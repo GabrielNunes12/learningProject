@@ -2,7 +2,7 @@
 
 A Brilliant-style learning site built on the **80/20 principle**: every course starts with the few ideas that carry most of the value (core lessons), taught through worked examples and exercises, then kept in memory with quizzes and spaced repetition.
 
-**Courses:** Learn Anything Fast · Probability · Big-O Thinking · Python · Java (8 → 25) · Kotlin · Unit Testing
+**Courses:** Learn Anything Fast · Probability · Big-O Thinking · Python · Java (8 → 25) · Kotlin · Unit Testing · SQL · Git · Spring Boot
 
 ## Run it
 

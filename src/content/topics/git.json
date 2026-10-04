@@ -1,0 +1,1024 @@
+{
+  "id": "git",
+  "title": "Git",
+  "icon": "🌿",
+  "color": "#f05133",
+  "order": 15,
+  "category": "Tools",
+  "level": "Beginner",
+  "description": "Use Git confidently every day: commit, branch, merge, collaborate through GitHub pull requests and undo mistakes without panic. The 20% of Git behind 80% of real work, taught with modern commands (`git switch`, `git restore`) plus the older `checkout` spellings you'll still see everywhere.",
+  "keyIdeas": [
+    "A commit is a snapshot of the whole project with a link to its parent; branches and `HEAD` are just movable pointers to commits.",
+    "Changes flow working tree → staging area (`git add`) → repository (`git commit`), and `git status` always tells you where each change is.",
+    "Do each piece of work on its own branch: merging fast-forwards when the target hasn't moved, and creates a merge commit when both sides have new work.",
+    "`git fetch` only downloads; `git pull` is fetch plus merge (or rebase); `git push -u origin <branch>` publishes a branch and sets its upstream.",
+    "On GitHub, work flows through pull requests: push a branch, open a PR, push more commits to address review, merge, delete the branch.",
+    "Undo pushed commits with `git revert`; keep `git reset` and `--amend` for local history, and remember `git reflog` can find almost any \"lost\" commit."
+  ],
+  "units": [
+    {
+      "id": "mental-model",
+      "title": "The mental model",
+      "description": "What Git actually stores, and the add-commit loop you'll run many times a day.",
+      "lessons": [
+        {
+          "id": "snapshots-and-pointers",
+          "title": "Commits, branches and HEAD",
+          "pareto": "core",
+          "minutes": 6,
+          "takeaway": "A commit is a snapshot with a parent; a branch is a movable label on one commit, and `HEAD` points at the branch you're on.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Snapshots, not file copies",
+              "body": "Git is a database of **commits**. Each commit is a **snapshot** of every tracked file at one moment, plus metadata: author, date, message and a link to its **parent** commit.\n\nEvery commit has an ID, a hash such as `3f9a2c1`, computed from its content. Change anything and you get a different ID, so history can't be silently altered.\n\nBecause each commit points to its parent, history forms a **graph** (oldest on the left):\n\n```\nA---B---C\n```\n\n`C`'s parent is `B`, whose parent is `A`. Unchanged files are stored only once, so snapshots are cheap."
+            },
+            {
+              "type": "explain",
+              "title": "Branches and HEAD are pointers",
+              "body": "A **branch** is not a folder or a copy of your code. It's a tiny file holding one commit ID: a movable label.\n\n```\nA---B---C   ← main ← HEAD\n```\n\n**HEAD** answers \"where am I?\". Normally it points at a branch. When you commit, Git:\n\n- creates a new commit whose parent is the current one\n- moves the branch that HEAD points at forward to the new commit\n\nHEAD comes along for the ride because it points at that branch. Creating a branch just writes a new label, which is why branching in Git is instant."
+            },
+            {
+              "type": "mcq",
+              "id": "q-branch-is",
+              "prompt": "Your repo has 2,000 commits and you run `git branch experiment`. What does Git actually create?",
+              "choices": [
+                "A full copy of the project's files in a new folder",
+                "A new pointer to the commit you're currently on",
+                "A new empty commit that marks where the branch starts",
+                "A copy of all 2,000 commits under a new name"
+              ],
+              "answer": 1,
+              "explanation": "A branch is a label holding one commit ID, so creating one is instant no matter how big the repo is. No files or commits are copied, and no commit is created: new commits only appear when you actually commit."
+            },
+            {
+              "type": "example",
+              "title": "Watching the pointers move",
+              "problem": "You're on `main` at commit `B`. You run `git branch feature`, then make one commit. Where does each pointer end up?\n\n```\nA---B   ← main ← HEAD\n```",
+              "steps": [
+                "`git branch feature` creates a new label at the current commit. `main` and `feature` both point at `B`. HEAD still points at `main`: creating a branch doesn't switch to it.",
+                "`git commit` creates `C` with parent `B`, then moves the branch HEAD points at, which is `main`.",
+                "Result:\n\n```\nA---B---C   ← main ← HEAD\n    ↑\n    feature\n```",
+                "`feature` was left behind at `B`. This surprises many beginners: `git branch` creates a branch but doesn't move you onto it. (Next unit: `git switch -c` does both.)"
+              ],
+              "answer": "`feature` stays on `B`; `main` (and HEAD with it) moves to the new commit `C`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-commit-moves",
+              "prompt": "HEAD points at `bugfix`, which points at commit `E`. `main` also points at `E`. You make commit `F`. What changes?",
+              "choices": [
+                "Both `bugfix` and `main` move to `F`",
+                "Only `main` moves to `F`, because it's the default branch",
+                "Only `bugfix` moves to `F`; `main` stays on `E`",
+                "Nothing moves until you run `git push`"
+              ],
+              "answer": 2,
+              "explanation": "A commit only advances the branch HEAD is attached to, here `bugfix`. `main` still points at `E`. Pushing is about sharing with a remote and has nothing to do with how your local pointers move."
+            },
+            {
+              "type": "explain",
+              "title": "Naming commits relative to HEAD",
+              "body": "You can name a commit relative to another one:\n\n- `HEAD~1` (or `HEAD~`): the parent of the current commit\n- `HEAD~3`: three commits back, following parent links\n- `main~2`: two commits before the tip of `main`\n\nYou'll use these with commands like `git show HEAD~1` and, later, to undo commits. A short hash such as `3f9a2c1` works anywhere a commit is expected, too."
+            },
+            {
+              "type": "text",
+              "id": "q-tilde",
+              "prompt": "Your history is:\n\n```\nA---B---C---D---E   ← main ← HEAD\n```\n\nWhich commit does `HEAD~3` refer to? (Just the letter.)",
+              "accept": [
+                "B",
+                "commit B"
+              ],
+              "hint": "`HEAD~1` is the parent of `E`. Keep stepping back.",
+              "explanation": "`HEAD` is `E`, `HEAD~1` is `D`, `HEAD~2` is `C`, and `HEAD~3` is **B**. Each step follows one parent link back."
+            }
+          ]
+        },
+        {
+          "id": "three-areas",
+          "title": "The three areas and the everyday loop",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Edit in the working tree, choose what goes into the next commit with `git add`, record it with `git commit`, and run `git status` whenever you're unsure.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Three places a change can be",
+              "body": "Every change moves through three areas:\n\n- **Working tree**: the files you see and edit on disk.\n- **Staging area** (also called the **index**): the draft of your next commit.\n- **Repository**: the committed snapshots, stored in the hidden `.git` folder.\n\n```bash\ngit add app.js                  # working tree → staging area\ngit add .                       # stage everything in this folder\ngit commit -m \"Add login form\"   # staging area → new commit\n```\n\nThe staging area lets you commit *part* of your work: fix two unrelated things, then stage and commit them separately."
+            },
+            {
+              "type": "explain",
+              "title": "git status is your dashboard",
+              "body": "`git status` shows which area each change is in, and even suggests the next command:\n\n```\nOn branch main\nChanges to be committed:\n  (use \"git restore --staged <file>...\" to unstage)\n        modified:   app.js\n\nChanges not staged for commit:\n        modified:   style.css\n\nUntracked files:\n        notes.txt\n```\n\n- **Changes to be committed**: staged; will go into the next commit.\n- **Changes not staged**: edited tracked files you haven't added.\n- **Untracked**: new files Git has never recorded.\n\nRun it constantly. It's free and it prevents surprises."
+            },
+            {
+              "type": "mcq",
+              "id": "q-status-after",
+              "prompt": "In a clean repo you edit two tracked files, `index.html` and `about.html`, then run `git add index.html`. What does `git status` show?",
+              "choices": [
+                "Both files under \"Changes to be committed\"",
+                "`index.html` under \"Changes to be committed\" and `about.html` under \"Untracked files\"",
+                "`index.html` under \"Changes to be committed\" and `about.html` under \"Changes not staged for commit\"",
+                "Both files under \"Changes not staged for commit\" until you commit"
+              ],
+              "answer": 2,
+              "explanation": "Only `index.html` was staged. `about.html` is already tracked (it's in earlier commits), so its edit is listed as *not staged*. \"Untracked\" is only for brand-new files Git has never recorded."
+            },
+            {
+              "type": "explain",
+              "title": "Seeing exact changes with git diff",
+              "body": "`git status` says *which* files changed; `git diff` shows *what* changed, line by line:\n\n- `git diff`: working tree vs staging area, i.e. changes you haven't staged yet.\n- `git diff --staged`: staging area vs last commit, i.e. exactly what the next commit will contain. (`--cached` is an older synonym.)\n\n```\n-color = blue\n+color = green\n```\n\nLines starting with `-` were removed, `+` were added. Checking `git diff --staged` right before committing is a great habit: it's your last look at what you're about to record."
+            },
+            {
+              "type": "example",
+              "title": "A focused commit",
+              "problem": "You fixed a typo in `README.md` and, separately, started a half-finished refactor in `api.js`. You want one clean commit containing only the typo fix.",
+              "steps": [
+                "`git status` lists both files under \"Changes not staged for commit\".",
+                "`git add README.md` stages only the typo fix. `api.js` stays as it is in the working tree.",
+                "`git diff --staged` confirms the staged change is just the typo. `git diff` still shows the refactor in progress.",
+                "`git commit -m \"Fix typo in README\"` records what's staged. The refactor isn't lost: it's still in your working tree, ready for a later commit."
+              ],
+              "answer": "Stage selectively with `git add <file>`, check with `git diff --staged`, then commit."
+            },
+            {
+              "type": "mcq",
+              "id": "q-edit-after-add",
+              "prompt": "You run `git add config.yml`, edit `config.yml` again, then run `git commit -m \"Update config\"`. What gets committed?",
+              "choices": [
+                "Only the first edit, the version you staged; the second edit stays unstaged",
+                "Both edits, because the file was added",
+                "Nothing: Git refuses to commit a file that has unstaged changes",
+                "Only the second edit, because it's the newest"
+              ],
+              "answer": 0,
+              "hint": "`git add` copies the file's content *at that moment* into the staging area.",
+              "explanation": "`git add` stages a snapshot of the file as it was when you ran it. Later edits live only in the working tree until you `git add` again. That's why `git status` can list the same file as both staged and not staged."
+            },
+            {
+              "type": "text",
+              "id": "q-unstage",
+              "prompt": "You accidentally staged `secrets.env`. You want it unstaged again, keeping your edits in the file. Fill in the blank:\n\n```bash\ngit ___ secrets.env\n```",
+              "accept": [
+                "restore --staged",
+                "git restore --staged",
+                "restore --staged secrets.env",
+                "git restore --staged secrets.env",
+                "reset",
+                "reset HEAD",
+                "git reset HEAD secrets.env"
+              ],
+              "hint": "`git status` prints this command for you under \"Changes to be committed\".",
+              "explanation": "`git restore --staged secrets.env` takes the file out of the staging area and leaves your working-tree edits alone. Older tutorials write `git reset HEAD secrets.env`, which does the same thing."
+            }
+          ]
+        },
+        {
+          "id": "history-messages-gitignore",
+          "title": "History, commit messages and .gitignore",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "Read history with `git log --oneline`, write short imperative messages that explain why, and keep build output and secrets out with `.gitignore`.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Reading history",
+              "body": "`git log` lists commits, newest first. Day to day you'll want the compact forms:\n\n```bash\ngit log --oneline                 # one line per commit\ngit log --oneline --graph --all   # draw all branches\ngit show 3f9a2c1                  # one commit's message and diff\n```\n\n```\n9c1e2f4 (HEAD -> main) Add password reset email\n3f9a2c1 Validate email on signup\na07b3d8 Create user model\n```\n\nThe names in parentheses show where branch pointers and HEAD currently are. `git log` walks back from HEAD by following parent links."
+            },
+            {
+              "type": "numeric",
+              "id": "q-log-count",
+              "prompt": "`git log --oneline` on `main` shows 4 commits. You run `git branch backup`, then make 2 more commits on `main`. How many lines does `git log --oneline backup` print?",
+              "answer": 4,
+              "hint": "Where does `backup` point after the two new commits?",
+              "explanation": "`git log <branch>` shows the commits reachable from that branch by following parents. `backup` still points at the 4th commit, so it shows **4**; `git log --oneline main` would show 6."
+            },
+            {
+              "type": "explain",
+              "title": "Commit messages that help future you",
+              "body": "A good message tells a teammate (or you, in six months) *why* something changed without reading the diff.\n\n- **Subject line**: about 50 characters, imperative mood, as if finishing \"This commit will…\": `Fix crash when cart is empty`.\n- **Blank line, then an optional body** explaining why and any trade-offs.\n- **One logical change per commit.** \"Fix login bug, rename utils, bump deps\" is three commits.\n\n```\nFix crash when cart is empty\n\nCheckout assumed at least one item and threw on\nan empty cart. Show an empty-state message instead.\n```\n\n`git commit` without `-m` opens your editor for multi-line messages."
+            },
+            {
+              "type": "mcq",
+              "id": "q-best-message",
+              "prompt": "Which commit message follows the conventions best?",
+              "choices": [
+                "`Fix rounding error in invoice totals`",
+                "`fixed stuff`",
+                "`Fixed the bug where invoice totals were sometimes wrong because of rounding and also cleaned up some code`",
+                "`WIP`"
+              ],
+              "answer": 0,
+              "explanation": "It's short, imperative and says exactly what changed. `fixed stuff` and `WIP` tell a reader nothing; the long one crams a body into the subject line and bundles an unrelated cleanup that deserves its own commit."
+            },
+            {
+              "type": "explain",
+              "title": ".gitignore keeps junk out",
+              "body": "Some files should never be committed: build output, installed dependencies, logs, editor settings and **secrets**. List patterns in a `.gitignore` file at the repo root, and commit that file:\n\n```\nnode_modules/\ndist/\n*.log\n.env\n```\n\n- `node_modules/` ignores that folder wherever it appears\n- `*.log` ignores every file ending in `.log`, at any depth\n- `!important.log` (a leading `!`) re-includes a file\n\nIgnored files disappear from `git status`, and `git add .` skips them. GitHub's `gitignore` templates are a good starting point for each language."
+            },
+            {
+              "type": "example",
+              "title": "Ignoring a file that's already tracked",
+              "problem": "You committed `.env` (containing an API key) last week. Now you add `.env` to `.gitignore`, but `git status` still shows it as modified whenever you change it. Why, and how do you fix it?",
+              "steps": [
+                "`.gitignore` only affects **untracked** files. Once a file is tracked, Git keeps tracking it whatever `.gitignore` says.",
+                "Stop tracking it but keep it on disk: `git rm --cached .env`.",
+                "Commit both changes: `git add .gitignore`, then `git commit -m \"Stop tracking .env\"`. From now on Git ignores the file.",
+                "The key is still inside the **old commits**. If they were ever pushed, treat the key as leaked and rotate it (generate a new one). Scrubbing it from history needs special tools and rewrites shared history."
+              ],
+              "answer": "`git rm --cached .env`, commit, and rotate the leaked secret."
+            },
+            {
+              "type": "mcq",
+              "id": "q-ignore-pattern",
+              "prompt": "Your `.gitignore` contains:\n\n```\n*.log\nbuild/\n```\n\nYou create these four new files. Which one still shows up as untracked in `git status`?",
+              "choices": [
+                "`server.log`",
+                "`build/app.js`",
+                "`logs/error.log`",
+                "`src/logger.js`"
+              ],
+              "answer": 3,
+              "explanation": "`*.log` matches files ending in `.log` at any depth, so `server.log` and `logs/error.log` are ignored, and `build/` ignores everything inside that folder. `src/logger.js` ends in `.js`, so no pattern matches it."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "branching",
+      "title": "Branching & merging",
+      "description": "Work on several things at once without tripping over yourself, then bring the work back together.",
+      "lessons": [
+        {
+          "id": "branches",
+          "title": "Creating and switching branches",
+          "pareto": "core",
+          "minutes": 6,
+          "takeaway": "`git switch -c name` creates a branch and moves onto it; if Git says your changes would be overwritten, commit or stash first.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "One branch per task",
+              "body": "A branch lets you work on a feature or fix in isolation while `main` stays stable. A typical day: one branch per task, merged back when it's done.\n\n```bash\ngit branch                 # list branches (* marks the current one)\ngit switch -c login-page   # create a branch and switch to it\ngit switch main            # switch to an existing branch\ngit switch -               # jump back to the previous branch\ngit branch -d login-page   # delete a branch that's been merged\n```\n\nSwitching moves HEAD to that branch and updates your working tree to its snapshot. `git branch -d` refuses to delete unmerged work; `-D` forces it."
+            },
+            {
+              "type": "explain",
+              "title": "The older checkout spelling",
+              "body": "`git switch` and `git restore` arrived in Git 2.23 (2019). Before that, `git checkout` did both jobs, and you'll still see it in tutorials, Stack Overflow answers and colleagues' muscle memory:\n\n- `git checkout main` = `git switch main`\n- `git checkout -b login-page` = `git switch -c login-page`\n- `git checkout -- file.txt` = `git restore file.txt` (discard edits; covered later)\n\nThe old forms still work. The new ones are clearer because each command does one job, which makes it harder to throw away work by accident."
+            },
+            {
+              "type": "mcq",
+              "id": "q-switch-create",
+              "prompt": "You're on `main` and want to start work on a new branch called `dark-mode`. Which command creates it **and** moves you onto it?",
+              "choices": [
+                "`git branch dark-mode`",
+                "`git switch dark-mode`",
+                "`git branch -c dark-mode`",
+                "`git switch -c dark-mode`"
+              ],
+              "answer": 3,
+              "explanation": "`-c` means create. `git branch dark-mode` creates the branch but leaves you on `main`, so your next commit lands on `main`. Plain `git switch dark-mode` fails because the branch doesn't exist yet, and `git branch -c` copies the current branch without switching. The older equivalent is `git checkout -b dark-mode`."
+            },
+            {
+              "type": "example",
+              "title": "Switching with uncommitted changes",
+              "problem": "On `feature` you've edited `cfg.txt` but not committed. You run `git switch main` and get:\n\n```\nerror: Your local changes to the following files would be overwritten by checkout:\n        cfg.txt\nPlease commit your changes or stash them before you switch branches.\nAborting\n```\n\nWhat's going on, and what are your options?",
+              "steps": [
+                "`cfg.txt` is different on `main`. Switching would replace your edited file with `main`'s version and destroy the edit, so Git refuses. Nothing has changed or been lost.",
+                "When a switch *wouldn't* overwrite anything, Git simply carries your uncommitted changes along to the other branch. It only stops you when work would be lost.",
+                "Option 1: commit the work on `feature` (a work-in-progress commit is fine), then switch.",
+                "Option 2: `git stash` to shelve the changes, switch, and `git stash pop` when you come back. (There's a lesson on stash below.)"
+              ],
+              "answer": "Git is protecting your edit. Commit it or stash it, then switch."
+            },
+            {
+              "type": "mcq",
+              "id": "q-carry",
+              "prompt": "On `main` you edit `notes.md` (a tracked file) and don't commit. Then you run `git switch -c experiment`. Where is your edit now?",
+              "choices": [
+                "Lost: switching resets the working tree",
+                "Still in your working tree, uncommitted, and you're now on `experiment`",
+                "Automatically committed to `main` before the switch",
+                "Committed to `experiment` as its first commit"
+              ],
+              "answer": 1,
+              "explanation": "Uncommitted changes don't belong to any branch; they live in the working tree. A new branch starts at the same commit, so nothing would be overwritten and the edit simply comes along. It becomes part of whichever branch you commit it on."
+            },
+            {
+              "type": "text",
+              "id": "q-old-switch",
+              "prompt": "A tutorial tells you to run `git checkout -b hotfix`. What's the modern equivalent? (Type the full command.)",
+              "accept": [
+                "git switch -c hotfix",
+                "switch -c hotfix",
+                "git switch --create hotfix",
+                "switch --create hotfix"
+              ],
+              "explanation": "`git checkout -b hotfix` creates a branch and switches to it in one go. In modern Git that's `git switch -c hotfix` (`-c` is short for `--create`)."
+            }
+          ]
+        },
+        {
+          "id": "merging",
+          "title": "Merging: fast-forward vs merge commit",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "If the receiving branch hasn't moved, merging just slides its pointer forward (fast-forward); if both sides have new commits, Git creates a merge commit with two parents.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Merge into the branch you're on",
+              "body": "To bring `feature` into `main`, switch to the branch that should **receive** the work, then merge:\n\n```bash\ngit switch main\ngit merge feature\n```\n\nRead it as \"merge `feature` into the branch I'm on\". Only the current branch moves; `feature` itself is unchanged. What Git does depends on the shape of the graph, and there are just two cases."
+            },
+            {
+              "type": "explain",
+              "title": "Case 1: fast-forward",
+              "body": "If `main` has **no new commits** since `feature` branched off, `main` is simply behind:\n\n```\nA---B           main\n     \\\n      C---D     feature\n```\n\nThere's nothing to combine, so Git just moves the `main` pointer forward to `D` and prints `Fast-forward`. No new commit is created and history stays a straight line:\n\n```\nA---B---C---D   main, feature\n```"
+            },
+            {
+              "type": "explain",
+              "title": "Case 2: merge commit",
+              "body": "If **both** branches have new commits, they have diverged:\n\n```\nA---B---E       main\n     \\\n      C---D     feature\n```\n\nGit combines the two lines of work into a new **merge commit** `M` with **two parents**, `E` and `D`:\n\n```\nA---B---E---M   main\n     \\     /\n      C---D     feature\n```\n\nIf the branches changed different parts of the code, this is automatic. Some teams use `git merge --no-ff feature` to force a merge commit even when a fast-forward is possible, so every feature shows up as a unit in history."
+            },
+            {
+              "type": "mcq",
+              "id": "q-ff-or-not",
+              "prompt": "You branched `fix` off `main`, made 2 commits on `fix`, and nobody has touched `main` since. You run `git switch main` and then `git merge fix`. What happens?",
+              "choices": [
+                "`main` fast-forwards to `fix`'s latest commit; no new commit is created",
+                "A merge commit with two parents is created on `main`",
+                "The 2 commits are copied onto `main` with new hashes",
+                "Git refuses because `main` is behind"
+              ],
+              "answer": 0,
+              "explanation": "`main` hasn't moved since `fix` branched off, so `main`'s commit is an ancestor of `fix`. Git only has to slide the `main` pointer forward: a fast-forward. The commits keep their hashes because nothing is recreated."
+            },
+            {
+              "type": "example",
+              "title": "Counting commits after a real merge",
+              "problem": "`main` has commits A and B. You create `feature` from B and commit C and D on it. Back on `main` you also commit a quick fix, E. Then you run `git switch main` and `git merge feature`. What does history look like, and how many lines does `git log --oneline` print?",
+              "steps": [
+                "Both branches have new commits since B (`main` has E; `feature` has C and D), so a fast-forward is impossible.",
+                "Git creates a merge commit M with two parents, E and D. Its default message is `Merge branch 'feature'`.",
+                "`git log` follows *all* parents, so on `main` it lists M, E, D, C, B and A (merge commits can make the order look interleaved).",
+                "`git log --oneline --graph` draws the two lines of work joining at M."
+              ],
+              "answer": "6 lines: A, B, C, D, E and the merge commit M."
+            },
+            {
+              "type": "numeric",
+              "id": "q-merge-count",
+              "prompt": "`main` is `A---B---C`. You create `api` from C and commit D, E and F on it. Nothing else happens on `main`. Then you run `git switch main` and `git merge api`. How many lines does `git log --oneline` print on `main`?",
+              "answer": 6,
+              "hint": "Did `main` get any new commits after `api` branched off?",
+              "explanation": "`main` hadn't moved, so this is a fast-forward and no merge commit is made. `main` now points at F, and its history is A, B, C, D, E, F: **6**. (With `--no-ff` there would be a merge commit too, making 7.)"
+            },
+            {
+              "type": "mcq",
+              "id": "q-merge-direction",
+              "prompt": "You're on your branch `feature` and run `git merge main`. Which branch pointer can move?",
+              "choices": [
+                "`main`",
+                "`feature`",
+                "Both `main` and `feature`",
+                "Neither: you have to be on `main` to merge"
+              ],
+              "answer": 1,
+              "explanation": "`git merge X` always updates the **current** branch by bringing X's commits into it. Here that pulls `main`'s latest work into `feature`, which is a common way to keep a feature branch up to date. `main` isn't touched."
+            }
+          ]
+        },
+        {
+          "id": "merge-conflicts",
+          "title": "Resolving merge conflicts",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "A conflict is Git asking you to decide: edit the file into its final form, delete the markers, `git add` it, then `git commit` (or back out with `git merge --abort`).",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "When Git can't decide",
+              "body": "Git merges automatically when the branches changed different files, or different parts of the same file. If both changed **the same lines** (or one edited a file the other deleted), Git can't know which is right, so it pauses:\n\n```\nAuto-merging cfg.txt\nCONFLICT (content): Merge conflict in cfg.txt\nAutomatic merge failed; fix conflicts and then commit the result.\n```\n\nA conflict isn't an error or a broken repo. The merge is simply waiting for your decision. `git status` lists the affected files under **Unmerged paths** as `both modified`."
+            },
+            {
+              "type": "explain",
+              "title": "Reading conflict markers",
+              "body": "Git writes both versions into the file:\n\n```\ntitle = \"Shop\"\n<<<<<<< HEAD\ncolor = red\n=======\ncolor = green\n>>>>>>> theme\n```\n\n- From `<<<<<<< HEAD` to `=======`: **your** side, the branch you're on.\n- From `=======` to `>>>>>>> theme`: the **incoming** side, from the branch being merged.\n- Lines outside the markers merged cleanly.\n\nTo resolve, edit the file into the final version you want (one side, the other, or a mix) and **delete all three marker lines**."
+            },
+            {
+              "type": "mcq",
+              "id": "q-which-side",
+              "prompt": "You're on `main` and ran `git merge theme`. The file now contains:\n\n```\n<<<<<<< HEAD\nlimit = 50\n=======\nlimit = 100\n>>>>>>> theme\n```\n\nWhich value is `main`'s?",
+              "choices": [
+                "`limit = 100`",
+                "Neither: the top half is the common ancestor",
+                "`limit = 50`",
+                "Whichever commit is newer"
+              ],
+              "answer": 2,
+              "explanation": "The `HEAD` half is the branch you're on, `main`, so `limit = 50` is yours and `limit = 100` comes from `theme`. Commit dates play no role in how Git labels the sides."
+            },
+            {
+              "type": "example",
+              "title": "Resolving step by step",
+              "problem": "You're merging `theme` into `main` and `cfg.txt` conflicts on `color` (red on `main`, green on `theme`). The team agreed on green. Finish the merge.",
+              "steps": [
+                "Open `cfg.txt` and edit it to the final content, removing every marker line:\n\n```\ntitle = \"Shop\"\ncolor = green\n```",
+                "Mark it resolved by staging it: `git add cfg.txt`. For a conflicted file, `git add` means \"this one is fixed\".",
+                "`git status` now says `All conflicts fixed but you are still merging.`",
+                "Run `git commit`. Git pre-fills the message `Merge branch 'theme'`, so you can just save it, and the merge commit is created.",
+                "Changed your mind halfway? `git merge --abort` puts everything back as it was before the merge."
+              ],
+              "answer": "Edit the file → `git add` → `git commit`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-forgot-markers",
+              "prompt": "You resolved a conflict, ran `git add` and `git commit`, but the committed file still contains `<<<<<<< HEAD`. What happened?",
+              "choices": [
+                "The merge was aborted halfway, leaving markers behind",
+                "Git removes markers at commit time, so someone must have edited the file afterwards",
+                "The markers only appear in your editor, not in the commit",
+                "You staged the file without deleting the markers, and Git doesn't check"
+              ],
+              "answer": 3,
+              "explanation": "`git add` is your word that a file is resolved; Git doesn't inspect the content, so markers can be committed (and then break the build). Search for `<<<<<<<` before staging. Most editors highlight conflicts and offer accept current / incoming / both buttons."
+            },
+            {
+              "type": "explain",
+              "title": "Keeping conflicts small",
+              "body": "Conflicts are normal on a busy team. You can keep them small and rare:\n\n- Merge the latest `main` into your branch often, so differences don't pile up.\n- Keep branches short-lived and focused on one task.\n- Don't mix big reformatting (or mass renames) with real changes in the same branch.\n\nA conflict in 3 lines takes a minute. A conflict after three weeks apart can take an afternoon."
+            },
+            {
+              "type": "text",
+              "id": "q-abort",
+              "prompt": "Halfway through a messy conflict you decide not to merge right now. Which command returns everything to the state before you ran `git merge`?",
+              "accept": [
+                "git merge --abort",
+                "merge --abort"
+              ],
+              "explanation": "`git merge --abort` throws away the in-progress merge and restores your branch, staging area and working tree to their pre-merge state. It's cleanest when you had no uncommitted changes before starting the merge."
+            }
+          ]
+        },
+        {
+          "id": "rebase",
+          "title": "Rebase basics and the golden rule",
+          "pareto": "extra",
+          "minutes": 7,
+          "takeaway": "`git rebase main` replays your branch's commits on top of `main` as new commits for a straight history; never rebase commits other people already have.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Replaying commits",
+              "body": "Rebase is the other way to integrate work. Instead of a merge commit, it **moves** your branch so it starts from the tip of another:\n\n```\nBefore:  A---B---E          main\n              \\\n               C---D        feature\n\nAfter:   A---B---E          main\n                  \\\n                   C'---D'  feature\n```\n\n```bash\ngit switch feature\ngit rebase main\n```\n\nGit re-applies C and D one by one on top of E. `C'` and `D'` contain the same changes but are **new commits with new hashes**, because their parent changed."
+            },
+            {
+              "type": "explain",
+              "title": "Why rebase?",
+              "body": "- **Linear history**: no \"Merge branch 'main' into feature\" commits, so `git log` reads like a story.\n- **Clean integration later**: after rebasing onto `main`, merging `feature` into `main` can be a fast-forward.\n\nConflicts work as in a merge, but per replayed commit: fix the file, `git add` it, then `git rebase --continue`. `git rebase --abort` returns your branch to where it started.\n\n`git pull --rebase` uses the same idea: it puts your local commits on top of what you just fetched instead of creating a merge commit."
+            },
+            {
+              "type": "mcq",
+              "id": "q-hashes",
+              "prompt": "After `git switch feature` and `git rebase main`, what's true about your feature commits?",
+              "choices": [
+                "They keep their hashes but get a new parent",
+                "They're replaced by new commits with new hashes",
+                "They're squashed into a single commit",
+                "They're added to `main`, so `main` now includes them"
+              ],
+              "answer": 1,
+              "explanation": "A commit's hash covers its parent, so a commit can't be moved, only recreated. Rebase makes copies (`C'`, `D'`) and moves `feature` to point at them. `main` doesn't move, and nothing is squashed unless you ask for it (interactive rebase, `git rebase -i`)."
+            },
+            {
+              "type": "explain",
+              "title": "The golden rule",
+              "body": "**Never rebase commits that others have already pulled.**\n\nRebasing replaces commits with new copies. If a teammate based work on the originals, your histories now disagree: they'll see duplicate commits and confusing conflicts.\n\n- Your own **local, unpushed** commits: rebase freely.\n- Your own pushed branch that nobody else uses: OK, but you must then run `git push --force-with-lease`, which overwrites the remote branch only if nobody else pushed to it in the meantime.\n- `main` or any shared branch: don't."
+            },
+            {
+              "type": "example",
+              "title": "A rebase with a conflict",
+              "problem": "Your `feature` branch has commits C and D. You run `git rebase main`. C replays cleanly, but D conflicts in `app.js`.",
+              "steps": [
+                "Git stops partway: `C'` already exists and D is paused. `git status` says a rebase is in progress and lists `app.js` as `both modified`.",
+                "Edit `app.js` to resolve the markers, exactly as for a merge conflict, then `git add app.js`.",
+                "Run `git rebase --continue` (not `git commit`). Git creates `D'` and finishes.",
+                "If it all goes sideways, `git rebase --abort` returns `feature` to C and D as if nothing happened."
+              ],
+              "answer": "Resolve, `git add`, then `git rebase --continue`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-golden",
+              "prompt": "Which of these breaks the golden rule of rebasing?",
+              "choices": [
+                "Rebasing 3 local commits you haven't pushed onto the latest `main`",
+                "Using `git pull --rebase` to put your unpushed commits on top of fetched ones",
+                "Rebasing your personal draft branch, which only you use, before opening a pull request",
+                "Rebasing `main`, which the whole team pulls from, to tidy up last week's history"
+              ],
+              "answer": 3,
+              "explanation": "Teammates already have last week's `main` commits; rewriting them forces everyone to untangle duplicate history. The other options only rewrite commits nobody else has (or, for the draft branch, that nobody else uses)."
+            },
+            {
+              "type": "mcq",
+              "id": "q-merge-or-rebase",
+              "prompt": "You and a teammate both push to the branch `checkout-v2`. You want the latest `main` changes in it. What's the safest choice?",
+              "choices": [
+                "`git rebase main`, then `git push --force`",
+                "`git reset --hard main`",
+                "`git merge main`, then `git push`",
+                "Delete `checkout-v2` and recreate it from `main`"
+              ],
+              "answer": 2,
+              "explanation": "The branch is shared, so don't rewrite it. Merging `main` in adds one new commit and leaves existing history intact. Rebasing plus force-pushing rewrites commits your teammate already has, and `reset --hard main` or deleting the branch throws its work away."
+            }
+          ]
+        },
+        {
+          "id": "stash",
+          "title": "Stash: shelve work for later",
+          "pareto": "extra",
+          "minutes": 5,
+          "takeaway": "`git stash` shelves uncommitted changes so you can switch tasks; `git stash pop` brings them back.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "The interruption problem",
+              "body": "You're halfway through a change on `feature` when an urgent bug comes in. The work isn't ready to commit, and switching may be blocked or drag half-done edits along.\n\n```bash\ngit stash          # shelve changes; working tree is clean again\ngit switch main    # ...fix the bug, commit...\ngit switch feature\ngit stash pop      # re-apply the changes and remove the stash entry\n```\n\nThe stash is a stack, so you can stash several times. `git stash list` shows the entries as `stash@{0}` (newest), `stash@{1}`, and so on."
+            },
+            {
+              "type": "explain",
+              "title": "What gets stashed",
+              "body": "By default `git stash` saves changes to **tracked** files, both staged and unstaged. **Untracked** (brand-new) files stay where they are.\n\n- `git stash -u` also stashes untracked files.\n- `git stash push -m \"half-done nav\"` adds a label you'll recognise in `git stash list`.\n- `git stash apply` re-applies an entry but **keeps** it; `pop` applies and removes it (if there's a conflict, `pop` keeps the entry too).\n- `git stash drop` deletes an entry without applying it."
+            },
+            {
+              "type": "mcq",
+              "id": "q-untracked",
+              "prompt": "You modified `app.js` (tracked) and created `new-widget.js` (never added). You run `git stash`. What does `git status` show now?",
+              "choices": [
+                "Nothing to commit, working tree clean",
+                "Only `new-widget.js`, listed as untracked",
+                "`app.js` modified and `new-widget.js` untracked",
+                "Only `app.js`, listed as modified"
+              ],
+              "answer": 1,
+              "explanation": "Plain `git stash` saves changes to tracked files only, so the `app.js` edit goes onto the stash and the untracked `new-widget.js` stays in the working tree. `git stash -u` would have taken it too."
+            },
+            {
+              "type": "example",
+              "title": "Work started on the wrong branch",
+              "problem": "You've been editing for an hour and realise you're on `main`, but this work belongs on a branch called `search`. Nothing is committed yet.",
+              "steps": [
+                "If `search` doesn't exist yet, you don't need stash at all: `git switch -c search` carries your uncommitted changes onto the new branch. Commit there.",
+                "If `search` **already exists** and differs in the files you touched, switching may be refused. Then: `git stash`, `git switch search`, `git stash pop`.",
+                "If `pop` hits a conflict, resolve it like a merge conflict. The entry stays in the stash, so `git stash drop` it once you're happy."
+              ],
+              "answer": "New branch: just `git switch -c search`. Existing branch: stash, switch, pop."
+            },
+            {
+              "type": "numeric",
+              "id": "q-stash-count",
+              "prompt": "Starting with an empty stash, you stash three separate times (editing files in between). Then you run `git stash pop`, followed by `git stash drop`. How many entries does `git stash list` show?",
+              "answer": 1,
+              "explanation": "Three stashes make 3 entries. `pop` applies the newest and removes it (2 left). `drop` deletes the new newest without applying it, leaving **1**."
+            },
+            {
+              "type": "text",
+              "id": "q-stash-u",
+              "prompt": "Fill in the flag so brand-new untracked files are stashed too:\n\n```bash\ngit stash ___\n```",
+              "accept": [
+                "-u",
+                "--include-untracked",
+                "u",
+                "include-untracked"
+              ],
+              "explanation": "`git stash -u` (long form `--include-untracked`) stashes untracked files as well. Ignored files are still left alone unless you use `-a` (`--all`)."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "collaborating",
+      "title": "Collaborating",
+      "description": "Remotes, pushing and pulling, and the GitHub pull-request flow most teams use.",
+      "lessons": [
+        {
+          "id": "remotes",
+          "title": "Remotes: clone, fetch, pull and push",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "`fetch` downloads without touching your work, `pull` is fetch plus merge (or rebase), and `push -u origin <branch>` publishes a branch and sets its upstream.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Your copy and theirs",
+              "body": "A **remote** is another copy of the repository, usually on GitHub. `git clone <url>` downloads the full history and names that remote **`origin`**.\n\nNothing syncs automatically. Git remembers what it last saw on the remote in **remote-tracking branches** such as `origin/main`: read-only bookmarks that only move when you talk to the remote.\n\n```bash\ngit clone https://github.com/acme/shop.git\ngit remote -v     # list remotes and their URLs\ngit branch -a     # local and remote-tracking branches\n```"
+            },
+            {
+              "type": "explain",
+              "title": "fetch vs pull",
+              "body": "- `git fetch` downloads new commits and updates `origin/main` and friends. It **never** changes your own branches or working files, so it's always safe.\n- `git pull` = `git fetch` **plus** integrating the remote branch into your current branch: a merge by default, or a rebase with `git pull --rebase`.\n\nAfter a fetch, `git status` compares your branch with its remote-tracking branch:\n\n```\nYour branch is behind 'origin/main' by 3 commits, and can be fast-forwarded.\n```\n\nIf both sides have new commits, a fresh Git install asks you to choose merge or rebase once, e.g. `git config --global pull.rebase false`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-fetch-safe",
+              "prompt": "A teammate pushed to `main`. You have uncommitted edits and want to *look at* their changes before anything touches your own branch. What do you run?",
+              "choices": [
+                "`git pull`",
+                "`git push`",
+                "`git fetch`, then inspect `origin/main` (e.g. `git log origin/main`)",
+                "Delete your folder and `git clone` the repo again"
+              ],
+              "answer": 2,
+              "explanation": "`fetch` only updates `origin/main`; your `main` and working tree stay untouched, so you can inspect first and integrate later. `git pull` would immediately merge into your branch. Re-cloning works, but it's a sledgehammer that also throws away your uncommitted edits."
+            },
+            {
+              "type": "explain",
+              "title": "Pushing and upstream tracking",
+              "body": "`git push` uploads your commits. The first time you push a new branch, say where it goes and remember it:\n\n```bash\ngit switch -c search\n# ...commit...\ngit push -u origin search\n```\n\n`-u` (`--set-upstream`) makes `origin/search` the branch's **upstream**. From then on, plain `git push` and `git pull` know where to go, and `git status` reports ahead/behind counts.\n\nIf the remote has commits you don't, the push is **rejected**. That's protection, not a bug: pull first, then push again."
+            },
+            {
+              "type": "example",
+              "title": "A rejected push",
+              "problem": "You commit on `main` and run `git push`. It fails:\n\n```\n ! [rejected]        main -> main (fetch first)\nerror: failed to push some refs to 'github.com:acme/shop.git'\nhint: Updates were rejected because the remote contains work that you do not\nhint: have locally.\n```",
+              "steps": [
+                "A teammate pushed first. The remote `main` has a commit you don't have, so accepting your push would erase their work. Git refuses.",
+                "`git pull` fetches their commit and integrates it: a merge commit, or, with `git pull --rebase`, your commit replayed on top of theirs.",
+                "Resolve any conflicts, then `git push` again. Your branch now contains theirs, so the push is a fast-forward for the remote and is accepted.",
+                "Don't reach for `git push --force`: it would overwrite your teammate's commit on the remote."
+              ],
+              "answer": "Pull, then push. Never force-push a shared branch to get around a rejection."
+            },
+            {
+              "type": "mcq",
+              "id": "q-status-ahead",
+              "prompt": "`git status` says `Your branch is ahead of 'origin/main' by 2 commits.` What does that mean?",
+              "choices": [
+                "The remote has 2 commits you need to pull",
+                "2 files are staged but not yet committed",
+                "Your branch has diverged and needs a merge",
+                "You have 2 local commits that aren't on the remote yet; `git push` will send them"
+              ],
+              "answer": 3,
+              "explanation": "Ahead means commits you have that `origin/main` doesn't. The comparison uses what you last fetched, so run `git fetch` first if you want it to be current; \"behind\" would mean the remote has commits you lack."
+            },
+            {
+              "type": "numeric",
+              "id": "q-fetch-count",
+              "prompt": "`main` and `origin/main` both point at C (history A, B, C). A teammate pushes D and E to `main` on GitHub. You run `git fetch`. How many lines does `git log --oneline main` print?",
+              "answer": 3,
+              "hint": "Which pointer does `fetch` move?",
+              "explanation": "`fetch` moves only `origin/main`, now at E. Your local `main` still points at C, so it shows **3** commits. `git pull` (or `git merge origin/main`) would fast-forward it to 5."
+            },
+            {
+              "type": "text",
+              "id": "q-push-u",
+              "prompt": "You created the branch `pricing` locally. Push it to `origin` for the first time, setting its upstream so that plain `git push` works afterwards. Full command?",
+              "accept": [
+                "git push -u origin pricing",
+                "push -u origin pricing",
+                "git push --set-upstream origin pricing",
+                "push --set-upstream origin pricing"
+              ],
+              "explanation": "`git push -u origin pricing` creates `pricing` on the remote and records `origin/pricing` as its upstream, so future `git push` and `git pull` need no arguments."
+            }
+          ]
+        },
+        {
+          "id": "pull-requests",
+          "title": "GitHub flow: pull requests and staying current",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "Branch from an up-to-date `main`, push, open a pull request, answer review with more commits on the same branch, merge, then delete the branch and pull `main`.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "The GitHub flow",
+              "body": "Most teams follow one simple loop:\n\n- **Update** `main`: `git switch main`, `git pull`.\n- **Branch**: `git switch -c fix-signup-email`.\n- **Commit** small, focused changes.\n- **Push**: `git push -u origin fix-signup-email`.\n- **Open a pull request (PR)** on GitHub: a request to merge your branch into `main`.\n- **Review**: teammates comment; automated checks such as tests run.\n- **Merge** on GitHub, delete the branch, and pull `main` locally.\n\n`main` stays releasable at all times, and all work happens on branches."
+            },
+            {
+              "type": "explain",
+              "title": "Pull requests and review",
+              "body": "A PR shows the diff, the commits, a description and a discussion thread. Good PRs are **small** and explain *what* and *why*, with screenshots or test steps where useful.\n\nWhen reviewers request changes, you don't open a new PR: commit on the same branch and push. The PR updates automatically.\n\nOnce approved, GitHub offers three merge buttons:\n\n- **Create a merge commit**: keeps every commit, plus a merge commit.\n- **Squash and merge**: turns the whole PR into one commit on `main`.\n- **Rebase and merge**: replays the commits onto `main` without a merge commit."
+            },
+            {
+              "type": "mcq",
+              "id": "q-review-changes",
+              "prompt": "A reviewer asks you to rename a function in your open PR. What's the normal way to update it?",
+              "choices": [
+                "Close the PR, make the change on a new branch and open a new PR",
+                "Make the change directly on `main` so the reviewer can see it",
+                "Paste the new code into a PR comment for the reviewer to apply",
+                "Commit the change on the same branch and `git push`; the PR updates itself"
+              ],
+              "answer": 3,
+              "explanation": "A PR tracks a branch, not a fixed set of commits. New commits pushed to that branch show up in the PR, keeping the whole review discussion in one place."
+            },
+            {
+              "type": "explain",
+              "title": "Keeping your branch up to date",
+              "body": "While your PR is open, `main` keeps moving. Bring its changes into **your branch**, so any conflicts get resolved there and not on `main`:\n\n```bash\ngit switch main\ngit pull               # update local main\ngit switch my-feature\ngit merge main         # or: git rebase main\n```\n\nShortcut that skips updating local `main`: `git fetch`, then `git merge origin/main`.\n\nMerging is always safe on a shared branch. Rebasing gives a cleaner history but rewrites your commits: only do it if you're the only one on the branch, and push with `git push --force-with-lease`."
+            },
+            {
+              "type": "example",
+              "title": "From idea to merged",
+              "problem": "You need to fix a typo on the pricing page. Walk through the whole flow.",
+              "steps": [
+                "`git switch main` and `git pull`, so you branch from the latest code.",
+                "`git switch -c fix-pricing-typo`, edit the page, then `git add` and `git commit -m \"Fix typo on pricing page\"`.",
+                "`git push -u origin fix-pricing-typo`. GitHub shows a link to open a PR; write a short description and request a reviewer.",
+                "The reviewer spots a second typo. Fix it, commit, `git push`. The PR updates.",
+                "Approved and checks pass: merge on GitHub and click **Delete branch**. Locally: `git switch main`, `git pull`, `git branch -d fix-pricing-typo`."
+              ],
+              "answer": "Update `main` → branch → commit → `push -u` → open PR → push review fixes → merge → clean up."
+            },
+            {
+              "type": "mcq",
+              "id": "q-conflict-pr",
+              "prompt": "GitHub says your PR \"has conflicts that must be resolved\" because someone changed the same lines on `main`. What's the usual fix?",
+              "choices": [
+                "Pull the latest `main`, merge it into your branch, resolve the conflict, commit and push",
+                "Merge the PR anyway; conflicts resolve themselves after merging",
+                "Force-push your branch over `main`",
+                "Ask the other author to revert their commit on `main`"
+              ],
+              "answer": 0,
+              "explanation": "Bring `main` into your branch so the conflict is resolved on your branch, where you understand the change. Pushing the result updates the PR, which can then merge cleanly. Overwriting `main` would destroy teammates' work, and their change is probably needed."
+            },
+            {
+              "type": "mcq",
+              "id": "q-squash",
+              "prompt": "Your PR has 9 commits like \"wip\", \"fix test\" and \"oops\". The team wants `main` to show one commit per PR. Which merge button?",
+              "choices": [
+                "Squash and merge",
+                "Create a merge commit",
+                "Rebase and merge",
+                "Any of them; GitHub always combines PR commits"
+              ],
+              "answer": 0,
+              "explanation": "Squash and merge combines all the PR's changes into one new commit on `main`. A merge commit keeps all 9 commits (plus the merge), and rebase-and-merge replays all 9 onto `main`."
+            },
+            {
+              "type": "text",
+              "id": "q-merge-origin-main",
+              "prompt": "On your feature branch you want the latest `main` from GitHub without first updating your local `main`. Fill in the blank:\n\n```bash\ngit fetch\ngit merge ___\n```",
+              "accept": [
+                "origin/main",
+                "origin main"
+              ],
+              "hint": "After a fetch, the freshest copy of the remote's `main` lives in a remote-tracking branch.",
+              "explanation": "`git fetch` updates `origin/main`, and `git merge origin/main` merges that into your current branch. Your local `main` stays wherever it was."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fixing-mistakes",
+      "title": "Fixing mistakes",
+      "description": "An undo for almost everything, which ones are safe after you've pushed, and how to recover \"lost\" commits.",
+      "lessons": [
+        {
+          "id": "undo-changes",
+          "title": "Undo cheat sheet: restore and amend",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "`git restore file` discards edits, `git restore --staged file` unstages, and `git commit --amend` fixes the last commit, as long as it isn't pushed.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Pick the undo by where the mistake is",
+              "body": "Most \"oops\" moments map to one command:\n\n- Edited a file and want the committed version back → `git restore <file>`\n- Staged something by accident → `git restore --staged <file>`\n- Last commit has a bad message or is missing a file → `git commit --amend`\n- A commit that's already pushed must be undone → `git revert <commit>`\n- Local, unpushed commits should go → `git reset`\n\nThis lesson covers the first three; the next one covers revert vs reset."
+            },
+            {
+              "type": "explain",
+              "title": "git restore",
+              "body": "`git restore` copies content back from a safe place:\n\n```bash\ngit restore app.js            # discard unstaged edits\ngit restore --staged app.js   # unstage; your edits stay in the file\ngit restore .                 # discard all unstaged edits here\n```\n\nPlain `git restore` refills the file from the staging area, which matches the last commit unless you staged something.\n\n**Careful:** discarding is permanent. Those edits were never committed, so Git has no copy. Glance at `git diff` first.\n\nOlder spellings: `git checkout -- app.js` and `git reset HEAD app.js`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-restore-staged",
+              "prompt": "You edited `pricing.js` and ran `git add pricing.js`. Now you run `git restore --staged pricing.js`. What's the state?",
+              "choices": [
+                "The edits are gone and the file matches the last commit",
+                "The edits are still in the file, but no longer staged",
+                "The edits are committed",
+                "The file is removed from the repository"
+              ],
+              "answer": 1,
+              "explanation": "`--staged` only touches the staging area: it resets the staged version of the file to match HEAD. Your edits stay in the working tree and show under \"Changes not staged for commit\". To discard them too you'd follow up with `git restore pricing.js`."
+            },
+            {
+              "type": "explain",
+              "title": "git commit --amend",
+              "body": "`--amend` **replaces** the last commit with a new one built from the current staging area:\n\n```bash\n# just fix the message\ngit commit --amend -m \"Fix rounding in checkout total\"\n\n# add a forgotten file, keep the message\ngit add forgotten_test.py\ngit commit --amend --no-edit\n```\n\nThe amended commit gets a **new hash**, so amending rewrites history. That's fine for a commit that only exists on your machine. For a pushed commit you'd need a force-push, which causes trouble for anyone who already pulled it."
+            },
+            {
+              "type": "example",
+              "title": "Forgot a file",
+              "problem": "You just ran `git commit -m \"Add invoice PDF export\"` but forgot to add `pdf_utils.py`. Nothing is pushed yet.",
+              "steps": [
+                "Stage the missing file: `git add pdf_utils.py`.",
+                "`git commit --amend --no-edit` builds a new commit from the previous commit's content plus what's now staged, and reuses the message.",
+                "`git log --oneline` shows a single \"Add invoice PDF export\" commit (with a new hash) containing both files. No \"forgot a file\" commit cluttering history."
+              ],
+              "answer": "`git add pdf_utils.py`, then `git commit --amend --no-edit`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-amend-pushed",
+              "prompt": "When is `git commit --amend` a bad idea?",
+              "choices": [
+                "You want to fix a typo in the message of the commit you made a minute ago",
+                "You forgot to stage one file in your last commit, which isn't pushed yet",
+                "The commit is already on `main` on GitHub and teammates have pulled it",
+                "You haven't pushed your branch at all yet"
+              ],
+              "answer": 2,
+              "explanation": "Amend swaps the commit for a new one. If teammates already have the original, your history and theirs diverge and you'd have to force-push. For a pushed commit, add a new commit (or use `git revert`) instead."
+            },
+            {
+              "type": "text",
+              "id": "q-discard",
+              "prompt": "You experimented in `style.css` (nothing staged) and want to throw the edits away, back to the last committed version. What's the modern command?",
+              "accept": [
+                "git restore style.css",
+                "restore style.css",
+                "git checkout -- style.css",
+                "git checkout style.css"
+              ],
+              "explanation": "`git restore style.css` overwrites the working-tree file with the staged version, which is the last committed version since nothing is staged. The edits are gone for good, because Git never had a copy. (Old spelling: `git checkout -- style.css`.)"
+            }
+          ]
+        },
+        {
+          "id": "revert-vs-reset",
+          "title": "Undoing commits: revert vs reset",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "`git revert` adds a new commit that undoes an old one and is safe on shared branches; `git reset` moves the branch pointer back (`--soft` keeps changes staged, `--mixed` unstaged, `--hard` discards them) and is for local commits only.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "git revert: undo by adding",
+              "body": "`git revert <commit>` creates a **new commit** that applies the exact opposite of that commit's changes:\n\n```\nA---B---C---R   main     (R undoes C)\n```\n\n```bash\ngit revert HEAD       # undo the latest commit\ngit revert 3f9a2c1    # undo an older one\n```\n\nNothing disappears: `C` stays in history, along with a record that it was undone. Since no existing commit is rewritten, revert is **safe on pushed, shared branches**. It's the standard way to back out a bad change on `main`."
+            },
+            {
+              "type": "explain",
+              "title": "git reset: move the branch pointer",
+              "body": "`git reset <commit>` moves the **current branch** (and HEAD with it) to another commit. Later commits drop out of the branch's history. The mode decides what happens to their changes:\n\n- `--soft`: only move the branch. The changes stay **staged**.\n- `--mixed` (the default): move the branch and reset the staging area. The changes stay in the working tree, **unstaged**.\n- `--hard`: move the branch and reset the staging area **and** working tree. The changes are **discarded**, along with any uncommitted edits to tracked files.\n\n```bash\ngit reset --soft HEAD~1   # \"uncommit\", keep it all staged\n```"
+            },
+            {
+              "type": "mcq",
+              "id": "q-reset-mixed",
+              "prompt": "Right after a local commit that changed `cart.js`, you run `git reset HEAD~1` (no mode flag). What's the state?",
+              "choices": [
+                "The commit is gone from the branch and the `cart.js` changes are in the working tree, unstaged",
+                "The commit is gone and the `cart.js` changes are deleted",
+                "The commit is gone and the changes are staged, ready to commit again",
+                "A new commit is added that undoes the change"
+              ],
+              "answer": 0,
+              "explanation": "No flag means `--mixed`: the branch moves back one commit and the staging area is reset, but the working tree keeps the changes, unstaged. `--soft` would leave them staged, `--hard` would discard them, and adding an undo commit is what `git revert` does."
+            },
+            {
+              "type": "explain",
+              "title": "Which one should I use?",
+              "body": "- The commit is **pushed or shared** → `git revert`. Never reset history others have.\n- The commit is **local only** and you want to redo it → `git reset --soft` or `git reset` (mixed).\n- Local commits are junk and should vanish → `git reset --hard`, after checking `git status` for uncommitted work you'd lose.\n\nReset a branch that's already pushed and your next `git push` is rejected. Forcing it would rewrite history your teammates already have."
+            },
+            {
+              "type": "example",
+              "title": "Committed to main by mistake",
+              "problem": "You made one commit on `main` that should have gone on a new branch `feature`. It's **not pushed**, and your working tree is clean.\n\n```\nA---B---C   ← main ← HEAD     (C belongs on feature)\n```",
+              "steps": [
+                "`git branch feature` puts a new pointer on `C`, so the commit is safe on `feature`.",
+                "`git reset --hard HEAD~1` moves `main` back to `B`. The working tree was clean and `C` is still held by `feature`, so nothing is lost.",
+                "`git switch feature` and carry on:\n\n```\nA---B              main\n     \\\n      C            feature ← HEAD\n```",
+                "If `C` had already been pushed to `main`, you'd still create `feature` the same way, but then undo `C` on `main` with `git revert` instead of resetting shared history."
+              ],
+              "answer": "`git branch feature`, `git reset --hard HEAD~1`, `git switch feature`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-pushed-bug",
+              "prompt": "A commit that broke the login page was pushed to `main` yesterday, and teammates have pulled since. Which command undoes it safely?",
+              "choices": [
+                "`git reset --hard HEAD~1`, then `git push --force`",
+                "`git commit --amend`, then `git push`",
+                "`git restore --staged .`",
+                "`git revert <hash of the bad commit>`, then `git push`"
+              ],
+              "answer": 3,
+              "explanation": "Revert adds a new commit that cancels the bad one, so everyone just pulls it. Reset plus force-push rewrites `main` under your teammates (and would also drop any commits made after the bad one). Amend only edits the latest commit and also rewrites history, and `restore --staged` merely unstages files."
+            },
+            {
+              "type": "numeric",
+              "id": "q-reset-count",
+              "prompt": "`git log --oneline` on your `feature` branch shows 7 commits; the last 3 haven't been pushed. You run `git reset --soft HEAD~3`, then `git commit -m \"Add search\"`. How many lines does `git log --oneline` print now?",
+              "answer": 5,
+              "hint": "`--soft` keeps the 3 commits' changes staged, so the new commit isn't empty.",
+              "explanation": "`reset --soft HEAD~3` moves the branch back 3 commits (7 → 4) and leaves all their changes staged. Committing records them as a single commit: 4 + 1 = **5**. It's a handy way to squash your last few local commits."
+            },
+            {
+              "type": "text",
+              "id": "q-uncommit",
+              "prompt": "You want to undo your latest local commit but keep all of its changes **staged**. Type the full command. (Name the parent commit as `HEAD~1`.)",
+              "accept": [
+                "git reset --soft HEAD~1",
+                "reset --soft HEAD~1"
+              ],
+              "explanation": "`git reset --soft HEAD~1` moves the branch back to the parent commit without touching the staging area or working tree, so everything from that commit is staged again, ready to recommit."
+            }
+          ]
+        },
+        {
+          "id": "reflog-detached-head",
+          "title": "Safety nets: reflog, detached HEAD and detective tools",
+          "pareto": "extra",
+          "minutes": 8,
+          "takeaway": "`git reflog` remembers everywhere HEAD has been, so a \"lost\" commit can be revived from its hash; in detached HEAD, create a branch before leaving if you want to keep your commits.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "The reflog remembers",
+              "body": "Every time HEAD moves (commit, switch, reset, merge, rebase), Git records it in the **reflog**, a local log kept for weeks (30 to 90 days by default):\n\n```\nc526b1e HEAD@{0}: reset: moving to HEAD~2\n4eb933b HEAD@{1}: commit: Add search filters\n6f03855 HEAD@{2}: checkout: moving from main to search\n```\n\nSo a commit you \"lost\" with `reset --hard`, a botched rebase or a deleted branch is almost always still there. You just need its hash, and the reflog has it. The exception is uncommitted changes: Git never saved those."
+            },
+            {
+              "type": "example",
+              "title": "Undoing a bad reset --hard",
+              "problem": "You ran `git reset --hard HEAD~2` and immediately realised those two commits were good.",
+              "steps": [
+                "Run `git reflog`. The top entry, `HEAD@{0}`, is the reset; `HEAD@{1}` is where you were just before it.",
+                "Put the branch back: `git reset --hard HEAD@{1}` (or use the hash shown on that line). To be extra careful, first run `git branch rescue HEAD@{1}` so the commits have a pointer no matter what.",
+                "`git log --oneline` shows both commits again. Nothing was deleted; only the branch pointer had moved."
+              ],
+              "answer": "`git reflog`, then `git reset --hard HEAD@{1}` (or the hash you find there)."
+            },
+            {
+              "type": "mcq",
+              "id": "q-reflog-recover",
+              "prompt": "You deleted the branch `experiment` with `git branch -D experiment`, but it had 3 unmerged commits you need. What's the best move?",
+              "choices": [
+                "Find the branch's last commit hash (in `git reflog` or the delete message) and run `git branch experiment <hash>`",
+                "Nothing can be done: `-D` permanently deletes the commits",
+                "`git revert experiment`",
+                "`git restore experiment`"
+              ],
+              "answer": 0,
+              "explanation": "Deleting a branch only deletes the pointer; the commits still exist. Git even prints the hash when deleting (`Deleted branch experiment (was b7e2d29).`), and the reflog has it too. Recreating the branch at that hash brings everything back."
+            },
+            {
+              "type": "explain",
+              "title": "Detached HEAD",
+              "body": "Normally HEAD points at a branch. If you check out a **commit** directly, HEAD points at that commit instead: **detached HEAD**.\n\n```bash\ngit switch --detach 3f9a2c1   # modern\ngit checkout 3f9a2c1          # older; same result\n```\n\nIt's great for exploring old code or running old tests. You can even commit, but no branch moves to remember those commits, so if you switch away they're left without a pointer (only the reflog knows them).\n\nTo keep work done there, run `git switch -c new-branch` **before** leaving."
+            },
+            {
+              "type": "mcq",
+              "id": "q-detached-keep",
+              "prompt": "In detached HEAD you made 2 experimental commits that turned out great. What should you run to keep them?",
+              "choices": [
+                "`git switch main`",
+                "`git stash`",
+                "`git commit --amend`",
+                "`git switch -c great-experiment`"
+              ],
+              "answer": 3,
+              "explanation": "Creating a branch right where you are gives the commits a pointer, so they're safe and you can merge them later. Switching to `main` first would leave them unreferenced (recoverable only through the reflog). Stash only handles uncommitted changes."
+            },
+            {
+              "type": "explain",
+              "title": "Detective tools: blame and bisect",
+              "body": "Two commands for investigating problems:\n\n- `git blame app.js` shows, for every line, the commit and author that last changed it. Use it to find *why* a line exists, then read that commit with `git show <hash>`.\n- `git bisect` binary-searches history for the commit that introduced a bug. Run `git bisect start`, `git bisect bad` (the current commit is broken) and `git bisect good v1.2` (that one worked). Git checks out a commit halfway between; test it and mark it `good` or `bad`, and repeat. Finish with `git bisect reset`."
+            },
+            {
+              "type": "numeric",
+              "id": "q-bisect",
+              "prompt": "A bug appeared somewhere in the last 64 commits. With `git bisect`, about how many commits will you need to test before Git names the culprit?",
+              "answer": 6,
+              "tolerance": 1,
+              "hint": "Each test halves the number of suspects.",
+              "explanation": "Each test halves the range: 64 → 32 → 16 → 8 → 4 → 2 → 1. That's about **6** tests (log₂ 64), instead of up to 64 if you checked commits one by one."
+            },
+            {
+              "type": "text",
+              "id": "q-reflog",
+              "prompt": "A rebase went wrong and your branch now looks broken. Which command lists where HEAD has been recently, so you can find the commit your branch pointed at before the rebase?",
+              "accept": [
+                "git reflog",
+                "reflog",
+                "git reflog show",
+                "git log -g",
+                "git log --walk-reflogs"
+              ],
+              "explanation": "`git reflog` lists HEAD's recent positions. Find the entry from just before the rebase started and `git reset --hard <that hash>` to put your branch back."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

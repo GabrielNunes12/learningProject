@@ -73,7 +73,10 @@ const LANGS: Record<string, LangSpec> = {
     flags: true,
   },
   yaml: { keywords: words('true false null on off yes no'), comment: HASH_COMMENT, keys: true },
+  json: { keywords: words('true false null'), comment: '(?!)' },
 };
+/** Fences that are output, trees or tables: shown as-is. */
+const PLAIN = new Set(['text', 'txt', 'plain', 'output', 'console-output', 'diff', 'tree', 'none']);
 const ALIASES: Record<string, string> = {
   py: 'python',
   python3: 'python',
@@ -94,17 +97,22 @@ const ALIASES: Record<string, string> = {
   ini: 'yaml',
 };
 
-function guessLanguage(code: string): string {
-  if (/^\s*(git|npm|cd|mkdir)\s/m.test(code)) return 'bash';
-  if (/\bSELECT\b[\s\S]*\bFROM\b/.test(code)) return 'sql';
-  if (/\bfun\s|\bval\s/.test(code)) return 'kotlin';
-  if (/;\s*$/m.test(code) || /\bpublic\s|\bvoid\s/.test(code)) return 'java';
-  return 'python';
+/** For unlabeled fences: only highlight when the code clearly is a language; otherwise show it plain. */
+function guessLanguage(code: string): string | null {
+  if (/^\s*(\$\s*)?(git|npm|npx|cd|mkdir|mvn|\.\/mvnw|docker)\s/m.test(code)) return 'bash';
+  if (/\b(SELECT\b[\s\S]*\bFROM|INSERT\s+INTO|CREATE\s+TABLE|UPDATE\s+\w+\s+SET|DELETE\s+FROM)\b/i.test(code)) return 'sql';
+  if (/\bfun\s+\w+\s*\(|\bval\s+\w+\s*[=:]/.test(code)) return 'kotlin';
+  if (/;\s*$/m.test(code) || /\b(public|private|void|class)\s/.test(code)) return 'java';
+  if (/^\s*(def |import |from \S+ import |print\(|for \w+ in |while |if .+:\s*$|return\b)/m.test(code)) return 'python';
+  return null;
 }
 
 function highlight(code: string, lang: string): ReactNode[] {
+  if (PLAIN.has(lang)) return [code];
   const name = ALIASES[lang] ?? lang;
-  const spec = LANGS[name] ?? LANGS[guessLanguage(code)];
+  const guessed = LANGS[name] ? name : guessLanguage(code);
+  if (!guessed) return [code];
+  const spec = LANGS[guessed];
   const re = new RegExp(
     [
       `(?<cmt>${spec.comment})`,

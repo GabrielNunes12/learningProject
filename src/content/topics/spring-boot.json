@@ -1,0 +1,1093 @@
+{
+  "id": "spring-boot",
+  "title": "Spring Boot",
+  "icon": "🍃",
+  "color": "#6db33f",
+  "order": 16,
+  "category": "Programming",
+  "level": "Intermediate",
+  "description": "Build and test a production-style REST API with Spring Boot, and understand the \"magic\" (dependency injection, auto-configuration) well enough to debug it. Java 17+, Spring Boot 3 and 4.",
+  "keyIdeas": [
+    "Spring Boot = Spring + **starters** + **auto-configuration** + an **embedded server**: `@SpringBootApplication` scans your package, configures what your classpath needs, and `java -jar` runs it.",
+    "Your classes become **beans** through annotations like `@Service`; ask for dependencies through one constructor, and remember every bean is a shared singleton.",
+    "Auto-configuration is conditional `@Bean` definitions: tune it with properties, override it by defining your own bean, and debug it with `debug=true`.",
+    "A REST endpoint is a `@RestController` method: input via `@PathVariable`, `@RequestParam` and `@Valid @RequestBody`, output as records or a `ResponseEntity`, errors mapped once in a `@RestControllerAdvice` returning `ProblemDetail`.",
+    "Spring Data JPA turns `interface CustomerRepository extends JpaRepository<Customer, Long>` and names like `findByEmail` into working queries.",
+    "One jar for every environment: profiles and environment variables change the config, and test slices (`@WebMvcTest`, `@DataJpaTest`) keep tests fast."
+  ],
+  "units": [
+    {
+      "id": "how-it-works",
+      "title": "How Spring Boot works",
+      "description": "What Spring Boot adds on top of Spring, how dependency injection wires your app, and what auto-configuration is really doing.",
+      "lessons": [
+        {
+          "id": "what-is-spring-boot",
+          "title": "Spring vs Spring Boot: what you actually get",
+          "pareto": "core",
+          "minutes": 6,
+          "takeaway": "Spring is the framework; Spring Boot adds starters, auto-configuration and an embedded server, so running `main()` (or `java -jar`) starts a complete web app.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Spring, then Spring Boot",
+              "body": "**Spring Framework** is a toolkit for Java back ends: a dependency-injection container plus modules for web (Spring MVC), data access, transactions, security and more. Before Boot, you configured much of it by hand and deployed a WAR file to a separately installed server.\n\n**Spring Boot** sits on top of Spring and makes the boring choices for you:\n\n- **Starters**: one dependency such as `spring-boot-starter-web` pulls in a tested set of libraries (Spring MVC, Jackson for JSON, embedded Tomcat).\n- **Auto-configuration**: it looks at your classpath and properties and creates sensible beans for you.\n- **Embedded server**: the web server runs *inside* your app.\n\nSpring Boot 3 requires Java 17+ and uses `jakarta.*` packages instead of `javax.*`. Spring Boot 4 keeps the same programming model, so this course applies to both."
+            },
+            {
+              "type": "explain",
+              "title": "The smallest app",
+              "body": "```java\npackage com.example.shop;\n\nimport org.springframework.boot.SpringApplication;\nimport org.springframework.boot.autoconfigure.SpringBootApplication;\n\n@SpringBootApplication\npublic class ShopApplication {\n    public static void main(String[] args) {\n        SpringApplication.run(ShopApplication.class, args);\n    }\n}\n```\n\n`@SpringBootApplication` is three annotations in one:\n\n- `@Configuration` (via `@SpringBootConfiguration`): this class may define beans.\n- `@EnableAutoConfiguration`: switch on Boot's automatic setup.\n- `@ComponentScan`: find your `@Service`, `@RestController` etc. classes **in this package and its sub-packages**.\n\n`SpringApplication.run` builds the Spring container, applies auto-configuration and, with the web starter, starts Tomcat on port **8080**."
+            },
+            {
+              "type": "mcq",
+              "id": "q-sba-parts",
+              "prompt": "`@SpringBootApplication` is a shortcut. Which combination does it stand for?",
+              "choices": [
+                "`@RestController` + `@EnableAutoConfiguration` + `@ComponentScan`",
+                "`@Configuration` + `@EnableWebMvc` + `@EntityScan`",
+                "`@Configuration` + `@EnableAutoConfiguration` + `@ComponentScan`",
+                "`@Component` + `@EnableAutoConfiguration` + `@Import`"
+              ],
+              "answer": 2,
+              "explanation": "It marks the class as a configuration class (via `@SpringBootConfiguration`), turns on auto-configuration and scans for components starting at its own package. It is not a controller, and Boot configures Spring MVC for you, so you rarely write `@EnableWebMvc` yourself."
+            },
+            {
+              "type": "explain",
+              "title": "Project layout",
+              "body": "Generate projects at **start.spring.io** (or from your IDE): pick Maven or Gradle, a Java version and starters like *Spring Web* and *Spring Data JPA*. You get:\n\n```text\nshop/\n  mvnw, pom.xml                 (or gradlew, build.gradle.kts)\n  src/main/java/com/example/shop/\n    ShopApplication.java\n    order/OrderController.java\n    order/OrderService.java\n  src/main/resources/application.properties\n  src/test/java/com/example/shop/ShopApplicationTests.java\n```\n\n- Keep the main class in the **root package** and everything else in sub-packages: component scanning starts there.\n- `./mvnw` (or `./gradlew`) is a wrapper script, so nobody needs to install the build tool.\n- Boot manages library versions for you: you add `spring-boot-starter-data-jpa` without a Hibernate version, and you get one known to work with your Boot version."
+            },
+            {
+              "type": "example",
+              "title": "The controller nobody could find",
+              "problem": "The app starts without errors, but `GET /hello` returns **404**. Why?\n\n```java\npackage com.example.shop;\n\n@SpringBootApplication\npublic class ShopApplication { /* main... */ }\n```\n\n```java\npackage com.example.web;\n\n@RestController\npublic class HelloController {\n    @GetMapping(\"/hello\")\n    public String hello() { return \"hi\"; }\n}\n```",
+              "steps": [
+                "The `@ComponentScan` inside `@SpringBootApplication` scans `com.example.shop` and everything below it.",
+                "`com.example.web` is a *sibling* package, not a sub-package, so `HelloController` is never registered as a bean.",
+                "No bean means no mapping for `/hello`, so Spring answers 404. Nothing fails at startup, which is what makes this confusing.",
+                "Fix: move the class to `com.example.shop.web` (preferred), or widen the scan with `@SpringBootApplication(scanBasePackages = \"com.example\")`."
+              ],
+              "answer": "The controller lives outside the scanned package tree. Move it under `com.example.shop`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-run-how",
+              "prompt": "You built `shop.jar` from a project with the web starter. What must be installed on the production machine to run it?",
+              "choices": [
+                "A Tomcat server to deploy the jar into",
+                "Maven, so it can run `mvn spring-boot:run`",
+                "A Spring Boot runtime, installed separately from Java",
+                "Just a Java runtime: `java -jar shop.jar` starts the embedded server"
+              ],
+              "answer": 3,
+              "explanation": "Boot builds an *executable* jar containing your classes, every dependency and the embedded server (Tomcat by default). A Java 17+ runtime is all it needs. Maven is a build tool, not a runtime dependency."
+            },
+            {
+              "type": "mcq",
+              "id": "q-versions",
+              "prompt": "Your build lists `spring-boot-starter-data-jpa` with no version, and Hibernate appears on the classpath anyway. Where does its version come from?",
+              "choices": [
+                "Spring Boot's dependency management, which pins versions that are tested together for your Boot release",
+                "The latest Hibernate release, downloaded at build time",
+                "Whatever Hibernate version your IDE has cached",
+                "The JDK, which ships with a JPA implementation"
+              ],
+              "answer": 0,
+              "explanation": "Boot's parent POM / Gradle plugin imports a bill of materials (BOM) with compatible versions of hundreds of libraries. Upgrading Boot upgrades them together, which avoids most version-clash headaches. The JDK has no JPA implementation."
+            },
+            {
+              "type": "numeric",
+              "id": "q-port",
+              "prompt": "With no configuration at all, which port does the embedded web server listen on?",
+              "answer": 8080,
+              "explanation": "The default is **8080**. Change it with `server.port=9090` in `application.properties`, or per environment with the `SERVER_PORT` environment variable (see the configuration lesson)."
+            }
+          ]
+        },
+        {
+          "id": "dependency-injection",
+          "title": "Beans & dependency injection",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "Annotate your classes as beans, ask for dependencies through a single constructor with `final` fields, and remember that every bean is one shared instance.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Don't new it, ask for it",
+              "body": "Without Spring, classes build their own dependencies:\n\n```java\npublic class OrderService {\n    private final PaymentClient payments = new StripePaymentClient(); // hard-wired\n}\n```\n\nThat's hard to test and hard to swap. With **dependency injection**, a class just declares what it needs and someone else supplies it.\n\nIn Spring, that someone is the **application context** (the IoC container). It creates your objects, works out what each needs, and passes the pieces in. The objects it manages are called **beans**."
+            },
+            {
+              "type": "explain",
+              "title": "Turning classes into beans",
+              "body": "Component scanning registers any class carrying a stereotype annotation:\n\n- `@Component`: a generic bean.\n- `@Service`: business logic. Behaves exactly like `@Component`; the name documents intent.\n- `@Repository`: data access. Also translates persistence exceptions into Spring's `DataAccessException` family.\n- `@Controller` / `@RestController`: the web layer.\n\n```java\n@Service\npublic class OrderService {\n    private final PaymentClient payments;\n    private final OrderRepository orders;\n\n    public OrderService(PaymentClient payments, OrderRepository orders) {\n        this.payments = payments;\n        this.orders = orders;\n    }\n}\n```\n\nWith a **single constructor**, Spring uses it automatically: no `@Autowired` needed. It injects by **type**, so asking for the interface `PaymentClient` is normal."
+            },
+            {
+              "type": "mcq",
+              "id": "q-missing-bean",
+              "prompt": "Startup fails with:\n\n*Parameter 0 of constructor in OrderService required a bean of type 'PaymentClient' that could not be found.*\n\nThe only implementation is:\n\n```java\npublic class StripePaymentClient implements PaymentClient { ... }\n```\n\nWhat's the cause?",
+              "choices": [
+                "`OrderService`'s constructor is missing `@Autowired`",
+                "`StripePaymentClient` has no stereotype annotation (and no `@Bean` method), so no `PaymentClient` bean exists",
+                "`PaymentClient` is an interface, and Spring can only inject concrete classes",
+                "Interfaces can only be injected with field injection"
+              ],
+              "answer": 1,
+              "explanation": "Spring looked for a bean assignable to `PaymentClient` and found none, because a plain class is invisible to the container. Add `@Component` (or `@Service`) to `StripePaymentClient`, or create it in a `@Bean` method. Injecting by interface is the normal, preferred style, and a single constructor needs no `@Autowired`.",
+              "hint": "Being on the classpath is not the same as being a bean."
+            },
+            {
+              "type": "explain",
+              "title": "Why constructor injection",
+              "body": "Older code often uses **field injection**:\n\n```java\n@Service\npublic class OrderService {\n    @Autowired private PaymentClient payments; // discouraged\n}\n```\n\nPrefer constructor injection:\n\n- Fields can be `final`: the object is never half-built.\n- Dependencies are visible in one place. A constructor with eight parameters is an honest sign the class does too much.\n- Unit tests just call `new OrderService(fakePayments, fakeRepo)`: no Spring, no reflection (see the Unit Testing course).\n- Circular dependencies fail fast at startup instead of hiding."
+            },
+            {
+              "type": "explain",
+              "title": "@Bean for classes you don't own",
+              "body": "You can't add `@Service` to a library class like `java.time.Clock`. Instead, write a factory method in a `@Configuration` class:\n\n```java\n@Configuration\npublic class TimeConfig {\n\n    @Bean\n    public Clock clock() {\n        return Clock.systemUTC();\n    }\n}\n```\n\nThe return value becomes a bean (named after the method: `clock`) that any class can request in its constructor. A test can then supply a fixed clock instead of the real one."
+            },
+            {
+              "type": "example",
+              "title": "One instance for everyone",
+              "problem": "Beans are **singletons** by default: one instance per application context, shared by every class and every request thread. What goes wrong here?\n\n```java\n@Service\npublic class CheckoutService {\n    private BigDecimal runningTotal = BigDecimal.ZERO;\n\n    public BigDecimal total(List<Item> items) {\n        runningTotal = BigDecimal.ZERO;\n        for (var item : items) runningTotal = runningTotal.add(item.price());\n        return runningTotal;\n    }\n}\n```",
+              "steps": [
+                "There is exactly one `CheckoutService`, and the server handles many requests at once on different threads.",
+                "Two concurrent checkouts both read and write the same `runningTotal` field, so one customer can see the other's total.",
+                "Fix: keep per-request data in local variables (`var total = BigDecimal.ZERO;`) or parameters. Fields in a singleton should hold only dependencies and immutable settings."
+              ],
+              "answer": "A race condition. Singleton beans must be stateless (or carefully thread-safe)."
+            },
+            {
+              "type": "numeric",
+              "id": "q-singleton-count",
+              "prompt": "```java\n@Service\npublic class VisitCounter {\n    private int count;\n    public int next() { return ++count; }\n}\n\n@Service\npublic class A { public A(VisitCounter c) { c.next(); } }\n\n@Service\npublic class B { public B(VisitCounter c) { c.next(); } }\n```\n\nAfter the app has started, a controller (which also injects `VisitCounter`) calls `counter.next()` once. What does it return?",
+              "answer": 3,
+              "explanation": "All three classes receive the **same** singleton `VisitCounter`. Creating `A` and `B` bumped it to 2, so the controller's call returns 3. This shared-instance behavior is exactly why mutable fields in beans are dangerous.",
+              "hint": "How many `VisitCounter` objects does Spring create?"
+            },
+            {
+              "type": "text",
+              "id": "q-fill-service",
+              "prompt": "Fill in the annotation so component scanning registers this business-logic class as a bean:\n\n```java\n@___\npublic class InvoiceService {\n    private final InvoiceRepository invoices;\n    public InvoiceService(InvoiceRepository invoices) { this.invoices = invoices; }\n}\n```",
+              "accept": [
+                "Service",
+                "@Service",
+                "Component",
+                "@Component"
+              ],
+              "explanation": "`@Service` is the idiomatic choice for business logic. `@Component` works identically; `@Service` just tells readers what the class is for."
+            }
+          ]
+        },
+        {
+          "id": "auto-configuration",
+          "title": "Auto-configuration: the magic, explained",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "Auto-configuration is just conditional `@Bean` definitions: they react to your classpath and properties, back off when you define your own bean, and `debug=true` shows every decision.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Where do the beans come from?",
+              "body": "Add `spring-boot-starter-data-jpa` and a Postgres driver, set a URL, and you suddenly have a `DataSource`, a connection pool, an `EntityManagerFactory` and transaction management, without writing any configuration. Who made them?\n\nSpring Boot ships many **auto-configuration classes**: ordinary configuration classes full of `@Bean` methods, listed in `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports` inside the Boot jars. `@EnableAutoConfiguration` loads them all, but each is guarded by **conditions**, so only the relevant ones create beans."
+            },
+            {
+              "type": "explain",
+              "title": "Conditions",
+              "body": "```java\n// Simplified sketch of what Boot does for you\n@AutoConfiguration\n@ConditionalOnClass(DataSource.class)\npublic class DataSourceAutoConfiguration {\n\n    @Bean\n    @ConditionalOnMissingBean\n    public DataSource dataSource(DataSourceProperties props) {\n        // build a HikariCP pool from the spring.datasource.* properties\n    }\n}\n```\n\nThe conditions you'll meet most:\n\n- `@ConditionalOnClass`: only if a library is on the classpath. Adding a starter flips these on.\n- `@ConditionalOnMissingBean`: only if **you** haven't defined a bean of that type. This is how you override Boot.\n- `@ConditionalOnProperty`: only if a property has a given value.\n- `@ConditionalOnBean`: only if some other bean exists."
+            },
+            {
+              "type": "mcq",
+              "id": "q-override",
+              "prompt": "You declare your own `DataSource` bean in a `@Configuration` class. What happens to the one Boot would auto-configure?",
+              "choices": [
+                "Startup fails because there are now two `DataSource` beans",
+                "Boot's bean replaces yours, because auto-configuration runs last",
+                "It backs off: `@ConditionalOnMissingBean` sees your bean and skips creating Boot's",
+                "Both exist, and Spring picks one at random for each injection point"
+              ],
+              "answer": 2,
+              "explanation": "Auto-configurations are processed *after* your own configuration, precisely so conditions like `@ConditionalOnMissingBean` can see your beans. Your bean always wins and Boot's default steps aside. That is the main override mechanism."
+            },
+            {
+              "type": "explain",
+              "title": "Tune with properties first",
+              "body": "Usually you don't replace auto-configured beans, you **tune** them. Each auto-configuration reads a family of properties:\n\n```properties\nspring.datasource.url=jdbc:postgresql://localhost:5432/shop\nspring.datasource.username=shop\nserver.port=9090\n```\n\nWhen you want different behavior, try in this order:\n\n- Set a property (your IDE autocompletes them; the reference docs list them all).\n- Define your own bean of that type to replace Boot's.\n- Exclude an auto-configuration completely: `@SpringBootApplication(exclude = SomeAutoConfiguration.class)` or the `spring.autoconfigure.exclude` property."
+            },
+            {
+              "type": "example",
+              "title": "Reading the condition report",
+              "problem": "Your app has no `DataSource` bean and you can't see why. You add `debug=true` to `application.properties` (or start with `--debug`) and the log shows a report like this (abridged):\n\n```text\nCONDITIONS EVALUATION REPORT\n\nPositive matches:\n   WebMvcAutoConfiguration matched ...\n\nNegative matches:\n   DataSourceAutoConfiguration:\n      Did not match:\n         - @ConditionalOnClass did not find required class '...EmbeddedDatabaseType'\n```\n\nWhat's going on?",
+              "steps": [
+                "**Positive matches** are auto-configurations whose conditions passed (they created beans). **Negative matches** were skipped, each with the reason.",
+                "`DataSourceAutoConfiguration` was skipped because a class from Spring JDBC isn't on the classpath.",
+                "So no JDBC or JPA starter made it into the build: the dependency is missing, misspelled, or in the wrong scope.",
+                "Fix: add `spring-boot-starter-data-jpa` (or `spring-boot-starter-jdbc`) plus a database driver. The condition flips to a positive match and the `DataSource` appears."
+              ],
+              "answer": "The JDBC classes are missing from the classpath, so Boot never tried to create a `DataSource`. Add the data starter."
+            },
+            {
+              "type": "text",
+              "id": "q-debug-property",
+              "prompt": "Which property, set to `true` in `application.properties`, prints the condition evaluation report at startup?",
+              "accept": [
+                "debug",
+                "debug=true",
+                "debug: true"
+              ],
+              "explanation": "`debug=true` (or the `--debug` command-line flag) makes Boot log which auto-configurations matched and why the others did not. With Actuator, the `/actuator/conditions` endpoint shows the same report on a running app."
+            },
+            {
+              "type": "mcq",
+              "id": "q-datasource-fail",
+              "prompt": "You add `spring-boot-starter-data-jpa` to a new project, but no database driver and no `spring.datasource.url`. What happens at startup?",
+              "choices": [
+                "Startup fails: Boot tries to configure a `DataSource` but has no URL and no embedded database to fall back on",
+                "It starts, and JPA silently stays disabled",
+                "Boot downloads an H2 driver automatically",
+                "It starts with an in-memory database created by Hibernate"
+              ],
+              "answer": 0,
+              "explanation": "The JPA starter puts the `DataSource` classes on the classpath, so the condition matches and Boot tries to build one. With an embedded database such as H2 on the classpath it would create an in-memory database; with neither a driver nor a URL it fails with a \"Failed to configure a DataSource\" message. Add a driver and URL (or H2 for local work).",
+              "hint": "Which condition does the starter satisfy?"
+            },
+            {
+              "type": "mcq",
+              "id": "q-why-json",
+              "prompt": "Your app uses the web starter and you never declared anything about JSON, yet controllers return JSON. Which explanation is right?",
+              "choices": [
+                "The JDK has a built-in JSON serializer that Spring MVC uses",
+                "`@RestController` contains its own JSON serializer",
+                "`@SpringBootApplication` scans the Jackson jar for `@Component` classes",
+                "An auto-configuration conditioned on Jackson being on the classpath created a JSON mapper and plugged it into Spring MVC"
+              ],
+              "answer": 3,
+              "explanation": "The web starter brings Jackson, and Jackson on the classpath satisfies `@ConditionalOnClass` checks in Boot's auto-configuration, which registers a mapper and wires it into Spring MVC's message converters. Component scanning only covers your own packages, never library jars."
+            }
+          ]
+        },
+        {
+          "id": "bean-conflicts",
+          "title": "When wiring fails: duplicate beans & cycles",
+          "pareto": "extra",
+          "minutes": 6,
+          "takeaway": "Two beans of one type need `@Primary` or `@Qualifier` (or inject them all as a `List`); a dependency cycle needs a redesign, not a workaround.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Two candidates, one slot",
+              "body": "Spring injects by **type**. One matching bean: done. Two matching beans: it refuses to guess.\n\n```java\n@Component\npublic class StripeClient implements PaymentClient { ... }\n\n@Component\npublic class PaypalClient implements PaymentClient { ... }\n\n@Service\npublic class OrderService {\n    public OrderService(PaymentClient payments) { ... }\n}\n```\n\nStartup fails with: *Parameter 0 of constructor in OrderService required a single bean, but 2 were found*."
+            },
+            {
+              "type": "explain",
+              "title": "Three ways to choose",
+              "body": "- `@Primary` on one implementation: it wins whenever there's ambiguity.\n- `@Qualifier` on the injection point: pick a bean by name. A scanned class's default bean name is its simple name with a lowercase first letter (`paypalClient`); a `@Bean` method's is the method name.\n- Inject them all: `List<PaymentClient>`, or `Map<String, PaymentClient>` keyed by bean name. Handy for strategy-style code.\n\n```java\n@Service\npublic class RefundService {\n    public RefundService(@Qualifier(\"paypalClient\") PaymentClient payments) { ... }\n}\n```"
+            },
+            {
+              "type": "mcq",
+              "id": "q-two-beans",
+              "prompt": "Startup fails with *required a single bean, but 2 were found* for `PaymentClient`. Which change does **not** fix it?",
+              "choices": [
+                "Mark one implementation with `@Primary`",
+                "Add `@Autowired` to the constructor",
+                "Add `@Qualifier(\"stripeClient\")` to the constructor parameter",
+                "Change the parameter type to `List<PaymentClient>`"
+              ],
+              "answer": 1,
+              "explanation": "`@Autowired` only says \"inject this\"; Spring was already doing that via the single constructor. It does nothing to resolve which of the two beans to use. `@Primary`, `@Qualifier` or injecting all of them each remove the ambiguity."
+            },
+            {
+              "type": "explain",
+              "title": "Circular dependencies",
+              "body": "```java\n@Service\npublic class OrderService {\n    public OrderService(InvoiceService invoices) { ... }\n}\n\n@Service\npublic class InvoiceService {\n    public InvoiceService(OrderService orders) { ... }\n}\n```\n\nTo build `OrderService`, Spring needs `InvoiceService`, which needs `OrderService`... With constructor injection there's no valid order, so startup fails with *The dependencies of some of the beans in the application context form a cycle*, plus a little diagram of the loop.\n\nSince Spring Boot 2.6, cycles through field or setter injection are rejected by default too. The fix is design, not configuration: move the shared logic into a third bean, or decouple one direction with an application event."
+            },
+            {
+              "type": "example",
+              "title": "Breaking a cycle",
+              "problem": "`OrderService` calls `invoices.createFor(order)`, and `InvoiceService` calls `orders.totalOf(orderId)` to compute the invoice amount. How do you break the cycle?",
+              "steps": [
+                "Ask what each side really needs. `InvoiceService` doesn't need all of `OrderService`, only an order's total.",
+                "Extract that into its own bean, e.g. `OrderPricing` with `totalOf(orderId)`, which depends only on `OrderRepository`.",
+                "Now the arrows run one way: `OrderService` → `InvoiceService` → `OrderPricing` → `OrderRepository`. No loop.",
+                "Bonus: each class got smaller and easier to unit-test."
+              ],
+              "answer": "Extract the shared piece into a third bean so dependencies form a straight line."
+            },
+            {
+              "type": "mcq",
+              "id": "q-qualifier-vs-primary",
+              "prompt": "`StripeClient` is marked `@Primary`. `RefundService`'s constructor parameter is `@Qualifier(\"paypalClient\") PaymentClient payments`. What gets injected into `RefundService`?",
+              "choices": [
+                "`StripeClient`, because `@Primary` always wins",
+                "Startup fails: `@Primary` and `@Qualifier` conflict",
+                "`PaypalClient`, because the explicit qualifier narrows the choice first",
+                "A list containing both clients"
+              ],
+              "answer": 2,
+              "explanation": "`@Primary` is only a tie-breaker for injection points that don't say which bean they want. An explicit `@Qualifier` selects the bean by name, so `PaypalClient` is injected. Everywhere else, `StripeClient` stays the default."
+            },
+            {
+              "type": "mcq",
+              "id": "q-cycle",
+              "prompt": "All beans below use constructor injection. Which setup makes the app fail at startup?",
+              "choices": [
+                "`A` needs `B`, and `B` needs `C`",
+                "`A` and `B` both need `C`",
+                "`A` needs a `List<Handler>` and there are three `Handler` beans",
+                "`A` needs `B`, `B` needs `C`, and `C` needs `A`"
+              ],
+              "answer": 3,
+              "hint": "Draw the arrows and look for a loop.",
+              "explanation": "`A → B → C → A` is a cycle: no bean can be built first. Chains and shared dependencies are fine (Spring builds `C` once and shares it), and a `List<Handler>` simply receives all matching beans."
+            },
+            {
+              "type": "text",
+              "id": "q-primary",
+              "prompt": "Which annotation, placed on one of several implementations, makes it the default choice wherever an injection point is ambiguous?",
+              "accept": [
+                "Primary",
+                "@Primary"
+              ],
+              "explanation": "`@Primary` marks the preferred candidate. Injection points that need a different one can still ask for it explicitly with `@Qualifier`."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rest-api",
+      "title": "Building a REST API",
+      "description": "Controllers, JSON, status codes, validation and clean error responses: the daily work of a Spring Boot back end.",
+      "lessons": [
+        {
+          "id": "rest-controllers",
+          "title": "REST controllers: requests in, JSON out",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "`@RestController` methods map requests with `@GetMapping`/`@PostMapping`, read input via `@PathVariable`, `@RequestParam` and `@RequestBody`, and return records as JSON, or a `ResponseEntity` when the status code matters.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "A JSON endpoint",
+              "body": "```java\nimport org.springframework.web.bind.annotation.*;\n\n@RestController\n@RequestMapping(\"/api/books\")\npublic class BookController {\n\n    private final BookService books;\n\n    public BookController(BookService books) {\n        this.books = books;\n    }\n\n    @GetMapping(\"/{id}\")\n    public BookResponse get(@PathVariable Long id) {\n        return books.find(id);\n    }\n}\n```\n\n- `@RestController` = `@Controller` + `@ResponseBody`: return values are written to the response body (as JSON, via Jackson) instead of being treated as view names.\n- `@RequestMapping` on the class sets a shared path prefix.\n- `@GetMapping`, `@PostMapping`, `@PutMapping`, `@PatchMapping` and `@DeleteMapping` map one HTTP method plus a path."
+            },
+            {
+              "type": "explain",
+              "title": "Three ways to read input",
+              "body": "```java\n// GET /api/books/42\n@GetMapping(\"/{id}\")\npublic BookResponse get(@PathVariable Long id) { ... }\n\n// GET /api/books?author=Herbert&page=2\n@GetMapping\npublic List<BookResponse> search(@RequestParam String author,\n                                 @RequestParam(defaultValue = \"0\") int page) { ... }\n\n// POST /api/books with a JSON body\n@PostMapping\npublic BookResponse create(@RequestBody CreateBookRequest request) { ... }\n```\n\n- `@PathVariable`: a path segment that identifies the resource.\n- `@RequestParam`: a query-string parameter. **Required by default**, unless you give a `defaultValue` or `required = false`.\n- `@RequestBody`: the JSON body, deserialized by Jackson."
+            },
+            {
+              "type": "explain",
+              "title": "Records as DTOs",
+              "body": "Use **records** for request and response bodies. Jackson reads and writes them out of the box:\n\n```java\npublic record CreateBookRequest(String title, String author, int year) {}\npublic record BookResponse(Long id, String title, String author) {}\n```\n\nA `BookResponse` is sent as `{\"id\":42,\"title\":\"Dune\",\"author\":\"Herbert\"}`.\n\nKeep these DTOs separate from your database entities: you control exactly what goes over the wire (no leaked `passwordHash` field), and you can change the database without breaking clients."
+            },
+            {
+              "type": "mcq",
+              "id": "q-missing-param",
+              "prompt": "```java\n@GetMapping(\"/api/books\")\npublic List<BookResponse> search(@RequestParam String author) { ... }\n```\n\nWhat does `GET /api/books` (no query string at all) return?",
+              "choices": [
+                "200 with an empty list",
+                "200, with `author` set to `null`",
+                "404 Not Found",
+                "400 Bad Request: the required parameter is missing"
+              ],
+              "answer": 3,
+              "explanation": "`@RequestParam` is required by default, so Spring rejects the request before your method runs (a `MissingServletRequestParameterException`, mapped to 400). Make it optional with `required = false`, a `defaultValue`, or an `Optional<String>` parameter. The path itself matched, so it is not a 404."
+            },
+            {
+              "type": "explain",
+              "title": "Status codes with ResponseEntity",
+              "body": "A method that returns an object answers **200 OK**. When the status matters, return a `ResponseEntity`:\n\n```java\n@PostMapping\npublic ResponseEntity<BookResponse> create(@RequestBody CreateBookRequest req) {\n    BookResponse saved = books.create(req);\n    URI location = URI.create(\"/api/books/\" + saved.id());\n    return ResponseEntity.created(location).body(saved);   // 201 + Location header\n}\n\n@DeleteMapping(\"/{id}\")\npublic ResponseEntity<Void> delete(@PathVariable Long id) {\n    books.delete(id);\n    return ResponseEntity.noContent().build();             // 204\n}\n```\n\nFor a fixed status you can also annotate the method, e.g. `@ResponseStatus(HttpStatus.CREATED)`."
+            },
+            {
+              "type": "example",
+              "title": "Not found, the clean way",
+              "problem": "`GET /api/books/99` asks for a book that doesn't exist. `books.findById(id)` returns `Optional<BookResponse>`. Respond 200 with the book, or 404.",
+              "steps": [
+                "Returning `books.findById(id).orElse(null)` gives **200 with an empty body**: it claims success, which misleads clients.",
+                "Map the `Optional` into a `ResponseEntity`:\n\n```java\n@GetMapping(\"/{id}\")\npublic ResponseEntity<BookResponse> get(@PathVariable Long id) {\n    return books.findById(id)\n            .map(ResponseEntity::ok)\n            .orElse(ResponseEntity.notFound().build());\n}\n```",
+                "Present → `ResponseEntity.ok(book)` → 200 with JSON. Empty → 404 with no body. (`ResponseEntity.of(optional)` is a built-in shortcut for exactly this.)",
+                "In a bigger app you'd rather throw a `BookNotFoundException` from the service and map it to 404 in one place. That's the error-handling lesson."
+              ],
+              "answer": "`.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build())`"
+            },
+            {
+              "type": "mcq",
+              "id": "q-post-status",
+              "prompt": "This endpoint saves a book successfully. What status does the client get?\n\n```java\n@PostMapping\npublic BookResponse create(@RequestBody CreateBookRequest req) {\n    return books.create(req);\n}\n```",
+              "choices": [
+                "201 Created",
+                "200 OK",
+                "202 Accepted",
+                "204 No Content"
+              ],
+              "answer": 1,
+              "explanation": "Spring doesn't infer 201 from `@PostMapping`: a returned object means 200. For a proper REST create, return `ResponseEntity.created(location).body(saved)` or add `@ResponseStatus(HttpStatus.CREATED)`."
+            },
+            {
+              "type": "text",
+              "id": "q-restcontroller",
+              "prompt": "These methods return `BookResponse` records, but Spring tries to resolve the return values as view templates instead of writing JSON. Fill in the class annotation that fixes it:\n\n```java\n@___\n@RequestMapping(\"/api/books\")\npublic class BookController { ... }\n```",
+              "accept": [
+                "RestController",
+                "@RestController"
+              ],
+              "explanation": "A plain `@Controller` treats return values as view names. `@RestController` adds `@ResponseBody` to every method, so return values are serialized (to JSON) into the response body."
+            }
+          ]
+        },
+        {
+          "id": "validation",
+          "title": "Validating input",
+          "pareto": "core",
+          "minutes": 6,
+          "takeaway": "Put Jakarta Bean Validation constraints on your request records and `@Valid` on the `@RequestBody`; bad input becomes a 400 before your code runs.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Never trust the body",
+              "body": "Add `spring-boot-starter-validation` (it brings Hibernate Validator), then declare the rules on your DTO:\n\n```java\nimport jakarta.validation.constraints.*;\n\npublic record CreateUserRequest(\n        @NotBlank @Size(max = 50) String name,\n        @NotBlank @Email String email,\n        @Min(18) int age) {}\n```\n\nThen ask Spring to check it with `@Valid` (`jakarta.validation.Valid`):\n\n```java\n@PostMapping(\"/api/users\")\npublic ResponseEntity<UserResponse> create(@Valid @RequestBody CreateUserRequest req) { ... }\n```\n\nIf any constraint fails, Spring throws `MethodArgumentNotValidException` and answers **400 Bad Request**. Your method never runs."
+            },
+            {
+              "type": "explain",
+              "title": "The constraints you'll actually use",
+              "body": "- `@NotNull`: not null (but `\"\"` passes).\n- `@NotEmpty`: not null and length > 0 (but `\"   \"` passes).\n- `@NotBlank`: contains at least one non-whitespace character. The usual choice for strings.\n- `@Size(min = .., max = ..)`: string length or collection size.\n- `@Min`, `@Max`, `@Positive`: numbers.\n- `@Email`, `@Pattern(regexp = \"...\")`: formats.\n- `@Past`, `@Future`: dates.\n\nMost constraints treat `null` as valid, so add `@NotNull` when a value is required: `@NotNull @Positive Integer quantity`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-not-empty",
+              "prompt": "A field is annotated `@NotEmpty String name`, and the controller uses `@Valid`. A client sends `{\"name\": \"   \"}`. What happens?",
+              "choices": [
+                "The request passes validation",
+                "400: whitespace counts as empty",
+                "500: Jackson can't parse whitespace",
+                "400, but only if the record is also annotated with `@Valid`"
+              ],
+              "answer": 0,
+              "explanation": "`@NotEmpty` only checks that the string is non-null with length > 0, and `\"   \"` has length 3. To reject whitespace-only strings, use `@NotBlank`."
+            },
+            {
+              "type": "example",
+              "title": "The forgotten @Valid",
+              "problem": "A tester posts `{\"name\": \"\", \"email\": \"nope\", \"age\": 12}` and gets **201 Created**, even though `CreateUserRequest` has all its constraints. Find the bug:\n\n```java\n@PostMapping(\"/api/users\")\npublic ResponseEntity<UserResponse> create(@RequestBody CreateUserRequest req) { ... }\n```",
+              "steps": [
+                "Constraint annotations are just metadata. Something has to *trigger* validation.",
+                "For a request body, the trigger is `@Valid` (or Spring's `@Validated`) on the parameter. Without it, Spring deserializes the JSON and calls your method as-is.",
+                "Second suspect, for when `@Valid` *is* present but nothing happens: the validation starter is missing, so there is no validator to run the rules.",
+                "Fix: `create(@Valid @RequestBody CreateUserRequest req)`. The same request now gets 400 listing three field errors."
+              ],
+              "answer": "Add `@Valid` to the `@RequestBody` parameter."
+            },
+            {
+              "type": "mcq",
+              "id": "q-invalid-status",
+              "prompt": "With `@Valid` in place, a client sends `{\"name\": \"Ann\", \"email\": \"ann@example.com\", \"age\": 12}`, where `age` has `@Min(18)`. What does the client get by default?",
+              "choices": [
+                "201 Created: `@Min` only applies to strings",
+                "422 Unprocessable Entity",
+                "400 Bad Request",
+                "500 Internal Server Error"
+              ],
+              "answer": 2,
+              "explanation": "The failed constraint raises `MethodArgumentNotValidException`, which Spring MVC maps to **400**. Some teams prefer 422; you can choose that yourself in an exception handler (next lesson). `@Min` is for numbers."
+            },
+            {
+              "type": "explain",
+              "title": "Nested objects and business rules",
+              "body": "Validation doesn't descend into nested objects on its own. Mark them with `@Valid` too:\n\n```java\npublic record OrderRequest(\n        @NotNull @Valid Address shipping,\n        @NotEmpty List<@Valid OrderLine> lines) {}\n```\n\nAnnotations are for the **shape** of the input. Rules that need data, like \"this email is already registered\", belong in your service, which throws an exception you map to a status code."
+            },
+            {
+              "type": "mcq",
+              "id": "q-nested",
+              "prompt": "`OrderRequest` has `@NotNull Address shipping` (no `@Valid` on that field), and `Address` has `@NotBlank String city`. The controller uses `@Valid @RequestBody`. A request arrives with `\"shipping\": {\"city\": \"\"}`. What happens?",
+              "choices": [
+                "400: `city` is blank",
+                "400: `shipping` is null",
+                "500: validation can't handle nested records",
+                "Validation passes: `Address`'s constraints aren't checked without `@Valid` on the field"
+              ],
+              "answer": 3,
+              "hint": "Which object does `@Valid` on the parameter actually validate?",
+              "explanation": "`@Valid` on the parameter validates `OrderRequest` itself: `shipping` is not null, so that passes. Without `@Valid` on the `shipping` field, validation doesn't cascade into `Address`, so the blank city slips through."
+            },
+            {
+              "type": "text",
+              "id": "q-notblank",
+              "prompt": "Fill in the constraint that rejects `null`, `\"\"` and `\"   \"`:\n\n```java\npublic record Tag(@___ String label) {}\n```",
+              "accept": [
+                "NotBlank",
+                "@NotBlank"
+              ],
+              "explanation": "`@NotBlank` (from `jakarta.validation.constraints`) requires at least one non-whitespace character, which also rules out null and the empty string."
+            }
+          ]
+        },
+        {
+          "id": "error-handling",
+          "title": "Error handling with ProblemDetail",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "Throw meaningful exceptions from your services and translate them to status codes in one `@RestControllerAdvice` that returns `ProblemDetail` bodies.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "What happens by default",
+              "body": "If a controller method throws and nothing handles the exception, Spring Boot's error handling answers **500 Internal Server Error** with a small JSON body (timestamp, status, error, path).\n\nSpring MVC already maps its own exceptions sensibly:\n\n- failed `@Valid` body, malformed JSON, missing `@RequestParam`, wrong type in a path variable → **400**\n- no matching path → **404**; wrong HTTP method → **405**; unsupported `Content-Type` → **415**\n\nBut your `BookNotFoundException` is just another `RuntimeException` to Spring: **500**. That's wrong, because the client asked for something missing; the server didn't crash."
+            },
+            {
+              "type": "explain",
+              "title": "One place for all mappings",
+              "body": "```java\nimport org.springframework.http.HttpStatus;\nimport org.springframework.http.ProblemDetail;\nimport org.springframework.web.bind.annotation.*;\n\n@RestControllerAdvice\npublic class ApiExceptionHandler {\n\n    @ExceptionHandler(BookNotFoundException.class)\n    public ProblemDetail notFound(BookNotFoundException ex) {\n        return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());\n    }\n}\n```\n\n- `@RestControllerAdvice` applies to every controller; return values become the response body.\n- `@ExceptionHandler` names the exception type(s) a method handles.\n- `ProblemDetail` models the standard error format of RFC 9457 (which replaced RFC 7807). Spring uses its `status` as the response code and sends `Content-Type: application/problem+json`."
+            },
+            {
+              "type": "example",
+              "title": "What the client sees",
+              "problem": "`BookService.find(99)` throws `new BookNotFoundException(\"Book 99 not found\")`. With the advice above in place, what does `GET /api/books/99` return?",
+              "steps": [
+                "The exception escapes the controller, and Spring looks for a matching `@ExceptionHandler`. It finds `notFound` in the advice.",
+                "The handler builds a `ProblemDetail` with status 404 and the message as its `detail`.",
+                "Spring sends status **404** with `Content-Type: application/problem+json` and a body like:\n\n```json\n{\n  \"type\": \"about:blank\",\n  \"title\": \"Not Found\",\n  \"status\": 404,\n  \"detail\": \"Book 99 not found\",\n  \"instance\": \"/api/books/99\"\n}\n```",
+                "Every error in your API now has the same, machine-readable shape, which clients can parse in one place."
+              ],
+              "answer": "404 with a `problem+json` body describing the error."
+            },
+            {
+              "type": "mcq",
+              "id": "q-default-500",
+              "prompt": "There is **no** `@RestControllerAdvice`. `BookService` throws `BookNotFoundException extends RuntimeException`. What status does the client get?",
+              "choices": [
+                "404 Not Found",
+                "400 Bad Request",
+                "500 Internal Server Error",
+                "200 with an empty body"
+              ],
+              "answer": 2,
+              "explanation": "Spring knows nothing about your exception, so an unhandled one is a 500. To get 404: map it in an `@ExceptionHandler`, annotate the exception class with `@ResponseStatus(HttpStatus.NOT_FOUND)`, or throw `ResponseStatusException(HttpStatus.NOT_FOUND, ...)`."
+            },
+            {
+              "type": "explain",
+              "title": "Other options & good practice",
+              "body": "- `throw new ResponseStatusException(HttpStatus.NOT_FOUND, \"Book not found\")`: quick and needs no custom class, but HTTP details leak into your service layer.\n- `@ResponseStatus(HttpStatus.NOT_FOUND)` on your exception class: a fixed status, very little code.\n- Want `ProblemDetail` bodies for Spring MVC's built-in errors too (validation, malformed JSON)? Set `spring.mvc.problemdetails.enabled=true`, or have your advice extend `ResponseEntityExceptionHandler`.\n\nWhatever you choose: never send stack traces or SQL messages to clients, and log unexpected 500s on the server."
+            },
+            {
+              "type": "mcq",
+              "id": "q-most-specific",
+              "prompt": "One advice has two handlers: `@ExceptionHandler(RuntimeException.class)` returning 500, and `@ExceptionHandler(BookNotFoundException.class)` returning 404. A `BookNotFoundException` (a subclass of `RuntimeException`) is thrown. Which handler runs?",
+              "choices": [
+                "The `BookNotFoundException` handler: the closest match in the exception hierarchy wins",
+                "The `RuntimeException` handler, if it is declared first in the class",
+                "Neither: startup fails because both handlers match",
+                "Both, in declaration order"
+              ],
+              "answer": 0,
+              "explanation": "Spring picks the handler whose declared exception type is nearest to the thrown exception's class, so the specific handler wins and the generic one becomes a catch-all for everything else. Declaration order doesn't matter."
+            },
+            {
+              "type": "mcq",
+              "id": "q-422",
+              "prompt": "Your API style guide says invalid request bodies must return **422** instead of 400. What do you add?",
+              "choices": [
+                "`@ResponseStatus(422)` on the request record",
+                "An `@ExceptionHandler(MethodArgumentNotValidException.class)` in your advice that returns a `ProblemDetail` with status 422",
+                "The property `server.error.status=422`",
+                "`@Valid(status = 422)` on the parameter"
+              ],
+              "answer": 1,
+              "hint": "Which exception does a failed `@Valid` raise?",
+              "explanation": "Validation failures surface as `MethodArgumentNotValidException`. Handling it yourself lets you pick the status and include the field errors (from `ex.getBindingResult()`) in the body. The other options don't exist or don't apply to DTOs."
+            },
+            {
+              "type": "text",
+              "id": "q-advice",
+              "prompt": "Fill in the class annotation that makes these `@ExceptionHandler` methods apply to **every** controller and write their return values as the response body:\n\n```java\n@___\npublic class ApiExceptionHandler { ... }\n```",
+              "accept": [
+                "RestControllerAdvice",
+                "@RestControllerAdvice"
+              ],
+              "explanation": "`@RestControllerAdvice` = `@ControllerAdvice` + `@ResponseBody`. It is the standard home for API-wide exception mappings."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "data-config",
+      "title": "Data & configuration",
+      "description": "Persist entities with Spring Data JPA and configure one build for every environment.",
+      "lessons": [
+        {
+          "id": "spring-data-jpa",
+          "title": "Spring Data JPA: entities & repositories",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Map a class with `@Entity`, extend `JpaRepository<Entity, Id>`, let method names like `findByEmail` become queries, and switch to `@Query` when the names get long.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "An entity",
+              "body": "```java\nimport jakarta.persistence.*;\n\n@Entity\n@Table(name = \"customers\")\npublic class Customer {\n\n    @Id\n    @GeneratedValue(strategy = GenerationType.IDENTITY)\n    private Long id;\n\n    @Column(nullable = false, unique = true)\n    private String email;\n\n    private String name;\n\n    protected Customer() {}        // required by JPA\n\n    public Customer(String email, String name) {\n        this.email = email;\n        this.name = name;\n    }\n    // getters, and setters for what may change\n}\n```\n\nJPA (implemented by Hibernate) maps each instance to a table row. Entities need an `@Id`, a no-argument constructor, and must not be `final`, so they are classes, **not records**. Keep records for your DTOs."
+            },
+            {
+              "type": "explain",
+              "title": "A repository with zero code",
+              "body": "```java\npublic interface CustomerRepository extends JpaRepository<Customer, Long> {\n    Optional<Customer> findByEmail(String email);\n    List<Customer> findByNameContainingIgnoreCase(String fragment);\n    boolean existsByEmail(String email);\n}\n```\n\nSpring Data generates the implementation at startup (no `@Repository` annotation needed on the interface). You get `save`, `findById` (returns an `Optional`), `findAll`, `deleteById`, `count` and paging for free.\n\nOn top of that, **derived queries**: the method name is parsed into a query. `findBy` + property name + optional keywords such as `And`, `Or`, `GreaterThan`, `After`, `Containing`, `IgnoreCase` or `OrderBy`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-typo",
+              "prompt": "You add `Optional<Customer> findByEmial(String email);` to the repository (note the typo). What happens?",
+              "choices": [
+                "The app fails to start: Spring Data finds no property `emial` on `Customer`",
+                "It compiles, and the method always returns an empty `Optional`",
+                "It throws a `NullPointerException` the first time it's called",
+                "Spring Data falls back to `findAll()`"
+              ],
+              "answer": 0,
+              "explanation": "Derived query names are parsed when the repository bean is created at startup, so a misspelled property fails fast with an error like *No property 'emial' found for type 'Customer'*. Better a startup failure than a silent bug."
+            },
+            {
+              "type": "text",
+              "id": "q-derived-name",
+              "prompt": "`Customer` has a field `LocalDate signupDate`. Write the derived method name that returns customers who signed up **after** a given date:\n\n```java\nList<Customer> ___(LocalDate date);\n```",
+              "accept": [
+                "findBySignupDateAfter",
+                "findAllBySignupDateAfter",
+                "findBySignupDateGreaterThan",
+                "findAllBySignupDateGreaterThan"
+              ],
+              "hint": "`findBy` + property name (capitalized) + a comparison keyword.",
+              "explanation": "`findBySignupDateAfter` becomes `... where c.signupDate > ?1`. `GreaterThan` works too; `After`/`Before` simply read better for dates."
+            },
+            {
+              "type": "explain",
+              "title": "@Query when names get silly",
+              "body": "`findByStatusAndCreatedAtBetweenAndTotalGreaterThanOrderByCreatedAtDesc` works, but nobody can read it. Write the query yourself, in JPQL (entity and field names, not table names):\n\n```java\n@Query(\"select i from Invoice i where i.customer.email = :email and i.total > :min\")\nList<Invoice> bigInvoicesFor(@Param(\"email\") String email, @Param(\"min\") BigDecimal min);\n```\n\nAdd `nativeQuery = true` to write plain SQL when you need database-specific features."
+            },
+            {
+              "type": "explain",
+              "title": "Schema and transactions: the basics",
+              "body": "- **Schema**: `spring.jpa.hibernate.ddl-auto` defaults to `create-drop` for an embedded database like H2 (when no migration tool is present) and to `none` otherwise. In production, manage the schema with Flyway or Liquibase and keep `ddl-auto` at `validate` or `none`.\n- **Transactions**: built-in repository methods such as `save` already run in their own transaction. When one service method makes **several** changes that must succeed or fail together, annotate it with `@Transactional`; a `RuntimeException` rolls all of them back.\n- In development, `spring.jpa.show-sql=true` prints the SQL Hibernate runs."
+            },
+            {
+              "type": "example",
+              "title": "Registering a customer",
+              "problem": "Write a service method that registers a customer and rejects duplicate emails with a `DuplicateEmailException` (a `RuntimeException` you map to 409 Conflict).",
+              "steps": [
+                "Inject the repository through the constructor: `public CustomerService(CustomerRepository customers)`.",
+                "Check the business rule first with the derived query: `if (customers.existsByEmail(req.email())) throw new DuplicateEmailException(req.email());`.",
+                "Create and save the entity: `Customer saved = customers.save(new Customer(req.email(), req.name()));`. `save` returns the entity with its generated `id`.",
+                "Map the entity to a DTO before returning it: `return new CustomerResponse(saved.getId(), saved.getEmail(), saved.getName());`.",
+                "Keep the `unique = true` column constraint too: two simultaneous requests can both pass the `exists` check, and the database is the final guard."
+              ],
+              "answer": "Check `existsByEmail`, then `save`, then map to a response record; let the unique constraint catch races."
+            },
+            {
+              "type": "mcq",
+              "id": "q-ddl-auto",
+              "prompt": "An app uses PostgreSQL, has no `ddl-auto` setting and no Flyway or Liquibase. You add a new `@Entity` and start the app. What does Hibernate do to the schema?",
+              "choices": [
+                "Creates the missing table automatically",
+                "Drops and recreates every table",
+                "Nothing: for a non-embedded database the default is `none`, so the table must already exist",
+                "Fails startup, because `ddl-auto` must always be set"
+              ],
+              "answer": 2,
+              "explanation": "Boot only defaults to `create-drop` for embedded databases such as H2. For a real database it defaults to `none`, so queries against the new entity fail until a migration creates the table. That is deliberate: schema changes in production should be explicit, reviewed migrations."
+            }
+          ]
+        },
+        {
+          "id": "configuration",
+          "title": "Configuration, profiles & environment overrides",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "Put defaults in `application.properties`, bind groups of settings to a `@ConfigurationProperties` record, and override per environment with profiles and environment variables, never by rebuilding.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "application.properties (or .yml)",
+              "body": "```properties\nserver.port=8081\nspring.datasource.url=jdbc:postgresql://localhost:5432/shop\napp.mail.host=smtp.example.com\napp.mail.port=587\napp.mail.timeout=5s\n```\n\nThe same in `application.yml`:\n\n```yaml\napp:\n  mail:\n    host: smtp.example.com\n    port: 587\n    timeout: 5s\n```\n\nBoot's own keys (`server.*`, `spring.*`, `management.*`) tune auto-configuration. Your own keys (here `app.*`) are for your code. Pick one format per project."
+            },
+            {
+              "type": "explain",
+              "title": "Typed settings with @ConfigurationProperties",
+              "body": "```java\n@ConfigurationProperties(prefix = \"app.mail\")\npublic record MailProperties(String host, int port, Duration timeout) {}\n```\n\n```java\n@SpringBootApplication\n@ConfigurationPropertiesScan          // registers MailProperties as a bean\npublic class ShopApplication { ... }\n```\n\nNow inject `MailProperties` like any other bean. Boot converts types for you: `\"5s\"` becomes a `Duration` and `\"587\"` an `int`.\n\nCompared with scattering `@Value(\"${app.mail.host}\")` around, you get one typed, testable object. Add `@Validated` and constraints to make the app refuse to start with bad config."
+            },
+            {
+              "type": "explain",
+              "title": "Profiles",
+              "body": "A **profile** is a named set of overrides. Boot loads `application.properties`, then `application-{profile}.properties` for each active profile, whose values win:\n\n```properties\n# application-dev.properties\nspring.datasource.url=jdbc:h2:mem:shop\nlogging.level.com.example=DEBUG\n```\n\n```properties\n# application-prod.properties\nspring.datasource.url=jdbc:postgresql://db.internal:5432/shop\n```\n\nActivate one with `spring.profiles.active=prod`, for example via the environment variable `SPRING_PROFILES_ACTIVE=prod`. Beans can be profile-specific too: `@Profile(\"dev\")` on a class or `@Bean` method."
+            },
+            {
+              "type": "explain",
+              "title": "Who wins? Environment variables & relaxed binding",
+              "body": "Simplified precedence, highest first:\n\n- Command-line arguments: `java -jar app.jar --server.port=9000`\n- OS environment variables\n- `application-{profile}.properties`\n- `application.properties`\n\nEnvironment variables use **relaxed binding**: uppercase, dots become underscores, dashes are dropped. `SPRING_DATASOURCE_URL` sets `spring.datasource.url`; `APP_MAIL_HOST` sets `app.mail.host`.\n\nThat's how containers and cloud platforms inject settings and secrets: the jar is identical everywhere, only the environment changes."
+            },
+            {
+              "type": "example",
+              "title": "Tracing one setting",
+              "problem": "`application.properties` has `app.mail.port=25`, `application-prod.properties` has `app.mail.port=587`, and the container sets `APP_MAIL_PORT=2525`. The app runs with `SPRING_PROFILES_ACTIVE=prod`. What does `MailProperties.port()` return?",
+              "steps": [
+                "Start at the bottom: `application.properties` says 25.",
+                "The `prod` profile is active, so `application-prod.properties` overrides it: 587.",
+                "`APP_MAIL_PORT` maps to `app.mail.port` through relaxed binding, and environment variables beat config files: 2525."
+              ],
+              "answer": "2525"
+            },
+            {
+              "type": "numeric",
+              "id": "q-cmdline-wins",
+              "prompt": "Same files and `APP_MAIL_PORT=2525` as above, but now the app is started with `java -jar shop.jar --app.mail.port=465`. Which port does `MailProperties.port()` return?",
+              "answer": 465,
+              "explanation": "Command-line arguments sit above environment variables, which sit above every config file. 465 wins. That makes `--key=value` handy for one-off overrides."
+            },
+            {
+              "type": "text",
+              "id": "q-env-name",
+              "prompt": "In production you want to set `spring.datasource.password` through an environment variable. What is the variable called?",
+              "accept": [
+                "SPRING_DATASOURCE_PASSWORD"
+              ],
+              "explanation": "Uppercase it and replace the dots with underscores: `SPRING_DATASOURCE_PASSWORD`. Secrets belong in the environment (or a secret store), never in a committed properties file."
+            },
+            {
+              "type": "mcq",
+              "id": "q-no-profile",
+              "prompt": "You run the app locally without activating any profile. The project has `application.properties` and `application-dev.properties`. Which values apply?",
+              "choices": [
+                "Both files: `dev` is the default profile",
+                "Only `application.properties`; the dev values apply only when `dev` is active",
+                "Only `application-dev.properties`",
+                "None: startup fails without an active profile"
+              ],
+              "answer": 1,
+              "explanation": "With no profile set, Spring activates a profile literally named `default`, so it would load `application-default.properties` if that existed, but never the `dev` file. Activate `dev` explicitly, e.g. with `SPRING_PROFILES_ACTIVE=dev` or in your IDE run configuration."
+            }
+          ]
+        },
+        {
+          "id": "transactions-n-plus-one",
+          "title": "Transactions & the N+1 problem",
+          "pareto": "extra",
+          "minutes": 7,
+          "takeaway": "`@Transactional` works through a proxy, so self-calls and checked exceptions surprise people; and lazy associations touched in a loop silently turn 1 query into N+1.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "How @Transactional really works",
+              "body": "Spring wraps your bean in a **proxy**. A call from *another* bean goes through the proxy, which starts a transaction, calls your method, then commits, or rolls back if it threw. Consequences:\n\n- **Self-invocation**: calling `this.rebuild()` from inside the same class skips the proxy, so `@Transactional` on `rebuild` is ignored for that call.\n- **Rollback rules**: by default only unchecked exceptions (`RuntimeException`, `Error`) roll back. A checked exception **commits**. Use `@Transactional(rollbackFor = Exception.class)` to change that.\n- **Dirty checking**: inside a transaction, changes to entities you loaded are written at commit, even without calling `save()`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-checked-commit",
+              "prompt": "`InsufficientFundsException` is a **checked** exception. It gets thrown here. What happens to the debit?\n\n```java\n@Transactional\npublic void transfer(long from, long to, BigDecimal amount) throws InsufficientFundsException {\n    accounts.debit(from, amount);\n    if (accounts.balanceOf(from).signum() < 0) throw new InsufficientFundsException();\n    accounts.credit(to, amount);\n}\n```",
+              "choices": [
+                "Rolled back: any exception rolls the transaction back",
+                "Rolled back, but only if `accounts` is a `@Repository`",
+                "The transaction stays open until the next request",
+                "Committed: checked exceptions don't trigger a rollback by default"
+              ],
+              "answer": 3,
+              "explanation": "Spring's default rule is \"roll back on unchecked exceptions only\". The debit is committed while the credit never happens: money disappears. Use `@Transactional(rollbackFor = InsufficientFundsException.class)` or make the exception unchecked.",
+              "hint": "The default rollback rule is about the *kind* of exception."
+            },
+            {
+              "type": "mcq",
+              "id": "q-self-invocation",
+              "prompt": "A scheduler calls `reportService.nightly()`. Does `rebuild()` run in a transaction?\n\n```java\n@Service\npublic class ReportService {\n    public void nightly() {\n        rebuild();\n    }\n\n    @Transactional\n    public void rebuild() { ... }\n}\n```",
+              "choices": [
+                "No: the internal call doesn't pass through the proxy, so the annotation has no effect",
+                "Yes: the annotation is on the method being executed",
+                "Yes, but read-only",
+                "Only if the class is also annotated with `@Repository`"
+              ],
+              "answer": 0,
+              "explanation": "`rebuild()` is called on `this`, the raw object, not on the proxy that other beans see. Fixes: put `@Transactional` on `nightly()`, or move `rebuild()` into another bean."
+            },
+            {
+              "type": "explain",
+              "title": "The N+1 problem",
+              "body": "```java\n@Entity\npublic class Author {\n    @Id @GeneratedValue private Long id;\n    private String name;\n\n    @OneToMany(mappedBy = \"author\")     // LAZY by default\n    private List<Book> books;\n}\n```\n\n```java\nList<Author> authors = authorRepository.findAll();          // 1 query\nfor (var a : authors) {\n    System.out.println(a.getName() + \": \" + a.getBooks().size()); // +1 query each\n}\n```\n\nEach `getBooks()` fires its own `select` the first time it's touched. 100 authors → 101 queries. It feels fine with ten rows of test data and crawls in production."
+            },
+            {
+              "type": "numeric",
+              "id": "q-n-plus-one",
+              "prompt": "With the loop above and **40** authors in the database, how many SQL queries run in total?",
+              "answer": 41,
+              "explanation": "One query loads the 40 authors, then each author's lazy `books` collection costs one more: 1 + 40 = **41**. Hence the name N+1."
+            },
+            {
+              "type": "explain",
+              "title": "Fixing it",
+              "body": "Load what you need in one query:\n\n```java\n@Query(\"select distinct a from Author a left join fetch a.books\")\nList<Author> findAllWithBooks();\n\n// or declaratively, on a repository method:\n@EntityGraph(attributePaths = \"books\")\nList<Author> findAll();\n```\n\n- With `spring.jpa.show-sql=true` in development, *count* the queries behind your list endpoints.\n- For read-only screens, query straight into DTOs that select only the columns you need.\n- Boot enables `spring.jpa.open-in-view` by default (and logs a warning about it). It keeps lazy loading working during JSON rendering, which hides N+1 problems; many teams set it to `false`."
+            },
+            {
+              "type": "example",
+              "title": "Saved without save()",
+              "problem": "There is no `save()` call. Is the new name stored?\n\n```java\n@Transactional\npublic void rename(Long id, String newName) {\n    Customer c = customers.findById(id).orElseThrow();\n    c.setName(newName);\n}\n```",
+              "steps": [
+                "`findById` loads `c` into the persistence context, which now tracks it as a *managed* entity.",
+                "`setName` changes it in memory; Hibernate still knows the original state.",
+                "At commit, Hibernate compares the two (dirty checking) and issues an `UPDATE` for the changed column.",
+                "Without the surrounding transaction nothing would flush that change, so you would need an explicit `customers.save(c)`."
+              ],
+              "answer": "Yes: dirty checking writes the change when the transaction commits."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "testing-production",
+      "title": "Testing & production",
+      "description": "Fast, focused tests with Spring's test slices, then the extras that get an app safely into production.",
+      "lessons": [
+        {
+          "id": "testing-slices",
+          "title": "Testing: slices, MockMvc & @MockitoBean",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Unit-test services with plain JUnit and Mockito, use `@WebMvcTest` or `@DataJpaTest` to test one layer in a small context, and keep `@SpringBootTest` for a few end-to-end checks.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Pick the smallest test that works",
+              "body": "`spring-boot-starter-test` brings JUnit 5, Mockito, AssertJ and Spring's test support. Three levels:\n\n- **Plain unit test**: `new OrderService(mockRepo)`, no Spring at all. Milliseconds, and possible thanks to constructor injection (see the Unit Testing course).\n- **Slice test**: starts one layer only. `@WebMvcTest` (controllers, JSON, validation, advice) or `@DataJpaTest` (entities, repositories, a test database).\n- **`@SpringBootTest`**: the whole application context. Most realistic, slowest.\n\nSlices are faster because they load a fraction of the beans and auto-configurations. Spring caches contexts between test classes, but each distinct setup (a different set of mocks, say) means another context to start."
+            },
+            {
+              "type": "explain",
+              "title": "@WebMvcTest + MockMvc",
+              "body": "```java\n@WebMvcTest(BookController.class)\nclass BookControllerTest {\n\n    @Autowired MockMvc mvc;\n    @MockitoBean BookService books;\n\n    @Test\n    void returnsBook() throws Exception {\n        when(books.find(42L)).thenReturn(new BookResponse(42L, \"Dune\", \"Herbert\"));\n\n        mvc.perform(get(\"/api/books/42\"))\n           .andExpect(status().isOk())\n           .andExpect(jsonPath(\"$.title\").value(\"Dune\"));\n    }\n}\n```\n\n**MockMvc** pushes fake HTTP requests through the real Spring MVC machinery, with no server. `@MockitoBean` (Spring Framework 6.2+) puts a Mockito mock into the context in place of the real bean; it replaces `@MockBean`, deprecated since Spring Boot 3.4. Field injection is fine in tests."
+            },
+            {
+              "type": "mcq",
+              "id": "q-no-service-bean",
+              "prompt": "A `@WebMvcTest(BookController.class)` test fails while loading the context: *No qualifying bean of type 'BookService' available*. Why?",
+              "choices": [
+                "`BookService` is missing `@Autowired`",
+                "MockMvc can only test controllers that have no dependencies",
+                "`@WebMvcTest` doesn't create `@Service` beans, so the controller's dependency must be supplied, typically with `@MockitoBean`",
+                "The test class must also be annotated with `@SpringBootApplication`"
+              ],
+              "answer": 2,
+              "explanation": "The web slice only includes web-layer components (controllers, advice, converters, filters). Services and repositories are left out on purpose, so you provide them: usually `@MockitoBean BookService books;`, or `@Import` the real class if you really want it."
+            },
+            {
+              "type": "example",
+              "title": "Testing validation and errors",
+              "problem": "Write a test proving that posting a book with a blank title returns 400 **and** never reaches the service.",
+              "steps": [
+                "Send a body that breaks `@NotBlank title`:\n\n```java\nmvc.perform(post(\"/api/books\")\n        .contentType(MediaType.APPLICATION_JSON)\n        .content(\"\"\"\n            {\"title\": \"\", \"author\": \"Herbert\", \"year\": 1965}\n            \"\"\"))\n   .andExpect(status().isBadRequest());\n```",
+                "`@WebMvcTest` includes validation and your `@RestControllerAdvice`, so this runs the real 400 path, including your error body.",
+                "Then check the mock was never touched: `verify(books, never()).create(any());`.",
+                "That's the sweet spot for slice tests: routing, JSON, validation and error mapping, all without a database."
+              ],
+              "answer": "Expect `status().isBadRequest()` and `verify(books, never()).create(any())`."
+            },
+            {
+              "type": "explain",
+              "title": "@DataJpaTest and @SpringBootTest",
+              "body": "```java\n@DataJpaTest\nclass CustomerRepositoryTest {\n\n    @Autowired CustomerRepository customers;\n\n    @Test\n    void findsByEmail() {\n        customers.save(new Customer(\"ann@example.com\", \"Ann\"));\n        assertThat(customers.findByEmail(\"ann@example.com\")).isPresent();\n    }\n}\n```\n\n`@DataJpaTest` sets up JPA and your repositories only, uses an embedded in-memory database by default (if one is on the classpath), and rolls back each test's transaction. To test against your real database engine, pair it with Testcontainers.\n\n`@SpringBootTest` starts everything; add `webEnvironment = RANDOM_PORT` to run a real server for true end-to-end calls. Keep these few: they're the slowest."
+            },
+            {
+              "type": "mcq",
+              "id": "q-slice-query",
+              "prompt": "You want to check that a custom repository query, `findTop5ByOrderByCreatedAtDesc`, returns the right rows. Which setup fits best?",
+              "choices": [
+                "`@DataJpaTest`",
+                "`@WebMvcTest` with a `@MockitoBean` repository",
+                "`@SpringBootTest(webEnvironment = RANDOM_PORT)`",
+                "A plain Mockito test that mocks the repository"
+              ],
+              "answer": 0,
+              "explanation": "Only a real database run can tell you whether the query is right, and `@DataJpaTest` gives you that with the smallest context. Mocking the repository tests nothing about the query, and a full `@SpringBootTest` is slower than it needs to be."
+            },
+            {
+              "type": "mcq",
+              "id": "q-slice-web",
+              "prompt": "You want to verify that `DELETE /api/books/7` answers 204 and calls `books.delete(7L)`. Which setup fits best?",
+              "choices": [
+                "`@DataJpaTest`",
+                "`@SpringBootTest` against a real database",
+                "A plain unit test that calls `controller.delete(7L)` directly",
+                "`@WebMvcTest(BookController.class)` with `@MockitoBean BookService`"
+              ],
+              "answer": 3,
+              "hint": "The question is about HTTP behavior, not about the database.",
+              "explanation": "The web slice exercises the real routing and status mapping through MockMvc, while the mocked service lets you `verify(books).delete(7L)`. Calling the method directly skips routing; a full context with a database adds cost without testing anything extra."
+            },
+            {
+              "type": "text",
+              "id": "q-mock-annotation",
+              "prompt": "Fill in the annotation (Spring Framework 6.2+) that replaces the `BookService` bean with a Mockito mock in a slice test:\n\n```java\n@___ BookService books;\n```",
+              "accept": [
+                "MockitoBean",
+                "@MockitoBean"
+              ],
+              "explanation": "`@MockitoBean` is the current annotation. You will still see `@MockBean` in older code; it was deprecated in Spring Boot 3.4 in favor of `@MockitoBean`."
+            }
+          ]
+        },
+        {
+          "id": "security-basics",
+          "title": "Spring Security basics",
+          "pareto": "extra",
+          "minutes": 7,
+          "takeaway": "Adding Spring Security locks every endpoint by default; open things up deliberately in a `SecurityFilterChain` bean, specific rules first and `anyRequest()` last.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Secure by default",
+              "body": "Add `spring-boot-starter-security` and restart. Without writing any code:\n\n- **Every** endpoint now requires authentication.\n- Boot creates a single user named `user` with a random password printed in the startup log. That's for development only.\n- Unauthenticated API calls get **401 Unauthorized**; browsers are redirected to a generated login page.\n- CSRF protection is on, so state-changing requests (`POST`, `PUT`, `DELETE`) without a CSRF token are rejected with **403**."
+            },
+            {
+              "type": "mcq",
+              "id": "q-after-starter",
+              "prompt": "You add `spring-boot-starter-security` to the book API and change nothing else. What does an anonymous `GET /api/books` from curl return now?",
+              "choices": [
+                "200: GET requests stay public by default",
+                "401 Unauthorized",
+                "403 Forbidden",
+                "404: controllers are disabled until you configure security"
+              ],
+              "answer": 1,
+              "explanation": "Once Spring Security is on the classpath, Boot's default configuration requires authentication for every request. No credentials means 401. Nothing is public until you say so."
+            },
+            {
+              "type": "explain",
+              "title": "Your own rules: SecurityFilterChain",
+              "body": "```java\n@Configuration\npublic class SecurityConfig {\n\n    @Bean\n    public SecurityFilterChain api(HttpSecurity http) throws Exception {\n        http\n            .authorizeHttpRequests(auth -> auth\n                .requestMatchers(\"/actuator/health\", \"/api/public/**\").permitAll()\n                .requestMatchers(HttpMethod.DELETE, \"/api/**\").hasRole(\"ADMIN\")\n                .anyRequest().authenticated())\n            .httpBasic(Customizer.withDefaults());\n        return http.build();\n    }\n}\n```\n\nRules are checked **top to bottom and the first match wins**, so specific rules go first and `anyRequest()` last. Defining this bean replaces Boot's default security setup (auto-configuration backing off again). For token-based APIs, `oauth2ResourceServer(...)` validates JWTs instead of passwords."
+            },
+            {
+              "type": "mcq",
+              "id": "q-rule-order",
+              "prompt": "What happens with this configuration?\n\n```java\n.authorizeHttpRequests(auth -> auth\n    .anyRequest().authenticated()\n    .requestMatchers(\"/api/public/**\").permitAll())\n```",
+              "choices": [
+                "Public paths work: `permitAll()` always overrides `authenticated()`",
+                "Public paths still require login, because the first rule matches everything",
+                "Only GET requests to the public paths are allowed anonymously",
+                "The app fails to start: no rule may be added after `anyRequest()`"
+              ],
+              "answer": 3,
+              "hint": "Spring Security checks the rule list while it is being built.",
+              "explanation": "`anyRequest()` has to be the final rule; Spring Security rejects any `requestMatchers` added after it with an error at startup. Put the specific `permitAll()` rules first and `anyRequest().authenticated()` last."
+            },
+            {
+              "type": "explain",
+              "title": "401 vs 403, and CSRF",
+              "body": "- **401 Unauthorized** really means *unauthenticated*: we don't know who you are (missing or bad credentials).\n- **403 Forbidden** means we know who you are, but you're not allowed: a missing role, or a failed check such as CSRF.\n\nCSRF protection defends browser sessions that rely on cookies. A stateless API that authenticates every request with a header (`Authorization: Bearer ...`) isn't exposed the same way, which is why such APIs commonly turn it off with `http.csrf(csrf -> csrf.disable())`. Keep it on for cookie-based logins."
+            },
+            {
+              "type": "mcq",
+              "id": "q-403",
+              "prompt": "Using the `SecurityConfig` above (with CSRF disabled), user `ann`, who has only the `USER` role, sends `DELETE /api/books/3` with valid credentials. What is the response?",
+              "choices": [
+                "401 Unauthorized",
+                "204 No Content",
+                "403 Forbidden",
+                "405 Method Not Allowed"
+              ],
+              "answer": 2,
+              "explanation": "Ann is authenticated, so it isn't a 401, but the matching rule requires role `ADMIN`. Authenticated-but-not-allowed is **403**."
+            },
+            {
+              "type": "example",
+              "title": "The health check that broke",
+              "problem": "After adding Spring Security, the platform's health probe (`GET /actuator/health`) starts failing and your containers keep restarting. Fix it.",
+              "steps": [
+                "The probe sends no credentials, so it now gets 401, and the platform concludes the app is unhealthy.",
+                "Declare a `SecurityFilterChain` bean with `.requestMatchers(\"/actuator/health\").permitAll()` placed **before** `.anyRequest().authenticated()`.",
+                "Open only the health endpoint. Never make `/actuator/env` or heap dumps public: they can reveal secrets.",
+                "Restart: the probe gets 200 with `{\"status\":\"UP\"}` again, and everything else still needs a login."
+              ],
+              "answer": "Permit the health endpoint explicitly in your `SecurityFilterChain`, before `anyRequest()`."
+            },
+            {
+              "type": "text",
+              "id": "q-permit-all",
+              "prompt": "Fill in the method that lets anyone, logged in or not, reach the matched paths:\n\n```java\n.requestMatchers(\"/api/public/**\").___()\n```",
+              "accept": [
+                "permitAll",
+                "permitAll()"
+              ],
+              "explanation": "`permitAll()` skips the authentication requirement for matching requests. Its counterparts are `authenticated()`, `hasRole(\"...\")` and `denyAll()`."
+            }
+          ]
+        },
+        {
+          "id": "actuator-and-shipping",
+          "title": "Actuator & shipping your app",
+          "pareto": "extra",
+          "minutes": 6,
+          "takeaway": "Actuator gives you health checks and metrics for free, and a Boot app ships as one executable jar (or a buildpack-built image) configured by the environment it runs in.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Actuator",
+              "body": "Add `spring-boot-starter-actuator` to get production endpoints under `/actuator`:\n\n- `/actuator/health`: `{\"status\":\"UP\"}` with HTTP 200, or `DOWN` with **503** when a checked component (database, disk space...) is unhealthy. Load balancers and Kubernetes probes poll this.\n- `/actuator/metrics`: Micrometer metrics such as `http.server.requests`, JVM memory and connection-pool usage. Add a registry like Prometheus to export them.\n- `info`, `loggers`, `conditions`, `env` and more.\n\nOver HTTP, only `health` is exposed by default. Opt in to others explicitly:\n\n```properties\nmanagement.endpoints.web.exposure.include=health,info,metrics\n```"
+            },
+            {
+              "type": "mcq",
+              "id": "q-health-down",
+              "prompt": "The app is running but its database is down. A load balancer polls `/actuator/health`. What does it receive?",
+              "choices": [
+                "503 with status `DOWN`",
+                "200 with `{\"status\":\"UP\"}`: the web server itself is fine",
+                "500 Internal Server Error",
+                "404: the health endpoint disappears when a component fails"
+              ],
+              "answer": 0,
+              "explanation": "With a `DataSource` present, a database health indicator is included in the overall status. If it fails, the aggregate becomes `DOWN`, which maps to HTTP **503**, so the load balancer can stop routing traffic to this instance."
+            },
+            {
+              "type": "mcq",
+              "id": "q-metrics-404",
+              "prompt": "After adding Actuator, `/actuator/health` works but `/actuator/metrics` returns 404. Why?",
+              "choices": [
+                "Metrics require a Prometheus server to be running first",
+                "Only `health` is exposed over HTTP by default; add `metrics` to `management.endpoints.web.exposure.include`",
+                "Metrics are only available in the `prod` profile",
+                "Spring Security is blocking it"
+              ],
+              "answer": 1,
+              "explanation": "Endpoints are opt-in for web exposure because several reveal internals. Security blocking it would give 401/403, not 404. Treat `env`, `heapdump` and similar endpoints as sensitive and never expose them publicly."
+            },
+            {
+              "type": "explain",
+              "title": "Build & run",
+              "body": "```bash\n./mvnw spring-boot:run                    # run from source while developing\n./mvnw clean package                      # build target/shop-0.0.1-SNAPSHOT.jar\njava -jar target/shop-0.0.1-SNAPSHOT.jar --spring.profiles.active=prod\n\n./gradlew bootRun                         # Gradle equivalents\n./gradlew bootJar                         # build/libs/shop-0.0.1-SNAPSHOT.jar\n```\n\nThe jar is **executable**: it holds your classes, every dependency and the embedded server. The same artifact runs in every environment; only profiles, environment variables and command-line arguments change."
+            },
+            {
+              "type": "explain",
+              "title": "Container images without a Dockerfile",
+              "body": "```bash\n./mvnw spring-boot:build-image            # or: ./gradlew bootBuildImage\ndocker run -p 8080:8080 -e SPRING_PROFILES_ACTIVE=prod shop:0.0.1-SNAPSHOT\n```\n\n`build-image` uses **Cloud Native Buildpacks** to produce an OCI image with a suitable JRE, sensible memory settings and dependencies in separate layers, so rebuilding after a code change only replaces a small layer. It needs a local Docker daemon. You can still write your own Dockerfile; buildpacks just give you a good default with no extra files."
+            },
+            {
+              "type": "example",
+              "title": "One jar, three environments",
+              "problem": "You have one `shop.jar`. Locally you want H2 and debug logging; staging and production both use PostgreSQL, with different URLs and passwords. How do you set this up without rebuilding?",
+              "steps": [
+                "`application.properties`: shared defaults, e.g. `management.endpoints.web.exposure.include=health,info`.",
+                "`application-dev.properties`: the H2 URL and `logging.level.com.example=DEBUG`. Run locally with `./mvnw spring-boot:run -Dspring-boot.run.profiles=dev`.",
+                "`application-prod.properties`: production settings such as logging levels and pool sizes, but **no secrets**.",
+                "Staging and production both run with `SPRING_PROFILES_ACTIVE=prod` and get their own `SPRING_DATASOURCE_URL` and `SPRING_DATASOURCE_PASSWORD` from the platform's secret store."
+              ],
+              "answer": "Profiles for differences in behavior, environment variables for per-environment values and secrets: one artifact everywhere."
+            },
+            {
+              "type": "mcq",
+              "id": "q-run-port",
+              "prompt": "Which command starts the packaged app on port 9000 without changing any file?",
+              "choices": [
+                "`java -jar shop.jar server.port=9000`",
+                "`java -jar shop.jar -port 9000`",
+                "`java -jar shop.jar --server.port=9000`",
+                "`./mvnw package -Dport=9000`"
+              ],
+              "answer": 2,
+              "explanation": "Boot turns `--key=value` arguments into properties with the highest precedence. Without the leading `--` it is just an ordinary program argument, `-port` means nothing to Boot, and the `package` goal builds the jar rather than running it."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
