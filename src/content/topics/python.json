@@ -1,0 +1,933 @@
+{
+  "id": "python",
+  "title": "Python",
+  "icon": "🐍",
+  "color": "#3776ab",
+  "order": 10,
+  "category": "Programming",
+  "level": "Beginner",
+  "description": "Write useful scripts and read real-world Python with confidence. Focus on the 20% of the language you'll use 80% of the time.",
+  "keyIdeas": [
+    "Values carry types, names don't: convert explicitly at the boundaries with `int(text)` and `str(n)`.",
+    "Pick the container for the job: list for order, dict for lookup by key, set for uniqueness and fast `in`.",
+    "Loop over items directly, and reach for `enumerate`, `zip`, comprehensions and unpacking instead of index juggling.",
+    "Functions return `None` unless told otherwise, and a mutable default like `[]` is shared between calls.",
+    "Catch specific exceptions, open files with `with`, and guard script code with `if __name__ == '__main__':`.",
+    "Give every project its own venv and install packages with `python -m pip install`."
+  ],
+  "units": [
+    {
+      "id": "foundations",
+      "title": "Foundations",
+      "description": "Types, strings, containers, loops and functions: the parts of Python every script uses.",
+      "lessons": [
+        {
+          "id": "values-types",
+          "title": "Values, variables & types",
+          "pareto": "core",
+          "minutes": 5,
+          "takeaway": "A variable is just a name for a value, and the value carries the type: `'3' + 3` is an error, `int('3') + 3` is 6.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Names, not boxes",
+              "body": "In Python a variable is a **name** attached to a value. `x = 5` makes the name `x` refer to the integer 5.\n\nThere are no type declarations: the *value* carries the type, and a name can later point at a value of a different type. This is **dynamic typing**.\n\n```python\nx = 5            # x refers to an int\nx = 'five'       # now it refers to a str (allowed)\nprint(type(x))   # <class 'str'>\n```"
+            },
+            {
+              "type": "explain",
+              "title": "The five everyday types",
+              "body": "- `int`: whole numbers of any size, like `42` or `-7`\n- `float`: decimals, like `3.14` or `1e-3`\n- `str`: text, like `'hello'` or `\"hello\"` (both quote styles work)\n- `bool`: `True` or `False` (capitalized)\n- `None`: the single \"no value here\" object, which is also what a function returns when it returns nothing\n\nArithmetic: `/` always gives a float (`6 / 2` is `3.0`), `//` is floor division (`7 // 2` is `3`), `%` is the remainder and `**` is power (`2 ** 10` is `1024`). Floats are approximate: `0.1 + 0.2` is `0.30000000000000004`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-division",
+              "prompt": "What does this print?\n\n```python\nprint(7 // 2, 7 / 2, 7 % 2)\n```",
+              "choices": ["`3 3.5 1`", "`3.5 3.5 1`", "`3 3 1`", "`3.5 3 0`"],
+              "answer": 0,
+              "explanation": "`//` floors to `3`, `/` always returns a float (`3.5`), and `%` gives the remainder of 7 ÷ 2, which is `1`."
+            },
+            {
+              "type": "example",
+              "title": "Mixing types",
+              "problem": "A user typed their age, so it arrives as text: `age = '30'`. Why does `age + 1` fail, and how do you fix it?",
+              "steps": [
+                "`age` holds a `str`. Using `+` between a `str` and an `int` raises `TypeError: can only concatenate str (not \"int\") to str`. Python won't guess what you meant.",
+                "Convert explicitly: `int(age)` turns `'30'` into the number `30`.",
+                "Now `int(age) + 1` is `31`. Going the other way, `str(31)` gives `'31'`."
+              ],
+              "answer": "`int(age) + 1` gives `31`. Python is dynamically typed but **strongly** typed: it never silently mixes text and numbers, so you convert at the boundary where data comes in."
+            },
+            {
+              "type": "mcq",
+              "id": "q-str-times",
+              "prompt": "What does this print?\n\n```python\na = '3'\nb = 3\nprint(a * 2, b * 2)\n```",
+              "choices": ["`33 6`", "`6 6`", "A `TypeError`, because you can't multiply a string", "`3 3 6`"],
+              "answer": 0,
+              "explanation": "Multiplying a string by an int **repeats** it: `'3' * 2` is `'33'`. Multiplying the int gives `6`. (Adding a str and an int is the operation that fails.)"
+            },
+            {
+              "type": "mcq",
+              "id": "q-none-check",
+              "prompt": "A function returns either a number or `None`. Which line correctly checks for `None`, without being fooled by a result of `0`?",
+              "choices": ["`if result is None:`", "`if not result:`", "`if result == 'None':`", "`if result = None:`"],
+              "answer": 0,
+              "hint": "What does `not 0` evaluate to?",
+              "explanation": "`is None` is the idiomatic check, and it's only true for `None` itself. `not result` is also true for `0`, `''` and `[]`. `'None'` is a string, not the `None` object, and `=` is assignment, which is a syntax error in an `if`."
+            },
+            {
+              "type": "numeric",
+              "id": "q-int-convert",
+              "prompt": "What does this evaluate to?\n\n```python\nint(9.99) + int('9')\n```",
+              "answer": 18,
+              "hint": "`int()` on a float doesn't round.",
+              "explanation": "`int(9.99)` truncates toward zero, giving `9`, and `int('9')` parses the text to `9`. So the total is **18**. Use `round()` if you actually want rounding."
+            }
+          ]
+        },
+        {
+          "id": "strings",
+          "title": "Strings, f-strings & slicing",
+          "pareto": "core",
+          "minutes": 6,
+          "takeaway": "Build text with f-strings, slice with `s[start:stop]` (stop is excluded), and remember string methods return a new string.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "f-strings",
+              "body": "Put `f` before the quote and drop any expression inside `{}`:\n\n```python\nname = 'Ada'\nn = 3\nprint(f'{name} has {n} new messages')\n# Ada has 3 new messages\n```\n\nAdd a format spec after a colon: `f'{3.14159:.2f}'` gives `'3.14'` and `f'{1234567:,}'` gives `'1,234,567'`. A handy debugging trick is `f'{n=}'`, which gives `'n=3'`."
+            },
+            {
+              "type": "explain",
+              "title": "Indexing and slicing",
+              "body": "Strings are sequences. `s[0]` is the first character and `s[-1]` the last. A slice `s[start:stop]` includes `start` but **excludes** `stop`. Leave out either end to go to the edge, and add a third number for the step.\n\n```python\ns = 'Python'\ns[0]      # 'P'\ns[-1]     # 'n'\ns[1:4]    # 'yth'\ns[:2]     # 'Py'\ns[2:]     # 'thon'\ns[::-1]   # 'nohtyP' (reversed)\n```\n\nThe same slicing works on lists and tuples."
+            },
+            {
+              "type": "mcq",
+              "id": "q-slice",
+              "prompt": "What does this print?\n\n```python\nword = 'spreadsheet'\nprint(word[2:6])\n```",
+              "choices": ["`read`", "`reads`", "`prea`", "`eads`"],
+              "answer": 0,
+              "hint": "Number the letters from 0: s=0, p=1, r=2, …",
+              "explanation": "Indexes 2, 3, 4 and 5 are `r`, `e`, `a`, `d`. The stop index 6 is excluded, so you get `read`."
+            },
+            {
+              "type": "explain",
+              "title": "Methods you'll use daily",
+              "body": "Strings are **immutable**: methods never change the string, they return a new one.\n\n- `s.strip()` removes surrounding whitespace\n- `s.lower()` and `s.upper()` change case\n- `s.replace('a', 'b')` swaps every occurrence\n- `s.split(',')` gives a list of pieces, and `s.split()` splits on any whitespace\n- `', '.join(items)` glues a list of strings together\n- `s.startswith('x')` and `'sub' in s` test contents"
+            },
+            {
+              "type": "example",
+              "title": "Cleaning messy input",
+              "problem": "Turn `raw = '  alice,BOB , carol '` into `'Alice, Bob, Carol'`.",
+              "steps": [
+                "`raw.strip()` removes the outer spaces: `'alice,BOB , carol'`.",
+                "`.split(',')` cuts it into pieces: `['alice', 'BOB ', ' carol']`.",
+                "Clean each piece with `p.strip().title()`, giving `'Alice'`, `'Bob'` and `'Carol'`.",
+                "Glue them back together with `', '.join(...)`."
+              ],
+              "answer": "```python\nraw = '  alice,BOB , carol '\nnames = [p.strip().title() for p in raw.strip().split(',')]\nprint(', '.join(names))   # Alice, Bob, Carol\n```\n\nThe bracket syntax on line 2 is a list comprehension, which you'll meet in the next unit."
+            },
+            {
+              "type": "mcq",
+              "id": "q-immutable",
+              "prompt": "What does this print?\n\n```python\ns = 'hello'\ns.upper()\nprint(s)\n```",
+              "choices": ["`hello`", "`HELLO`", "`None`", "An error, because strings can't be changed"],
+              "answer": 0,
+              "explanation": "`s.upper()` returns a **new** string `'HELLO'`, but the result is thrown away. `s` still refers to `'hello'`. Write `s = s.upper()` to keep it."
+            },
+            {
+              "type": "text",
+              "id": "q-fstring-format",
+              "prompt": "Fill in the format spec so this prints `Total: 42.50`:\n\n```python\ntotal = 42.5\nprint(f'Total: {total:___}')\n```",
+              "accept": [".2f", "0.2f"],
+              "hint": "You want two digits after the decimal point, in fixed-point (`f`) format.",
+              "explanation": "`.2f` means fixed-point with 2 decimals, so `42.5` is shown as `42.50`. It's the format you'll use for money and measurements."
+            },
+            {
+              "type": "numeric",
+              "id": "q-split-len",
+              "prompt": "What does this print?\n\n```python\nparts = 'a,b,,c'.split(',')\nprint(len(parts))\n```",
+              "answer": 4,
+              "hint": "What sits between the two adjacent commas?",
+              "explanation": "Splitting on `,` gives `['a', 'b', '', 'c']`: the two adjacent commas produce an empty string. That's **4** pieces."
+            }
+          ]
+        },
+        {
+          "id": "collections",
+          "title": "Lists, tuples, dicts & sets",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "List for an ordered, changing sequence; tuple for a fixed record; dict for lookup by key; set for uniqueness and fast membership.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Four containers",
+              "body": "```python\nnums = [3, 1, 2]              # list: ordered, changeable\npoint = (4, 5)                # tuple: ordered, unchangeable\nages = {'ann': 31, 'bo': 25}  # dict: key -> value\ntags = {'red', 'blue'}        # set: unique items, no order\n```\n\nTuples can be dict keys and set members, but lists can't, because they're mutable. Watch out: `{}` is an empty **dict**. An empty set is written `set()`."
+            },
+            {
+              "type": "explain",
+              "title": "Lists",
+              "body": "Lists are the default sequence.\n\n- `nums.append(x)` adds to the end, and `nums.pop()` removes and returns the last item\n- `nums.sort()` sorts **in place** and returns `None`\n- `sorted(nums)` returns a **new** sorted list and leaves the original alone\n- `len(nums)`, `nums[0]` and `nums[1:3]` work just like with strings\n- `x in nums` checks membership by scanning the whole list"
+            },
+            {
+              "type": "mcq",
+              "id": "q-sort-none",
+              "prompt": "What does this print?\n\n```python\nnums = [3, 1, 2]\nresult = nums.sort()\nprint(result)\n```",
+              "choices": ["`None`", "`[1, 2, 3]`", "`[3, 1, 2]`", "An error"],
+              "answer": 0,
+              "explanation": "`list.sort()` sorts the list in place and returns `None`, so `result` is `None` (while `nums` is now `[1, 2, 3]`). Use `result = sorted(nums)` if you want a new list back."
+            },
+            {
+              "type": "explain",
+              "title": "Dicts: the workhorse",
+              "body": "```python\nages = {'ann': 31}\nages['bo'] = 25        # add or overwrite\nages['ann']            # 31\nages.get('cy')         # None, no error\nages.get('cy', 0)      # 0, a default\n'bo' in ages           # True (checks keys)\n\nfor name, age in ages.items():\n    print(name, age)\n```\n\n`ages['cy']` would raise `KeyError`. Dicts remember insertion order (guaranteed since Python 3.7). JSON data, configs and API responses all turn into dicts."
+            },
+            {
+              "type": "example",
+              "title": "Counting things",
+              "problem": "Count how often each word appears in `words = ['a', 'b', 'a', 'c', 'a']`.",
+              "steps": [
+                "Start with an empty dict: `counts = {}`.",
+                "For each word, add 1 to its count, starting from 0 if it hasn't been seen: `counts[w] = counts.get(w, 0) + 1`.",
+                "After the loop, `counts` is `{'a': 3, 'b': 1, 'c': 1}`.",
+                "The standard library has a shortcut: `from collections import Counter`, then `Counter(words)` counts for you and adds `.most_common()`."
+              ],
+              "answer": "```python\ncounts = {}\nfor w in words:\n    counts[w] = counts.get(w, 0) + 1\nprint(counts)   # {'a': 3, 'b': 1, 'c': 1}\n```"
+            },
+            {
+              "type": "mcq",
+              "id": "q-pick-container",
+              "prompt": "You have 100,000 email addresses and need to check, thousands of times, whether a given address is among them. What should you store them in?",
+              "choices": ["A set", "A tuple", "A list, sorted alphabetically", "One long string joined with commas"],
+              "answer": 0,
+              "explanation": "`x in some_set` is a hash lookup, which is about the same speed however big the set is. `in` on a list or tuple scans item by item, and substring search on a string is both slow and wrong (`'bo@x.com'` would match inside `'jimbo@x.com'`)."
+            },
+            {
+              "type": "numeric",
+              "id": "q-set-len",
+              "prompt": "What does this print?\n\n```python\nitems = ['a', 'b', 'a', 'c', 'b', 'a']\nprint(len(set(items)))\n```",
+              "answer": 3,
+              "explanation": "A set keeps only unique items: `{'a', 'b', 'c'}`, so its length is **3**. `set(...)` is the quickest way to deduplicate."
+            },
+            {
+              "type": "mcq",
+              "id": "q-alias",
+              "prompt": "What does this print?\n\n```python\na = [1, 2]\nb = a\nb.append(3)\nprint(a)\n```",
+              "choices": ["`[1, 2, 3]`", "`[1, 2]`", "`[3]`", "`[1, 2, [3]]`"],
+              "answer": 0,
+              "hint": "`b = a` doesn't copy anything.",
+              "explanation": "`b = a` gives the **same** list a second name, so appending through `b` changes what `a` sees too. To get an independent copy, use `b = a.copy()` or `b = list(a)`."
+            }
+          ]
+        },
+        {
+          "id": "control-flow",
+          "title": "Control flow & truthiness",
+          "pareto": "core",
+          "minutes": 6,
+          "takeaway": "Loop over items directly, use `enumerate` for positions and `zip` for parallel lists, and remember that empty things are falsy.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Blocks are indentation",
+              "body": "```python\ntemp = 31\nif temp > 30:\n    print('hot')\nelif temp > 15:\n    print('mild')\nelse:\n    print('cold')\n```\n\nA colon opens a block, and indentation (4 spaces by convention) defines what's inside it. There are no braces. Combine conditions with `and`, `or` and `not`, and comparisons can chain: `0 < x < 10`."
+            },
+            {
+              "type": "explain",
+              "title": "Truthiness",
+              "body": "`if` accepts any value, not just `True`/`False`. These are **falsy**: `False`, `None`, `0`, `0.0`, `''`, `[]`, `{}`, `()` and `set()`. Everything else is truthy.\n\nSo `if items:` is the idiomatic way to say \"if the list is not empty\".\n\n`and` and `or` return one of their operands, not necessarily a bool. `name or 'anonymous'` gives `name` if it's truthy, otherwise `'anonymous'`, which is a common way to supply a default."
+            },
+            {
+              "type": "mcq",
+              "id": "q-truthy",
+              "prompt": "Which values get printed?\n\n```python\nfor v in [0, '0', [], ' ', None]:\n    if v:\n        print(repr(v))\n```",
+              "choices": ["`'0'` and `' '`", "Only `' '`", "`0`, `'0'` and `' '`", "Nothing, because they're all falsy"],
+              "answer": 0,
+              "hint": "Only *empty* strings are falsy.",
+              "explanation": "`'0'` is a non-empty string, and `' '` contains a space, so both are truthy. `0`, `[]` and `None` are falsy."
+            },
+            {
+              "type": "explain",
+              "title": "for loops walk over items",
+              "body": "Python's `for` goes over the **items**, not indexes:\n\n```python\nfor fruit in ['apple', 'fig']:\n    print(fruit)\n\nfor i in range(3):          # 0, 1, 2\n    print(i)\n\nfor i, fruit in enumerate(['apple', 'fig']):\n    print(i, fruit)         # 0 apple, then 1 fig\n\nfor name, score in zip(['ann', 'bo'], [90, 85]):\n    print(name, score)      # ann 90, then bo 85\n```\n\n`range(start, stop, step)` excludes `stop`. `break` leaves the loop, `continue` jumps to the next item, and `while condition:` repeats while the condition is truthy."
+            },
+            {
+              "type": "numeric",
+              "id": "q-range-sum",
+              "prompt": "What does this print?\n\n```python\ntotal = 0\nfor i in range(1, 10, 3):\n    total += i\nprint(total)\n```",
+              "answer": 12,
+              "hint": "Start at 1, step by 3, and stop *before* 10.",
+              "explanation": "`range(1, 10, 3)` produces 1, 4, 7 (10 is excluded). 1 + 4 + 7 = **12**."
+            },
+            {
+              "type": "example",
+              "title": "A while loop",
+              "problem": "What does this print?\n\n```python\nn = 1\nsteps = 0\nwhile n < 1000:\n    n *= 2\n    steps += 1\nprint(steps, n)\n```",
+              "steps": [
+                "Each pass doubles `n` and counts one step: 1 → 2 → 4 → 8 → …",
+                "After 9 passes, `n` is 2⁹ = 512, which is still below 1000, so the loop runs again and `n` becomes 1024.",
+                "Now `n < 1000` is false, and the loop stops after 10 passes."
+              ],
+              "answer": "It prints `10 1024`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-enumerate",
+              "prompt": "With `names = ['ann', 'bo', 'cy']`, which loop prints `1. ann`, `2. bo` and `3. cy` on separate lines?",
+              "choices": [
+                "`for i, n in enumerate(names, start=1): print(f'{i}. {n}')`",
+                "`for i in names: print(f'{i}. {names[i]}')`",
+                "`for i, n in enumerate(names): print(f'{i}. {n}')`",
+                "`for i, n in zip(names, range(1, 4)): print(f'{i}. {n}')`"
+              ],
+              "answer": 0,
+              "explanation": "`enumerate(..., start=1)` pairs each item with a counter starting at 1. Plain `enumerate` starts at 0. Looping `for i in names` gives strings, so `names[i]` raises `TypeError`. The `zip` version has the pair backwards and prints `ann. 1`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-or-default",
+              "prompt": "What does this print?\n\n```python\nname = ''\nprint(name or 'anonymous')\n```",
+              "choices": ["`anonymous`", "`True`", "An empty line", "`False`"],
+              "answer": 0,
+              "explanation": "`''` is falsy, so `or` returns its right-hand operand, `'anonymous'`. `or` returns one of the operands, not a bool."
+            }
+          ]
+        },
+        {
+          "id": "functions",
+          "title": "Functions",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "Functions take positional or keyword arguments and return a value (or `None`). Never use a mutable object like `[]` as a default.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "def and return",
+              "body": "```python\ndef area(width, height=1):\n    return width * height\n\narea(3, 4)                # 12\narea(3)                   # 3, because height defaults to 1\narea(height=2, width=5)   # 10, using keyword arguments\n```\n\nA function with no `return` (or a bare `return`) returns `None`. Keyword arguments make calls self-explanatory: `send(to='bo', retries=3)` reads better than `send('bo', 3)`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-no-return",
+              "prompt": "What does this print?\n\n```python\ndef double(x):\n    print(x * 2)\n\nresult = double(4)\nprint(result)\n```",
+              "choices": ["`8`, then `None`", "`8`, then `8`", "Just `8`", "`None`, then `8`"],
+              "answer": 0,
+              "explanation": "Calling `double(4)` prints `8`, but the function has no `return`, so it returns `None`, and the second `print` shows `None`. Printing is not returning."
+            },
+            {
+              "type": "explain",
+              "title": "Flexible arguments",
+              "body": "In a `def`, `*args` collects extra positional arguments into a tuple and `**kwargs` collects extra keyword arguments into a dict:\n\n```python\ndef log(msg, *args, **kwargs):\n    print(msg, args, kwargs)\n\nlog('hi', 1, 2, level='warn')\n# hi (1, 2) {'level': 'warn'}\n```\n\nIn a call, the same stars **unpack**: `f(*my_list)` spreads a list into positional arguments and `f(**my_dict)` spreads a dict into keyword arguments. You'll see this constantly in code that wraps or forwards calls."
+            },
+            {
+              "type": "numeric",
+              "id": "q-args-count",
+              "prompt": "What does this print?\n\n```python\ndef f(a, b=10, *args, **kwargs):\n    return a + b + len(args) + len(kwargs)\n\nprint(f(1, 2, 3, 4, x=5))\n```",
+              "answer": 6,
+              "hint": "Fill the named parameters left to right first. Leftover positional values go to `args`.",
+              "explanation": "`a=1`, `b=2`, `args=(3, 4)` and `kwargs={'x': 5}`. So the result is 1 + 2 + 2 + 1 = **6**."
+            },
+            {
+              "type": "example",
+              "title": "Scope",
+              "problem": "Why does calling `bump()` fail with `UnboundLocalError`?\n\n```python\ncount = 0\n\ndef bump():\n    count = count + 1\n\nbump()\n```",
+              "steps": [
+                "Assigning to `count` anywhere inside the function makes `count` a **local** name for the whole function body.",
+                "So `count + 1` tries to read the local `count` before it has a value, which is an `UnboundLocalError`.",
+                "Reading a global inside a function is fine; *assigning* to it creates a local. `global count` would make it work, but passing values in and returning results is cleaner."
+              ],
+              "answer": "```python\ndef bump(count):\n    return count + 1\n\ncount = bump(count)\n```"
+            },
+            {
+              "type": "explain",
+              "title": "The mutable default trap",
+              "body": "Default values are evaluated **once**, when `def` runs, not on every call:\n\n```python\ndef add_item(item, bucket=[]):\n    bucket.append(item)\n    return bucket\n\nadd_item('a')   # ['a']\nadd_item('b')   # ['a', 'b'], the same list again!\n```\n\nThe fix is to use `None` as the default and create a fresh list inside:\n\n```python\ndef add_item(item, bucket=None):\n    if bucket is None:\n        bucket = []\n    bucket.append(item)\n    return bucket\n```"
+            },
+            {
+              "type": "mcq",
+              "id": "q-default-bug",
+              "prompt": "This prints `1 2`, but the author expected `1 1`. Which line causes the bug?\n\n```python\ndef collect(n, seen=set()):    # line 1\n    seen.add(n)                # line 2\n    return len(seen)           # line 3\n\nprint(collect(1), collect(2))  # line 5\n```",
+              "choices": [
+                "Line 1: the default `set()` is created once and shared by every call",
+                "Line 2: sets use `append`, not `add`",
+                "Line 3: `len` doesn't work on sets",
+                "Line 5: a function can't be called twice inside one `print`"
+              ],
+              "answer": 0,
+              "explanation": "The default `set()` is built once, when `def` runs. The first call adds 1 to it, and the second call adds 2 to the **same** set, so its length is 2. Use `seen=None` and create the set inside the function."
+            },
+            {
+              "type": "text",
+              "id": "q-sentinel",
+              "prompt": "Fill in both blanks with the same value: the standard safe default to use instead of `[]`.\n\n```python\ndef append_to(x, items=___):\n    if items is ___:\n        items = []\n    items.append(x)\n    return items\n```",
+              "accept": ["None"],
+              "explanation": "`None` is immutable and means \"nothing was passed\", so the function can create a fresh list on every call that needs one."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pythonic",
+      "title": "Pythonic Python",
+      "description": "The idioms that make Python code short and readable, plus errors, files, imports and environments.",
+      "lessons": [
+        {
+          "id": "comprehensions",
+          "title": "Comprehensions & unpacking",
+          "pareto": "core",
+          "minutes": 6,
+          "takeaway": "`[expr for x in items if cond]` replaces most build-a-list loops, and unpacking replaces most index juggling.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Loop to comprehension",
+              "body": "These two snippets build the same list:\n\n```python\nsquares = []\nfor n in range(5):\n    if n % 2 == 0:\n        squares.append(n * n)\n\nsquares = [n * n for n in range(5) if n % 2 == 0]\n# [0, 4, 16]\n```\n\nRead a comprehension as **what** to collect, **from where**, and (optionally) **which ones**."
+            },
+            {
+              "type": "explain",
+              "title": "Dicts, sets and generator expressions",
+              "body": "```python\nlengths = {w: len(w) for w in ['hi', 'hello']}   # {'hi': 2, 'hello': 5}\ninitials = {w[0] for w in ['ant', 'ape', 'bee']} # {'a', 'b'} (a set, so no order)\ntotal = sum(n * n for n in range(4))             # 14\n```\n\nThe last one is a **generator expression**: when it's the only argument to a function, you don't need extra brackets.\n\nKeep comprehensions short. If one needs several loops and conditions, a regular `for` loop is usually clearer."
+            },
+            {
+              "type": "mcq",
+              "id": "q-comp-output",
+              "prompt": "What does this print?\n\n```python\nwords = ['apple', 'kiwi', 'banana', 'fig']\nprint([w.upper() for w in words if len(w) > 3])\n```",
+              "choices": [
+                "`['APPLE', 'KIWI', 'BANANA']`",
+                "`['APPLE', 'BANANA']`",
+                "`['APPLE', 'KIWI', 'BANANA', 'FIG']`",
+                "`['FIG']`"
+              ],
+              "answer": 0,
+              "explanation": "The lengths are 5, 4, 6 and 3. Only `fig` fails `len(w) > 3` (`kiwi` has 4 letters, which passes). The survivors are uppercased."
+            },
+            {
+              "type": "mcq",
+              "id": "q-dict-comp",
+              "prompt": "With `keys = ['a', 'b']` and `vals = [1, 2]`, which expression builds `{'a': 1, 'b': 2}`?",
+              "choices": [
+                "`{k: v for k, v in zip(keys, vals)}`",
+                "`{k: v for k in keys for v in vals}`",
+                "`[k: v for k, v in zip(keys, vals)]`",
+                "`dict(keys, vals)`"
+              ],
+              "answer": 0,
+              "hint": "You need each key paired with *one* value, not every combination.",
+              "explanation": "`zip` pairs the lists element by element. The nested version loops over every combination, so later values overwrite earlier ones and you get `{'a': 2, 'b': 2}`. Square brackets can't hold `k: v`, and `dict(keys, vals)` is a `TypeError`. (`dict(zip(keys, vals))` also works.)"
+            },
+            {
+              "type": "explain",
+              "title": "Unpacking",
+              "body": "Assign several names at once from any sequence:\n\n```python\nx, y = (4, 5)                  # x=4, y=5\nx, y = y, x                    # swap, no temp variable\nfirst, *rest = [1, 2, 3, 4]    # first=1, rest=[2, 3, 4]\n\nfor name, score in [('ann', 90), ('bo', 85)]:\n    print(name, score)\n```\n\nThe counts must match: `a, b = [1, 2, 3]` raises `ValueError` (too many values to unpack). A starred name soaks up whatever is left over."
+            },
+            {
+              "type": "example",
+              "title": "Unpacking in practice",
+              "problem": "Parse `line = 'alice,31,paris'` into three named variables, with the age as an int.",
+              "steps": [
+                "`line.split(',')` gives `['alice', '31', 'paris']`.",
+                "Unpack straight into names: `name, age, city = line.split(',')`.",
+                "Convert the one that needs it: `age = int(age)`."
+              ],
+              "answer": "`name` is `'alice'`, `age` is `31` and `city` is `'paris'`. No `parts[0]`, `parts[1]` index juggling, and if a line has the wrong number of fields you get a clear `ValueError`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-star-unpack",
+              "prompt": "What does this print?\n\n```python\nfirst, *middle, last = [10, 20, 30, 40]\nprint(middle)\n```",
+              "choices": ["`[20, 30]`", "`(20, 30)`", "`20`", "`[20, 30, 40]`"],
+              "answer": 0,
+              "explanation": "`first` takes 10, `last` takes 40, and the starred name collects everything in between. A starred target always becomes a **list**, even when unpacking a tuple."
+            },
+            {
+              "type": "numeric",
+              "id": "q-sum-gen",
+              "prompt": "What does this print?\n\n```python\nprint(sum(x for x in range(10) if x % 3 == 0))\n```",
+              "answer": 18,
+              "explanation": "The multiples of 3 in 0 to 9 are 0, 3, 6 and 9. They add up to **18**."
+            }
+          ]
+        },
+        {
+          "id": "exceptions",
+          "title": "Exceptions & EAFP",
+          "pareto": "core",
+          "minutes": 6,
+          "takeaway": "Catch the specific exception you expect, close to where it happens, and let everything else crash loudly.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "When things go wrong",
+              "body": "Errors are **exceptions**: they travel up through the calling functions until something catches them. If nothing does, the program stops with a traceback. Read the traceback from the **bottom**: the last line names the exception and message, and the lines above it show where it happened.\n\n```python\ntry:\n    n = int(input('Number: '))\nexcept ValueError:\n    print('That was not a number')\n```\n\nCommon ones: `ValueError`, `TypeError`, `KeyError`, `IndexError`, `AttributeError`, `ZeroDivisionError`, `FileNotFoundError`."
+            },
+            {
+              "type": "explain",
+              "title": "The full shape",
+              "body": "```python\ntry:\n    value = int(text)\nexcept ValueError as e:\n    print('bad input:', e)\nelse:\n    print('parsed', value)   # only if no exception\nfinally:\n    print('done')            # always runs\n```\n\n`raise ValueError('age must be positive')` throws your own exception. Inside an `except` block, a bare `raise` re-raises the exception you caught, which is handy for logging an error and passing it on."
+            },
+            {
+              "type": "mcq",
+              "id": "q-try-flow",
+              "prompt": "What does this print?\n\n```python\ntry:\n    x = 1 / 0\n    print('A')\nexcept ZeroDivisionError:\n    print('B')\nelse:\n    print('C')\nfinally:\n    print('D')\n```",
+              "choices": ["`B`, then `D`", "`A`, then `B`, then `D`", "`B`, then `C`, then `D`", "Only `B`"],
+              "answer": 0,
+              "explanation": "`1 / 0` raises immediately, so `print('A')` never runs. The `except` block prints `B`. `else` only runs when there was **no** exception, and `finally` always runs, printing `D`."
+            },
+            {
+              "type": "explain",
+              "title": "EAFP: just try it",
+              "body": "Python style favours **EAFP**, *Easier to Ask Forgiveness than Permission*: attempt the operation and handle the failure, rather than checking every precondition first (*Look Before You Leap*).\n\n```python\n# Look before you leap\nif key in config:\n    port = config[key]\nelse:\n    port = 8080\n\n# EAFP\ntry:\n    port = config[key]\nexcept KeyError:\n    port = 8080\n```\n\n(For this exact case, `config.get(key, 8080)` is shortest.) EAFP shines when checking first is unreliable: a file can disappear between an `exists()` check and the `open()`."
+            },
+            {
+              "type": "example",
+              "title": "Too wide a net",
+              "problem": "What's wrong with this code?\n\n```python\ntry:\n    average = sum(prices) / len(pricse)\nexcept Exception:\n    average = 0\n```",
+              "steps": [
+                "There's a typo: `pricse`. That raises `NameError` every time.",
+                "`except Exception` catches that too, quietly setting `average = 0`. The bug hides, and the function always returns 0.",
+                "Catch only the failure you expect. Here that's an empty list, which raises `ZeroDivisionError`."
+              ],
+              "answer": "```python\ntry:\n    average = sum(prices) / len(prices)\nexcept ZeroDivisionError:\n    average = 0\n```\n\nNow a typo crashes loudly with a `NameError`, which is exactly what you want."
+            },
+            {
+              "type": "mcq",
+              "id": "q-which-exception",
+              "prompt": "What happens when this runs?\n\n```python\nages = {'ann': 31}\nprint(ages['bo'])\n```",
+              "choices": ["It raises `KeyError`", "It raises `IndexError`", "It raises `ValueError`", "It prints `None`"],
+              "answer": 0,
+              "explanation": "Square-bracket lookup of a missing dict key raises `KeyError: 'bo'`. `IndexError` is for sequence positions. `ages.get('bo')` is the version that returns `None`."
+            },
+            {
+              "type": "text",
+              "id": "q-raise",
+              "prompt": "Fill in the keyword that throws an exception:\n\n```python\ndef set_age(age):\n    if age < 0:\n        ___ ValueError('age must be >= 0')\n```",
+              "accept": ["raise"],
+              "explanation": "Python uses `raise`. (`throw` is the word in Java and JavaScript.) Raising early with a clear message beats letting bad data travel further."
+            },
+            {
+              "type": "numeric",
+              "id": "q-count-valid",
+              "prompt": "What does this print?\n\n```python\ndef count_ints(items):\n    good = 0\n    for s in items:\n        try:\n            int(s)\n            good += 1\n        except ValueError:\n            pass\n    return good\n\nprint(count_ints(['1', 'x', '3.5', '-4', ' 7 ']))\n```",
+              "answer": 3,
+              "hint": "`int()` accepts a sign and surrounding whitespace, but not a decimal point.",
+              "explanation": "`'1'`, `'-4'` and `' 7 '` parse fine. `'x'` and `'3.5'` raise `ValueError` and are skipped. That's **3**."
+            }
+          ]
+        },
+        {
+          "id": "files-modules",
+          "title": "Files, imports & virtual environments",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "Open files with `with` so they always close, guard script code with `if __name__ == '__main__':`, and give every project its own venv.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Files and the with statement",
+              "body": "```python\nwith open('notes.txt', encoding='utf-8') as f:\n    for line in f:\n        print(line.rstrip())\n\nwith open('out.txt', 'w', encoding='utf-8') as f:\n    f.write('hello\\n')\n```\n\n`with` closes the file when the block ends, even if an exception happens inside. Modes: `'r'` reads (the default), `'w'` writes and **erases** existing content, `'a'` appends. Each line keeps its trailing `'\\n'`, hence `.rstrip()`. Pass `encoding='utf-8'` explicitly, because the default depends on the operating system."
+            },
+            {
+              "type": "numeric",
+              "id": "q-write-mode",
+              "prompt": "`report.txt` already has 100 lines. How many lines does it have after this runs?\n\n```python\nwith open('report.txt', 'w', encoding='utf-8') as f:\n    f.write('one line\\n')\n```",
+              "answer": 1,
+              "explanation": "Mode `'w'` truncates the file the moment it's opened, so only the newly written line remains: **1**. Use `'a'` to add to the end instead."
+            },
+            {
+              "type": "explain",
+              "title": "Imports",
+              "body": "```python\nimport json                  # use as json.loads(...)\nfrom pathlib import Path     # use as Path(...)\nfrom math import sqrt, pi\nimport numpy as np           # an alias; np is the community convention\n```\n\nEvery `.py` file is a **module**: a `helpers.py` next to your script can be loaded with `import helpers`. A folder of modules is a **package**. Avoid `from x import *` in real code: it hides where names come from."
+            },
+            {
+              "type": "example",
+              "title": "A tiny real script",
+              "problem": "Load `settings.json`, read its `'name'` setting (defaulting to `'world'`), and print a greeting.",
+              "steps": [
+                "Import what you need: `import json` and `from pathlib import Path`.",
+                "`Path('settings.json').read_text(encoding='utf-8')` reads the whole file into a string. It opens and closes the file for you.",
+                "`json.loads(text)` turns JSON text into Python dicts and lists.",
+                "`config.get('name', 'world')` copes with a missing key."
+              ],
+              "answer": "```python\nimport json\nfrom pathlib import Path\n\ntext = Path('settings.json').read_text(encoding='utf-8')\nconfig = json.loads(text)\nname = config.get('name', 'world')\nprint(f'Hello, {name}!')\n```"
+            },
+            {
+              "type": "explain",
+              "title": "The main guard",
+              "body": "When you run a file directly (`python tool.py`), Python sets that module's `__name__` to `'__main__'`. When the file is *imported*, `__name__` is the module's own name, like `'tool'`.\n\n```python\ndef main():\n    ...\n\nif __name__ == '__main__':\n    main()\n```\n\nSo `main()` runs when you execute the script, but not when another file does `import tool` to reuse its functions. You'll see this at the bottom of most Python scripts."
+            },
+            {
+              "type": "mcq",
+              "id": "q-dunder-name",
+              "prompt": "`greet.py` contains:\n\n```python\nprint('loading', __name__)\n\nif __name__ == '__main__':\n    print('running as a script')\n```\n\nAnother file runs `import greet`. What gets printed?",
+              "choices": [
+                "`loading greet`",
+                "`loading __main__`, then `running as a script`",
+                "`loading __main__`",
+                "Nothing, because importing never runs any code"
+              ],
+              "answer": 0,
+              "explanation": "Importing a module runs its top-level code once, so the first `print` runs, and `__name__` is the module name, `'greet'`. The guarded block is skipped because `__name__` isn't `'__main__'`."
+            },
+            {
+              "type": "explain",
+              "title": "One venv per project",
+              "body": "A **virtual environment** is an isolated folder of installed packages, so two projects can need different versions without fighting.\n\n```\npython -m venv .venv\n\n# activate it (once per terminal session):\n#   macOS/Linux:  source .venv/bin/activate\n#   Windows:      .venv\\Scripts\\activate\n\npython -m pip install requests\npython -m pip freeze > requirements.txt\npython -m pip install -r requirements.txt\n```\n\nThe last line recreates the same environment on another machine. You may also see newer tools like `uv` or `poetry`, which wrap these same steps."
+            },
+            {
+              "type": "text",
+              "id": "q-pip",
+              "prompt": "Your venv is active. Fill in the missing word to install the `requests` package:\n\n```\npython -m ___ install requests\n```",
+              "accept": ["pip"],
+              "explanation": "`pip` is Python's package installer. Running it as `python -m pip` guarantees you're using the pip that belongs to the active Python, so the package lands in the right environment."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "objects",
+      "title": "Objects & data",
+      "description": "Bundling data with behaviour: classes, dataclasses and the special methods that plug into Python's syntax.",
+      "lessons": [
+        {
+          "id": "classes",
+          "title": "Classes & dataclasses",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "A class bundles data with the functions that use it, and `self` is the instance. For plain records, `@dataclass` writes the boilerplate for you.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Defining a class",
+              "body": "```python\nclass Account:\n    def __init__(self, owner, balance=0):\n        self.owner = owner\n        self.balance = balance\n\n    def deposit(self, amount):\n        self.balance += amount\n        return self.balance\n\nacct = Account('ann')\nacct.deposit(50)      # 50\nprint(acct.balance)   # 50\n```\n\n`__init__` sets up each new instance. Every method's first parameter is `self`, the instance it was called on. Attributes live on `self`."
+            },
+            {
+              "type": "text",
+              "id": "q-method-call",
+              "prompt": "Behind the scenes, `acct.deposit(50)` is the same call as:\n\n```python\nAccount.deposit(___, 50)\n```\n\nWhat goes in the blank?",
+              "accept": ["acct"],
+              "explanation": "Python passes the instance as the first argument automatically. That's where `self` comes from: inside `deposit`, `self` is `acct`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-self-bug",
+              "prompt": "Calling `increment()` on a `Counter` crashes. Which line has the bug?\n\n```python\nclass Counter:                  # line 1\n    def __init__(self):         # line 2\n        self.count = 0          # line 3\n\n    def increment(self):        # line 5\n        count += 1              # line 6\n```",
+              "choices": [
+                "Line 6: it should be `self.count += 1`",
+                "Line 2: `__init__` needs a `count` parameter",
+                "Line 3: attributes must be declared at class level first",
+                "Line 5: `increment` needs a `count` parameter"
+              ],
+              "answer": 0,
+              "explanation": "Inside a method, `count` is just a local variable that doesn't exist yet, so `count += 1` raises `UnboundLocalError`. The attribute lives on the instance and must be reached through `self.count`."
+            },
+            {
+              "type": "explain",
+              "title": "Inheritance, briefly",
+              "body": "A subclass gets all the parent's methods, can override them, and can call the parent's version with `super()`:\n\n```python\nclass Savings(Account):\n    def __init__(self, owner, rate):\n        super().__init__(owner)\n        self.rate = rate\n\n    def add_interest(self):\n        return self.deposit(self.balance * self.rate)\n```\n\nYou'll meet inheritance mostly when frameworks ask you to subclass their base classes. In your own code, small classes and plain functions usually beat deep hierarchies."
+            },
+            {
+              "type": "numeric",
+              "id": "q-inherit",
+              "prompt": "Using `Account` and `Savings` from above, what is printed?\n\n```python\ns = Savings('bo', 0.1)\ns.deposit(200)\ns.add_interest()\nprint(s.balance)\n```",
+              "answer": 220,
+              "explanation": "`Savings.__init__` calls `Account.__init__`, so the balance starts at 0. `deposit(200)` makes it 200. `add_interest` deposits 200 × 0.1 = 20.0, so it prints `220.0`, which is **220**."
+            },
+            {
+              "type": "explain",
+              "title": "Dataclasses",
+              "body": "For classes that mainly hold data, let Python write the boilerplate:\n\n```python\nfrom dataclasses import dataclass\n\n@dataclass\nclass Point:\n    x: float\n    y: float = 0.0\n\np = Point(3, 4)\nprint(p)                  # Point(x=3, y=4)\nprint(p == Point(3, 4))   # True\n```\n\n`@dataclass` generates `__init__`, a readable `__repr__` and a field-by-field `__eq__` from the annotated fields. Use `@dataclass(frozen=True)` for records that shouldn't change."
+            },
+            {
+              "type": "mcq",
+              "id": "q-plain-eq",
+              "prompt": "What does this print?\n\n```python\nclass P:\n    def __init__(self, x):\n        self.x = x\n\nprint(P(1) == P(1))\n```",
+              "choices": ["`False`", "`True`", "An error, because `==` isn't defined for `P`"],
+              "answer": 0,
+              "hint": "Without an `__eq__`, what could `==` compare?",
+              "explanation": "A plain class inherits a default `==` that compares **identity**: are these the same object? They're two separate objects, so the result is `False`. With `@dataclass`, the same comparison would be `True`."
+            },
+            {
+              "type": "example",
+              "title": "What @dataclass saves you",
+              "problem": "What would you have to write by hand to match `@dataclass` for `Point`?",
+              "steps": [
+                "An `__init__(self, x, y=0.0)` that stores `self.x` and `self.y`.",
+                "A `__repr__` returning text like `'Point(x=3, y=4)'`. Without it, `print(p)` shows something like `<__main__.Point object at 0x7f...>`.",
+                "An `__eq__` that compares the fields. Without it, two points with equal coordinates are not `==`."
+              ],
+              "answer": "About ten lines of boilerplate per class, replaced by a list of field names with types."
+            }
+          ]
+        },
+        {
+          "id": "dunder-methods",
+          "title": "Dunder methods",
+          "pareto": "extra",
+          "minutes": 5,
+          "takeaway": "Dunder methods like `__repr__`, `__eq__`, `__len__` and `__add__` let your objects work with Python's built-in syntax and functions.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Python's hooks",
+              "body": "Double-underscore (\"dunder\") methods are hooks that Python calls for you. `len(x)` calls `x.__len__()`, `a + b` calls `a.__add__(b)`, and `print(x)` uses `x.__str__()`, falling back to `x.__repr__()`. You rarely call them yourself; you define them so your objects plug into the language.\n\n- `__repr__` and `__str__`: text for developers and for users\n- `__eq__` and `__lt__`: `==` and `<` (which sorting uses)\n- `__len__`, `__getitem__` and `__contains__`: `len()`, `x[i]` and `in`\n- `__add__` and `__mul__`: the `+` and `*` operators\n- `__enter__` and `__exit__`: the `with` statement"
+            },
+            {
+              "type": "example",
+              "title": "A vector you can add",
+              "problem": "What does this print?\n\n```python\nclass Vec:\n    def __init__(self, x, y):\n        self.x, self.y = x, y\n\n    def __add__(self, other):\n        return Vec(self.x + other.x, self.y + other.y)\n\n    def __repr__(self):\n        return f'Vec({self.x}, {self.y})'\n\nprint(Vec(1, 2) + Vec(3, 4))\n```",
+              "steps": [
+                "`Vec(1, 2) + Vec(3, 4)` becomes `Vec(1, 2).__add__(Vec(3, 4))`.",
+                "That builds and returns `Vec(4, 6)`.",
+                "`print` needs text. `Vec` defines no `__str__`, so Python uses `__repr__`."
+              ],
+              "answer": "It prints `Vec(4, 6)`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-len-bool",
+              "prompt": "What does this print?\n\n```python\nclass Playlist:\n    def __init__(self, songs):\n        self.songs = songs\n\n    def __len__(self):\n        return len(self.songs)\n\np = Playlist(['a', 'b', 'c'])\nprint(len(p), bool(p), bool(Playlist([])))\n```",
+              "choices": ["`3 True False`", "`3 True True`", "`3 False False`", "An error, because `bool()` needs a `__bool__` method"],
+              "answer": 0,
+              "hint": "Without `__bool__`, truthiness falls back to `__len__`.",
+              "explanation": "`len(p)` calls `__len__` and gets 3. With no `__bool__`, Python treats a length of 0 as falsy and anything else as truthy, so the full playlist is `True` and the empty one is `False`, just like lists."
+            },
+            {
+              "type": "explain",
+              "title": "repr vs str",
+              "body": "`repr()` is for developers: unambiguous, ideally looking like code that recreates the value. `str()` is for end users. Containers always show their items' `repr`:\n\n```python\ns = 'hi'\nprint(str(s))    # hi\nprint(repr(s))   # 'hi'\nprint([s])       # ['hi']\n```\n\nIf you define only one, define `__repr__`: `str()` falls back to it, and it's what you'll see in the debugger, the REPL and inside lists."
+            },
+            {
+              "type": "mcq",
+              "id": "q-contains",
+              "prompt": "You want `'apple' in inventory` to work for your own `Inventory` class. Which method should you define?",
+              "choices": ["`__contains__`", "`__in__`", "`__has__`", "`__includes__`"],
+              "answer": 0,
+              "explanation": "`x in obj` calls `obj.__contains__(x)`. (If it's missing, Python falls back to iterating with `__iter__` or `__getitem__`, which is slower.) The other names aren't special to Python."
+            },
+            {
+              "type": "text",
+              "id": "q-dunder-sort",
+              "prompt": "`sorted(tasks)` fails with `TypeError: '<' not supported between instances of 'Task' and 'Task'`. Which dunder method should `Task` define to make sorting work?",
+              "accept": ["__lt__", "lt", "_lt_"],
+              "hint": "Sorting compares items with `<`, which is \"less than\".",
+              "explanation": "Sorting only needs `<`, which calls `__lt__`. Alternatives: pass a key, as in `sorted(tasks, key=lambda t: t.priority)`, or use `@dataclass(order=True)`."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "going-further",
+      "title": "Going further",
+      "description": "Features you'll meet in real-world code: generators, decorators, type hints and async.",
+      "lessons": [
+        {
+          "id": "generators",
+          "title": "Iterators & generators",
+          "pareto": "extra",
+          "minutes": 6,
+          "takeaway": "A generator uses `yield` to produce values lazily, one at a time. That's ideal for big or endless streams, but it can only be consumed once.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "What for really does",
+              "body": "Anything you can loop over is an **iterable**: lists, strings, dicts, files, `range`. A `for` loop calls `iter()` on it to get an **iterator**, then calls `next()` repeatedly until the iterator raises `StopIteration`.\n\n```python\nit = iter([10, 20])\nnext(it)   # 10\nnext(it)   # 20\nnext(it)   # raises StopIteration\n```"
+            },
+            {
+              "type": "explain",
+              "title": "Generators with yield",
+              "body": "A function containing `yield` returns a **generator**. Calling it runs nothing yet. Each `next()` runs the body until the next `yield`, pauses there, and hands back that value.\n\n```python\ndef countdown(n):\n    while n > 0:\n        yield n\n        n -= 1\n\nlist(countdown(3))   # [3, 2, 1]\n```\n\nValues are produced **lazily**, so memory use stays flat even for millions of items, such as reading a huge log file line by line."
+            },
+            {
+              "type": "mcq",
+              "id": "q-gen-pause",
+              "prompt": "What does this print?\n\n```python\ndef gen():\n    print('start')\n    yield 1\n    print('middle')\n    yield 2\n\ng = gen()\nprint(next(g))\n```",
+              "choices": ["`start`, then `1`", "`start`, `1`, `middle`, `2`", "Just `1`", "`start`, then `middle`, then `1`"],
+              "answer": 0,
+              "explanation": "`gen()` only creates the generator. `next(g)` runs until the first `yield`, which prints `start` and hands back `1`. The code after it waits until someone calls `next` again."
+            },
+            {
+              "type": "example",
+              "title": "One pass only",
+              "problem": "What does this print?\n\n```python\nsquares = (n * n for n in range(4))\nprint(sum(squares))\nprint(sum(squares))\n```",
+              "steps": [
+                "The parentheses make a **generator expression**, not a tuple.",
+                "The first `sum` consumes it: 0 + 1 + 4 + 9 = 14.",
+                "The generator is now exhausted, so the second `sum` sees no items and returns 0."
+              ],
+              "answer": "It prints `14`, then `0`. If you need to go over the values twice, build a list with `[n * n for n in range(4)]`."
+            },
+            {
+              "type": "numeric",
+              "id": "q-gen-sum",
+              "prompt": "What does this print?\n\n```python\ndef evens(limit):\n    n = 0\n    while n < limit:\n        yield n\n        n += 2\n\nprint(sum(evens(9)))\n```",
+              "answer": 20,
+              "explanation": "The generator yields 0, 2, 4, 6 and 8 (10 is not below 9). They add up to **20**."
+            },
+            {
+              "type": "mcq",
+              "id": "q-lazy-memory",
+              "prompt": "Inside `with open('big.log', encoding='utf-8') as f:`, which line counts the lines containing `ERROR` while using almost no memory, however large the file is?",
+              "choices": [
+                "`n = sum(1 for line in f if 'ERROR' in line)`",
+                "`n = sum(1 for line in f.readlines() if 'ERROR' in line)`",
+                "`n = len([line for line in f if 'ERROR' in line])`",
+                "`n = f.read().count('ERROR')`"
+              ],
+              "answer": 0,
+              "explanation": "Iterating over `f` reads one line at a time, and the generator expression never stores them. `readlines()` and `read()` load the whole file into memory (and `count` would count occurrences, not lines). The list comprehension keeps every matching line in memory."
+            },
+            {
+              "type": "text",
+              "id": "q-yield",
+              "prompt": "Fill in the keyword that turns this function into a generator:\n\n```python\ndef read_ids(path):\n    with open(path, encoding='utf-8') as f:\n        for line in f:\n            ___ int(line)\n```",
+              "accept": ["yield"],
+              "explanation": "`yield` hands back one value at a time and pauses, so callers can write `for id in read_ids('ids.txt'):` without the whole file ever sitting in memory."
+            }
+          ]
+        },
+        {
+          "id": "decorators",
+          "title": "Decorators",
+          "pareto": "extra",
+          "minutes": 6,
+          "takeaway": "`@decorator` above a `def` means `func = decorator(func)`: a function that wraps another to add behaviour before or after it.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Functions are values",
+              "body": "Functions are objects. You can give them new names, pass them to other functions, and define them inside other functions.\n\n```python\ndef shout(text):\n    return text.upper()\n\nf = shout                                   # no call, just another name\nprint(f('hi'))                              # HI\nprint(sorted(['bb', 'a', 'ccc'], key=len))  # ['a', 'bb', 'ccc']\n```"
+            },
+            {
+              "type": "explain",
+              "title": "The @ syntax",
+              "body": "A **decorator** takes a function and returns a replacement, usually a wrapper around it:\n\n```python\nimport functools\n\ndef logged(func):\n    @functools.wraps(func)\n    def wrapper(*args, **kwargs):\n        print('calling', func.__name__)\n        return func(*args, **kwargs)\n    return wrapper\n\n@logged\ndef add(a, b):\n    return a + b\n```\n\nWriting `@logged` above `def add` is exactly the same as writing `add = logged(add)` after it. `functools.wraps` copies the original name and docstring onto the wrapper."
+            },
+            {
+              "type": "mcq",
+              "id": "q-deco-output",
+              "prompt": "Using `logged` and `add` from above, what does this print?\n\n```python\nprint(add(2, 3))\n```",
+              "choices": ["`calling add`, then `5`", "`5`, then `calling add`", "`calling wrapper`, then `5`", "Just `5`"],
+              "answer": 0,
+              "explanation": "`add` now refers to `wrapper`. It prints `calling add` (since `func` is the original `add`), then returns `add(2, 3)`, which the outer `print` shows as `5`."
+            },
+            {
+              "type": "example",
+              "title": "A timing decorator",
+              "problem": "Write a decorator that prints how long a function took to run.",
+              "steps": [
+                "`time.perf_counter()` is a high-resolution clock for measuring durations.",
+                "In the wrapper, record the start time, call the function, then measure the elapsed time.",
+                "Return the original result, so the decorated function still behaves exactly as before."
+              ],
+              "answer": "```python\nimport functools\nimport time\n\ndef timed(func):\n    @functools.wraps(func)\n    def wrapper(*args, **kwargs):\n        start = time.perf_counter()\n        result = func(*args, **kwargs)\n        elapsed = time.perf_counter() - start\n        print(f'{func.__name__} took {elapsed:.3f}s')\n        return result\n    return wrapper\n```"
+            },
+            {
+              "type": "mcq",
+              "id": "q-deco-bug",
+              "prompt": "`print(double(5))` shows `calling`, then `None` instead of `10`. Which line is the bug?\n\n```python\ndef logged(func):                    # line 1\n    def wrapper(*args, **kwargs):    # line 2\n        print('calling')             # line 3\n        func(*args, **kwargs)        # line 4\n    return wrapper                   # line 5\n\n@logged\ndef double(x):\n    return x * 2\n```",
+              "choices": [
+                "Line 4: the wrapper calls `func` but doesn't return its result",
+                "Line 5: it should be `return wrapper()`",
+                "Line 2: `wrapper` must take exactly the same parameters as `double`",
+                "Line 1: every decorator must use `functools.wraps`"
+              ],
+              "answer": 0,
+              "hint": "What does a function return if it has no `return` statement?",
+              "explanation": "`wrapper` computes `func(...)` and throws the result away, so it returns `None`. Line 4 should be `return func(*args, **kwargs)`. Returning `wrapper()` would call it immediately, and `functools.wraps` is good practice but doesn't affect return values."
+            },
+            {
+              "type": "explain",
+              "title": "Decorators in the wild",
+              "body": "You'll mostly *use* decorators rather than write them:\n\n- `@property` lets a method be read like an attribute, as in `circle.area`\n- `@staticmethod` and `@classmethod` define methods that don't need an instance\n- `@functools.cache` remembers results for arguments it has seen before\n- `@dataclass` generates class boilerplate\n- `@app.get('/users')` (FastAPI) and `@app.route('/users')` (Flask) register web handlers, and `@pytest.fixture` sets up test data\n\nA decorator with arguments, like `@app.get('/users')`, is a function call that *returns* the actual decorator."
+            },
+            {
+              "type": "text",
+              "id": "q-deco-equiv",
+              "prompt": "Writing `@functools.cache` above `def fib(n): ...` is equivalent to which line after the definition? Fill in the blank.\n\n```python\nfib = ___(fib)\n```",
+              "accept": ["functools.cache", "cache"],
+              "explanation": "`@d` above `def f` means `f = d(f)`. Here the name `fib` ends up pointing at the caching wrapper, so recursive calls hit the cache too."
+            }
+          ]
+        },
+        {
+          "id": "type-hints-async",
+          "title": "Type hints & async at a glance",
+          "pareto": "extra",
+          "minutes": 6,
+          "takeaway": "Type hints document intent and power editors and checkers but aren't enforced at runtime. `async`/`await` let one thread overlap lots of waiting.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Reading type hints",
+              "body": "```python\ndef greet(name: str, excited: bool = False) -> str:\n    return f'Hi {name}' + ('!' if excited else '.')\n\nscores: dict[str, list[int]] = {}\nnickname: str | None = None\n```\n\n`name: str` annotates a parameter and `-> str` annotates the return value. `list[int]` (Python 3.9+) and `str | None` (3.10+) are the modern spelling. Older code writes `List[int]` and `Optional[str]` from the `typing` module. Editors use hints for autocompletion, and checkers like mypy or pyright use them to find bugs before you run anything."
+            },
+            {
+              "type": "mcq",
+              "id": "q-hints-runtime",
+              "prompt": "What happens when you run this?\n\n```python\ndef double(x: int) -> int:\n    return x * 2\n\nprint(double('ab'))\n```",
+              "choices": [
+                "It prints `abab`",
+                "It raises `TypeError`, because `'ab'` isn't an `int`",
+                "It refuses to start, because Python checks hints before running",
+                "It prints `None`"
+              ],
+              "answer": 0,
+              "explanation": "Python does **not** enforce type hints at runtime. `'ab' * 2` is `'abab'`, so that's what prints. A type checker like mypy would flag the call before you run it, which is where hints pay off."
+            },
+            {
+              "type": "mcq",
+              "id": "q-read-hint",
+              "prompt": "Which value matches the hint `dict[str, list[int]]`?",
+              "choices": ["`{'ann': [90, 85]}`", "`{'ann': 90}`", "`[{'ann': 90}]`", "`{90: ['ann']}`"],
+              "answer": 0,
+              "explanation": "It's a dict whose keys are strings and whose values are lists of ints. `{'ann': 90}` has an int value, not a list. `[...]` is a list, not a dict. `{90: ['ann']}` has the types swapped."
+            },
+            {
+              "type": "explain",
+              "title": "Async: waiting efficiently",
+              "body": "Many scripts spend most of their time **waiting** for the network, a database or a disk. `async def` defines a **coroutine**, and `await` marks a point where it pauses so the event loop can run other tasks until the result is ready.\n\n```python\nimport asyncio\n\nasync def fetch(name, delay):\n    await asyncio.sleep(delay)   # stands in for a network call\n    return name\n\nasync def main():\n    results = await asyncio.gather(fetch('a', 1), fetch('b', 1))\n    print(results)               # ['a', 'b'], after about 1 s, not 2\n\nasyncio.run(main())\n```\n\nAsync helps with lots of concurrent I/O, not with heavy computation."
+            },
+            {
+              "type": "example",
+              "title": "Sequential vs concurrent",
+              "problem": "Three downloads each take 2 seconds of pure waiting. How long does awaiting them one by one take, compared with `asyncio.gather`?",
+              "steps": [
+                "One by one: each `await` finishes before the next download starts, so the total is about 2 + 2 + 2 = 6 s.",
+                "With `gather`, all three start together. While one waits, the others can wait at the same time, so the total is about 2 s.",
+                "The total work is the same. The saving comes from overlapping the waiting."
+              ],
+              "answer": "About **6 s** one by one, versus about **2 s** with `asyncio.gather`."
+            },
+            {
+              "type": "numeric",
+              "id": "q-gather-time",
+              "prompt": "Roughly how many seconds does this take to run?\n\n```python\nimport asyncio\n\nasync def job(seconds):\n    await asyncio.sleep(seconds)\n\nasync def main():\n    await job(1)\n    await asyncio.gather(job(2), job(3))\n\nasyncio.run(main())\n```",
+              "answer": 4,
+              "tolerance": 0.5,
+              "unit": "s",
+              "hint": "The first `await` finishes before `gather` starts. Inside `gather`, the jobs overlap.",
+              "explanation": "`job(1)` takes 1 s on its own. Then the two gathered jobs run concurrently, so they take as long as the slower one, 3 s. That's 1 + 3 = **4 s**."
+            },
+            {
+              "type": "mcq",
+              "id": "q-forgot-await",
+              "prompt": "What does this print?\n\n```python\nimport asyncio\n\nasync def get_num():\n    return 42\n\nasync def main():\n    n = get_num()\n    print(type(n).__name__)\n\nasyncio.run(main())\n```",
+              "choices": [
+                "`coroutine`, plus a warning that it was never awaited",
+                "`int`",
+                "`NoneType`",
+                "`function`"
+              ],
+              "answer": 0,
+              "hint": "Calling an `async def` function doesn't run its body.",
+              "explanation": "Calling `get_num()` only creates a coroutine object; nothing runs until it's awaited. Python also warns `coroutine 'get_num' was never awaited`. The fix is `n = await get_num()`, which gives `42`."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

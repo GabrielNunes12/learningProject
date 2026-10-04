@@ -1,0 +1,214 @@
+import { useEffect, useState } from 'react';
+import { lessonKey, questionKey, unitOf } from '../content';
+import { useAuth } from '../lib/auth';
+import { href } from '../lib/router';
+import { completeLesson, openLesson, recordAnswer, streak, useProgress, xpToday, XP } from '../lib/storage';
+import { isQuestion, type Course, type ExampleStep, type Lesson } from '../types';
+import { PlayerHeader } from './Layout';
+import { Markdown } from './Markdown';
+import { BottomBar, QuestionView } from './QuestionView';
+import { accentStyle, Ring, useBodyAccent } from './ui';
+
+export function LessonPlayer({ course, lesson }: { course: Course; lesson: Lesson }) {
+  const [index, setIndex] = useState(0);
+  const [score, setScore] = useState({ right: 0, total: 0 });
+  const [xp, setXp] = useState(0);
+  const steps = lesson.steps;
+  const done = index >= steps.length;
+  const courseHref = href('course', course.id);
+  useBodyAccent(course.color);
+
+  useEffect(() => openLesson(course.id, lesson.id), [course.id, lesson.id]);
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [index]);
+
+  const next = () => {
+    if (index + 1 === steps.length) setXp((x) => x + completeLesson(lessonKey(course.id, lesson.id)));
+    setIndex(index + 1);
+  };
+
+  if (done) return <LessonComplete course={course} lesson={lesson} score={score} xp={xp} />;
+
+  const step = steps[index];
+  return (
+    <div className="player" style={accentStyle(course.color)}>
+      <PlayerHeader
+        exitHref={courseHref}
+        done={index}
+        total={steps.length}
+        right={
+          <span className="xp-pill" aria-label={`${xp} XP earned this lesson`}>
+            ⭐ {xp}
+          </span>
+        }
+      />
+      <main className="player-body">
+        <div className="lesson-crumb">
+          <span aria-hidden>{course.icon}</span> {unitOf(course, lesson).title} · <strong>{lesson.title}</strong>
+        </div>
+
+        {step.type === 'explain' && (
+          <>
+            <article className="step-card" key={index}>
+              {step.title && <h2>{step.title}</h2>}
+              <Markdown text={step.body} />
+            </article>
+            <BottomBar>
+              <div className="bb-status" />
+              <div className="bb-actions">
+                <button className="btn primary big" onClick={next} autoFocus>
+                  Continue
+                </button>
+              </div>
+            </BottomBar>
+          </>
+        )}
+
+        {step.type === 'example' && <ExampleView key={index} step={step} onContinue={next} />}
+
+        {isQuestion(step) && (
+          <article className="step-card" key={index}>
+            <QuestionView
+              step={step}
+              mode="learn"
+              onDone={(ok) => {
+                recordAnswer(questionKey(course.id, lesson.id, step.id), ok);
+                setScore((s) => ({ right: s.right + (ok ? 1 : 0), total: s.total + 1 }));
+                setXp((x) => x + (ok ? XP.correct : XP.attempt));
+                next();
+              }}
+            />
+          </article>
+        )}
+      </main>
+    </div>
+  );
+}
+
+function ExampleView({ step, onContinue }: { step: ExampleStep; onContinue: () => void }) {
+  const [shown, setShown] = useState(0);
+  const total = step.steps.length + (step.answer ? 1 : 0);
+  const all = shown >= total;
+  const label = shown === 0 ? 'Show first step' : shown < step.steps.length ? 'Next step' : 'Show answer';
+
+  return (
+    <>
+      <article className="step-card example">
+        <span className="eyebrow">Worked example</span>
+        {step.title && <h2>{step.title}</h2>}
+        <Markdown text={step.problem} />
+        {shown === 0 && <p className="try-first">✍️ Try it yourself first, then reveal the solution one step at a time.</p>}
+        {shown > 0 && (
+          <ol className="solution">
+            {step.steps.slice(0, shown).map((s, i) => (
+              <li key={i}>
+                <Markdown text={s} />
+              </li>
+            ))}
+          </ol>
+        )}
+        {all && step.answer && (
+          <div className="answer-box">
+            <Markdown text={step.answer} />
+          </div>
+        )}
+      </article>
+      <BottomBar>
+        <div className="bb-status">
+          {!all && (
+            <span className="muted small">
+              Step {shown} of {step.steps.length}
+            </span>
+          )}
+        </div>
+        <div className="bb-actions">
+          {!all ? (
+            <>
+              <button className="btn ghost" onClick={onContinue}>
+                Skip
+              </button>
+              <button className="btn primary big" onClick={() => setShown(shown + 1)} autoFocus>
+                {label}
+              </button>
+            </>
+          ) : (
+            <button className="btn primary big" onClick={onContinue} autoFocus>
+              Continue
+            </button>
+          )}
+        </div>
+      </BottomBar>
+    </>
+  );
+}
+
+function LessonComplete({ course, lesson, score, xp }: { course: Course; lesson: Lesson; score: { right: number; total: number }; xp: number }) {
+  const p = useProgress();
+  const { user } = useAuth();
+  const pos = course.lessons.findIndex((l) => l.id === lesson.id);
+  // Suggest the next core lesson first (80/20), then the next lesson in order.
+  const nextLesson =
+    course.lessons.slice(pos + 1).find((l) => l.pareto === 'core' && !p.completed[lessonKey(course.id, l.id)]) ?? course.lessons[pos + 1];
+  const today = xpToday(p);
+
+  return (
+    <div className="player" style={accentStyle(course.color)}>
+      <PlayerHeader exitHref={href('course', course.id)} done={1} total={1} />
+      <main className="player-body complete">
+        <div className="celebrate" aria-hidden>
+          🎉
+        </div>
+        <h1>Lesson complete!</h1>
+        <p className="lead">{lesson.title}</p>
+
+        <div className="result-tiles">
+          <div className="result-tile xp">
+            <span>Total XP</span>
+            <strong>+{xp}</strong>
+          </div>
+          <div className="result-tile">
+            <span>Accuracy</span>
+            <strong>{score.total ? `${Math.round((score.right / score.total) * 100)}%` : '—'}</strong>
+          </div>
+          <div className="result-tile">
+            <span>Streak</span>
+            <strong>🔥 {streak(p)}</strong>
+          </div>
+          <div className="result-tile">
+            <Ring value={today / Math.max(p.dailyGoal, 1)} size={44} stroke={5} label="Daily goal" />
+            <span>
+              {today}/{p.dailyGoal} today
+            </span>
+          </div>
+        </div>
+
+        <div className="takeaway">
+          <span className="eyebrow">Key takeaway</span>
+          <Markdown text={lesson.takeaway} />
+        </div>
+
+        {!user && (
+          <p className="small muted">
+            <a href="#/signup">Create a free profile</a> to keep your progress on every device.
+          </p>
+        )}
+
+        <div className="actions center">
+          <a className="btn ghost" href={href('course', course.id)}>
+            Back to course
+          </a>
+          {nextLesson ? (
+            <a className="btn primary big" href={href('course', course.id, 'lesson', nextLesson.id)} autoFocus>
+              Next: {nextLesson.title} →
+            </a>
+          ) : (
+            <a className="btn primary big" href={href('course', course.id, 'quiz')} autoFocus>
+              Take the course quiz →
+            </a>
+          )}
+        </div>
+      </main>
+    </div>
+  );
+}

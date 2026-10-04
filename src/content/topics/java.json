@@ -1,0 +1,1264 @@
+{
+  "id": "java",
+  "title": "Java (8 → 25)",
+  "icon": "☕",
+  "color": "#e76f00",
+  "order": 11,
+  "category": "Programming",
+  "level": "Beginner",
+  "description": "Write modern Java confidently and know what every release from 8 to 25 added — so you can read any codebase, legacy or brand new, and pick a version.",
+  "keyIdeas": [
+    "Compare objects with `.equals()`, not `==` — and remember that Strings never change, methods return new ones.",
+    "Program to interfaces: `List`, `Set` and `Map` (with `ArrayList`, `HashSet`, `HashMap`) cover most everyday needs.",
+    "Java 8's lambdas, streams and `Optional` are the baseline of every modern codebase.",
+    "A new Java ships every March and September; most teams move along the LTS jumps 8 → 11 → 17 → 21 → 25.",
+    "Modern Java models data with records, sealed types and pattern-matching `switch`.",
+    "Virtual threads (Java 21) let simple blocking code scale to huge numbers of concurrent tasks."
+  ],
+  "units": [
+    {
+      "id": "essentials",
+      "title": "Java essentials",
+      "description": "The core of the language you'll use in every Java file: types, strings, classes, collections and exceptions.",
+      "lessons": [
+        {
+          "id": "java-basics",
+          "title": "Program structure, primitives & references",
+          "pareto": "core",
+          "minutes": 6,
+          "takeaway": "Primitives hold values; everything else holds a reference — and assignment copies whichever one the variable holds.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "The smallest classic program",
+              "body": "```java\npublic class Hello {\n    public static void main(String[] args) {\n        System.out.println(\"Hello, Java!\");\n    }\n}\n```\n\n- All code lives inside a **class**. A `public` class must sit in a file with the same name: `Hello.java`.\n- `main` is the entry point. Statements end with `;`.\n- Classic workflow: `javac Hello.java` compiles to bytecode, `java Hello` runs it. Since Java 11, `java Hello.java` does both in one step.\n\nJava 25 trims this down even further — you'll see that later in the course."
+            },
+            {
+              "type": "explain",
+              "title": "Primitives vs references",
+              "body": "Java has **8 primitive types**: `byte`, `short`, `int`, `long`, `float`, `double`, `char`, `boolean`. A primitive variable holds the **value itself**.\n\nEverything else — `String`, arrays, collections, your own classes — is a **reference type**. The variable holds a *reference* (an arrow) to an object living on the heap.\n\nAssignment always copies what the variable holds. For a primitive that's the value; for a reference it's the arrow, so two variables can end up pointing at the **same object**.\n\nEach primitive has a wrapper class (`int` → `Integer`), and Java converts between them automatically (*autoboxing*)."
+            },
+            {
+              "type": "example",
+              "title": "Copying a value vs copying a reference",
+              "problem": "What does this print?\n\n```java\nint a = 5;\nint b = a;\nb = 10;\n\nint[] x = {1, 2, 3};\nint[] y = x;\ny[0] = 99;\n\nSystem.out.println(a + \" \" + x[0]);\n```",
+              "steps": [
+                "`int b = a` copies the **value** 5 into `b`. Changing `b` later doesn't touch `a`, so `a` is still 5.",
+                "`int[] y = x` copies the **reference**. There is still only one array, and both `x` and `y` point at it.",
+                "`y[0] = 99` changes that shared array, so `x[0]` is now 99 too."
+              ],
+              "answer": "It prints `5 99`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-int-division",
+              "prompt": "What does this print?\n\n```java\nint total = 7;\nint count = 2;\ndouble avg = total / count;\nSystem.out.println(avg);\n```",
+              "choices": [
+                "`3.5`",
+                "`3.0`",
+                "`3`",
+                "It doesn't compile"
+              ],
+              "answer": 1,
+              "hint": "Which division happens first — and with which types?",
+              "explanation": "`total / count` is `int / int`, which is **integer division**: 7 / 2 = 3. Only then is 3 widened to the `double` 3.0. Fix it with `(double) total / count`, which gives 3.5."
+            },
+            {
+              "type": "mcq",
+              "id": "q-pass-by-value",
+              "prompt": "Java passes arguments **by value**. What does this print?\n\n```java\nstatic void reset(int n) { n = 0; }\nstatic void reset(int[] arr) { arr[0] = 0; }\n\n// in main:\nint n = 5;\nint[] arr = {5};\nreset(n);\nreset(arr);\nSystem.out.println(n + \" \" + arr[0]);\n```",
+              "choices": [
+                "`5 5`",
+                "`5 0`",
+                "`0 0`",
+                "`0 5`"
+              ],
+              "answer": 1,
+              "hint": "What gets copied into the parameter in each case: a value, or a reference?",
+              "explanation": "The first `reset` gets a copy of the number 5 and changes only its own copy. The second gets a copy of the **reference**, which still points to the caller's array, so `arr[0] = 0` changes the real array. Result: `5 0`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-sb-alias",
+              "prompt": "`StringBuilder` is a *mutable* text buffer. What does this print?\n\n```java\nStringBuilder a = new StringBuilder(\"hi\");\nStringBuilder b = a;\nb.append(\"!\");\nSystem.out.println(a);\n```",
+              "choices": [
+                "`hi`",
+                "`hi!`",
+                "`hi!hi!`",
+                "It doesn't compile"
+              ],
+              "answer": 1,
+              "explanation": "`a` and `b` are two references to the **same** `StringBuilder`. Appending through `b` changes the object that `a` also sees, so it prints `hi!`."
+            },
+            {
+              "type": "text",
+              "id": "q-int-div-text",
+              "prompt": "What does `System.out.println(10 / 4);` print?",
+              "accept": [
+                "2"
+              ],
+              "explanation": "Both operands are `int`, so this is integer division: the fractional part is dropped and 10 / 4 = **2**. Write `10 / 4.0` to get 2.5."
+            }
+          ]
+        },
+        {
+          "id": "strings-equality",
+          "title": "Strings, immutability & == vs equals",
+          "pareto": "core",
+          "minutes": 5,
+          "takeaway": "Strings never change — keep the result of every String method — and compare content with `.equals()`, never `==`.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Strings are immutable",
+              "body": "A `String` object can **never change**. Methods like `toUpperCase()`, `replace()`, `trim()` or `concat()` don't modify the string — they **return a new one**.\n\nThat makes strings safe to share between objects and threads, but it creates a classic bug: calling a String method and forgetting to use the result.\n\nWhen you build a long string piece by piece in a loop, use a `StringBuilder` instead of `+=` — each `+=` copies the whole string again."
+            },
+            {
+              "type": "example",
+              "title": "The forgotten result",
+              "problem": "What does this print?\n\n```java\nString s = \"java\";\ns.toUpperCase();\nSystem.out.println(s);\ns = s.toUpperCase();\nSystem.out.println(s);\n```",
+              "steps": [
+                "Line 2 creates a new string `\"JAVA\"` — and throws it away. `s` still refers to `\"java\"`.",
+                "So the first `println` prints `java`.",
+                "Line 4 stores the new string back into `s`. Now `s` refers to `\"JAVA\"`."
+              ],
+              "answer": "`java`, then `JAVA`."
+            },
+            {
+              "type": "explain",
+              "title": "== vs .equals()",
+              "body": "- For **primitives**, `==` compares values: `3 == 3` is true.\n- For **objects**, `==` asks *\"are these the very same object?\"* — it compares references.\n- `.equals()` compares **content**, as defined by the class. `String`, `Integer`, `List` and records all define it sensibly.\n\nRule: **compare objects with `.equals()`**. Sometimes `==` on strings appears to work because identical literals are shared, but that's luck, not a guarantee.\n\nIf a value might be `null`, write `\"admin\".equals(name)` or `Objects.equals(a, b)` — calling `.equals` on `null` throws a `NullPointerException`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-equals",
+              "prompt": "What does this print?\n\n```java\nString a = \"hello\";\nString b = new String(\"hello\");\nSystem.out.println(a == b);\nSystem.out.println(a.equals(b));\n```",
+              "choices": [
+                "`true` then `true`",
+                "`false` then `true`",
+                "`true` then `false`",
+                "`false` then `false`"
+              ],
+              "answer": 1,
+              "explanation": "`new String(...)` always creates a distinct object, so `a == b` (same object?) is **false**. The characters are identical, so `a.equals(b)` is **true**."
+            },
+            {
+              "type": "mcq",
+              "id": "q-null-safe",
+              "prompt": "`name` comes from user input and might be `null`. Which check is correct **and** can never throw?",
+              "choices": [
+                "`name == \"admin\"`",
+                "`name.equals(\"admin\")`",
+                "`\"admin\".equals(name)`",
+                "`name.compareTo(\"admin\") == 0`"
+              ],
+              "answer": 2,
+              "explanation": "`\"admin\".equals(name)` calls the method on a literal that is never null, and simply returns false when `name` is null. `name.equals(...)` and `name.compareTo(...)` throw a NullPointerException for null, and `==` compares references, not content."
+            },
+            {
+              "type": "mcq",
+              "id": "q-concat-loop",
+              "prompt": "You build a 10,000-line report inside a loop. What's the best way to accumulate the text?",
+              "choices": [
+                "`report += line + \"\\n\";` on a `String`",
+                "Append to a `StringBuilder`, then call `toString()` once",
+                "Call `report.concat(line)` each time without assigning",
+                "Use `==` to check for duplicates first"
+              ],
+              "answer": 1,
+              "explanation": "Because strings are immutable, each `+=` copies everything built so far — O(n²) work overall. A `StringBuilder` appends in place. (And `concat` without assigning does nothing useful: the result is thrown away.)"
+            },
+            {
+              "type": "text",
+              "id": "q-replace-result",
+              "prompt": "What does this print?\n\n```java\nString s = \"cat\";\ns.replace('c', 'b');\ns = s + \"s\";\nSystem.out.println(s);\n```",
+              "accept": [
+                "cats"
+              ],
+              "hint": "Was the result of `replace` stored anywhere?",
+              "explanation": "`replace` returned `\"bat\"` but nobody kept it, so `s` is still `\"cat\"`. Then `s + \"s\"` is assigned back, giving **cats**."
+            }
+          ]
+        },
+        {
+          "id": "classes-objects",
+          "title": "Classes, interfaces & inheritance",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "Keep fields private, extend one class, implement many interfaces — and the object's real type decides which method runs.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "A class bundles data and behaviour",
+              "body": "```java\npublic class Account {\n    private final String owner;\n    private double balance;\n\n    public Account(String owner) {\n        this.owner = owner;\n    }\n\n    public void deposit(double amount) {\n        if (amount <= 0) throw new IllegalArgumentException(\"must be positive\");\n        balance += amount;\n    }\n\n    public double getBalance() { return balance; }\n}\n```\n\n`new Account(\"Ada\")` runs the **constructor** and creates an object. `this.owner` means *this object's* field. `final` means the field is assigned exactly once."
+            },
+            {
+              "type": "explain",
+              "title": "Access modifiers",
+              "body": "From most to least restrictive:\n\n- `private` — only inside the same class\n- *(no keyword)* — package-private: classes in the same package\n- `protected` — same package plus subclasses\n- `public` — everyone\n\nThe usual habit: **fields private**, expose behaviour through methods. That's why `Account` has `getBalance()` and `deposit()` instead of a public `balance` field — the class can enforce rules like \"no negative deposits\".\n\n`static` members belong to the class itself rather than to each object."
+            },
+            {
+              "type": "explain",
+              "title": "Inheritance and interfaces",
+              "body": "- A class can **extend one** class: `class Dog extends Animal`. It inherits fields and methods and can **override** them (mark with `@Override`).\n- A class can **implement many** interfaces: `class Circle implements Shape, Comparable<Circle>`. An interface is a contract — a list of methods a class promises to provide.\n- `super.method()` calls the parent's version.\n\n**Polymorphism:** a variable's *declared* type decides which methods you may call; the object's *actual* type decides which implementation runs. Program to interfaces: `List<String> names = new ArrayList<>();`"
+            },
+            {
+              "type": "example",
+              "title": "Which method runs?",
+              "problem": "What does this print?\n\n```java\nclass Animal {\n    String sound() { return \"...\"; }\n}\nclass Dog extends Animal {\n    @Override\n    String sound() { return \"Woof\"; }\n}\n\nAnimal a = new Dog();\nSystem.out.println(a.sound());\n```",
+              "steps": [
+                "The declared type is `Animal`, so the compiler allows the call: `Animal` has a `sound()` method.",
+                "At runtime the object is a `Dog`. The JVM looks up the method on the **actual** object (*dynamic dispatch*).",
+                "`Dog` overrides `sound()`, so its version runs."
+              ],
+              "answer": "It prints `Woof`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-private-access",
+              "prompt": "This code is in a **different class** from `Counter`. Which line fails to compile?\n\n```java\nclass Counter {\n    private int count;\n    public void increment() { count++; }\n    public int get() { return count; }\n}\n\n// elsewhere, in another class:\nCounter c = new Counter();    // line A\nc.increment();                // line B\nc.count = 5;                  // line C\nSystem.out.println(c.get());  // line D\n```",
+              "choices": [
+                "Line A",
+                "Line B",
+                "Line C",
+                "Line D"
+              ],
+              "answer": 2,
+              "explanation": "`count` is `private`, so only code inside `Counter` can touch it. Lines B and D go through public methods, which is exactly the point of encapsulation."
+            },
+            {
+              "type": "mcq",
+              "id": "q-extends-implements",
+              "prompt": "Which declaration is legal Java?",
+              "choices": [
+                "`class A extends B, C {}`",
+                "`class A extends B implements C, D {}`",
+                "`class A implements C extends B {}`",
+                "`interface I implements J {}`"
+              ],
+              "answer": 1,
+              "hint": "How many classes can you extend? Which keyword comes first?",
+              "explanation": "A class extends **at most one** class and may implement any number of interfaces, with `extends` written before `implements`. Interfaces extend other interfaces (`interface I extends J`); they never `implements`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-super-call",
+              "prompt": "What does this print?\n\n```java\nclass Base {\n    void hello() { System.out.println(\"Base\"); }\n}\nclass Child extends Base {\n    @Override\n    void hello() {\n        super.hello();\n        System.out.println(\"Child\");\n    }\n}\n\nBase b = new Child();\nb.hello();\n```",
+              "choices": [
+                "`Base` only",
+                "`Child` only",
+                "`Base` then `Child`",
+                "`Child` then `Base`"
+              ],
+              "answer": 2,
+              "explanation": "The object is a `Child`, so `Child.hello()` runs. Its first line calls the parent's version (`Base`), then it prints `Child`."
+            },
+            {
+              "type": "text",
+              "id": "q-implements-keyword",
+              "prompt": "`Shape` is an interface. Fill in the keyword: `class Circle ______ Shape { ... }`",
+              "accept": [
+                "implements"
+              ],
+              "explanation": "Classes **implement** interfaces and **extend** classes."
+            }
+          ]
+        },
+        {
+          "id": "collections-generics",
+          "title": "Collections & generics",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "List for order, Set for uniqueness, Map for lookup by key — declared by interface, typed with generics.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "The big three",
+              "body": "- **`List`** — ordered, allows duplicates, access by index. Default: `ArrayList`.\n- **`Set`** — no duplicates. `HashSet` (no order), `LinkedHashSet` (insertion order), `TreeSet` (sorted).\n- **`Map`** — key → value lookup. `HashMap` (no order), `LinkedHashMap`, `TreeMap` (sorted by key).\n\nDeclare variables by the interface and pick the implementation once:\n\n```java\nList<String> names = new ArrayList<>();\nMap<String, Integer> ages = new HashMap<>();\n```\n\nIterate with for-each: `for (String n : names)`, and for maps `for (Map.Entry<String, Integer> e : ages.entrySet())`."
+            },
+            {
+              "type": "explain",
+              "title": "Generics",
+              "body": "The `<String>` in `List<String>` is a **type parameter**. The compiler then guarantees that only strings go in, and you get strings out — no casts, no surprises at runtime.\n\n- The **diamond** `<>` on the right lets the compiler infer the type: `new ArrayList<>()`.\n- Generics work only with **reference types**: write `List<Integer>`, not `List<int>`. Autoboxing converts between `int` and `Integer` for you.\n- Without generics (\"raw types\", pre-2004 code) everything is `Object` and needs casts — avoid them."
+            },
+            {
+              "type": "example",
+              "title": "Counting words with a Map",
+              "problem": "What does this print?\n\n```java\nString[] words = {\"a\", \"b\", \"a\", \"c\", \"a\"};\nMap<String, Integer> counts = new HashMap<>();\nfor (String w : words) {\n    counts.put(w, counts.getOrDefault(w, 0) + 1);\n}\nSystem.out.println(counts.get(\"a\"));\n```",
+              "steps": [
+                "The first time a word is seen, `getOrDefault` returns 0, so the count is stored as 1.",
+                "Each later time, the existing count is read and `put` overwrites it with count + 1.",
+                "`\"a\"` appears three times."
+              ],
+              "answer": "It prints `3`. (Printing the whole `HashMap` would show the keys in no guaranteed order.)"
+            },
+            {
+              "type": "numeric",
+              "id": "q-set-size",
+              "prompt": "What does this print?\n\n```java\nSet<String> s = new HashSet<>();\ns.add(\"x\");\ns.add(\"y\");\ns.add(\"x\");\nSystem.out.println(s.size());\n```",
+              "answer": 2,
+              "explanation": "A `Set` ignores duplicates — the second `add(\"x\")` returns false and changes nothing. Size: **2**."
+            },
+            {
+              "type": "mcq",
+              "id": "q-list-int",
+              "prompt": "Which line fails to compile?",
+              "choices": [
+                "`List<int> nums = new ArrayList<>();`",
+                "`List<Integer> nums = new ArrayList<>();`",
+                "`Map<String, List<Integer>> m = new HashMap<>();`",
+                "`Set<Character> cs = new TreeSet<>();`"
+              ],
+              "answer": 0,
+              "explanation": "Type arguments must be reference types. Use the wrapper `Integer` instead of `int`; autoboxing handles the conversion when you add and read numbers."
+            },
+            {
+              "type": "mcq",
+              "id": "q-choose-collection",
+              "prompt": "You need to find a `User` by their email address, fast, many times per second. Which collection fits?",
+              "choices": [
+                "`ArrayList<User>`",
+                "`HashMap<String, User>` keyed by email",
+                "`HashSet<String>` of emails",
+                "`TreeSet<User>`"
+              ],
+              "answer": 1,
+              "explanation": "A `HashMap` gives O(1) average lookup by key and returns the `User` itself. Searching a list is O(n), and a set of emails only tells you whether the email exists."
+            },
+            {
+              "type": "mcq",
+              "id": "q-treemap-order",
+              "prompt": "What does this print?\n\n```java\nMap<String, Integer> ages = new TreeMap<>();\nages.put(\"Zoe\", 30);\nages.put(\"Al\", 25);\nfor (Map.Entry<String, Integer> e : ages.entrySet()) {\n    System.out.print(e.getKey() + \"=\" + e.getValue() + \" \");\n}\n```",
+              "choices": [
+                "`Zoe=30 Al=25`",
+                "`Al=25 Zoe=30`",
+                "An unpredictable order",
+                "It doesn't compile"
+              ],
+              "answer": 1,
+              "explanation": "A `TreeMap` keeps its keys **sorted** (alphabetically for strings), so `Al` comes before `Zoe` regardless of insertion order. A `HashMap` would give no guaranteed order."
+            }
+          ]
+        },
+        {
+          "id": "exceptions",
+          "title": "Exceptions & try-with-resources",
+          "pareto": "core",
+          "minutes": 6,
+          "takeaway": "Checked exceptions must be caught or declared; use try-with-resources so anything you open gets closed.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Checked vs unchecked",
+              "body": "- **Checked exceptions** — subclasses of `Exception` but not `RuntimeException`, like `IOException`. They model things that can go wrong outside your control. The compiler **forces** you to either `catch` them or declare `throws IOException` on the method.\n- **Unchecked exceptions** — subclasses of `RuntimeException`, like `NullPointerException`, `IllegalArgumentException`, `IndexOutOfBoundsException`. Usually bugs or bad input; no declaration required.\n- **Errors** like `OutOfMemoryError` — don't catch these.\n\n`finally` blocks always run, whether the `try` succeeded, threw, or returned."
+            },
+            {
+              "type": "example",
+              "title": "Tracing try / catch / finally",
+              "problem": "What happens when you call `parse(\"x\")`?\n\n```java\nstatic int parse(String s) {\n    try {\n        System.out.println(\"trying\");\n        return Integer.parseInt(s);\n    } catch (NumberFormatException e) {\n        System.out.println(\"bad input\");\n        return -1;\n    } finally {\n        System.out.println(\"done\");\n    }\n}\n```",
+              "steps": [
+                "`trying` is printed.",
+                "`Integer.parseInt(\"x\")` throws a `NumberFormatException` (unchecked), so the `return` in the `try` never completes.",
+                "The matching `catch` prints `bad input` and prepares to return -1.",
+                "Before the method actually returns, `finally` runs and prints `done`."
+              ],
+              "answer": "Prints `trying`, `bad input`, `done` — and returns -1."
+            },
+            {
+              "type": "explain",
+              "title": "try-with-resources",
+              "body": "Files, sockets and database connections must be closed. Since Java 7, declare them in the `try` header and Java closes them for you — even if an exception is thrown:\n\n```java\ntry (BufferedReader in = Files.newBufferedReader(Path.of(\"data.txt\"))) {\n    System.out.println(in.readLine());\n} catch (IOException e) {\n    System.err.println(\"Could not read: \" + e.getMessage());\n}\n```\n\n- Works with anything that implements `AutoCloseable`.\n- Several resources are separated by `;` and closed in **reverse** order.\n- Since Java 9 you can also list an existing effectively-final variable: `try (in) { ... }`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-checked",
+              "prompt": "Which method fails to compile?",
+              "choices": [
+                "`void a() { throw new IllegalStateException(); }`",
+                "`void b() throws IOException { throw new IOException(); }`",
+                "`void c() { throw new IOException(); }`",
+                "`void d() { throw new NullPointerException(); }`"
+              ],
+              "answer": 2,
+              "explanation": "`IOException` is **checked**: a method that throws it must declare `throws IOException` (or catch it). `IllegalStateException` and `NullPointerException` are unchecked, so `a` and `d` compile."
+            },
+            {
+              "type": "mcq",
+              "id": "q-close-order",
+              "prompt": "What does this print?\n\n```java\nclass R implements AutoCloseable {\n    private final String name;\n    R(String name) { this.name = name; }\n    public void close() { System.out.println(\"close \" + name); }\n}\n\ntry (R a = new R(\"A\"); R b = new R(\"B\")) {\n    System.out.println(\"body\");\n}\n```",
+              "choices": [
+                "`body`, `close A`, `close B`",
+                "`body`, `close B`, `close A`",
+                "`close A`, `close B`, `body`",
+                "`body` only"
+              ],
+              "answer": 1,
+              "hint": "Resources are closed in the opposite order to how they were opened.",
+              "explanation": "The body runs first, then resources are closed in **reverse** order of declaration: B, then A. That way a resource that depends on an earlier one is closed first."
+            },
+            {
+              "type": "text",
+              "id": "q-finally-print",
+              "prompt": "What does `System.out.println(test());` print?\n\n```java\nstatic String test() {\n    try {\n        throw new IllegalStateException(\"boom\");\n    } catch (IllegalStateException e) {\n        return \"caught \" + e.getMessage();\n    } finally {\n        System.out.print(\"finally \");\n    }\n}\n```",
+              "accept": [
+                "finally caught boom"
+              ],
+              "hint": "`finally` runs before the method hands its return value back to the caller.",
+              "explanation": "The `catch` computes the return value `\"caught boom\"`, then `finally` prints `finally ` **before** `test()` returns. Only then does `println` print the returned string: **finally caught boom**."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "modern-java",
+      "title": "Modern Java, version by version",
+      "description": "How Java releases work, and what each LTS jump from 8 to 25 brought — so you can read any codebase and pick a version.",
+      "lessons": [
+        {
+          "id": "release-cadence",
+          "title": "Release cadence & LTS",
+          "pareto": "core",
+          "minutes": 5,
+          "takeaway": "A new Java ships every March and September, but the versions that matter are the LTS jumps: 8, 11, 17, 21, 25.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "A new Java every six months",
+              "body": "Java 8 came out in 2014 and Java 9 in September 2017 — big, slow releases. Since **Java 10 (March 2018)** there's a new feature release **every March and every September**, like clockwork:\n\n- 10 → March 2018, 11 → September 2018\n- 17 → September 2021, 21 → September 2023\n- 25 → September 2025\n\nThe old \"1.8\" naming is gone: it's just Java 21, Java 25. Each release is smaller, so features arrive steadily instead of in one giant drop every few years."
+            },
+            {
+              "type": "explain",
+              "title": "LTS: the versions teams actually run",
+              "body": "A non-LTS release is only updated until the next one arrives — six months. **Long-Term Support (LTS)** releases get security and bug fixes for years from Oracle and other vendors (Eclipse Adoptium, Amazon Corretto, and others).\n\n**LTS versions: 8, 11, 17, 21, 25.** Since 17, a new LTS arrives every two years (every fourth release).\n\nMost companies jump from LTS to LTS. That's the 80/20 of versions: learn what each **LTS jump** bundled — 8 → 11 → 17 → 21 → 25 — and you can read almost any codebase."
+            },
+            {
+              "type": "explain",
+              "title": "Preview features",
+              "body": "Big language features usually arrive as a **preview** first: fully implemented, but allowed to change. They're off by default; you must opt in at compile time and run time:\n\n```\njavac --release 25 --enable-preview Main.java\njava --enable-preview Main\n```\n\nA feature typically goes preview → second preview → **final** over a few releases. (New APIs can also start even earlier as *incubator* modules under `jdk.incubator`.) Once final, it's standard Java — no flags. In this course, \"added in version N\" means **final** in N unless it says preview."
+            },
+            {
+              "type": "example",
+              "title": "Picking a version for a new project",
+              "problem": "You're starting a new backend service today (late 2026). Which Java version should you target?",
+              "steps": [
+                "Prefer an **LTS** so you get years of updates without upgrading every six months.",
+                "The newest LTS is **25** (September 2025); 21 is the one before it.",
+                "Check that your frameworks, libraries and build tools support it. If a key dependency doesn't yet, fall back to 21."
+              ],
+              "answer": "Target the **newest LTS your dependencies support** — usually 25, otherwise 21. Stay off non-LTS versions unless you're happy to upgrade every six months."
+            },
+            {
+              "type": "mcq",
+              "id": "q-release-month",
+              "prompt": "Java 22 was released in March 2024. When was Java 23 released?",
+              "choices": [
+                "September 2024",
+                "March 2025",
+                "December 2024",
+                "September 2025"
+              ],
+              "answer": 0,
+              "explanation": "Releases come every six months, March and September, so 22 → March 2024 and 23 → **September 2024**. Then 24 in March 2025 and 25 in September 2025."
+            },
+            {
+              "type": "mcq",
+              "id": "q-lts-list",
+              "prompt": "Your company only allows LTS versions in production. Which list contains **only** LTS releases?",
+              "choices": [
+                "8, 11, 17, 21, 25",
+                "8, 10, 15, 20, 25",
+                "9, 11, 17, 22",
+                "11, 14, 17, 23"
+              ],
+              "answer": 0,
+              "explanation": "The LTS releases are **8, 11, 17, 21 and 25**. Versions like 9, 10, 14, 15, 20, 22 and 23 were each supported only until the next release six months later."
+            },
+            {
+              "type": "numeric",
+              "id": "q-next-lts",
+              "prompt": "Since Java 17, every fourth release (one every two years) has been an LTS: 17, 21, 25. If the pattern holds, which version is the next LTS after 25?",
+              "answer": 29,
+              "explanation": "25 + 4 = **29**, due two years after 25 (September 2027)."
+            },
+            {
+              "type": "mcq",
+              "id": "q-preview",
+              "prompt": "On JDK 25 you compile code that uses a feature which is still a **preview** in 25. Compilation fails, saying preview features are disabled. What's the fix?",
+              "choices": [
+                "Compile and run with `--enable-preview` (compiling with `--release 25`)",
+                "Add a `@Preview` annotation to the class",
+                "Downgrade to the previous LTS",
+                "Add `import jdk.preview;` at the top"
+              ],
+              "answer": 0,
+              "explanation": "Preview features must be explicitly enabled with `--enable-preview` at **both** compile time (together with `--release`/`--source` for that exact version) and run time. Code using previews is tied to that one JDK version."
+            }
+          ]
+        },
+        {
+          "id": "java-8",
+          "title": "Java 8: lambdas, streams & Optional",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Java 8 made functions first-class: lambdas plug into functional interfaces, and streams describe data pipelines instead of loops.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Lambdas and functional interfaces",
+              "body": "Java 8 (2014, LTS) is the biggest release in Java's history and the baseline of every modern codebase.\n\nA **functional interface** has exactly one abstract method: `Runnable`, `Comparator<T>`, `Function<T, R>`, `Predicate<T>`, `Supplier<T>`, `Consumer<T>`. A **lambda** is a compact implementation of that one method:\n\n```java\nPredicate<String> isLong = s -> s.length() > 5;\nFunction<String, Integer> len = s -> s.length();\n```\n\nA **method reference** is an even shorter lambda that just calls a method: `String::length`, `System.out::println`, `Integer::sum`."
+            },
+            {
+              "type": "example",
+              "title": "Sorting before and after Java 8",
+              "problem": "Sort a `List<String> names` by length. How does the code change from Java 7 to Java 8?",
+              "steps": [
+                "Java 7 needs an anonymous class:\n\n```java\nCollections.sort(names, new Comparator<String>() {\n    @Override\n    public int compare(String a, String b) {\n        return Integer.compare(a.length(), b.length());\n    }\n});\n```",
+                "`Comparator` has one abstract method, so a lambda can replace the class: `names.sort((a, b) -> Integer.compare(a.length(), b.length()));` — `List.sort` itself is new in Java 8.",
+                "`Comparator.comparing` builds the comparator from a key extractor, and a method reference supplies the key."
+              ],
+              "answer": "`names.sort(Comparator.comparing(String::length));` — one line instead of six."
+            },
+            {
+              "type": "explain",
+              "title": "Streams",
+              "body": "A **stream** is a pipeline over data: a source, then *intermediate* operations, then one *terminal* operation.\n\n```java\nList<String> result = names.stream()\n    .filter(n -> n.length() > 3)\n    .map(String::toUpperCase)\n    .sorted()\n    .collect(Collectors.toList());\n```\n\n- Intermediate ops (`filter`, `map`, `sorted`, `distinct`, `limit`) are **lazy** — nothing happens until a terminal op runs.\n- Terminal ops (`collect`, `forEach`, `count`, `sum`, `findFirst`, `reduce`) produce the result.\n- Streams never modify the source and can be used only once."
+            },
+            {
+              "type": "numeric",
+              "id": "q-stream-sum",
+              "prompt": "What does this print?\n\n```java\nList<Integer> nums = Arrays.asList(1, 2, 3, 4, 5, 6);\nint sum = nums.stream()\n    .filter(n -> n % 2 == 0)\n    .mapToInt(n -> n * n)\n    .sum();\nSystem.out.println(sum);\n```",
+              "answer": 56,
+              "hint": "Keep the even numbers, square them, add them up.",
+              "explanation": "The evens are 2, 4, 6. Squared: 4, 16, 36. Sum: **56**."
+            },
+            {
+              "type": "explain",
+              "title": "Optional, java.time and default methods",
+              "body": "- **`Optional<T>`** — a return type for \"maybe no value\", instead of returning `null`. `findFirst()` returns one. Use `map`, `orElse`, `orElseGet`, `ifPresent` rather than calling `get()` blindly.\n- **`java.time`** — `LocalDate`, `LocalDateTime`, `Instant`, `Duration`, `ZonedDateTime`. Immutable and clear; it replaces the old `Date` and `Calendar`.\n- **Default and static interface methods** — interfaces can now contain method bodies. That's how `List.sort` and `Collection.stream()` were added without breaking every existing implementation.\n- **`CompletableFuture`** — async pipelines (covered in the Concurrency unit)."
+            },
+            {
+              "type": "mcq",
+              "id": "q-optional",
+              "prompt": "What does this print?\n\n```java\nOptional<String> first = Stream.of(\"kiwi\", \"apple\", \"fig\")\n    .filter(s -> s.startsWith(\"b\"))\n    .findFirst();\nSystem.out.println(first.map(String::length).orElse(0));\n```",
+              "choices": [
+                "`0`",
+                "`Optional.empty`",
+                "`null`",
+                "It throws `NoSuchElementException`"
+              ],
+              "answer": 0,
+              "explanation": "No fruit starts with \"b\", so `findFirst()` returns an empty `Optional`. `map` on an empty Optional stays empty, and `orElse(0)` supplies the fallback: **0**."
+            },
+            {
+              "type": "mcq",
+              "id": "q-lazy",
+              "prompt": "What does this print?\n\n```java\nStream.of(\"a\", \"b\", \"c\")\n    .peek(s -> System.out.print(s))\n    .filter(s -> !s.equals(\"b\"));\nSystem.out.println(\"end\");\n```",
+              "choices": [
+                "`abcend`",
+                "`end`",
+                "`acend`",
+                "`abend`"
+              ],
+              "answer": 1,
+              "hint": "Does this pipeline have a terminal operation?",
+              "explanation": "`peek` and `filter` are intermediate, lazy operations. With no terminal operation, the pipeline never runs, so only `end` is printed."
+            },
+            {
+              "type": "text",
+              "id": "q-plus-months",
+              "prompt": "What does this print? (Write the date as Java prints it.)\n\n```java\nSystem.out.println(LocalDate.of(2024, 1, 31).plusMonths(1));\n```",
+              "accept": [
+                "2024-02-29"
+              ],
+              "hint": "There's no February 31st — and 2024 is a leap year.",
+              "explanation": "`java.time` clamps to the last valid day of the month, and 2024 is a leap year, so you get **2024-02-29** (ISO format `yyyy-MM-dd`)."
+            }
+          ]
+        },
+        {
+          "id": "java-9-11",
+          "title": "Java 9–11: var, factories & nicer strings",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "The 8 → 11 jump brings `var`, immutable `List.of`/`Map.of`, handy String and Files methods, and a built-in HttpClient.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Java 9 (2017)",
+              "body": "- **Module system (JPMS)** — a `module-info.java` declares what a module `requires` and `exports`. It restructured the JDK itself; many applications never write a module.\n- **JShell** — an interactive REPL: type `jshell` and try code line by line.\n- **Collection factories** — `List.of(1, 2, 3)`, `Set.of(\"a\", \"b\")`, `Map.of(\"a\", 1, \"b\", 2)`. They're **immutable** and reject `null`.\n- Stream additions: `takeWhile`, `dropWhile`, `ofNullable`, and `Stream.iterate` with a stop condition.\n- Private methods in interfaces, and try-with-resources on an existing effectively-final variable."
+            },
+            {
+              "type": "explain",
+              "title": "Java 10 (2018) and 11 (2018, LTS)",
+              "body": "**Java 10** — the first six-month release — added **`var`** for local variables:\n\n```java\nvar names = new ArrayList<String>();   // type: ArrayList<String>\n```\n\nThe type is still fixed at compile time; `var` just saves typing. Locals only (not fields or parameters), and it needs an initializer. Also: `List.copyOf`, `Optional.orElseThrow()`, `Collectors.toUnmodifiableList()`.\n\n**Java 11 (LTS)** added String `isBlank()`, `lines()`, `strip()`, `repeat(n)`; `Files.readString`/`writeString`; the standard **`HttpClient`** (`java.net.http`); `var` in lambda parameters; `Optional.isEmpty()`; and running a source file directly: `java Hello.java`."
+            },
+            {
+              "type": "example",
+              "title": "Rewriting Java 8 code in Java 11",
+              "problem": "Modernize this Java 8 code:\n\n```java\nList<String> tags = Collections.unmodifiableList(Arrays.asList(\"a\", \"b\"));\nString text = new String(Files.readAllBytes(Paths.get(\"notes.txt\")), StandardCharsets.UTF_8);\nboolean empty = text.trim().isEmpty();\n```",
+              "steps": [
+                "Immutable list → the Java 9 factory: `var tags = List.of(\"a\", \"b\");`",
+                "Read a whole file as a String → Java 11: `var text = Files.readString(Path.of(\"notes.txt\"));` (UTF-8 by default).",
+                "\"Only whitespace?\" → Java 11: `boolean empty = text.isBlank();` (and it understands Unicode whitespace, which `trim()` doesn't)."
+              ],
+              "answer": "```java\nvar tags = List.of(\"a\", \"b\");\nvar text = Files.readString(Path.of(\"notes.txt\"));\nboolean empty = text.isBlank();\n```"
+            },
+            {
+              "type": "mcq",
+              "id": "q-list-of-add",
+              "prompt": "What happens here?\n\n```java\nList<String> list = List.of(\"a\", \"b\");\nlist.add(\"c\");\n```",
+              "choices": [
+                "A compile error",
+                "`list` becomes `[a, b, c]`",
+                "An `UnsupportedOperationException` at runtime",
+                "`add` returns false and nothing changes"
+              ],
+              "answer": 2,
+              "explanation": "`List.of` returns an **immutable** list. The type is still `List`, so `add` compiles, but calling it throws `UnsupportedOperationException`. Use `new ArrayList<>(List.of(...))` when you need to modify it."
+            },
+            {
+              "type": "mcq",
+              "id": "q-var-invalid",
+              "prompt": "On Java 11, which line fails to compile?",
+              "choices": [
+                "`var count = 10;`",
+                "`var names = new ArrayList<String>();`",
+                "`var x;`",
+                "`for (var s : List.of(\"a\", \"b\")) { }`"
+              ],
+              "answer": 2,
+              "explanation": "`var` infers the type from the initializer, so `var x;` has nothing to infer from. `var` works for local variables and loop variables like the for-each one."
+            },
+            {
+              "type": "mcq",
+              "id": "q-strip-repeat",
+              "prompt": "What does this print?\n\n```java\nString s = \"  hi  \";\nSystem.out.println(\"[\" + s.strip() + \"]\" + \"-\".repeat(3));\n```",
+              "choices": [
+                "`[hi]---`",
+                "`[  hi  ]---`",
+                "`[hi]-`",
+                "`[hi ]---`"
+              ],
+              "answer": 0,
+              "explanation": "`strip()` (Java 11) removes leading and trailing whitespace, and `\"-\".repeat(3)` gives `---`. Result: `[hi]---`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-min-version-11",
+              "prompt": "What's the **minimum** Java version that compiles this line?\n\n```java\nlong n = Files.readString(Path.of(\"a.txt\")).lines().count();\n```",
+              "choices": [
+                "8",
+                "9",
+                "10",
+                "11"
+              ],
+              "answer": 3,
+              "hint": "Look up when `Files.readString` and `String.lines()` appeared.",
+              "explanation": "`Files.readString`, `Path.of` and `String.lines()` were all added in **Java 11**. On Java 8 you'd need `Files.readAllBytes` or `Files.lines`."
+            }
+          ]
+        },
+        {
+          "id": "java-12-17",
+          "title": "Java 12–17: switch, text blocks, records & sealed types",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "The 11 → 17 jump modernizes data code: switch expressions, text blocks, records, instanceof patterns and sealed types.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Switch expressions (final in 14)",
+              "body": "Previewed in 12 and 13, final in **14**:\n\n```java\nint n = 4;\nString size = switch (n) {\n    case 1, 2 -> \"small\";\n    case 3, 4 -> \"medium\";\n    default -> {\n        String label = \"large\";\n        yield label;\n    }\n};\n```\n\n- The switch **returns a value**, and must cover every case.\n- Arrow labels **never fall through** — no `break` needed.\n- Several labels per case: `case 1, 2`.\n- `yield` returns a value from a block.\n\nJava 14 also made **helpful NullPointerExceptions** the default: the message says which call failed and what was null."
+            },
+            {
+              "type": "mcq",
+              "id": "q-fall-through",
+              "prompt": "Here's an old-style switch with no `break`s. What does it print?\n\n```java\nint day = 6;\nString type = \"\";\nswitch (day) {\n    case 6: type += \"Sat \";\n    case 7: type += \"Sun \";\n    default: type += \"?\";\n}\nSystem.out.println(type);\n```",
+              "choices": [
+                "`Sat `",
+                "`Sat Sun ?`",
+                "`?`",
+                "`Sat ?`"
+              ],
+              "answer": 1,
+              "hint": "Without `break`, where does execution go after a case?",
+              "explanation": "Old colon-style cases **fall through**: execution starts at `case 6` and keeps running every following case. That bug-prone behavior is exactly what arrow-style `case 6 ->` removes."
+            },
+            {
+              "type": "explain",
+              "title": "Text blocks (15), records and instanceof patterns (16)",
+              "body": "**Text blocks** (final in 15) are multi-line strings; common indentation is stripped:\n\n```java\nString json = \"\"\"\n    {\n      \"name\": \"Ada\"\n    }\n    \"\"\";\n```\n\n**Records** (final in 16) are concise immutable data classes:\n\n```java\nrecord Point(int x, int y) {}\n```\n\nYou get private final fields, a constructor, accessors `x()` and `y()`, plus `equals`, `hashCode` and `toString`.\n\n**Pattern matching for instanceof** (16) tests and casts in one step: `if (obj instanceof String s) { ... s.length() ... }`. Java 16 also added `Stream.toList()`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-record-print",
+              "prompt": "What does this print?\n\n```java\nrecord Point(int x, int y) {}\n\nvar p = new Point(3, 4);\nvar q = new Point(3, 4);\nSystem.out.println(p.equals(q) + \" \" + p);\n```",
+              "choices": [
+                "`true Point[x=3, y=4]`",
+                "`false Point@1b6d3586`",
+                "`true Point(x=3, y=4)`",
+                "`false Point[x=3, y=4]`"
+              ],
+              "answer": 0,
+              "explanation": "Records generate `equals` that compares the components, so two points with the same values are equal. The generated `toString` uses the format `Point[x=3, y=4]`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-instanceof-rewrite",
+              "prompt": "Which is the Java 16+ equivalent of this?\n\n```java\nif (obj instanceof String) {\n    String s = (String) obj;\n    System.out.println(s.length());\n}\n```",
+              "choices": [
+                "`if (obj instanceof String s) { System.out.println(s.length()); }`",
+                "`if (obj instanceof s: String) { System.out.println(s.length()); }`",
+                "`if (String s = obj) { System.out.println(s.length()); }`",
+                "`if (obj is String s) { System.out.println(s.length()); }`"
+              ],
+              "answer": 0,
+              "explanation": "Pattern matching for `instanceof` adds a binding variable after the type. `s` is in scope (already cast) wherever the test is known to be true."
+            },
+            {
+              "type": "explain",
+              "title": "Sealed classes (final in 17)",
+              "body": "A **sealed** type lists exactly which classes may extend or implement it:\n\n```java\nsealed interface Shape permits Circle, Square {}\nrecord Circle(double r) implements Shape {}\nrecord Square(double side) implements Shape {}\n```\n\nEach permitted subclass must be `final`, `sealed` or `non-sealed` (records are automatically final). Now the compiler *knows* every possible `Shape` — which pays off with pattern matching in Java 21.\n\nJava 17 (LTS) also **strongly encapsulated JDK internals** (old libraries poking at `sun.*` classes may break), and previewed pattern matching for `switch`. Smaller additions on the way: `Collectors.teeing` and `String.indent`/`transform` (12), hidden classes (15)."
+            },
+            {
+              "type": "mcq",
+              "id": "q-min-version-16",
+              "prompt": "What's the minimum Java version that compiles this **without preview flags**?\n\n```java\nrecord User(String name) {}\n\nString greeting = \"\"\"\n    Hello\n    \"\"\";\n```",
+              "choices": [
+                "14",
+                "15",
+                "16",
+                "17"
+              ],
+              "answer": 2,
+              "hint": "Text blocks and records became final in different releases. The later one wins.",
+              "explanation": "Text blocks are final in 15, but records only became final in **16** (they were previews in 14 and 15). Code needs the version where *all* its features are final."
+            },
+            {
+              "type": "text",
+              "id": "q-record-accessor",
+              "prompt": "Given `record Book(String title, int pages) {}` and `var b = new Book(\"Dune\", 412);`, write the expression that returns the title.",
+              "accept": [
+                "b.title()",
+                "b.title"
+              ],
+              "explanation": "Record accessors are named exactly after the components — **`b.title()`**, not `getTitle()`."
+            }
+          ]
+        },
+        {
+          "id": "java-18-21",
+          "title": "Java 18–21: pattern matching & virtual threads",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Java 21 finalizes the modern toolkit: pattern-matching switch, record patterns, virtual threads and sequenced collections.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "18, 19, 20: the run-up",
+              "body": "- **18** — **UTF-8 is the default charset** everywhere (no more files that read differently on Windows), the `jwebserver` command serves static files for quick tests, and Javadoc gained `@snippet`.\n- **19** — virtual threads and record patterns arrive as **previews**.\n- **20** — scoped values as an incubator API, plus further previews of the pattern and virtual-thread features.\n\nThe big features of these releases became final in the next LTS — **21**. That's why many teams jumped straight from 17 to 21."
+            },
+            {
+              "type": "explain",
+              "title": "Pattern matching for switch + record patterns (21)",
+              "body": "Switch can now match on **types**, and **record patterns** take records apart:\n\n```java\nsealed interface Shape permits Circle, Square {}\nrecord Circle(double r) implements Shape {}\nrecord Square(double side) implements Shape {}\n\nstatic double area(Shape s) {\n    return switch (s) {\n        case Circle(double r) -> Math.PI * r * r;\n        case Square(double side) -> side * side;\n    };\n}\n```\n\nNo `default` needed: `Shape` is sealed, so the compiler knows both cases are covered. Add a new `Shape` and this switch stops compiling until you handle it. Add conditions with guards: `case Circle c when c.r() > 10 -> ...`."
+            },
+            {
+              "type": "explain",
+              "title": "Virtual threads & sequenced collections (21)",
+              "body": "**Virtual threads** are lightweight threads managed by the JVM. You can run millions of blocking tasks with plain, readable code:\n\n```java\ntry (var executor = Executors.newVirtualThreadPerTaskExecutor()) {\n    executor.submit(() -> handle(request));\n}\n```\n\n(More in the Concurrency unit.)\n\n**Sequenced collections** give ordered collections one shared API: `getFirst()`, `getLast()`, `addFirst()`, `addLast()`, `reversed()` on `List`, `Deque`, `LinkedHashSet` and friends — no more `list.get(list.size() - 1)`.\n\nJava 21 also added a generational mode for the low-pause ZGC garbage collector."
+            },
+            {
+              "type": "example",
+              "title": "Rewriting an instanceof chain",
+              "problem": "Modernize this Java 8 method for Java 21:\n\n```java\nstatic String describe(Object o) {\n    if (o instanceof Integer) {\n        Integer i = (Integer) o;\n        return i > 100 ? \"big number\" : \"number\";\n    } else if (o instanceof String) {\n        return \"text of length \" + ((String) o).length();\n    }\n    return \"unknown\";\n}\n```",
+              "steps": [
+                "Each `instanceof` + cast becomes a **type pattern** in a `case`: `case String s -> ...`.",
+                "The `i > 100` condition becomes a **guard**: `case Integer i when i > 100 -> \"big number\";`.",
+                "Order matters: the guarded case must come **before** the plain `case Integer i`, or the compiler reports it as unreachable (dominated).",
+                "`Object` isn't sealed, so a `default` is required."
+              ],
+              "answer": "```java\nstatic String describe(Object o) {\n    return switch (o) {\n        case Integer i when i > 100 -> \"big number\";\n        case Integer i -> \"number\";\n        case String s -> \"text of length \" + s.length();\n        default -> \"unknown\";\n    };\n}\n```"
+            },
+            {
+              "type": "mcq",
+              "id": "q-pattern-switch",
+              "prompt": "What does this print on Java 21?\n\n```java\nObject o = 42;\nString r = switch (o) {\n    case Integer i when i > 100 -> \"big\";\n    case Integer i -> \"int \" + i;\n    case String s -> \"str\";\n    default -> \"other\";\n};\nSystem.out.println(r);\n```",
+              "choices": [
+                "`big`",
+                "`int 42`",
+                "`other`",
+                "It doesn't compile"
+              ],
+              "answer": 1,
+              "explanation": "`42` is autoboxed to an `Integer`. The first case's guard (`i > 100`) is false, so the next case `Integer i` matches: `int 42`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-dominance",
+              "prompt": "Each option shows the first two cases of a `switch (o)` on an `Object`, followed by a `default`. Which one **fails to compile**?",
+              "choices": [
+                "`case Integer i when i > 100 -> \"big\"; case Integer i -> \"int\";`",
+                "`case Integer i -> \"int\"; case Integer i when i > 100 -> \"big\";`",
+                "`case String s -> \"str\"; case Integer i -> \"int\";`"
+              ],
+              "answer": 1,
+              "hint": "Can the second case ever be reached?",
+              "explanation": "An unguarded `case Integer i` matches **every** Integer, so a later `case Integer i when ...` could never run. The compiler rejects it as *dominated*. Put more specific cases first."
+            },
+            {
+              "type": "text",
+              "id": "q-sequenced",
+              "prompt": "What does this print on Java 21?\n\n```java\nList<String> list = new ArrayList<>(List.of(\"a\", \"b\", \"c\"));\nSystem.out.println(list.getLast() + list.reversed().getFirst() + list.getFirst());\n```",
+              "accept": [
+                "cca"
+              ],
+              "explanation": "`getLast()` is `c`; the first element of the reversed view is also `c`; `getFirst()` is `a`. Concatenated: **cca**."
+            },
+            {
+              "type": "mcq",
+              "id": "q-min-version-21",
+              "prompt": "What's the minimum Java version that compiles this **without preview flags**?\n\n```java\nrecord Point(int x, int y) {}\n\nif (obj instanceof Point(int x, int y)) {\n    System.out.println(x + y);\n}\n```",
+              "choices": [
+                "16",
+                "17",
+                "19",
+                "21"
+              ],
+              "answer": 3,
+              "hint": "This isn't a plain type pattern — it deconstructs the record.",
+              "explanation": "`obj instanceof Point p` works from 16, but deconstructing with a **record pattern** `Point(int x, int y)` was a preview in 19 and 20 and became final in **21**."
+            }
+          ]
+        },
+        {
+          "id": "java-22-25",
+          "title": "Java 22–25: simpler programs",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Java 22–25 cut ceremony: `_` for unused variables, stream gatherers, and Java 25's `void main()` compact source files.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "22, 23, 24",
+              "body": "- **22** — **unnamed variables & patterns**: write `_` for things you must declare but never use: `catch (NumberFormatException _)`, `case Circle(_) ->`. Also the **Foreign Function & Memory API** (call native C libraries without JNI) and launching **multi-file** programs with `java Main.java`.\n- **23** — **Markdown documentation comments** with `///`. (String templates had been previewed in 21–22 but were withdrawn — they are *not* part of Java.)\n- **24** — **stream gatherers** (`Stream.gather`, custom intermediate operations), virtual threads no longer get pinned inside `synchronized`, the Class-File API, and the Security Manager is permanently disabled."
+            },
+            {
+              "type": "explain",
+              "title": "Java 25 (LTS): compact source files",
+              "body": "A complete Java 25 program can be just this file, `Hello.java`:\n\n```java\nvoid main() {\n    IO.println(\"Hello, Java 25!\");\n}\n```\n\nRun it with `java Hello.java`.\n\n- No class declaration, no `public static`, no `String[] args`.\n- `IO.println`, `IO.print` and `IO.readln` cover simple console input and output.\n- A compact source file automatically imports everything in the `java.base` module, so `List`, `Map` and friends need no imports.\n\nInstance `main` methods also work in ordinary classes. It's the friendliest the language has ever been for beginners and scripts."
+            },
+            {
+              "type": "explain",
+              "title": "More of Java 25",
+              "body": "- **Module imports**: `import module java.base;` imports every package a module exports, in one line.\n- **Flexible constructor bodies**: statements may come *before* `super(...)`, e.g. to validate arguments (you still can't use `this` there):\n\n```java\nclass Employee extends Person {\n    Employee(String name, int age) {\n        if (age < 18) throw new IllegalArgumentException(\"too young\");\n        super(name);\n    }\n}\n```\n\n- **Scoped values** (final): a safer, cheaper alternative to `ThreadLocal` for sharing data down a call chain.\n- **Compact object headers**: an opt-in JVM setting that shrinks every object's header to save memory.\n\nStill **previews** in 25: structured concurrency, and primitive types in patterns."
+            },
+            {
+              "type": "example",
+              "title": "A stream gatherer (24)",
+              "problem": "What does this print on Java 24+?\n\n```java\nList<List<Integer>> windows = Stream.of(1, 2, 3, 4, 5)\n    .gather(Gatherers.windowFixed(2))\n    .toList();\nSystem.out.println(windows);\n```",
+              "steps": [
+                "`gather` plugs a custom intermediate operation into the stream; `Gatherers` ships ready-made ones.",
+                "`windowFixed(2)` groups elements into lists of 2, in order: `[1, 2]`, `[3, 4]`.",
+                "The last window may be smaller: `[5]`.",
+                "`toList()` (Java 16) collects the windows."
+              ],
+              "answer": "`[[1, 2], [3, 4], [5]]` — something that was awkward with plain Java 8 collectors."
+            },
+            {
+              "type": "mcq",
+              "id": "q-unnamed",
+              "prompt": "What's the minimum Java version that compiles this **without preview flags**?\n\n```java\nint bad = 0;\nfor (String s : List.of(\"1\", \"x\", \"3\")) {\n    try {\n        Integer.parseInt(s);\n    } catch (NumberFormatException _) {\n        bad++;\n    }\n}\nSystem.out.println(bad);\n```",
+              "choices": [
+                "17",
+                "21",
+                "22",
+                "25"
+              ],
+              "answer": 2,
+              "hint": "Look at the catch parameter.",
+              "explanation": "The unnamed variable `_` was a preview in 21 and became final in **22**. Everything else here works on Java 9+. (It prints `1`.)"
+            },
+            {
+              "type": "mcq",
+              "id": "q-compact-main",
+              "prompt": "Which of these is a **complete file** that runs with `java Hi.java` on Java 25 and prints `Hi`?",
+              "choices": [
+                "`void main() { IO.println(\"Hi\"); }`",
+                "`main() { println(\"Hi\"); }`",
+                "`static main { IO.println(\"Hi\"); }`",
+                "`IO.println(\"Hi\");`"
+              ],
+              "answer": 0,
+              "explanation": "A compact source file still needs a `main` **method** with a return type, but it can be an instance method with no parameters and no enclosing class. Java doesn't allow bare top-level statements."
+            },
+            {
+              "type": "mcq",
+              "id": "q-flexible-ctor",
+              "prompt": "`Shape` has a constructor `Shape(String name)`. From which version does this compile **without preview flags**?\n\n```java\nclass Square extends Shape {\n    Square(double side) {\n        if (side <= 0) throw new IllegalArgumentException(\"side\");\n        super(\"square\");\n    }\n}\n```",
+              "choices": [
+                "21",
+                "22",
+                "23",
+                "25"
+              ],
+              "answer": 3,
+              "explanation": "Before flexible constructor bodies, `super(...)` had to be the very first statement. The feature was previewed in 22–24 and became final in **25**."
+            },
+            {
+              "type": "text",
+              "id": "q-compact-print",
+              "prompt": "This is a complete Java 25 compact source file. What does it print?\n\n```java\nvoid main() {\n    var words = List.of(\"modern\", \"java\");\n    IO.println(words.reversed().getFirst().toUpperCase());\n}\n```",
+              "accept": [
+                "JAVA"
+              ],
+              "explanation": "`List` needs no import in a compact source file. `reversed()` (Java 21) gives `[java, modern]`, `getFirst()` is `\"java\"`, uppercased: **JAVA**."
+            }
+          ]
+        },
+        {
+          "id": "versions-at-a-glance",
+          "title": "Every version at a glance: 8 → 25",
+          "pareto": "extra",
+          "minutes": 6,
+          "takeaway": "Know one headline per version, and remember that a feature counts from the release where it became final.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "8 → 16",
+              "body": "- **8** (2014, LTS) — lambdas, streams, `Optional`, `java.time`, default methods\n- **9** (2017) — modules, JShell, `List.of`/`Map.of`\n- **10** (2018) — `var`\n- **11** (2018, LTS) — `isBlank`/`strip`/`repeat`, `Files.readString`, `HttpClient`, `java Hello.java`\n- **12** (2019) — switch expressions (preview), `Collectors.teeing`\n- **13** (2019) — text blocks (preview), `yield`\n- **14** (2020) — switch expressions final, helpful NullPointerExceptions\n- **15** (2020) — text blocks final, sealed classes (preview)\n- **16** (2021) — records, `instanceof` patterns, `Stream.toList()`"
+            },
+            {
+              "type": "explain",
+              "title": "17 → 25",
+              "body": "- **17** (2021, LTS) — sealed classes, strongly encapsulated JDK internals\n- **18** (2022) — UTF-8 by default, `jwebserver`, `@snippet`\n- **19** (2022) — virtual threads and record patterns (preview)\n- **20** (2023) — scoped values (incubator), more previews\n- **21** (2023, LTS) — virtual threads, pattern-matching switch, record patterns, sequenced collections\n- **22** (2024) — unnamed `_`, Foreign Function & Memory API\n- **23** (2024) — Markdown doc comments `///`\n- **24** (2025) — stream gatherers, no pinning in `synchronized`\n- **25** (2025, LTS) — compact source files, `import module`, flexible constructors, scoped values"
+            },
+            {
+              "type": "mcq",
+              "id": "q-records-version",
+              "prompt": "A library's README says \"requires Java 16+\". Which feature is it most likely using?",
+              "choices": [
+                "Records",
+                "Lambdas",
+                "Virtual threads",
+                "`var`"
+              ],
+              "answer": 0,
+              "explanation": "Records became final in **16** — a common reason for a 16+ requirement. Lambdas are 8, `var` is 10 (both work on 16 but don't require it), and virtual threads need 21."
+            },
+            {
+              "type": "mcq",
+              "id": "q-java9-compat",
+              "prompt": "A codebase must still compile on **Java 9**. Which line has to change?",
+              "choices": [
+                "`var x = 5;`",
+                "`List<Integer> xs = List.of(1, 2);`",
+                "`Optional<String> o = Optional.ofNullable(s);`",
+                "`Stream.iterate(1, n -> n < 100, n -> n * 2)`"
+              ],
+              "answer": 0,
+              "explanation": "`var` arrived in **10**. `List.of` and the three-argument `Stream.iterate` are Java 9; `Optional.ofNullable` is Java 8."
+            },
+            {
+              "type": "mcq",
+              "id": "q-utf8-default",
+              "prompt": "A program reads files with `new FileReader(file)` (no charset given). Accented letters come out garbled on some older Windows machines but not on Linux. From which version is the default charset UTF-8 on every platform?",
+              "choices": [
+                "11",
+                "17",
+                "18",
+                "21"
+              ],
+              "answer": 2,
+              "explanation": "Before **18**, the default charset depended on the operating system's locale — often not UTF-8 on Windows. Java 18 made UTF-8 the default everywhere. (Passing a charset explicitly is still clearest.)"
+            },
+            {
+              "type": "mcq",
+              "id": "q-java20-final",
+              "prompt": "Your team is stuck on **Java 20**. Which of these can you use without `--enable-preview`?",
+              "choices": [
+                "The `jwebserver` tool",
+                "Virtual threads",
+                "Record patterns",
+                "Pattern matching for `switch`"
+              ],
+              "answer": 0,
+              "hint": "Three of these were still previews in 19 and 20.",
+              "explanation": "`jwebserver` shipped in **18**. Virtual threads, record patterns and pattern-matching `switch` were all previews in 19–20 and only became final in 21 — one more reason teams went from 17 straight to 21."
+            },
+            {
+              "type": "mcq",
+              "id": "q-java23",
+              "prompt": "You see comments starting with `///` above methods in a new codebase. What are they?",
+              "choices": [
+                "Markdown documentation comments (Java 23)",
+                "String templates (Java 23)",
+                "Compiler directives for preview features",
+                "Commented-out `@snippet` tags (Java 18)"
+              ],
+              "answer": 0,
+              "explanation": "Java **23** lets you write Javadoc in Markdown with `///` lines. String templates were previewed in 21–22 and then withdrawn, so they aren't in Java at all."
+            },
+            {
+              "type": "text",
+              "id": "q-lambdas-version",
+              "prompt": "Which Java version introduced lambdas and the Stream API? (Just the number.)",
+              "accept": [
+                "8",
+                "Java 8",
+                "1.8",
+                "Java 1.8"
+              ],
+              "explanation": "**Java 8** (2014, LTS). Any codebase older than that uses anonymous classes and loops instead."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "concurrency",
+      "title": "Concurrency",
+      "description": "Running work in parallel: executors, async pipelines and Java 21's virtual threads.",
+      "lessons": [
+        {
+          "id": "threads-executors",
+          "title": "Threads & ExecutorService",
+          "pareto": "extra",
+          "minutes": 7,
+          "takeaway": "Submit tasks to an ExecutorService instead of managing threads, and never share mutable state without atomics or locks.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Threads and executors",
+              "body": "A **thread** runs code at the same time as other threads: `new Thread(() -> work()).start();`.\n\nIn real code you rarely create threads by hand. An **`ExecutorService`** owns a pool of threads; you **submit tasks** and get back a `Future` — a handle to the result that will arrive later.\n\n- `Executors.newFixedThreadPool(n)` — n reusable threads\n- `submit(task)` → `Future<T>`; `future.get()` waits for the result\n- `shutdown()` — accept no new tasks; let submitted ones finish\n\nSince Java 19, an `ExecutorService` is `AutoCloseable`: in try-with-resources, closing waits for all tasks."
+            },
+            {
+              "type": "example",
+              "title": "Getting a result from another thread",
+              "problem": "What does this print?\n\n```java\nExecutorService pool = Executors.newFixedThreadPool(4);\nFuture<Integer> f = pool.submit(() -> 6 * 7);\nSystem.out.println(f.get());\npool.shutdown();\n```",
+              "steps": [
+                "`submit` hands the lambda (a `Callable<Integer>`) to one of the pool's threads and returns immediately with a `Future`.",
+                "`f.get()` **blocks** the main thread until the task finishes, then returns its value. (It throws checked exceptions, so the enclosing method must handle or declare them.)",
+                "`shutdown()` lets the pool's threads end so the program can exit."
+              ],
+              "answer": "It prints `42`."
+            },
+            {
+              "type": "explain",
+              "title": "Race conditions",
+              "body": "`count++` looks like one step but is three: **read**, add one, **write**. If two threads read the same value at the same moment, one update is lost.\n\nFixes, from simplest:\n\n- **Don't share** — have each task return its result and combine them afterwards.\n- **Atomics** — `AtomicInteger.incrementAndGet()` is a single indivisible step.\n- **Locks** — `synchronized` blocks or `ReentrantLock`.\n- **Concurrent collections** — `ConcurrentHashMap` instead of a shared `HashMap`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-race",
+              "prompt": "What does this print on a multi-core machine?\n\n```java\nint[] count = {0};\nExecutorService pool = Executors.newFixedThreadPool(8);\nfor (int i = 0; i < 10_000; i++) {\n    pool.execute(() -> count[0]++);\n}\npool.shutdown();\npool.awaitTermination(1, TimeUnit.MINUTES);\nSystem.out.println(count[0]);\n```",
+              "choices": [
+                "Always 10000",
+                "Often less than 10000, and different from run to run",
+                "Always 0",
+                "It doesn't compile"
+              ],
+              "answer": 1,
+              "hint": "Is `count[0]++` one indivisible step?",
+              "explanation": "Eight threads perform unsynchronized read-modify-write on the same slot, so some increments overwrite each other. The result is usually **below 10000** and varies between runs — a classic race condition."
+            },
+            {
+              "type": "mcq",
+              "id": "q-fix-race",
+              "prompt": "Which change makes the count reliably reach 10000?",
+              "choices": [
+                "Use an `AtomicInteger` and call `incrementAndGet()` in each task",
+                "Declare the array `final`",
+                "Use more threads so it finishes faster",
+                "Add `Thread.sleep(1)` inside each task"
+              ],
+              "answer": 0,
+              "explanation": "`incrementAndGet()` performs the read-add-write as one atomic step. `final` only stops the variable being reassigned, more threads make collisions more likely, and sleeping just hides the bug sometimes."
+            },
+            {
+              "type": "mcq",
+              "id": "q-shutdown",
+              "prompt": "What does `pool.shutdown()` do?",
+              "choices": [
+                "Stops accepting new tasks; already-submitted tasks still run to completion",
+                "Immediately kills all running tasks",
+                "Blocks until every task has finished",
+                "Nothing until you also call `start()`"
+              ],
+              "answer": 0,
+              "explanation": "`shutdown()` is a polite close: no new tasks, existing ones finish. It doesn't wait — use `awaitTermination` for that. `shutdownNow()` is the one that interrupts running tasks."
+            },
+            {
+              "type": "text",
+              "id": "q-future-get",
+              "prompt": "Which `Future` method blocks until the task's result is ready?",
+              "accept": [
+                "get",
+                "get()",
+                "future.get()",
+                "f.get()"
+              ],
+              "explanation": "**`get()`** waits for the result (there's also an overload with a timeout). Calling it right after submitting turns async work back into a blocking wait, so call it only when you actually need the value."
+            }
+          ]
+        },
+        {
+          "id": "completable-future",
+          "title": "CompletableFuture pipelines",
+          "pareto": "extra",
+          "minutes": 6,
+          "takeaway": "CompletableFuture chains async steps: thenApply to transform, thenCompose to chain another async call, thenCombine to merge two.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Async pipelines (Java 8)",
+              "body": "A plain `Future` can only be waited on. A **`CompletableFuture`** lets you describe what happens *next*, without blocking:\n\n- `supplyAsync(() -> ...)` — start a task (by default on the shared common pool)\n- `thenApply(f)` — transform the result (like `map`)\n- `thenCompose(f)` — chain another async call (like `flatMap`)\n- `thenCombine(other, f)` — merge two independent results\n- `thenAccept(c)` — consume the result\n- `exceptionally(f)` / `handle(f)` — recover from errors\n- `join()` — wait for the final value (throws unchecked exceptions)"
+            },
+            {
+              "type": "example",
+              "title": "A small pipeline",
+              "problem": "What does this print?\n\n```java\nCompletableFuture<String> greeting = CompletableFuture\n    .supplyAsync(() -> \"java\")\n    .thenApply(String::toUpperCase)\n    .thenApply(s -> \"Hello, \" + s);\nSystem.out.println(greeting.join());\n```",
+              "steps": [
+                "`supplyAsync` produces `\"java\"` on a background thread.",
+                "The first `thenApply` turns it into `\"JAVA\"`.",
+                "The second turns that into `\"Hello, JAVA\"`.",
+                "`join()` waits for the whole chain and returns the final value."
+              ],
+              "answer": "It prints `Hello, JAVA`."
+            },
+            {
+              "type": "numeric",
+              "id": "q-combine",
+              "prompt": "What does this print?\n\n```java\nvar price = CompletableFuture.supplyAsync(() -> 20);\nvar tax = CompletableFuture.supplyAsync(() -> 5);\nint total = price.thenCombine(tax, Integer::sum).join();\nSystem.out.println(total);\n```",
+              "answer": 25,
+              "explanation": "The two futures run independently; `thenCombine` waits for both and applies `Integer::sum` to their results: 20 + 5 = **25**."
+            },
+            {
+              "type": "mcq",
+              "id": "q-exceptionally",
+              "prompt": "What does this print?\n\n```java\nint result = CompletableFuture\n    .supplyAsync(() -> Integer.parseInt(\"oops\"))\n    .thenApply(n -> n * 2)\n    .exceptionally(ex -> -1)\n    .join();\nSystem.out.println(result);\n```",
+              "choices": [
+                "`-1`",
+                "`-2`",
+                "It throws a `NumberFormatException`",
+                "`0`"
+              ],
+              "answer": 0,
+              "explanation": "`parseInt(\"oops\")` fails, so the future completes exceptionally. `thenApply` is **skipped** for failed stages, and `exceptionally` replaces the failure with -1."
+            },
+            {
+              "type": "mcq",
+              "id": "q-compose",
+              "prompt": "`fetchUser(id)` returns `CompletableFuture<User>` and `fetchOrders(user)` returns `CompletableFuture<List<Order>>`. Which expression has type `CompletableFuture<List<Order>>`?",
+              "choices": [
+                "`fetchUser(id).thenCompose(u -> fetchOrders(u))`",
+                "`fetchUser(id).thenApply(u -> fetchOrders(u))`",
+                "`fetchUser(id).thenAccept(u -> fetchOrders(u))`",
+                "`fetchUser(id).join().thenApply(u -> fetchOrders(u))`"
+              ],
+              "answer": 0,
+              "hint": "`thenApply` is like `map`; which one is like `flatMap`?",
+              "explanation": "`thenApply` would wrap the inner future, giving `CompletableFuture<CompletableFuture<List<Order>>>`. `thenCompose` flattens it. `thenAccept` gives `CompletableFuture<Void>`, and `join()` returns a plain `User`, which has no `thenApply`."
+            },
+            {
+              "type": "explain",
+              "title": "CompletableFuture vs virtual threads",
+              "body": "Long async chains were the main way to avoid blocking scarce platform threads. Since **Java 21**, virtual threads make blocking cheap, so straightforward code like `var user = fetchUser(id); var orders = fetchOrders(user);` inside a virtual thread is often clearer.\n\n`CompletableFuture` is still handy for combining independent results and for APIs that already return futures — and you'll see it everywhere in Java 8–17 codebases."
+            }
+          ]
+        },
+        {
+          "id": "virtual-threads",
+          "title": "Virtual threads in practice",
+          "pareto": "extra",
+          "minutes": 7,
+          "takeaway": "Use one virtual thread per blocking task (Java 21+), limit resources with semaphores rather than pools, and don't expect speed-ups for CPU-bound work.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Why virtual threads?",
+              "body": "A classic **platform thread** is an operating-system thread: heavyweight, so a server can only afford a few thousand. A thread blocked waiting for a database is wasted.\n\nA **virtual thread** (final in Java 21) is managed by the JVM. When it blocks on I/O, it **unmounts** from its carrier OS thread, which then runs another virtual thread. So you can have **millions**, each written as simple blocking code.\n\nThey shine for **I/O-bound** work (HTTP calls, database queries). They don't make **CPU-bound** work faster — you still have only as many cores as you have."
+            },
+            {
+              "type": "example",
+              "title": "10,000 sleeping tasks",
+              "problem": "Roughly how long does this take on Java 21+?\n\n```java\ntry (var executor = Executors.newVirtualThreadPerTaskExecutor()) {\n    for (int i = 0; i < 10_000; i++) {\n        int id = i;\n        executor.submit(() -> {\n            Thread.sleep(Duration.ofSeconds(1));\n            return id;\n        });\n    }\n}\n```",
+              "steps": [
+                "Each task gets its **own** virtual thread — 10,000 of them is no problem.",
+                "`Thread.sleep` blocks the virtual thread, which unmounts and frees its carrier for other tasks. All 10,000 sleep at the same time.",
+                "Leaving the try block calls `close()`, which waits for every task to finish."
+              ],
+              "answer": "About **1 second** in total."
+            },
+            {
+              "type": "explain",
+              "title": "Rules of thumb",
+              "body": "- **Don't pool virtual threads.** They're cheap — create one per task.\n- **Limit access to scarce resources with a `Semaphore`** (or the resource's own pool, like a DB connection pool), not by capping threads.\n- **Be careful with big `ThreadLocal` caches** — with millions of threads they multiply. Scoped values (final in Java 25) are the lighter alternative.\n- **On Java 21–23, blocking inside `synchronized` pins** the virtual thread to its carrier; prefer `ReentrantLock` there. Java 24 removed this limitation.\n- **Structured concurrency** (`StructuredTaskScope`) is still a preview in Java 25."
+            },
+            {
+              "type": "mcq",
+              "id": "q-io-vs-cpu",
+              "prompt": "Which workload benefits most from switching to virtual threads?",
+              "choices": [
+                "A web service where each request waits about 200 ms for a database",
+                "Resizing 1,000 images on an 8-core machine",
+                "A tight loop that searches for prime numbers",
+                "A single-threaded command-line calculator"
+              ],
+              "answer": 0,
+              "explanation": "Virtual threads help when many tasks spend their time **waiting**. Image resizing and prime searching are CPU-bound: the cores are the limit, not the number of threads."
+            },
+            {
+              "type": "numeric",
+              "id": "q-fixed-pool-time",
+              "prompt": "Same 10,000 tasks that each sleep 1 second, but run on `Executors.newFixedThreadPool(100)` (platform threads). Roughly how many **seconds** does it take?",
+              "answer": 100,
+              "tolerance": 5,
+              "unit": "seconds",
+              "hint": "How many tasks can be sleeping at the same moment?",
+              "explanation": "Only 100 tasks run at once, so 10,000 tasks need 10,000 ÷ 100 = **100** rounds of 1 second each. With virtual threads it's about 1 second."
+            },
+            {
+              "type": "mcq",
+              "id": "q-pool-virtual",
+              "prompt": "On Java 21, a teammate writes `Executors.newFixedThreadPool(50, Thread.ofVirtual().factory())` so at most 50 tasks hit the database at once. What's the recommended approach?",
+              "choices": [
+                "One virtual thread per task, and limit database access with a `Semaphore` or the connection pool",
+                "Keep it — pooling virtual threads is the standard pattern",
+                "Switch back to 50 platform threads",
+                "Add `Thread.sleep` calls to slow the tasks down"
+              ],
+              "answer": 0,
+              "explanation": "Virtual threads are meant to be created per task, never pooled. Limit the **scarce resource** directly — a `Semaphore` with 50 permits or the connection pool — and let everything else run freely."
+            },
+            {
+              "type": "mcq",
+              "id": "q-pinning",
+              "prompt": "On **Java 21**, a virtual thread does a slow network call while inside a `synchronized` block. What happens?",
+              "choices": [
+                "It pins its carrier thread, which can't run other virtual threads until the call finishes",
+                "It throws an exception",
+                "It deadlocks immediately",
+                "Nothing special — exactly the same as outside `synchronized`"
+              ],
+              "answer": 0,
+              "explanation": "Before Java 24, a virtual thread blocking inside `synchronized` stayed stuck to its carrier (*pinned*), reducing throughput. `ReentrantLock` avoided it; Java 24 fixed it for `synchronized` too."
+            },
+            {
+              "type": "text",
+              "id": "q-vt-factory",
+              "prompt": "Complete the factory method name: `Executors.________()` returns an executor that starts a new virtual thread for each task.",
+              "accept": [
+                "newVirtualThreadPerTaskExecutor",
+                "newVirtualThreadPerTaskExecutor()",
+                "Executors.newVirtualThreadPerTaskExecutor()"
+              ],
+              "explanation": "**`Executors.newVirtualThreadPerTaskExecutor()`** — typically used in try-with-resources so closing it waits for all tasks."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

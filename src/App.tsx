@@ -1,0 +1,97 @@
+import { contentErrors, getCourse } from './content';
+import { CheckEmail, DevMailbox, Forgot, Reset, SignIn, SignUp, Verify } from './components/Auth';
+import { CheatSheet } from './components/CheatSheet';
+import { CoursePage } from './components/CoursePage';
+import { Courses } from './components/Courses';
+import { Home } from './components/Home';
+import { Page } from './components/Layout';
+import { LessonPlayer } from './components/LessonPlayer';
+import { Profile } from './components/Profile';
+import { Quiz } from './components/Quiz';
+import { Review, ReviewSession } from './components/Review';
+import { useAuth } from './lib/auth';
+import { useRoute } from './lib/router';
+
+export function App() {
+  const route = useRoute();
+  return (
+    <>
+      {contentErrors.length > 0 && (
+        <div className="content-errors" role="alert">
+          <strong>Some course files have problems and were skipped:</strong>
+          <ul>
+            {contentErrors.map((e, i) => (
+              <li key={i}>{e}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <Route route={route} />
+    </>
+  );
+}
+
+function Route({ route }: { route: string[] }) {
+  const { user } = useAuth();
+  const [section, a, b, c] = route;
+
+  switch (section) {
+    case undefined:
+      return <Home />;
+    case 'courses':
+      return <Courses />;
+    case 'review':
+      if (a === 'start' || a === 'weak') return <ReviewSession key={route.join('/')} mode={a} courseId={b} />;
+      return <Review />;
+    case 'profile':
+      return <Profile />;
+    case 'signin':
+      return user ? <Redirect to="#/" /> : <SignIn />;
+    case 'signup':
+      return user ? <Redirect to="#/" /> : <SignUp />;
+    case 'check-email':
+      return <CheckEmail email={a ?? ''} />;
+    case 'verify':
+      return <Verify token={a ?? ''} />;
+    case 'forgot':
+      return <Forgot />;
+    case 'reset':
+      return <Reset token={a ?? ''} />;
+    case 'dev':
+      if (a === 'mailbox') return <DevMailbox />;
+      break;
+    case 'topic': // old links
+    case 'course': {
+      const course = a ? getCourse(a) : undefined;
+      if (!course) break;
+      if (!b) return <CoursePage course={course} />;
+      if (b === 'quiz') return <Quiz key={course.id} course={course} />;
+      if (b === 'cheatsheet') return <CheatSheet course={course} />;
+      const lesson = b === 'lesson' ? course.lessons.find((l) => l.id === c) : undefined;
+      if (lesson) return <LessonPlayer key={`${course.id}/${lesson.id}`} course={course} lesson={lesson} />;
+      break;
+    }
+  }
+
+  return (
+    <Page>
+      <section className="center empty-state">
+        <div className="celebrate" aria-hidden>
+          🧭
+        </div>
+        <h1>Page not found</h1>
+        <p className="lead">That link doesn't lead anywhere.</p>
+        <a className="btn primary" href="#/">
+          Go home
+        </a>
+      </section>
+    </Page>
+  );
+}
+
+function Redirect({ to }: { to: string }) {
+  queueMicrotask(() => {
+    window.location.hash = to;
+  });
+  return null;
+}

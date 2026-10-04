@@ -1,0 +1,901 @@
+{
+  "id": "kotlin",
+  "title": "Kotlin",
+  "icon": "🟣",
+  "color": "#7f52ff",
+  "order": 12,
+  "category": "Programming",
+  "level": "Beginner",
+  "description": "Write idiomatic, null-safe Kotlin for Android, backend and the JVM: the 20% of the language you'll use in 80% of your code, with Java contrasts where they help.",
+  "keyIdeas": [
+    "Default to `val`; type inference keeps code short without giving up static types.",
+    "Null is part of the type: a `String?` must be handled with `?.`, `?:` or a null check. Treat `!!` as a red flag.",
+    "`if` and `when` are expressions, and a `when` over a sealed type is checked for exhaustiveness by the compiler.",
+    "`data class` gives you equals, hashCode, toString, copy and destructuring for free.",
+    "Transform collections with `filter`, `map`, `groupBy` and trailing lambdas instead of hand-written loops.",
+    "Extension functions add methods to types you don't own; scope functions (`apply`, `also`, `let`) keep object setup and null handling tidy."
+  ],
+  "units": [
+    {
+      "id": "basics",
+      "title": "Kotlin basics",
+      "description": "Variables, functions, strings and control flow: the syntax you'll type every day.",
+      "lessons": [
+        {
+          "id": "val-var-strings",
+          "title": "val, var and string templates",
+          "pareto": "core",
+          "minutes": 5,
+          "takeaway": "Default to `val`, use `var` only when the value really changes, and build strings with `$name` and `${expr}` templates.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Two ways to declare",
+              "body": "Kotlin has two keywords for variables:\n\n- `val` is **read-only**: assign it once (like a `final` variable in Java).\n- `var` is **reassignable**.\n\n```kotlin\nval name = \"Ada\"     // type inferred as String\nvar count = 0        // type inferred as Int\ncount = count + 1    // fine\nval pi: Double = 3.14 // explicit type, if you want one\n```\n\nNo semicolons, no `new`, and the type comes *after* the name. Idiomatic Kotlin uses `val` by default and switches to `var` only when it must."
+            },
+            {
+              "type": "mcq",
+              "id": "q-reassign",
+              "prompt": "Which line doesn't compile?\n\n```kotlin\nval a = 10   // line 1\nvar b = 20   // line 2\nb = 25       // line 3\na = 15       // line 4\n```",
+              "choices": ["Line 1", "Line 2", "Line 3", "Line 4"],
+              "answer": 3,
+              "explanation": "`a` is a `val`, so it can't be reassigned: the compiler reports *Val cannot be reassigned*. Reassigning the `var` `b` on line 3 is fine."
+            },
+            {
+              "type": "explain",
+              "title": "Inferred, but still static",
+              "body": "Type inference doesn't make Kotlin dynamic. `var x = 5` makes `x` an `Int` **forever**; you just didn't have to write it.\n\nAlso, `val` freezes the *reference*, not the object:\n\n```kotlin\nval items = mutableListOf(1, 2)\nitems.add(3)          // OK: same list, new contents\nitems = mutableListOf(9) // error: items is a val\n```"
+            },
+            {
+              "type": "mcq",
+              "id": "q-type-fixed",
+              "prompt": "What happens here?\n\n```kotlin\nvar count = 5\ncount = \"five\"\n```",
+              "choices": [
+                "`count` now holds the String \"five\"",
+                "Compile error: type mismatch (`count` is an `Int`)",
+                "It compiles but throws a ClassCastException at runtime",
+                "Compile error: `count` is read-only"
+              ],
+              "answer": 1,
+              "explanation": "The first assignment fixed `count`'s type as `Int`. Assigning a `String` later is a **compile-time** type mismatch. `var` means the value can change, not the type."
+            },
+            {
+              "type": "explain",
+              "title": "String templates",
+              "body": "Instead of Java's `\"Hi \" + name` or `String.format`, Kotlin puts values straight into strings:\n\n- `$name` inserts a variable.\n- `${expression}` inserts any expression: `${user.name}`, `${items.size}`, `${a + b}`.\n\n```kotlin\nval user = \"Ann\"\nval cart = listOf(\"pen\", \"ink\")\nprintln(\"$user has ${cart.size} items\") // Ann has 2 items\n```"
+            },
+            {
+              "type": "example",
+              "title": "Where the template stops",
+              "problem": "What does this print?\n\n```kotlin\nval name = \"Ada\"\nval langs = listOf(\"Kotlin\", \"Java\")\nprintln(\"$name knows ${langs.size} languages\")\nprintln(\"$name.length\")\n```",
+              "steps": [
+                "First line: `$name` becomes `Ada` and `${langs.size}` evaluates to `2`.",
+                "Second line: `$name` only grabs the identifier `name`. The `.length` after it is plain text, not a property access.",
+                "To call `.length` you need braces: `\"${name.length}\"` would print `3`."
+              ],
+              "answer": "`Ada knows 2 languages`, then `Ada.length`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-template-expr",
+              "prompt": "What does this print?\n\n```kotlin\nval price = 4\nval qty = 3\nprintln(\"Total: ${price * qty}\")\nprintln(\"Total: $price * $qty\")\n```",
+              "choices": [
+                "`Total: 12` then `Total: 12`",
+                "`Total: 12` then `Total: 4 * 3`",
+                "`Total: ${price * qty}` then `Total: 4 * 3`",
+                "A compile error on the last line"
+              ],
+              "answer": 1,
+              "explanation": "`${price * qty}` evaluates the whole expression → `12`. In the second string only `$price` and `$qty` are templates. The `*` between them is literal text, so you get `Total: 4 * 3`."
+            },
+            {
+              "type": "text",
+              "id": "q-keyword",
+              "prompt": "Fill in the keyword so `maxRetries` can never be reassigned:\n\n```kotlin\n___ maxRetries = 3\n```",
+              "accept": ["val"],
+              "explanation": "`val maxRetries = 3`. Prefer `val` whenever the value doesn't need to change: code is easier to reason about when fewer things can move."
+            }
+          ]
+        },
+        {
+          "id": "functions",
+          "title": "Functions, defaults and named arguments",
+          "pareto": "core",
+          "minutes": 6,
+          "takeaway": "Use expression bodies for one-liners, and default + named arguments instead of a pile of overloads.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "fun, two ways",
+              "body": "A function with a block body:\n\n```kotlin\nfun add(a: Int, b: Int): Int {\n    return a + b\n}\n```\n\nWhen the body is a single expression, write it with `=` and let Kotlin infer the return type:\n\n```kotlin\nfun add(a: Int, b: Int) = a + b\n```\n\nFunctions can live at the **top level** of a file: no class needed (unlike Java). A function with nothing useful to return returns `Unit`, Kotlin's version of `void`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-expression-body",
+              "prompt": "Which is the idiomatic expression-body version of this function?\n\n```kotlin\nfun square(x: Int): Int {\n    return x * x\n}\n```",
+              "choices": [
+                "`fun square(x: Int) = x * x`",
+                "`fun square(x: Int) { x * x }`",
+                "`fun square(x: Int) => x * x`",
+                "`fun square(x: Int): Int = return x * x`"
+              ],
+              "answer": 0,
+              "explanation": "`= x * x` makes the expression the body and its value the result (type `Int`, inferred). A block body `{ x * x }` without `return` returns `Unit`; `=>` isn't Kotlin syntax; and `return` isn't allowed after `=`."
+            },
+            {
+              "type": "explain",
+              "title": "Default and named arguments",
+              "body": "Parameters can have **defaults**, and callers can pass arguments **by name**:\n\n```kotlin\nfun greet(name: String, greeting: String = \"Hello\", punct: String = \"!\") =\n    \"$greeting, $name$punct\"\n\ngreet(\"Ann\")                 // Hello, Ann!\ngreet(\"Ann\", \"Hi\")           // Hi, Ann!\ngreet(\"Ann\", punct = \"?\")    // Hello, Ann?\n```\n\nIn Java you'd write several overloads or a builder. Named arguments also make calls like `createUser(name = \"Ann\", admin = true)` readable at a glance."
+            },
+            {
+              "type": "example",
+              "title": "Mix and match",
+              "problem": "What does each call return?\n\n```kotlin\nfun box(w: Int = 1, h: Int = 2, d: Int = 3) = \"${w}x${h}x$d\"\n\nbox()\nbox(5)\nbox(h = 9)\nbox(d = 0, w = 4)\n```",
+              "steps": [
+                "Side note: the braces in `${w}x` matter. `$wx` would look for a variable called `wx`.",
+                "`box()` uses every default → `1x2x3`.",
+                "`box(5)` passes `w` positionally → `5x2x3`.",
+                "`box(h = 9)` skips `w` and sets only `h` → `1x9x3`.",
+                "`box(d = 0, w = 4)`: named arguments can come in any order → `4x2x0`."
+              ],
+              "answer": "`1x2x3`, `5x2x3`, `1x9x3`, `4x2x0`"
+            },
+            {
+              "type": "mcq",
+              "id": "q-skip-default",
+              "prompt": "What does this print?\n\n```kotlin\nfun price(amount: Int, discount: Int = 0, tax: Int = 10) =\n    amount - discount + tax\n\nprintln(price(100, tax = 5))\n```",
+              "choices": ["105", "115", "95", "Compile error: you can't skip `discount`"],
+              "answer": 0,
+              "explanation": "`discount` falls back to its default `0`, and `tax` is named as `5`: 100 − 0 + 5 = **105**. Named arguments let you skip any defaulted parameter."
+            },
+            {
+              "type": "mcq",
+              "id": "q-bad-call",
+              "prompt": "Given `fun connect(host: String, port: Int = 80, secure: Boolean = false)`, which call does **not** compile?",
+              "choices": [
+                "`connect(\"a.com\")`",
+                "`connect(\"a.com\", secure = true)`",
+                "`connect(port = 443, host = \"a.com\")`",
+                "`connect(\"a.com\", true)`"
+              ],
+              "answer": 3,
+              "hint": "Positional arguments fill parameters in order.",
+              "explanation": "The second positional argument goes to `port`, which is an `Int`, so `true` is a type mismatch. To set only `secure`, name it: `connect(\"a.com\", secure = true)`."
+            },
+            {
+              "type": "text",
+              "id": "q-unit",
+              "prompt": "What is the return type of this function? (Kotlin type name)\n\n```kotlin\nfun log(msg: String) {\n    println(msg)\n}\n```",
+              "accept": ["Unit", "kotlin.Unit"],
+              "explanation": "A block-body function without a declared return type returns `Unit`, Kotlin's equivalent of Java's `void` (except that `Unit` is a real type with a single value)."
+            }
+          ]
+        },
+        {
+          "id": "if-when-loops",
+          "title": "if, when, ranges and loops",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "`if` and `when` return values (no ternary, no switch fall-through), and ranges like `1..n`, `until`, `downTo` and `step` drive your loops.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "if is an expression",
+              "body": "In Kotlin, `if` **returns a value**, so Kotlin has no ternary operator like Java's `a > b ? a : b`:\n\n```kotlin\nval max = if (a > b) a else b\n```\n\nWhen you use `if` as an expression, the `else` branch is required: the result must have a value in every case."
+            },
+            {
+              "type": "explain",
+              "title": "when replaces switch",
+              "body": "```kotlin\nval label = when (code) {\n    200 -> \"OK\"\n    301, 302 -> \"Redirect\"\n    in 400..499 -> \"Client error\"\n    else -> \"Other\"\n}\n```\n\n- Branches can match values, several values, ranges (`in`) or types (`is`).\n- The **first** matching branch wins. There's no fall-through and no `break`.\n- Without a subject, `when { cond -> ... }` is a clean `if`/`else if` chain."
+            },
+            {
+              "type": "mcq",
+              "id": "q-when-first",
+              "prompt": "What does this print?\n\n```kotlin\nval score = 72\nval grade = when {\n    score >= 90 -> \"A\"\n    score >= 70 -> \"B\"\n    score >= 50 -> \"C\"\n    else -> \"F\"\n}\nprintln(grade)\n```",
+              "choices": ["A", "B", "C", "B, then C"],
+              "answer": 1,
+              "explanation": "Branches are checked top to bottom and the **first** true condition wins: 72 ≥ 70 → `B`. Even though 72 ≥ 50 is also true, `when` never falls through."
+            },
+            {
+              "type": "explain",
+              "title": "Ranges and for loops",
+              "body": "Kotlin has no C-style `for (int i = 0; i < n; i++)`. You loop over ranges and collections:\n\n- `1..5` → 1, 2, 3, 4, 5 (inclusive)\n- `0 until 5` or `0..<5` → 0 to 4 (end excluded)\n- `5 downTo 1` → 5, 4, 3, 2, 1\n- `0..10 step 2` → 0, 2, 4, 6, 8, 10\n\n```kotlin\nfor (i in 1..3) println(i)\nfor (item in list) println(item)\nfor ((i, item) in list.withIndex()) println(\"$i: $item\")\n```\n\n`while` and `do`/`while` work just like in Java."
+            },
+            {
+              "type": "example",
+              "title": "Counting down",
+              "problem": "What does this print?\n\n```kotlin\nfor (i in 10 downTo 1 step 3) print(\"$i \")\n```",
+              "steps": [
+                "Start at 10 and print it.",
+                "Step down by 3: 7, then 4, then 1, all still ≥ 1.",
+                "The next value would be −2, which is past the end of the range, so the loop stops."
+              ],
+              "answer": "`10 7 4 1 `"
+            },
+            {
+              "type": "numeric",
+              "id": "q-until-step",
+              "prompt": "How many times does the body of this loop run?\n\n```kotlin\nfor (i in 0 until 10 step 2) println(i)\n```",
+              "answer": 5,
+              "explanation": "`0 until 10` excludes 10, and `step 2` gives 0, 2, 4, 6, 8: **5** iterations."
+            },
+            {
+              "type": "mcq",
+              "id": "q-no-ternary",
+              "prompt": "Which is the Kotlin version of Java's `String sign = x > 0 ? \"positive\" : \"non-positive\";`?",
+              "choices": [
+                "`val sign = x > 0 ? \"positive\" : \"non-positive\"`",
+                "`val sign = if (x > 0) \"positive\" else \"non-positive\"`",
+                "`val sign = if (x > 0) { \"positive\" }`",
+                "`val sign = when (x > 0) \"positive\" else \"non-positive\"`"
+              ],
+              "answer": 1,
+              "explanation": "Kotlin has no ternary operator; `if`/`else` is the expression. An `if` without `else` can't produce a value, and `when` needs braces and `->` branches."
+            },
+            {
+              "type": "mcq",
+              "id": "q-in-range",
+              "prompt": "What does this print?\n\n```kotlin\nprintln(5 in 1..5)\nprintln(5 in 1 until 5)\n```",
+              "choices": ["`true` then `true`", "`true` then `false`", "`false` then `false`", "`false` then `true`"],
+              "answer": 1,
+              "explanation": "`1..5` includes its end, so 5 is in it. `1 until 5` stops *before* 5 (it's 1 to 4), so 5 is not in it."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "null-safety",
+      "title": "Null safety & types",
+      "description": "Kotlin's headline feature: nulls are tracked by the type system, so most NullPointerExceptions become compile errors.",
+      "lessons": [
+        {
+          "id": "nullable-types",
+          "title": "Nullable types: ?, ?., ?: and !!",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "`T?` marks what can be null; reach through it with `?.`, supply a default with `?:`, and treat `!!` as a red flag.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Non-null by default",
+              "body": "In Java any object reference can secretly be `null`. In Kotlin, a plain type **can't**:\n\n```kotlin\nval a: String = \"hi\"\nval b: String = null   // compile error\nval c: String? = null  // OK: the ? makes it nullable\n```\n\nAnd you can't call members of a `String?` directly. `c.length` won't compile, because `c` might be null. The compiler forces you to deal with null **before** your code runs."
+            },
+            {
+              "type": "mcq",
+              "id": "q-null-assign",
+              "prompt": "Which line doesn't compile?\n\n```kotlin\nvar a: String = \"hi\"    // line 1\nvar b: String? = \"hi\"   // line 2\nb = null                // line 3\na = null                // line 4\n```",
+              "choices": ["Line 1", "Line 2", "Line 3", "Line 4"],
+              "answer": 3,
+              "explanation": "`a` has the non-null type `String`, so `null` is not a valid value for it. `b` is declared `String?`, so line 3 is fine."
+            },
+            {
+              "type": "explain",
+              "title": "The null toolkit",
+              "body": "- **Safe call** `?.`: `name?.length` is the length, or `null` if `name` is null. The result type is `Int?`.\n- **Elvis** `?:`: `name?.length ?: 0` uses the right side when the left is null. It also works with `return` and `throw`: `val id = input ?: return`.\n- **Not-null assertion** `!!`: `name!!.length` says \"trust me\". If `name` is null, it throws a `NullPointerException`.\n\nIdiomatic code uses lots of `?.` and `?:` and almost no `!!`."
+            },
+            {
+              "type": "example",
+              "title": "Chaining safe calls",
+              "problem": "What does each call print?\n\n```kotlin\nclass Address(val city: String?)\nclass User(val address: Address?)\n\nfun cityOf(u: User?) = u?.address?.city ?: \"Unknown\"\n\nprintln(cityOf(User(Address(\"Oslo\"))))\nprintln(cityOf(User(Address(null))))\nprintln(cityOf(null))\n```",
+              "steps": [
+                "First call: nothing along the chain is null, so `u?.address?.city` is `\"Oslo\"` → prints `Oslo`.",
+                "Second call: `u` and `address` exist, but `city` is null. The chain yields `null`, and Elvis supplies `\"Unknown\"`.",
+                "Third call: `u` itself is null, so the whole chain short-circuits to `null` at the first `?.` → `Unknown`.",
+                "In Java this would be a nest of `if (u != null && u.getAddress() != null ...)` checks."
+              ],
+              "answer": "`Oslo`, `Unknown`, `Unknown`"
+            },
+            {
+              "type": "mcq",
+              "id": "q-elvis-loop",
+              "prompt": "What does this print?\n\n```kotlin\nval names: List<String?> = listOf(\"Ann\", null, \"Bo\")\nfor (n in names) print(\"${n?.length ?: -1} \")\n```",
+              "choices": ["`3 -1 2`", "`3 null 2`", "`3 0 2`", "It throws a NullPointerException"],
+              "answer": 0,
+              "explanation": "For `\"Ann\"` and `\"Bo\"` the safe call gives 3 and 2. For `null`, `n?.length` is `null`, so Elvis substitutes `-1`. Nothing throws, because `?.` never dereferences a null."
+            },
+            {
+              "type": "mcq",
+              "id": "q-idiomatic-elvis",
+              "prompt": "Which one-liner is the idiomatic replacement for this?\n\n```kotlin\nval len = if (name != null) name.length else 0\n```",
+              "choices": [
+                "`val len = name?.length ?: 0`",
+                "`val len = name!!.length ?: 0`",
+                "`val len = name.length ?: 0`",
+                "`val len = name?.length!!`"
+              ],
+              "answer": 0,
+              "hint": "You want: the length if there is a name, otherwise 0, with no chance of a crash.",
+              "explanation": "`?.` gives the length or null, and `?:` turns null into 0. Using `!!` would throw when `name` is null; `name.length` doesn't compile on a `String?`; and `?.length!!` crashes on null too."
+            },
+            {
+              "type": "explain",
+              "title": "Smart casts and let",
+              "body": "After a null check, the compiler **smart-casts** the value to its non-null type:\n\n```kotlin\nfun shout(name: String?) {\n    if (name == null) return\n    println(name.uppercase())   // name is String here\n}\n```\n\nThis works for local variables and parameters. It doesn't work for a mutable (`var`) class property, which could change between the check and the use.\n\nFor \"do this only if not null\", use `?.let`. Inside the lambda the value is `it`, already non-null:\n\n```kotlin\nemail?.let { sendWelcome(it) }\n```"
+            },
+            {
+              "type": "mcq",
+              "id": "q-let-null",
+              "prompt": "What does this print?\n\n```kotlin\nval inputs = listOf<String?>(null, \"kotlin\")\nfor (s in inputs) {\n    s?.let { println(\"got ${it.uppercase()}\") }\n}\n```",
+              "choices": [
+                "`got KOTLIN`",
+                "`got null` then `got KOTLIN`",
+                "`got NULL` then `got KOTLIN`",
+                "Nothing: the `null` element throws first"
+              ],
+              "answer": 0,
+              "explanation": "For the `null` element, `s?.let { ... }` short-circuits and the lambda never runs. For `\"kotlin\"`, the lambda runs with `it = \"kotlin\"` and prints `got KOTLIN`."
+            }
+          ]
+        },
+        {
+          "id": "any-unit-nothing",
+          "title": "Any, Unit and Nothing",
+          "pareto": "extra",
+          "minutes": 5,
+          "takeaway": "`Any` is the root type, `Unit` means \"nothing useful to return\", and `Nothing` means \"never returns\", which is why `?: throw` type-checks.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Three special types",
+              "body": "- `Any` is the root of every non-null type, like Java's `Object`. `Any?` sits above everything, including null.\n- `Unit` is the return type of functions with no useful result (Java's `void`). Unlike `void`, it's a real type with exactly one value, also called `Unit`.\n- `Nothing` has **no values at all**. A function returning `Nothing` never returns normally: it always throws or loops forever. `TODO()` returns `Nothing`."
+            },
+            {
+              "type": "explain",
+              "title": "Why Nothing is useful",
+              "body": "`throw` is an expression of type `Nothing`, and `Nothing` is a subtype of **every** type. That's what makes this compile:\n\n```kotlin\nval name: String = user.name ?: throw IllegalArgumentException(\"no name\")\n```\n\nThe left side is `String?`, the right side is `Nothing`, so the result is `String`. You can write your own helpers the same way:\n\n```kotlin\nfun fail(msg: String): Nothing = throw IllegalStateException(msg)\n```"
+            },
+            {
+              "type": "example",
+              "title": "Typing a branch that throws",
+              "problem": "What is the type of `x`?\n\n```kotlin\nval x = if (flag) 42 else throw IllegalStateException(\"no\")\n```",
+              "steps": [
+                "The `if` branch has type `Int`.",
+                "The `else` branch is a `throw`, of type `Nothing`.",
+                "The common supertype of `Int` and `Nothing` is `Int`, because `Nothing` fits anywhere."
+              ],
+              "answer": "`x` is an `Int`. If `flag` is false, the assignment never completes."
+            },
+            {
+              "type": "mcq",
+              "id": "q-unit-print",
+              "prompt": "What does this print?\n\n```kotlin\nfun log(msg: String) { println(msg) }\n\nval r = log(\"hi\")\nprintln(r)\n```",
+              "choices": [
+                "`hi` then `kotlin.Unit`",
+                "`hi` then `null`",
+                "`hi` and nothing else",
+                "Compile error: `log` doesn't return a value"
+              ],
+              "answer": 0,
+              "explanation": "`log` returns `Unit`, a real object, so you can store it in `r`. Printing it calls `Unit.toString()`, which is `kotlin.Unit`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-nothing-return",
+              "prompt": "Which return type lets `val n: Int = maybe ?: fail(\"missing\")` compile, where `maybe` is an `Int?`?\n\n```kotlin\nfun fail(msg: String): ___ = throw IllegalStateException(msg)\n```",
+              "choices": ["`Unit`", "`Nothing`", "`Any`", "`Nothing?`"],
+              "answer": 1,
+              "hint": "The right side of `?:` must fit into an `Int`.",
+              "explanation": "`Nothing` is a subtype of `Int`, so `Int? ?: Nothing` is `Int`. With `Unit` or `Any` the result would be `Any`, a type mismatch. `Nothing?` would make the result `Int?`, which can't go into an `Int`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-any-null",
+              "prompt": "Given `fun show(x: Any) = println(x)`, which call doesn't compile?",
+              "choices": ["`show(1)`", "`show(\"a\")`", "`show(null)`", "`show(listOf(1))`"],
+              "answer": 2,
+              "explanation": "`Any` is the root of **non-null** types only. To accept null too, the parameter must be `Any?`."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "classes",
+      "title": "Classes & data",
+      "description": "Concise classes, value types with data classes, and modelling closed sets of cases.",
+      "lessons": [
+        {
+          "id": "classes-data-classes",
+          "title": "Classes and data classes",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Put `val`/`var` in the primary constructor to get properties, and make value-holding classes a `data class` for free equals, toString, copy and destructuring.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Primary constructors",
+              "body": "The constructor goes right in the class header. Marking a parameter `val` or `var` turns it into a **property**:\n\n```kotlin\nclass User(val name: String, var age: Int) {\n    fun greet() = \"Hi, I'm $name\"\n}\n\nval u = User(\"Ann\", 30)   // no `new`\nu.age += 1               // calls the generated setter\nprintln(u.greet())       // Hi, I'm Ann\n```\n\nThat one line replaces a Java constructor, two fields, getters and a setter. Classes are **final by default**; mark them `open` to allow subclassing."
+            },
+            {
+              "type": "mcq",
+              "id": "q-param-vs-prop",
+              "prompt": "Which line doesn't compile?\n\n```kotlin\nclass Point(val x: Int, y: Int)\n\nval p = Point(1, 2)\nprintln(p.x)\nprintln(p.y)\n```",
+              "choices": [
+                "`class Point(...)`: a class needs a body `{ }`",
+                "`val p = Point(1, 2)`: Kotlin needs `new`",
+                "`println(p.x)`",
+                "`println(p.y)`"
+              ],
+              "answer": 3,
+              "hint": "Look closely at how `x` and `y` are declared.",
+              "explanation": "Without `val` or `var`, `y` is only a constructor parameter, not a property, so `p.y` doesn't exist. Classes don't need a body, and Kotlin never uses `new`."
+            },
+            {
+              "type": "explain",
+              "title": "Data classes",
+              "body": "For classes that mainly hold data, add `data`:\n\n```kotlin\ndata class User(val name: String, val age: Int)\n```\n\nThe compiler generates, from the **primary constructor properties**:\n\n- `equals`/`hashCode`: compare by value\n- `toString`: `User(name=Ann, age=30)`\n- `copy(...)`: a new object with some properties changed\n- `component1()`, `component2()`, …: for destructuring\n\nIt's the Kotlin answer to Java POJO boilerplate (and similar to Java records, but with `copy`)."
+            },
+            {
+              "type": "example",
+              "title": "A data class in action",
+              "problem": "What does this print?\n\n```kotlin\ndata class User(val name: String, val age: Int)\n\nval a = User(\"Ann\", 30)\nval b = User(\"Ann\", 30)\nval c = a.copy(age = 31)\nprintln(a == b)\nprintln(a === b)\nprintln(c)\nval (name, age) = c\nprintln(\"$name is $age\")\n```",
+              "steps": [
+                "`==` calls `equals`, which a data class implements by comparing properties → `true`. (In Kotlin, `==` is Java's `.equals()`, not reference comparison.)",
+                "`===` checks *identity*: `a` and `b` are two separate objects → `false`.",
+                "`copy(age = 31)` builds a new `User` with the same name → prints `User(name=Ann, age=31)`.",
+                "Destructuring calls `component1()` and `component2()` → `Ann is 31`."
+              ],
+              "answer": "`true`, `false`, `User(name=Ann, age=31)`, `Ann is 31`"
+            },
+            {
+              "type": "mcq",
+              "id": "q-data-equals",
+              "prompt": "What does this print?\n\n```kotlin\nclass A(val x: Int)\ndata class B(val x: Int)\n\nprintln(A(1) == A(1))\nprintln(B(1) == B(1))\n```",
+              "choices": ["`false` then `true`", "`true` then `true`", "`false` then `false`", "`true` then `false`"],
+              "answer": 0,
+              "explanation": "A regular class inherits `equals` from `Any`, which compares identity, so two separate `A(1)` objects aren't equal. The data class `B` compares by value → `true`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-body-property",
+              "prompt": "What does this print?\n\n```kotlin\ndata class Item(val name: String) {\n    var qty = 0\n}\n\nval a = Item(\"pen\")\na.qty = 5\nval b = Item(\"pen\")\nprintln(a == b)\nprintln(a)\n```",
+              "choices": [
+                "`true` then `Item(name=pen)`",
+                "`false` then `Item(name=pen, qty=5)`",
+                "`true` then `Item(name=pen, qty=5)`",
+                "`false` then `Item(name=pen)`"
+              ],
+              "answer": 0,
+              "hint": "Which properties does the generated code look at?",
+              "explanation": "Generated `equals` and `toString` only use properties declared in the **primary constructor**. `qty` lives in the body, so it's ignored: `a == b` is `true` and `toString` omits it."
+            },
+            {
+              "type": "text",
+              "id": "q-copy",
+              "prompt": "`u` is a `User(name = \"Ann\", age = 30)` data class. Which generated function do you call to get a version with age 31, as in `u.___(age = 31)`?",
+              "accept": ["copy", "copy()", "u.copy"],
+              "explanation": "`u.copy(age = 31)` returns a **new** `User` and leaves `u` unchanged. That's the idiomatic way to \"modify\" immutable data."
+            }
+          ]
+        },
+        {
+          "id": "sealed-when",
+          "title": "Smart casts, sealed types and exhaustive when",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "Model \"one of these cases\" with a sealed type, and let an exhaustive `when` with smart casts make the compiler check that you handled every case.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "is and smart casts",
+              "body": "`is` checks a type, and after the check the compiler **smart-casts** for you, with no explicit cast needed:\n\n```kotlin\nfun describe(x: Any) = when (x) {\n    is String -> \"text of length ${x.length}\"  // x is a String here\n    is Int -> \"number ${x + 1}\"                 // x is an Int here\n    else -> \"something else\"\n}\n```\n\nCompare Java's `if (x instanceof String) { String s = (String) x; ... }`. For a cast that might fail, `x as? String` gives a `String?`, which is `null` instead of an exception."
+            },
+            {
+              "type": "explain",
+              "title": "Sealed hierarchies",
+              "body": "A `sealed` class or interface has a **closed** set of subtypes, all known at compile time:\n\n```kotlin\nsealed interface Result\ndata class Success(val data: String) : Result\ndata class Failure(val error: Throwable) : Result\ndata object Loading : Result\n```\n\nBecause the compiler knows every subtype, a `when` over a `Result` must cover them all, and then needs **no** `else`. This is the standard way to model UI state on Android or outcomes in backend code."
+            },
+            {
+              "type": "example",
+              "title": "Rendering a Result",
+              "problem": "What does this print?\n\n```kotlin\nfun render(r: Result): String = when (r) {\n    is Success -> \"Got ${r.data}\"\n    is Failure -> \"Error: ${r.error.message}\"\n    Loading -> \"Loading...\"\n}\n\nprintln(render(Success(\"42\")))\nprintln(render(Failure(IllegalStateException(\"timeout\"))))\n```",
+              "steps": [
+                "`render(Success(\"42\"))`: the `is Success` branch matches, and `r` is smart-cast so `r.data` works → `Got 42`.",
+                "`render(Failure(...))`: `is Failure` matches, and `r.error.message` is `\"timeout\"` → `Error: timeout`.",
+                "`Loading` is a single object, so its branch compares by equality without `is`.",
+                "No `else` needed: all three subtypes are covered."
+              ],
+              "answer": "`Got 42`, then `Error: timeout`"
+            },
+            {
+              "type": "mcq",
+              "id": "q-add-subtype",
+              "prompt": "You add `data class Cancelled(val reason: String) : Result` to the sealed hierarchy above. What happens to `render`?",
+              "choices": [
+                "It compiles; `Cancelled` falls into the last branch",
+                "Compile error: the `when` is no longer exhaustive",
+                "It compiles but throws at runtime when given a `Cancelled`",
+                "It compiles, and `render` returns null for `Cancelled`"
+              ],
+              "answer": 1,
+              "explanation": "This is the whole point of sealed types: adding a case turns every non-exhaustive `when` into a **compile error**, so you can't forget to handle it. An `else` branch would hide this, so avoid `else` on sealed types when you can."
+            },
+            {
+              "type": "numeric",
+              "id": "q-smart-sum",
+              "prompt": "What does this print?\n\n```kotlin\nfun size(x: Any): Int = when (x) {\n    is String -> x.length\n    is List<*> -> x.size\n    else -> -1\n}\n\nprintln(size(\"hello\") + size(listOf(1, 2)) + size(3))\n```",
+              "answer": 6,
+              "explanation": "`\"hello\"` → 5, `listOf(1, 2)` → 2, and `3` matches neither type → −1. Total: 5 + 2 − 1 = **6**."
+            },
+            {
+              "type": "mcq",
+              "id": "q-smart-scope",
+              "prompt": "Which line doesn't compile?\n\n```kotlin\nfun check(x: Any) {\n    if (x is String) println(x.length)  // A\n    if (x !is Int) return\n    println(x + 1)                      // B\n    println(x.length)                   // C\n}\n```",
+              "choices": ["Line A", "Line B", "Line C", "Lines B and C: smart casts end at the `if`"],
+              "answer": 2,
+              "hint": "After the early `return`, what does the compiler know about `x`?",
+              "explanation": "The early `return` means that past it, `x` must be an `Int`, so line B works. But `Int` has no `length`, so line C fails. Line A is fine: inside that `if`, `x` is a `String`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-safe-cast",
+              "prompt": "You have `val obj: Any` and want it as a `String`, or `null` if it isn't one, without risking an exception. Which expression?",
+              "choices": ["`obj as String`", "`obj as? String`", "`(String) obj`", "`obj!! as String`"],
+              "answer": 1,
+              "explanation": "`as?` is the **safe cast**: it returns `null` on a type mismatch. Plain `as` throws a `ClassCastException`, and `(String) obj` is Java syntax."
+            }
+          ]
+        },
+        {
+          "id": "objects-enums",
+          "title": "object, companion object and enums",
+          "pareto": "extra",
+          "minutes": 6,
+          "takeaway": "`object` is a ready-made singleton, `companion object` replaces Java's `static`, and `enum class` is for a fixed set of same-shaped values.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "object: a singleton in one line",
+              "body": "```kotlin\nobject Config {\n    val baseUrl = \"https://api.example.com\"\n    fun timeoutMs() = 5_000\n}\n\nprintln(Config.baseUrl)\n```\n\nAn `object` declaration is a class with exactly **one** instance, created lazily and thread-safely on first use. No Java-style `getInstance()` boilerplate.\n\nThe same keyword makes one-off anonymous objects: `object : Runnable { override fun run() { ... } }`."
+            },
+            {
+              "type": "explain",
+              "title": "companion object instead of static",
+              "body": "Kotlin has no `static` keyword. Class-level members go in a **companion object**:\n\n```kotlin\nclass User private constructor(val name: String) {\n    companion object {\n        const val MAX_NAME = 50\n        fun create(name: String) = User(name.take(MAX_NAME))\n    }\n}\n\nval u = User.create(\"Ann\")\n```\n\nYou call members through the class name, like statics. A private constructor plus a factory in the companion is a common pattern."
+            },
+            {
+              "type": "mcq",
+              "id": "q-object-init",
+              "prompt": "What does this print?\n\n```kotlin\nobject Counter {\n    init { println(\"init\") }\n    var n = 0\n}\n\nCounter.n++\nCounter.n++\nprintln(Counter.n)\n```",
+              "choices": [
+                "`init` once, then `2`",
+                "`init` twice, then `2`",
+                "`init` twice, then `1`",
+                "Only `2`: `init` never runs in an object"
+              ],
+              "answer": 0,
+              "explanation": "There's only one `Counter`, initialized on first access, so `init` runs **once**. Both increments update the same instance → `2`."
+            },
+            {
+              "type": "explain",
+              "title": "enum class",
+              "body": "```kotlin\nenum class Level(val weight: Int) {\n    LOW(1), MEDIUM(5), HIGH(10);\n\n    fun isUrgent() = this == HIGH\n}\n```\n\n- Each constant is an instance and can have properties and methods.\n- `Level.entries` lists all constants (prefer it over the older `values()`).\n- `Level.valueOf(\"LOW\")`, `.name` and `.ordinal` work as in Java.\n- A `when` over an enum can be exhaustive with no `else`, just like a sealed type."
+            },
+            {
+              "type": "example",
+              "title": "Working with an enum",
+              "problem": "What does this print?\n\n```kotlin\nenum class Level(val weight: Int) { LOW(1), MEDIUM(5), HIGH(10) }\n\nvar total = 0\nfor (level in Level.entries) total += level.weight\nprintln(total)\nprintln(Level.HIGH.ordinal)\nprintln(Level.valueOf(\"MEDIUM\").weight)\nprintln(Level.LOW)\n```",
+              "steps": [
+                "The loop adds 1 + 5 + 10 → `16`.",
+                "`ordinal` is the zero-based position: `HIGH` is third → `2`.",
+                "`valueOf(\"MEDIUM\")` finds the constant by name, and its weight is `5`.",
+                "An enum's `toString()` is its name → `LOW`."
+              ],
+              "answer": "`16`, `2`, `5`, `LOW`"
+            },
+            {
+              "type": "mcq",
+              "id": "q-enum-or-sealed",
+              "prompt": "You need to model (1) HTTP methods: GET, POST, PUT, DELETE, and (2) a network outcome that is either `Success(body)` or `Error(code, message)`. Which fits best?",
+              "choices": [
+                "An enum for both",
+                "A sealed type for both",
+                "An enum for the methods, a sealed type for the outcome",
+                "A sealed type for the methods, an enum for the outcome"
+              ],
+              "answer": 2,
+              "explanation": "Enum constants all share the same shape, which fits fixed values like HTTP methods. Sealed subtypes can each carry **different data** (a body vs. a code and a message), which fits the outcome."
+            },
+            {
+              "type": "text",
+              "id": "q-companion",
+              "prompt": "Kotlin has no `static` keyword. Inside what kind of block do you put a class's factory functions and constants so you can call them as `User.create(...)`?",
+              "accept": ["companion object", "companion", "a companion object", "companion objects"],
+              "explanation": "A **companion object**. Its members are called through the class name. (To make them real JVM statics for Java callers, add `@JvmStatic`.)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "functional",
+      "title": "Functional Kotlin",
+      "description": "Collections, lambdas, extensions and scope functions, plus coroutines and Java interop as extras.",
+      "lessons": [
+        {
+          "id": "collections-lambdas",
+          "title": "Collections and lambdas",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Start with read-only `listOf`/`mapOf`, and transform data with `filter`, `map`, `groupBy` and `sumOf` plus trailing lambdas instead of hand-written loops.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Read-only vs mutable",
+              "body": "Kotlin separates collections you can only read from ones you can change:\n\n- `listOf(1, 2, 3)` → `List` (no `add`)\n- `mutableListOf(1, 2)` → `MutableList`\n- `setOf(...)` / `mutableSetOf(...)`\n- `mapOf(\"a\" to 1, \"b\" to 2)` / `mutableMapOf(...)`\n\n`\"a\" to 1` creates a `Pair`. Reading a map with `map[\"a\"]` returns a **nullable** `Int?`, because the key might be missing. Default to the read-only versions."
+            },
+            {
+              "type": "mcq",
+              "id": "q-readonly",
+              "prompt": "Which line doesn't compile?\n\n```kotlin\nval a = listOf(1, 2)\nval b = mutableListOf(1, 2)\nb.add(3)          // A\na.add(3)          // B\nval m = mapOf(\"x\" to 1)\nprintln(m[\"y\"])   // C\n```",
+              "choices": ["Line A", "Line B", "Line C", "Line A: `b` is a `val`"],
+              "answer": 1,
+              "explanation": "`listOf` returns a read-only `List`, which has no `add`. Line A is fine: `val` only stops reassigning `b`, not changing the list's contents. Line C compiles and prints `null`."
+            },
+            {
+              "type": "explain",
+              "title": "Lambdas and trailing lambda syntax",
+              "body": "A lambda is a function literal in braces: `{ x: Int -> x * 2 }`. The last expression is its result.\n\n- With exactly one parameter, you can skip it and use `it`: `{ it * 2 }`.\n- If a function's **last** parameter is a function, the lambda goes *outside* the parentheses, and if it's the only argument the parentheses disappear:\n\n```kotlin\nlist.map({ it * 2 })   // legal, but nobody writes this\nlist.map { it * 2 }    // idiomatic\nlist.fold(0) { acc, x -> acc + x }\n```"
+            },
+            {
+              "type": "explain",
+              "title": "The everyday operations",
+              "body": "These return **new** collections or values and leave the original untouched:\n\n- `map { }`: transform each element\n- `filter { }`: keep matching elements\n- `first { }` / `firstOrNull { }`: find one (`first` throws if none match)\n- `any { }`, `all { }`, `none { }`, `count { }`\n- `sumOf { }`, `maxByOrNull { }`, `sortedBy { }`\n- `groupBy { }`: `Map<Key, List<T>>`\n- `associateBy { }` / `associateWith { }`: build a map\n- `joinToString(\", \")`: build a string"
+            },
+            {
+              "type": "example",
+              "title": "A small report",
+              "problem": "What does this print?\n\n```kotlin\ndata class Order(val customer: String, val total: Int)\n\nval orders = listOf(\n    Order(\"Ann\", 30), Order(\"Bo\", 15),\n    Order(\"Ann\", 20), Order(\"Cy\", 50)\n)\nprintln(orders.filter { it.total >= 20 }.map { it.customer })\nval byCustomer = orders.groupBy { it.customer }\nprintln(byCustomer.mapValues { (_, list) -> list.sumOf { it.total } })\nprintln(orders.sumOf { it.total })\n```",
+              "steps": [
+                "`filter` keeps totals ≥ 20: Ann 30, Ann 20, Cy 50. `map` pulls out the names → `[Ann, Ann, Cy]`.",
+                "`groupBy` makes `{Ann=[Ann's 2 orders], Bo=[...], Cy=[...]}` and keeps first-seen key order.",
+                "`mapValues` replaces each list with its sum. The `(_, list)` destructures each map entry and ignores the key → `{Ann=50, Bo=15, Cy=50}`.",
+                "`sumOf` over all orders: 30 + 15 + 20 + 50 → `115`."
+              ],
+              "answer": "`[Ann, Ann, Cy]`, `{Ann=50, Bo=15, Cy=50}`, `115`"
+            },
+            {
+              "type": "mcq",
+              "id": "q-filter-map",
+              "prompt": "What does this print?\n\n```kotlin\nval nums = listOf(3, 8, 1, 6)\nprintln(nums.filter { it > 2 }.map { it * 10 })\n```",
+              "choices": ["`[30, 80, 60]`", "`[30, 80, 10, 60]`", "`[80, 60]`", "`[3, 8, 6]`"],
+              "answer": 0,
+              "explanation": "`filter { it > 2 }` keeps 3, 8 and 6 (1 is dropped), then `map` multiplies each by 10 → `[30, 80, 60]`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-idiomatic-chain",
+              "prompt": "Which is the idiomatic replacement for this loop?\n\n```kotlin\nval names = mutableListOf<String>()\nfor (u in users) {\n    if (u.active) names.add(u.name)\n}\n```",
+              "choices": [
+                "`val names = users.filter { it.active }.map { it.name }`",
+                "`val names = users.map { it.active }.filter { it.name }`",
+                "`val names = users.forEach { if (it.active) it.name }`",
+                "`val names = users.filter(it.active).map(it.name)`"
+              ],
+              "answer": 0,
+              "explanation": "Filter first, then map. Mapping to `active` first leaves only Booleans and loses the names; `forEach` returns `Unit`, not a list; and `it` only exists inside a lambda's braces."
+            },
+            {
+              "type": "text",
+              "id": "q-join",
+              "prompt": "What does this print?\n\n```kotlin\nprintln(listOf(\"kiwi\", \"fig\", \"plum\").joinToString(\"-\") { it.uppercase() })\n```",
+              "accept": ["KIWI-FIG-PLUM"],
+              "hint": "`joinToString` takes a separator and an optional lambda that transforms each element.",
+              "explanation": "Each element goes through the trailing lambda (`uppercase()`) and the results are joined with `-` → `KIWI-FIG-PLUM`."
+            }
+          ]
+        },
+        {
+          "id": "extensions-scope-functions",
+          "title": "Extension functions and scope functions",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Extensions add methods to types you don't own; among scope functions, `apply` configures, `also` adds side effects, and `let` transforms or handles null.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Extension functions",
+              "body": "You can add a function to an existing type, even `String` or a Java class, without subclassing:\n\n```kotlin\nfun String.initials(): String =\n    split(\" \").map { it.first() }.joinToString(\"\")\n\nprintln(\"Ada Lovelace\".initials())   // AL\n```\n\nInside, `this` is the receiver (`\"Ada Lovelace\"`), and you can call its members directly. Under the hood it's a static helper function, so it can't see private members. Much of Kotlin's standard library (`map`, `filter`, `let`…) is extensions."
+            },
+            {
+              "type": "numeric",
+              "id": "q-ext-count",
+              "prompt": "What does this print?\n\n```kotlin\nfun Int.isEven() = this % 2 == 0\n\nprintln((1..6).count { it.isEven() })\n```",
+              "answer": 3,
+              "explanation": "`isEven()` is now callable on any `Int`. Among 1 to 6, the even numbers are 2, 4 and 6 → **3**."
+            },
+            {
+              "type": "explain",
+              "title": "The five scope functions",
+              "body": "They all run a lambda on an object. They differ in **what the object is called** and **what they return**:\n\n- `apply`: object is `this`, returns **the object**. Use it to configure a new object.\n- `also`: object is `it`, returns **the object**. Use it for side effects like logging, mid-chain.\n- `let`: object is `it`, returns **the lambda result**. Use it with `?.` for null checks, or to transform.\n- `run`: object is `this`, returns **the lambda result**. Use it to compute a value from an object.\n- `with(obj) { }`: like `run`, but not an extension. Use it for many calls on one object.\n\nRule of thumb: want the object back? `apply`/`also`. Want a result? `let`/`run`."
+            },
+            {
+              "type": "example",
+              "title": "apply, let and also together",
+              "problem": "What does this print?\n\n```kotlin\nval sb = StringBuilder().apply {\n    append(\"Hello\")\n    append(\", \")\n    append(\"Kotlin\")\n}\nval len = sb.toString().let { it.length }\nval list = mutableListOf(1, 2).also { println(\"before: $it\") }\nlist.add(3)\nprintln(\"$sb / $len / $list\")\n```",
+              "steps": [
+                "`apply` calls `append` on the builder (as `this`) and returns the builder itself, so `sb` holds `Hello, Kotlin`.",
+                "`let` returns the lambda result: the length of `\"Hello, Kotlin\"`, which is 5 + 2 + 6 = 13.",
+                "`also` runs the print (`before: [1, 2]`) and returns the list unchanged, so `list` is the list itself.",
+                "After `add(3)`, the last line prints the builder, the length and the list."
+              ],
+              "answer": "`before: [1, 2]`, then `Hello, Kotlin / 13 / [1, 2, 3]`"
+            },
+            {
+              "type": "mcq",
+              "id": "q-let-vs-also",
+              "prompt": "What does this print?\n\n```kotlin\nval a = \"kotlin\".let { it.length }\nval b = \"kotlin\".also { it.length }\nprintln(\"$a $b\")\n```",
+              "choices": ["`6 kotlin`", "`6 6`", "`kotlin kotlin`", "`kotlin 6`"],
+              "answer": 0,
+              "explanation": "`let` returns the lambda's result (`6`). `also` ignores the lambda's result and returns the original object (`\"kotlin\"`)."
+            },
+            {
+              "type": "mcq",
+              "id": "q-apply-config",
+              "prompt": "Given `class Person { var name = \"\"; var age = 0 }`, which line creates and configures a `Person` idiomatically, so that `p` is the `Person`?",
+              "choices": [
+                "`val p = Person().apply { name = \"Ann\"; age = 30 }`",
+                "`val p = Person().let { name = \"Ann\"; age = 30 }`",
+                "`val p = Person().also { name = \"Ann\"; age = 30 }`",
+                "`val p = Person().run { name = \"Ann\"; age = 30 }`"
+              ],
+              "answer": 0,
+              "hint": "You need `this` as the receiver *and* the object as the return value.",
+              "explanation": "`apply` makes the person `this` (so `name = ...` sets its property) and returns the person. In `let`/`also` the person is `it`, so a bare `name` doesn't refer to it, and `run` returns the lambda's result (`Unit`), not the person."
+            },
+            {
+              "type": "mcq",
+              "id": "q-also-chain",
+              "prompt": "You want to log the intermediate list without changing what flows into `sum()`. Which function fills the blank?\n\n```kotlin\nval total = numbers\n    .filter { it > 0 }\n    .___ { println(\"positives: $it\") }\n    .sum()\n```",
+              "choices": ["`let`", "`also`", "`run`", "`apply`"],
+              "answer": 1,
+              "explanation": "`also` passes the list as `it` and then returns the **same list**, so `.sum()` still works. With `let` or `run` the chain would continue with the lambda's result (`Unit` from `println`), and `apply` has no `it`."
+            }
+          ]
+        },
+        {
+          "id": "coroutines-basics",
+          "title": "Coroutines basics",
+          "pareto": "extra",
+          "minutes": 8,
+          "takeaway": "`suspend` functions pause without blocking a thread; start them with `launch` (no result) or `async`/`await` (a result), inside a scope that owns their lifetime.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "suspend functions",
+              "body": "Coroutines (from the `kotlinx.coroutines` library) let you write asynchronous code that reads like ordinary sequential code.\n\n```kotlin\nsuspend fun fetchUser(id: Int): User {\n    delay(100)          // suspends: frees the thread while waiting\n    return User(id)\n}\n```\n\nA `suspend` function can **pause** without blocking its thread, so thousands of coroutines can share a few threads. The catch: a `suspend` function can only be called from another `suspend` function or from inside a coroutine."
+            },
+            {
+              "type": "explain",
+              "title": "Builders and structured concurrency",
+              "body": "- `runBlocking { }` bridges normal code to coroutines by blocking the current thread until the block finishes. Use it in `main` and tests, never on Android's main thread.\n- `launch { }` starts a fire-and-forget coroutine and returns a `Job`.\n- `async { }` starts one that produces a value and returns a `Deferred<T>`; get the value with `await()`.\n\n**Structured concurrency:** coroutines start inside a *scope*, and a scope doesn't finish until its children do. Cancelling the scope cancels them all. On Android you use `viewModelScope` or `lifecycleScope`; avoid `GlobalScope`."
+            },
+            {
+              "type": "example",
+              "title": "Who prints first?",
+              "problem": "What is the output order?\n\n```kotlin\nimport kotlinx.coroutines.*\n\nfun main() = runBlocking {\n    launch {\n        delay(100)\n        println(\"World\")\n    }\n    println(\"Hello\")\n}\n```",
+              "steps": [
+                "`launch` starts a child coroutine but doesn't wait for it.",
+                "The main body carries on and prints `Hello` (the child hasn't printed anything yet).",
+                "The child resumes after 100 ms and prints `World`.",
+                "`runBlocking` only returns once its children are done. That's structured concurrency."
+              ],
+              "answer": "`Hello`, then `World`"
+            },
+            {
+              "type": "mcq",
+              "id": "q-async-time",
+              "prompt": "What is printed, and roughly how long does it take?\n\n```kotlin\nfun main() = runBlocking {\n    val a = async { delay(1000); 1 }\n    val b = async { delay(1000); 2 }\n    println(a.await() + b.await())\n}\n```",
+              "choices": [
+                "`3` after about 1 second",
+                "`3` after about 2 seconds",
+                "`12` after about 1 second",
+                "Compile error: `delay` must run on a background thread"
+              ],
+              "answer": 0,
+              "hint": "When does each `async` start?",
+              "explanation": "Both `async` blocks start immediately and wait **concurrently**, so the total is about 1 second, not 2. `await()` returns the `Int` results → 1 + 2 = `3`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-suspend-call",
+              "prompt": "Which line doesn't compile?\n\n```kotlin\nsuspend fun load(): String { delay(10); return \"data\" }\n\nfun a() { println(load()) }                 // A\nsuspend fun b() { println(load()) }         // B\nfun c() = runBlocking { println(load()) }   // C\n```",
+              "choices": [
+                "Line A",
+                "Line B",
+                "Line C",
+                "Line B: a suspend function can't call another suspend function"
+              ],
+              "answer": 0,
+              "explanation": "`a` is a regular function, so it can't call the suspending `load()`. `b` is itself `suspend`, and `c` calls `load()` inside a coroutine started by `runBlocking`, so both are fine."
+            },
+            {
+              "type": "mcq",
+              "id": "q-android-scope",
+              "prompt": "In an Android `ViewModel`, how should you start a coroutine that loads data for the screen?",
+              "choices": [
+                "`viewModelScope.launch { ... }`",
+                "`GlobalScope.launch { ... }`",
+                "`runBlocking { ... }` on the main thread",
+                "`Thread { runBlocking { ... } }.start()`"
+              ],
+              "answer": 0,
+              "explanation": "`viewModelScope` ties the coroutine to the ViewModel's lifetime: it's cancelled automatically when the ViewModel is cleared. `GlobalScope` leaks work, and `runBlocking` on the main thread freezes the UI."
+            }
+          ]
+        },
+        {
+          "id": "java-interop",
+          "title": "Java interop",
+          "pareto": "extra",
+          "minutes": 7,
+          "takeaway": "Java values arrive as platform types, so pin down their nullability at the boundary, and use `@JvmStatic`/`@JvmOverloads` to make Kotlin APIs feel native from Java.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Calling Java from Kotlin",
+              "body": "Java libraries just work, with a few niceties:\n\n- Getters and setters become properties: `file.getName()` → `file.name`, and `button.setEnabled(true)` → `button.isEnabled = true`.\n- No `new`: `val list = ArrayList<String>()`.\n- **SAM conversion:** a Java interface with one method accepts a lambda: `executor.execute { println(\"hi\") }`.\n- Java collections map to Kotlin's `List`/`MutableList` and so on."
+            },
+            {
+              "type": "explain",
+              "title": "Platform types",
+              "body": "Java doesn't say whether a `String` can be null, so Kotlin gives it a **platform type**, shown in the IDE as `String!`. You may treat it as `String` or `String?`, and the compiler trusts you.\n\nIf you treat a null as non-null, you get a runtime exception, the very thing Kotlin tries to prevent. Fixes:\n\n- Declare the type explicitly as nullable: `val name: String? = javaObj.name`.\n- Annotate the Java code with `@Nullable` / `@NonNull`; Kotlin honours these annotations."
+            },
+            {
+              "type": "mcq",
+              "id": "q-platform-npe",
+              "prompt": "A Java method `public String findName(int id)` returns `null` for unknown ids. What happens with this Kotlin code?\n\n```kotlin\nval name: String = repo.findName(99)\nprintln(name.length)\n```",
+              "choices": [
+                "Compile error on the first line",
+                "It compiles, then throws a NullPointerException at the assignment",
+                "It prints `0`",
+                "It prints `null`"
+              ],
+              "answer": 1,
+              "hint": "The return type is a platform type, `String!`.",
+              "explanation": "With a platform type the compiler lets you choose `String`, and inserts a runtime null check at the assignment, which fails immediately with a `NullPointerException`. Declaring `String?` would force you to handle null at compile time."
+            },
+            {
+              "type": "explain",
+              "title": "Calling Kotlin from Java",
+              "body": "A few annotations make Kotlin code pleasant to use from Java:\n\n- `@JvmStatic` on a companion member → a real static method: `User.create()` instead of `User.Companion.create()`.\n- `@JvmOverloads` → generates Java overloads for default arguments.\n- `@JvmField` → exposes a property as a plain public field.\n- Top-level functions in `Utils.kt` become static methods on `UtilsKt`; rename that class with `@file:JvmName(\"Utils\")`.\n- Properties become getters and setters: `val name` → `getName()`."
+            },
+            {
+              "type": "example",
+              "title": "Companion members from Java",
+              "problem": "How does Java call each function?\n\n```kotlin\nclass Ids {\n    companion object {\n        fun next(): Int = 1\n        @JvmStatic fun nextStatic(): Int = 2\n    }\n}\n```",
+              "steps": [
+                "From Kotlin both look the same: `Ids.next()` and `Ids.nextStatic()`.",
+                "To Java, the companion is a static field named `Companion` holding an object, so plain members go through it: `Ids.Companion.next()`.",
+                "`@JvmStatic` also generates a real static method on `Ids`, so Java can write `Ids.nextStatic()`."
+              ],
+              "answer": "`Ids.Companion.next()` and `Ids.nextStatic()`"
+            },
+            {
+              "type": "mcq",
+              "id": "q-jvmoverloads",
+              "prompt": "Java code wants to call the Kotlin function `fun connect(host: String, port: Int = 80)` as `connect(\"a.com\")`, using the default port. What do you add to the Kotlin function?",
+              "choices": ["`@JvmStatic`", "`@JvmOverloads`", "`@JvmField`", "`@JvmName(\"connect\")`"],
+              "answer": 1,
+              "explanation": "Java has no default arguments, so it normally sees only `connect(String, int)`. `@JvmOverloads` generates the extra `connect(String)` overload."
+            },
+            {
+              "type": "mcq",
+              "id": "q-is-getter",
+              "prompt": "A Kotlin class `Account` has `var isActive: Boolean`. How does Java read and write it?",
+              "choices": [
+                "`account.isActive()` and `account.setActive(true)`",
+                "`account.getIsActive()` and `account.setIsActive(true)`",
+                "`account.isActive` as a public field",
+                "`account.getActive()` and `account.setActive(true)`"
+              ],
+              "answer": 0,
+              "explanation": "For properties whose name starts with `is`, Kotlin keeps the name for the getter (`isActive()`) and replaces `is` with `set` for the setter (`setActive(...)`). Other properties get the usual `getX()`/`setX()`."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

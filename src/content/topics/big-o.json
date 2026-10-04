@@ -1,0 +1,290 @@
+{
+  "id": "big-o",
+  "title": "Big-O Thinking",
+  "icon": "⚡",
+  "color": "#0f9f6e",
+  "order": 3,
+  "category": "Programming",
+  "level": "Intermediate",
+  "description": "Predict how code slows down as data grows — the one idea behind most performance decisions in programming.",
+  "keyIdeas": [
+    "Big-O describes how work **grows** as input grows, not exact speed.",
+    "Drop constants and smaller terms: 3n² + 5n + 2 is O(n²).",
+    "One loop over n → O(n). Nested loops → O(n²). Halving each step → O(log n).",
+    "Hash maps turn repeated O(n) searches into O(1) lookups (on average).",
+    "Efficient sorting is O(n log n). Optimize only where n is actually big."
+  ],
+  "lessons": [
+    {
+      "id": "growth",
+      "title": "What Big-O measures",
+      "pareto": "core",
+      "minutes": 5,
+      "takeaway": "Big-O is the growth shape: keep the dominant term, drop constants, and ask 'what happens when n doubles?'",
+      "steps": [
+        {
+          "type": "explain",
+          "title": "Growth, not speed",
+          "body": "When an algorithm handles more data, how much more work does it do? **Big-O notation** describes that *growth rate* as the input size **n** gets large.\n\nWe don't care about exact milliseconds (those depend on the machine). We care about the **shape**: if n doubles, does the work stay the same, double, or quadruple?"
+        },
+        {
+          "type": "explain",
+          "title": "Drop the noise",
+          "body": "Big-O keeps only the fastest-growing term and ignores constant factors:\n\n- 3n + 5 → **O(n)**\n- n² + 100n → **O(n²)**\n- 42 → **O(1)**\n\nFor large n, the biggest term dominates everything else."
+        },
+        {
+          "type": "mcq",
+          "id": "q-simplify",
+          "prompt": "Simplify **5n² + 3n + 1000** in Big-O notation.",
+          "choices": [
+            "O(1000)",
+            "O(n)",
+            "O(n²)",
+            "O(5n²)"
+          ],
+          "answer": 2,
+          "explanation": "Keep the dominant term (n²) and drop the constant factor 5 → **O(n²)**."
+        },
+        {
+          "type": "example",
+          "title": "Doubling the input",
+          "problem": "An O(n²) algorithm takes 1 second for 1,000 items. Roughly how long for 2,000 items?",
+          "steps": [
+            "Work grows like n². Going from n to 2n multiplies the work by (2n)² ÷ n² = **4**.",
+            "1 second × 4."
+          ],
+          "answer": "About **4 seconds**. Doubling the input quadruples the time."
+        },
+        {
+          "type": "numeric",
+          "id": "q-tenx",
+          "prompt": "An O(n²) algorithm takes 2 seconds for 10,000 items. Roughly how many **seconds** for 100,000 items?",
+          "answer": 200,
+          "hint": "The input grew 10×. What does that do to n²?",
+          "explanation": "10× the input → 10² = 100× the work: 2 × 100 = **200 seconds**."
+        },
+        {
+          "type": "mcq",
+          "id": "q-linear",
+          "prompt": "An O(n) algorithm takes 3 s on some input. If the input doubles, roughly how long will it take?",
+          "choices": [
+            "3 s",
+            "6 s",
+            "9 s",
+            "12 s"
+          ],
+          "answer": 1,
+          "explanation": "Linear growth: double the input, double the time → **6 s**."
+        }
+      ]
+    },
+    {
+      "id": "common-classes",
+      "title": "The five classes you'll meet most",
+      "pareto": "core",
+      "minutes": 6,
+      "takeaway": "O(1) < O(log n) < O(n) < O(n log n) < O(n²). At a million items, that's the difference between instant and forever.",
+      "steps": [
+        {
+          "type": "explain",
+          "title": "The usual suspects",
+          "body": "From slowest-growing to fastest-growing:\n\n- **O(1)** constant — reading an array element, a hash map lookup\n- **O(log n)** logarithmic — binary search\n- **O(n)** linear — one pass over the data\n- **O(n log n)** — efficient sorting\n- **O(n²)** quadratic — comparing every pair\n\nFor n = 1,000,000: log n ≈ 20, n log n ≈ 20 million, and n² = 1 trillion."
+        },
+        {
+          "type": "explain",
+          "title": "Why log n is so small",
+          "body": "**Binary search** finds an item in a *sorted* list by checking the middle, then throwing away the half that can't contain it — again and again.\n\nHow many halvings take n down to 1? That's log₂ n. Each time the data **doubles**, binary search needs just **one** more step."
+        },
+        {
+          "type": "numeric",
+          "id": "q-binsearch",
+          "prompt": "About how many steps does binary search need, in the worst case, to search **1,000,000** sorted items? (whole number)",
+          "answer": 20,
+          "tolerance": 1,
+          "hint": "2¹⁰ ≈ 1,000. So 2²⁰ ≈ ?",
+          "explanation": "2²⁰ = 1,048,576 ≥ 1,000,000, so about **20** halvings."
+        },
+        {
+          "type": "mcq",
+          "id": "q-order",
+          "prompt": "Which list goes from slowest-growing to fastest-growing?",
+          "choices": [
+            "O(n), O(log n), O(n²), O(1)",
+            "O(1), O(log n), O(n), O(n log n), O(n²)",
+            "O(log n), O(1), O(n), O(n²)",
+            "O(1), O(n), O(log n), O(n²)"
+          ],
+          "answer": 1,
+          "explanation": "Constant < logarithmic < linear < linearithmic < quadratic."
+        },
+        {
+          "type": "mcq",
+          "id": "q-feasible",
+          "prompt": "Your input has 10 million items and you need an answer within a few seconds. A typical machine does roughly 100 million simple operations per second. Which complexity is feasible?",
+          "choices": [
+            "O(n²)",
+            "O(n log n)",
+            "Both",
+            "Neither"
+          ],
+          "answer": 1,
+          "explanation": "n log n ≈ 10⁷ × 23 ≈ 2.3 × 10⁸ operations — a couple of seconds. n² = 10¹⁴ operations would take over a week."
+        },
+        {
+          "type": "text",
+          "id": "q-sorting",
+          "prompt": "What's the typical Big-O of an efficient general-purpose sorting algorithm (like merge sort)? Write it like O(...).",
+          "accept": [
+            "O(n log n)",
+            "n log n",
+            "O(n log(n))",
+            "n log(n)"
+          ],
+          "explanation": "**O(n log n)** — merge sort, heapsort, and the built-in sort in most languages. No comparison-based sort can do better in general."
+        }
+      ]
+    },
+    {
+      "id": "reading-code",
+      "title": "Reading complexity from code",
+      "pareto": "core",
+      "minutes": 7,
+      "takeaway": "Count the loops: sequential → add, nested → multiply, halving → log. Watch for hidden loops inside library calls.",
+      "steps": [
+        {
+          "type": "explain",
+          "title": "Follow the loops",
+          "body": "Most of the time you can read complexity straight off the loops:\n\n- **One loop over n items** → O(n)\n- **A loop inside a loop**, both over n → O(n²)\n- **Loops one after another** → add them: O(n) + O(n) = O(n)\n- **Halving (or doubling) each iteration** → O(log n)"
+        },
+        {
+          "type": "mcq",
+          "id": "q-code-sum",
+          "prompt": "What's the complexity of this function?\n\n```\ndef total(nums):\n    s = 0\n    for x in nums:\n        s += x\n    return s\n```",
+          "choices": [
+            "O(1)",
+            "O(log n)",
+            "O(n)",
+            "O(n²)"
+          ],
+          "answer": 2,
+          "explanation": "One pass, constant work per item → **O(n)**."
+        },
+        {
+          "type": "mcq",
+          "id": "q-code-dup",
+          "prompt": "What's the complexity of this function?\n\n```\ndef has_duplicate(nums):\n    for i in range(len(nums)):\n        for j in range(i + 1, len(nums)):\n            if nums[i] == nums[j]:\n                return True\n    return False\n```",
+          "choices": [
+            "O(n)",
+            "O(n log n)",
+            "O(n²)",
+            "O(2n)"
+          ],
+          "answer": 2,
+          "explanation": "Every pair gets compared: about n²/2 comparisons → **O(n²)**. (The /2 is a constant, so it's dropped.)"
+        },
+        {
+          "type": "mcq",
+          "id": "q-code-halve",
+          "prompt": "What's the complexity of this function?\n\n```\ndef count_halvings(n):\n    steps = 0\n    while n > 1:\n        n = n // 2\n        steps += 1\n    return steps\n```",
+          "choices": [
+            "O(1)",
+            "O(log n)",
+            "O(n)",
+            "O(n²)"
+          ],
+          "answer": 1,
+          "explanation": "n is halved every iteration, so the loop runs about log₂ n times → **O(log n)**."
+        },
+        {
+          "type": "example",
+          "title": "Loops in sequence",
+          "problem": "What's the total complexity?\n\n```\nfor x in nums:          # loop A\n    print(x)\nfor x in nums:          # loop B\n    for y in nums:\n        print(x, y)\n```",
+          "steps": [
+            "Loop A: n iterations → O(n).",
+            "Loop B: n × n iterations → O(n²).",
+            "They run one after the other, so add: O(n) + O(n²).",
+            "Keep only the dominant term."
+          ],
+          "answer": "**O(n²)**"
+        },
+        {
+          "type": "mcq",
+          "id": "q-hidden-loop",
+          "prompt": "Watch for hidden loops! In Python, `x in some_list` scans the list item by item. What's the complexity here?\n\n```\nfor x in a:        # a has n items\n    if x in b:     # b is a list of n items\n        print(x)\n```",
+          "choices": [
+            "O(n)",
+            "O(n log n)",
+            "O(n²)",
+            "O(1)"
+          ],
+          "answer": 2,
+          "explanation": "`x in b` is itself an O(n) scan, done n times → **O(n²)**. Turning `b` into a set makes each check O(1), and the whole thing O(n)."
+        }
+      ]
+    },
+    {
+      "id": "trade-offs",
+      "title": "Trading memory for speed",
+      "pareto": "extra",
+      "minutes": 6,
+      "takeaway": "Hash maps buy O(1) lookups with extra memory. Optimize only where n is big — simple beats clever for small inputs.",
+      "steps": [
+        {
+          "type": "explain",
+          "title": "The hash map superpower",
+          "body": "A **hash map** (a `dict` in Python, a `Map` in JavaScript) stores key → value pairs and finds a key in **O(1)** on average, no matter how big it gets.\n\nThat makes it the most common tool for speeding up code: spend O(n) extra **memory** to avoid repeated O(n) **searches**."
+        },
+        {
+          "type": "example",
+          "title": "Two-sum",
+          "problem": "Given a list of n numbers and a target, find two numbers that add up to the target.",
+          "steps": [
+            "**Brute force:** check every pair → O(n²) time, O(1) extra memory.",
+            "**Better:** walk the list once. For each x, check whether `target - x` is already in a set of the numbers seen so far, then add x to the set.",
+            "Each check and insert is O(1) on average, done n times → O(n) time, O(n) memory."
+          ],
+          "answer": "Spending O(n) memory turns O(n²) into **O(n)**. For a million items that's ~10⁶ steps instead of ~10¹²."
+        },
+        {
+          "type": "mcq",
+          "id": "q-dedupe",
+          "prompt": "You need to remove duplicates from a list of n items. Which approach is O(n) on average?",
+          "choices": [
+            "For each item, scan the result list to see if it's already there",
+            "Add items to a hash set, skipping ones that are already in it",
+            "Compare every item with every other item",
+            "Sort the list, then compare every item with every other item"
+          ],
+          "answer": 1,
+          "explanation": "Set membership is O(1) on average, so one pass is **O(n)**. Scanning the result list each time is O(n²)."
+        },
+        {
+          "type": "mcq",
+          "id": "q-sort-first",
+          "prompt": "Another option: sort the list (O(n log n)), then remove adjacent duplicates in one pass (O(n)). What's the total?",
+          "choices": [
+            "O(n)",
+            "O(n log n)",
+            "O(n² log n)",
+            "O(log n)"
+          ],
+          "answer": 1,
+          "explanation": "Sequential steps add, and the dominant term wins: O(n log n) + O(n) = **O(n log n)**. A bit slower than hashing, but it can use less memory."
+        },
+        {
+          "type": "mcq",
+          "id": "q-when-fine",
+          "prompt": "When is the simple O(n²) brute force perfectly fine?",
+          "choices": [
+            "Never",
+            "When n is small (say, a few hundred items) and the simpler code is easier to get right",
+            "Only in Python",
+            "Only when memory is unlimited"
+          ],
+          "answer": 1,
+          "explanation": "80/20 applies to optimization too: for small n the difference is microseconds. Spend your effort on the code paths that actually handle large inputs."
+        }
+      ]
+    }
+  ]
+}
