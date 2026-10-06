@@ -1,7 +1,7 @@
 // Validates every course file: node scripts/check-content.ts  (or: npm run check:content)
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { validateCourse } from '../src/content/validate.ts';
+import { validateCourse, validateRoadmap } from '../src/content/validate.ts';
 
 const dir = join(import.meta.dirname, '..', 'src', 'content', 'topics');
 let problems = 0;
@@ -26,10 +26,20 @@ for (const file of readdirSync(dir).filter((f) => f.endsWith('.json'))) {
   } else {
     const c = data as { units?: { lessons: { pareto: string; steps: { type: string }[] }[] }[]; lessons?: { pareto: string; steps: { type: string }[] }[] };
     const lessons = c.units ? c.units.flatMap((u) => u.lessons) : (c.lessons ?? []);
-    const questions = lessons.flatMap((l) => l.steps).filter((s) => ['mcq', 'numeric', 'text'].includes(s.type)).length;
+    const questions = lessons.flatMap((l) => l.steps).filter((s) => ['mcq', 'numeric', 'text', 'output', 'bug', 'order', 'buckets', 'trace'].includes(s.type)).length;
     const core = lessons.filter((l) => l.pareto === 'core').length;
     console.log(`✓ ${file}: ${lessons.length} lessons (${core} core), ${questions} questions`);
   }
+}
+
+try {
+  const roadmapErrs = validateRoadmap(JSON.parse(readFileSync(join(dir, '..', 'roadmap.json'), 'utf8')), [...ids.keys()]);
+  roadmapErrs.forEach((e) => console.error(`✗ ${e}`));
+  problems += roadmapErrs.length;
+  if (!roadmapErrs.length) console.log('✓ roadmap.json');
+} catch (e) {
+  console.error(`✗ roadmap.json: ${(e as Error).message}`);
+  problems++;
 }
 
 if (problems) {

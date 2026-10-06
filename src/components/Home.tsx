@@ -6,6 +6,7 @@ import { levelInfo, streak, useProgress, xpToday, type Progress } from '../lib/s
 import { WeekXpChart } from './charts';
 import { Page, useDueCount } from './Layout';
 import { CourseCard } from './Courses';
+import { RoadmapTeaser } from './Roadmap';
 import { accentStyle, ProgressBar, Ring } from './ui';
 
 function greeting() {
@@ -169,6 +170,7 @@ export function Home() {
       </div>
 
       <ContinueCard p={p} />
+      <RoadmapTeaser />
 
       {!user && !fresh && (
         <div className="save-banner">

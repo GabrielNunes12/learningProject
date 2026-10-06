@@ -1,13 +1,16 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { href } from '../lib/router';
 import { courseStats } from '../lib/stats';
 import { useProgress } from '../lib/storage';
 import type { Course, Lesson } from '../types';
+import { CoursePath } from './CoursePath';
 import { Page } from './Layout';
 import { InlineMarkdown } from './Markdown';
 import { accentStyle, plural, ProgressBar, Ring } from './ui';
 
 const FAST_KEY = 'projectlearn:fasttrack';
+const VIEW_KEY = 'projectlearn:pathview';
+type PathView = 'map' | 'list';
 
 export function CoursePage({ course }: { course: Course }) {
   const p = useProgress();
@@ -27,6 +30,27 @@ export function CoursePage({ course }: { course: Course }) {
       /* ignore */
     }
   };
+  const [view, setView] = useState<PathView>(() => {
+    try {
+      return localStorage.getItem(VIEW_KEY) === 'list' ? 'list' : 'map';
+    } catch {
+      return 'map';
+    }
+  });
+  const chooseView = (v: PathView) => {
+    setView(v);
+    try {
+      localStorage.setItem(VIEW_KEY, v);
+    } catch {
+      /* ignore */
+    }
+  };
+  // The map may scroll to the next lesson only on page load, not when the user switches views later.
+  // Child layout effects run before this effect, so the map's first check sees a fresh page.
+  const loadedFor = useRef<string | null>(null);
+  useEffect(() => {
+    loadedFor.current = course.id;
+  }, [course.id]);
   const quizBest = p.quizBest[course.id];
   let n = 0;
 
@@ -88,37 +112,51 @@ export function CoursePage({ course }: { course: Course }) {
           <div className="course-path">
             <div className="path-toolbar">
               <h2>Learning path</h2>
-              <label className="switch">
-                <input type="checkbox" checked={fast} onChange={toggleFast} />
-                <span className="switch-track" aria-hidden />
-                Fast track: core only
-              </label>
+              <div className="path-tools">
+                <div className="cpath-views" role="group" aria-label="Path view">
+                  <button type="button" aria-pressed={view === 'map'} onClick={() => chooseView('map')}>
+                    Map
+                  </button>
+                  <button type="button" aria-pressed={view === 'list'} onClick={() => chooseView('list')}>
+                    List
+                  </button>
+                </div>
+                <label className="switch">
+                  <input type="checkbox" checked={fast} onChange={toggleFast} />
+                  <span className="switch-track" aria-hidden />
+                  Fast track: core only
+                </label>
+              </div>
             </div>
             {fast && (
               <p className="muted small">
                 Showing the {s.coreTotal} core lessons (~{s.coreMinutes} min) that cover most of what you'll use.
               </p>
             )}
-            {course.units.map((u, ui) => {
-              const lessons = fast ? u.lessons.filter((l) => l.pareto === 'core') : u.lessons;
-              const doneCount = u.lessons.filter(s.done).length;
-              if (!lessons.length) {
-                return null;
-              }
-              return (
-                <section key={u.id} className="unit">
-                  <header className="unit-head">
-                    <span className="unit-num">Unit {ui + 1}</span>
-                    <h3>{u.title}</h3>
-                    <span className="muted small">
-                      {doneCount}/{u.lessons.length}
-                    </span>
-                  </header>
-                  {u.description && <p className="muted small unit-desc">{u.description}</p>}
-                  <ol className="lesson-list">{lessons.map(row)}</ol>
-                </section>
-              );
-            })}
+            {view === 'map' ? (
+              <CoursePath course={course} stats={s} fast={fast} canAutoScroll={() => loadedFor.current !== course.id} />
+            ) : (
+              course.units.map((u, ui) => {
+                const lessons = fast ? u.lessons.filter((l) => l.pareto === 'core') : u.lessons;
+                const doneCount = u.lessons.filter(s.done).length;
+                if (!lessons.length) {
+                  return null;
+                }
+                return (
+                  <section key={u.id} className="unit">
+                    <header className="unit-head">
+                      <span className="unit-num">Unit {ui + 1}</span>
+                      <h3>{u.title}</h3>
+                      <span className="muted small">
+                        {doneCount}/{u.lessons.length}
+                      </span>
+                    </header>
+                    {u.description && <p className="muted small unit-desc">{u.description}</p>}
+                    <ol className="lesson-list">{lessons.map(row)}</ol>
+                  </section>
+                );
+              })
+            )}
           </div>
 
           <aside className="course-side">

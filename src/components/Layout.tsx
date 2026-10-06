@@ -13,6 +13,7 @@ export function useDueCount() {
 const NAV = [
   { id: '', label: 'Home', icon: '⌂' },
   { id: 'courses', label: 'Courses', icon: '▦' },
+  { id: 'roadmap', label: 'Roadmap', icon: '⟿' },
   { id: 'review', label: 'Review', icon: '↻' },
   { id: 'profile', label: 'Profile', icon: '◉' },
 ];

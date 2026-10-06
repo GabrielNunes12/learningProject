@@ -2,6 +2,7 @@ import { contentErrors, getCourse } from './content';
 import { CheckEmail, DevMailbox, Forgot, Reset, SignIn, SignUp, Verify } from './components/Auth';
 import { CheatSheet } from './components/CheatSheet';
 import { CoursePage } from './components/CoursePage';
+import { DevGames } from './components/DevGames';
 import { Courses } from './components/Courses';
 import { Home } from './components/Home';
 import { Page } from './components/Layout';
@@ -9,6 +10,7 @@ import { LessonPlayer } from './components/LessonPlayer';
 import { Profile } from './components/Profile';
 import { Quiz } from './components/Quiz';
 import { Review, ReviewSession } from './components/Review';
+import { Roadmap } from './components/Roadmap';
 import { useAuth } from './lib/auth';
 import { useRoute } from './lib/router';
 
@@ -40,6 +42,8 @@ function Route({ route }: { route: string[] }) {
       return <Home />;
     case 'courses':
       return <Courses />;
+    case 'roadmap':
+      return <Roadmap trackId={a} />;
     case 'review':
       if (a === 'start' || a === 'weak') return <ReviewSession key={route.join('/')} mode={a} courseId={b} />;
       return <Review />;
@@ -59,6 +63,7 @@ function Route({ route }: { route: string[] }) {
       return <Reset token={a ?? ''} />;
     case 'dev':
       if (a === 'mailbox') return <DevMailbox />;
+      if (a === 'games' && import.meta.env.DEV) return <DevGames key={route.join('/')} index={b} mode={c} />;
       break;
     case 'topic': // old links
     case 'course': {

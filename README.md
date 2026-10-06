@@ -35,7 +35,7 @@ npm start
 | **Sync** | When you're signed in, progress (XP, streak, reviews, completed lessons) is saved to the server automatically. |
 | **Courses page** | Search, and filter by category. Each card shows the core lesson count and an estimated time. |
 | **Course page** | A learning path grouped into units, with **Core** and **Deep dive** labels. A *Fast track* switch shows only core lessons. The sidebar has key ideas, mastery, the quiz and the cheat sheet. |
-| **Lesson player** | Step-by-step: explanations, worked examples revealed one step at a time, and questions (multiple choice, number, short text). Answer feedback appears in a bottom bar with hints, retries and explanations. Code is syntax-highlighted. |
+| **Lesson player** | Step-by-step: explanations, worked examples revealed one step at a time, and questions (multiple choice, number, short text, predict the output, find the bug). Answer feedback appears in a bottom bar with hints, retries and explanations. Code is syntax-highlighted. |
 | **Quiz** | 12 questions mixed from across the course. The results list which lessons to study and which you can skip. |
 | **Review** | Spaced repetition: correct answers wait 1 → 3 → 7 → 16 → 35 days, misses come back right away. Shows a 7-day forecast, memory strength, and per-course review. |
 | **XP & levels** | XP for answers and lessons, levels with titles, a daily goal ring, a streak, a weekly chart and an activity heatmap on your profile. |

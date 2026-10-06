@@ -69,6 +69,24 @@
               "answer": "The controller lives outside the scanned package tree. Move it under `com.example.shop`."
             },
             {
+              "type": "bug",
+              "id": "q-bug-sibling-package",
+              "prompt": "`OrderController` should get a `PriceService` injected, but the app fails at startup. Click the line with the bug.",
+              "language": "java",
+              "code": "// ShopApplication.java\npackage com.example.shop;\n\n@SpringBootApplication\npublic class ShopApplication { /* main... */ }\n\n// PriceService.java\npackage com.example.pricing;\n\n@Service\npublic class PriceService { /* ... */ }\n\n// OrderController.java\npackage com.example.shop.order;\n\n@RestController\npublic class OrderController {\n    public OrderController(PriceService prices) { /* ... */ }\n}",
+              "error": "***************************\nAPPLICATION FAILED TO START\n***************************\n\nDescription:\n\nParameter 0 of constructor in OrderController required a bean of type 'PriceService' that could not be found.\n\nAction:\n\nConsider defining a bean of type 'PriceService' in your configuration.",
+              "lines": [8],
+              "fixes": [
+                "Change line 8 to `package com.example.shop.pricing;`",
+                "Add `@Autowired` above line 18",
+                "Add `@ComponentScan(\"com.example.shop\")` above line 4",
+                "Change line 14 to `package com.example.pricing;`"
+              ],
+              "answer": 0,
+              "hint": "Which packages does `@SpringBootApplication` scan, starting from line 2?",
+              "explanation": "Component scanning starts at the main class's package, `com.example.shop`, and covers only its sub-packages. `com.example.pricing` is a sibling, so `PriceService` is never registered and the controller's constructor has nothing to receive. Moving it to `com.example.shop.pricing` puts it inside the scanned tree. `@Autowired` doesn't create beans, and `@ComponentScan(\"com.example.shop\")` scans the same tree as before. Moving the controller to `com.example.pricing` only hides the error: the app starts because `OrderController` is no longer scanned either, so its endpoints answer 404."
+            },
+            {
               "type": "mcq",
               "id": "q-run-how",
               "prompt": "You built `shop.jar` from a project with the web starter. What must be installed on the production machine to run it?",
@@ -121,18 +139,22 @@
               "body": "Component scanning registers any class carrying a stereotype annotation:\n\n- `@Component`: a generic bean.\n- `@Service`: business logic. Behaves exactly like `@Component`; the name documents intent.\n- `@Repository`: data access. Also translates persistence exceptions into Spring's `DataAccessException` family.\n- `@Controller` / `@RestController`: the web layer.\n\n```java\n@Service\npublic class OrderService {\n    private final PaymentClient payments;\n    private final OrderRepository orders;\n\n    public OrderService(PaymentClient payments, OrderRepository orders) {\n        this.payments = payments;\n        this.orders = orders;\n    }\n}\n```\n\nWith a **single constructor**, Spring uses it automatically: no `@Autowired` needed. It injects by **type**, so asking for the interface `PaymentClient` is normal."
             },
             {
-              "type": "mcq",
+              "type": "bug",
               "id": "q-missing-bean",
-              "prompt": "Startup fails with:\n\n*Parameter 0 of constructor in OrderService required a bean of type 'PaymentClient' that could not be found.*\n\nThe only implementation is:\n\n```java\npublic class StripePaymentClient implements PaymentClient { ... }\n```\n\nWhat's the cause?",
-              "choices": [
-                "`OrderService`'s constructor is missing `@Autowired`",
-                "`StripePaymentClient` has no stereotype annotation (and no `@Bean` method), so no `PaymentClient` bean exists",
-                "`PaymentClient` is an interface, and Spring can only inject concrete classes",
-                "Interfaces can only be injected with field injection"
+              "prompt": "`OrderService` should get the Stripe client injected, but the app fails to start. Click the line with the bug.",
+              "language": "java",
+              "code": "public interface PaymentClient {\n    void charge(long cents);\n}\n\npublic class StripePaymentClient implements PaymentClient {\n    public void charge(long cents) { /* call Stripe */ }\n}\n\n@Service\npublic class OrderService {\n    private final PaymentClient payments;\n\n    public OrderService(PaymentClient payments) {\n        this.payments = payments;\n    }\n}",
+              "error": "***************************\nAPPLICATION FAILED TO START\n***************************\n\nDescription:\n\nParameter 0 of constructor in OrderService required a bean of type 'PaymentClient' that could not be found.\n\nAction:\n\nConsider defining a bean of type 'PaymentClient' in your configuration.",
+              "lines": [5],
+              "fixes": [
+                "Add `@Component` above line 5",
+                "Add `@Autowired` above line 13",
+                "Change line 13 to `public OrderService(StripePaymentClient payments) {`",
+                "Replace lines 11–15 with field injection: `@Autowired private PaymentClient payments;`"
               ],
-              "answer": 1,
-              "explanation": "Spring looked for a bean assignable to `PaymentClient` and found none, because a plain class is invisible to the container. Add `@Component` (or `@Service`) to `StripePaymentClient`, or create it in a `@Bean` method. Injecting by interface is the normal, preferred style, and a single constructor needs no `@Autowired`.",
-              "hint": "Being on the classpath is not the same as being a bean."
+              "answer": 0,
+              "hint": "Being on the classpath is not the same as being a bean.",
+              "explanation": "Spring looked for a bean assignable to `PaymentClient` and found none, because a plain class is invisible to the container. Add `@Component` (or `@Service`) to `StripePaymentClient`, or create it in a `@Bean` method. Injecting by interface is the normal, preferred style, and a single constructor needs no `@Autowired`."
             },
             {
               "type": "explain",
@@ -234,6 +256,23 @@
                 "debug: true"
               ],
               "explanation": "`debug=true` (or the `--debug` command-line flag) makes Boot log which auto-configurations matched and why the others did not. With Actuator, the `/actuator/conditions` endpoint shows the same report on a running app."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-port-property",
+              "prompt": "The app should listen on port 9090. This is its `application.properties`. Click the line with the bug.",
+              "language": "properties",
+              "code": "spring.datasource.url=jdbc:h2:mem:shop\nspring.datasource.username=sa\nspring.server.port=9090\nspring.jpa.show-sql=true",
+              "error": "Tomcat started on port 8080 (http) with context path '/'",
+              "lines": [3],
+              "fixes": [
+                "Change line 3 to `server.port=9090`",
+                "Change line 3 to `spring.server.port: 9090`",
+                "Add `debug=true` below line 3"
+              ],
+              "answer": 0,
+              "hint": "Is `spring.server.port` a key that Boot actually reads?",
+              "explanation": "The web server's port is `server.port`, not `spring.server.port`. Boot doesn't complain about keys it doesn't know: it simply never reads them, so the server falls back to the default 8080. Switching the separator to `:` keeps the same unknown key, and `debug=true` only prints the condition report. When a setting seems to do nothing, check the exact key with your IDE's autocompletion or the reference docs."
             },
             {
               "type": "mcq",
@@ -393,6 +432,38 @@
               "explanation": "`@RequestParam` is required by default, so Spring rejects the request before your method runs (a `MissingServletRequestParameterException`, mapped to 400). Make it optional with `required = false`, a `defaultValue`, or an `Optional<String>` parameter. The path itself matched, so it is not a 404."
             },
             {
+              "type": "bug",
+              "id": "q-bug-request-body",
+              "prompt": "`POST /api/books` with the body `{\"title\":\"Dune\",\"author\":\"Herbert\"}` should answer with that book as JSON (`BookResponse` is the record from above). Click the line with the bug.",
+              "language": "java",
+              "code": "public record CreateBookRequest(String title, String author) {}\n\n@RestController\n@RequestMapping(\"/api/books\")\npublic class BookController {\n\n    @PostMapping\n    public BookResponse create(CreateBookRequest req) {\n        return new BookResponse(1L, req.title(), req.author());\n    }\n}",
+              "error": "200 OK\n{\"id\":1,\"title\":null,\"author\":null}",
+              "lines": [8],
+              "fixes": [
+                "Change line 8 to `public BookResponse create(@RequestBody CreateBookRequest req) {`",
+                "Add `@ResponseBody` above line 8",
+                "Change line 7 to `@PostMapping(consumes = \"application/json\")`",
+                "Change line 8 to `public BookResponse create(@RequestParam CreateBookRequest req) {`"
+              ],
+              "answer": 0,
+              "hint": "Which annotation tells Spring to read the JSON body into a parameter?",
+              "explanation": "Without `@RequestBody`, Spring never reads the body: it tries to fill the record from query parameters and form fields, finds none, and passes in a request whose fields are all `null`. Your method happily returns 200. `@RequestBody` hands the JSON to Jackson instead. `@ResponseBody` is about the *return* value (and `@RestController` already adds it), `consumes` only restricts which requests match, and `@RequestParam` looks for a `?req=` query parameter, so the request fails with 400."
+            },
+            {
+              "type": "order",
+              "id": "q-order-request-flow",
+              "prompt": "A client sends `POST /api/books` with the body `{\"title\":\"Dune\",\"author\":\"Herbert\"}`. Put what happens in order.\n\n```java\n@RestController\n@RequestMapping(\"/api/books\")\npublic class BookController {\n\n    @PostMapping\n    public BookResponse create(@RequestBody CreateBookRequest req) {\n        return new BookResponse(1L, req.title(), req.author());\n    }\n}\n```",
+              "items": [
+                "Spring matches `POST /api/books` to the `@PostMapping` method",
+                "Jackson reads the JSON body into a `CreateBookRequest`",
+                "`create(req)` runs and returns a `BookResponse`",
+                "Jackson writes the `BookResponse` into the response body as JSON",
+                "The client receives `200 OK` and the book as JSON"
+              ],
+              "hint": "A method can't run until its arguments exist, and there's nothing to send back until it returns.",
+              "explanation": "Spring first finds the handler: the class prefix `/api/books` plus `@PostMapping` matches the path and the HTTP method. Your method can't run until its argument exists, so `@RequestBody` hands the JSON to Jackson to build the record first (if the JSON can't be read, the client gets 400 and your method never runs). Then your code runs like any Java method. `@RestController` includes `@ResponseBody`, so the returned record is written as JSON, and because you returned a plain object, the status is 200."
+            },
+            {
               "type": "explain",
               "title": "Status codes with ResponseEntity",
               "body": "A method that returns an object answers **200 OK**. When the status matters, return a `ResponseEntity`:\n\n```java\n@PostMapping\npublic ResponseEntity<BookResponse> create(@RequestBody CreateBookRequest req) {\n    BookResponse saved = books.create(req);\n    URI location = URI.create(\"/api/books/\" + saved.id());\n    return ResponseEntity.created(location).body(saved);   // 201 + Location header\n}\n\n@DeleteMapping(\"/{id}\")\npublic ResponseEntity<Void> delete(@PathVariable Long id) {\n    books.delete(id);\n    return ResponseEntity.noContent().build();             // 204\n}\n```\n\nFor a fixed status you can also annotate the method, e.g. `@ResponseStatus(HttpStatus.CREATED)`."
@@ -463,6 +534,24 @@
               ],
               "answer": 0,
               "explanation": "`@NotEmpty` only checks that the string is non-null with length > 0, and `\"   \"` has length 3. To reject whitespace-only strings, use `@NotBlank`."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-null-quantity",
+              "prompt": "Every order line needs a quantity of at least 1, so posting `{\"product\": \"pen\"}` (no quantity) should get 400. Click the line with the bug.",
+              "language": "java",
+              "code": "public record OrderLineRequest(\n        @NotBlank String product,\n        @Positive Integer quantity) {}\n\n@PostMapping(\"/api/order-lines\")\npublic OrderLineRequest add(@Valid @RequestBody OrderLineRequest req) {\n    return req;\n}",
+              "error": "200 OK\n{\"product\":\"pen\",\"quantity\":null}",
+              "lines": [3],
+              "fixes": [
+                "Change line 3 to `@NotNull @Positive Integer quantity) {}`",
+                "Change line 3 to `@Min(1) Integer quantity) {}`",
+                "Change line 3 to `@NotEmpty @Positive Integer quantity) {}`",
+                "Change line 3 to `@Valid @Positive Integer quantity) {}`"
+              ],
+              "answer": 0,
+              "hint": "What does `@Positive` say about `null`?",
+              "explanation": "Like most constraints, `@Positive` treats `null` as valid: it only checks values that are present. A missing quantity is `null`, so validation passes. Adding `@NotNull` makes the field required, while `@Positive` still rejects 0 and negatives. `@Min(1)` has the same blind spot for `null`. `@NotEmpty` is for strings and collections: on an `Integer` it throws `UnexpectedTypeException`, a 500 on every request. `@Valid` cascades into nested objects and does nothing for a number."
             },
             {
               "type": "example",
@@ -563,6 +652,24 @@
               "explanation": "Spring knows nothing about your exception, so an unhandled one is a 500. To get 404: map it in an `@ExceptionHandler`, annotate the exception class with `@ResponseStatus(HttpStatus.NOT_FOUND)`, or throw `ResponseStatusException(HttpStatus.NOT_FOUND, ...)`."
             },
             {
+              "type": "bug",
+              "id": "q-bug-orelsethrow",
+              "prompt": "`books.findById(id)` returns an `Optional<BookResponse>`. With this advice in place, `GET /api/books/99` (no such book) should return 404 with a `ProblemDetail`. Click the line with the bug.",
+              "language": "java",
+              "code": "// BookController\n@GetMapping(\"/{id}\")\npublic BookResponse get(@PathVariable Long id) {\n    return books.findById(id).orElseThrow();\n}\n\n// ApiExceptionHandler (@RestControllerAdvice)\n@ExceptionHandler(BookNotFoundException.class)\npublic ProblemDetail notFound(BookNotFoundException ex) {\n    return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());\n}",
+              "error": "500 Internal Server Error\n{\"timestamp\":\"…\",\"status\":500,\"error\":\"Internal Server Error\",\"path\":\"/api/books/99\"}\n\nServer log:\njava.util.NoSuchElementException: No value present\n  ...",
+              "lines": [4],
+              "fixes": [
+                "Change line 4 to `return books.findById(id).orElseThrow(() -> new BookNotFoundException(\"Book \" + id + \" not found\"));`",
+                "Change line 4 to `return books.findById(id).orElse(null);`",
+                "Change line 4 to `return books.findById(id).orElseThrow(() -> new RuntimeException(\"Book \" + id + \" not found\"));`",
+                "Add `@ResponseStatus(HttpStatus.NOT_FOUND)` above line 2"
+              ],
+              "answer": 0,
+              "hint": "Which exception does `orElseThrow()` with no arguments throw? Which one does the handler catch?",
+              "explanation": "`orElseThrow()` without arguments throws `NoSuchElementException`. The advice only handles `BookNotFoundException`, so no handler matches and Spring answers 500. Throwing the exception the handler expects routes it to `notFound`, which builds the 404 `ProblemDetail`. `orElse(null)` gives 200 with an empty body, a plain `RuntimeException` still matches no handler, and `@ResponseStatus` on the controller method sets the status of *successful* responses (book 42 would come back as 404) while the missing book still gets 500."
+            },
+            {
               "type": "explain",
               "title": "Other options & good practice",
               "body": "- `throw new ResponseStatusException(HttpStatus.NOT_FOUND, \"Book not found\")`: quick and needs no custom class, but HTTP details leak into your service layer.\n- `@ResponseStatus(HttpStatus.NOT_FOUND)` on your exception class: a fixed status, very little code.\n- Want `ProblemDetail` bodies for Spring MVC's built-in errors too (validation, malformed JSON)? Set `spring.mvc.problemdetails.enabled=true`, or have your advice extend `ResponseEntityExceptionHandler`.\n\nWhatever you choose: never send stack traces or SQL messages to clients, and log unexpected 500s on the server."
@@ -629,6 +736,24 @@
               "type": "explain",
               "title": "A repository with zero code",
               "body": "```java\npublic interface CustomerRepository extends JpaRepository<Customer, Long> {\n    Optional<Customer> findByEmail(String email);\n    List<Customer> findByNameContainingIgnoreCase(String fragment);\n    boolean existsByEmail(String email);\n}\n```\n\nSpring Data generates the implementation at startup (no `@Repository` annotation needed on the interface). You get `save`, `findById` (returns an `Optional`), `findAll`, `deleteById`, `count` and paging for free.\n\nOn top of that, **derived queries**: the method name is parsed into a query. `findBy` + property name + optional keywords such as `And`, `Or`, `GreaterThan`, `After`, `Containing`, `IgnoreCase` or `OrderBy`."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-no-id",
+              "prompt": "`CustomerRepository extends JpaRepository<Customer, Long>` should save customers with a generated id, but the app fails at startup. Click the line with the bug.",
+              "language": "java",
+              "code": "@Entity\n@Table(name = \"customers\")\npublic class Customer {\n\n    @GeneratedValue(strategy = GenerationType.IDENTITY)\n    private Long id;\n\n    @Column(nullable = false, unique = true)\n    private String email;\n\n    protected Customer() {}\n}",
+              "error": "org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'entityManagerFactory' ...\n  ...\nCaused by: org.hibernate.AnnotationException: Entity 'com.example.shop.Customer' has no identifier (every '@Entity' class must declare or inherit at least one '@Id' or '@EmbeddedId' property)",
+              "lines": [5, 6],
+              "fixes": [
+                "Change line 5 to `@Id @GeneratedValue(strategy = GenerationType.IDENTITY)`",
+                "Change line 5 to `@GeneratedValue(strategy = GenerationType.AUTO)`",
+                "Change line 6 to `private Long customerId;`",
+                "Add `@Id` above line 9"
+              ],
+              "answer": 0,
+              "hint": "`@GeneratedValue` says how to fill in the key. Which annotation says which field *is* the key?",
+              "explanation": "Every entity needs a primary key marked with `@Id`. `@GeneratedValue` only describes how the id is generated; it doesn't make the field the identifier, so Hibernate rejects the class while building the `EntityManagerFactory`. Changing the strategy or renaming the field still leaves the class without an `@Id`. Putting `@Id` on `email` fails too: Hibernate then complains that `id` has `@GeneratedValue` but is not part of an identifier."
             },
             {
               "type": "mcq",
@@ -760,6 +885,24 @@
               ],
               "answer": 1,
               "explanation": "With no profile set, Spring activates a profile literally named `default`, so it would load `application-default.properties` if that existed, but never the `dev` file. Activate `dev` explicitly, e.g. with `SPRING_PROFILES_ACTIVE=dev` or in your IDE run configuration."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-yaml-indent",
+              "prompt": "This `application.yml` feeds `MailProperties` from above (`prefix = \"app.mail\"`). At startup the app prints the record, which should show `timeout=PT5S` (5 seconds). Click the line with the bug.",
+              "language": "yaml",
+              "code": "server:\n  port: 8081\napp:\n  mail:\n    host: smtp.example.com\n    port: 587\n  timeout: 5s",
+              "error": "MailProperties[host=smtp.example.com, port=587, timeout=null]",
+              "lines": [7],
+              "fixes": [
+                "Indent line 7 by two more spaces, so `timeout` sits under `mail:`",
+                "Change line 7 to `  timeout: PT5S`",
+                "Change line 7 to `  timeout: \"5s\"`",
+                "Change line 7 to `  mail-timeout: 5s`"
+              ],
+              "answer": 0,
+              "hint": "In YAML, indentation decides the full key. What is line 7's full key?",
+              "explanation": "YAML builds keys from indentation. Line 7 is indented like `mail:`, so it is a sibling of `mail` and becomes `app.timeout`, which `MailProperties` (bound to `app.mail`) never reads: the field stays `null` and nothing complains. Indented under `mail:`, it becomes `app.mail.timeout` and binds as 5 seconds. Changing the value's format doesn't change the key, and `mail-timeout` becomes `app.mail-timeout`, still outside `app.mail`."
             }
           ]
         },
@@ -923,6 +1066,24 @@
                 "@MockitoBean"
               ],
               "explanation": "`@MockitoBean` is the current annotation. You will still see `@MockBean` in older code; it was deprecated in Spring Boot 3.4 in favor of `@MockitoBean`."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-mock-annotation",
+              "prompt": "This web-slice test should pass, with a fake `BookService` behind the controller. Instead the context fails to load. Click the line with the bug.",
+              "language": "java",
+              "code": "@WebMvcTest(BookController.class)\nclass BookControllerTest {\n\n    @Autowired MockMvc mvc;\n    @Mock BookService books;\n\n    @Test\n    void returnsBook() throws Exception {\n        when(books.find(42L)).thenReturn(new BookResponse(42L, \"Dune\", \"Herbert\"));\n        mvc.perform(get(\"/api/books/42\"))\n           .andExpect(status().isOk());\n    }\n}",
+              "error": "***************************\nAPPLICATION FAILED TO START\n***************************\n\nDescription:\n\nParameter 0 of constructor in BookController required a bean of type 'BookService' that could not be found.\n  ...\nBookControllerTest.returnsBook » IllegalState Failed to load ApplicationContext",
+              "lines": [5],
+              "fixes": [
+                "Change line 5 to `@MockitoBean BookService books;`",
+                "Change line 5 to `@Autowired BookService books;`",
+                "Change line 5 to `@Spy BookService books;`",
+                "Change line 1 to `@WebMvcTest`"
+              ],
+              "answer": 0,
+              "hint": "`@Mock` creates a mock inside the test class. Does the Spring context ever see it?",
+              "explanation": "`@Mock` is plain Mockito: it makes a mock for the test object (and only with Mockito's JUnit extension), but never registers it in the Spring context. `@WebMvcTest` leaves `@Service` beans out, so `BookController` still has no `BookService` to receive. `@MockitoBean` puts the mock into the context as the `BookService` bean and also injects it into your field for `when(...)`. `@Autowired` asks for a bean that doesn't exist, `@Spy` has the same problem as `@Mock`, and `@WebMvcTest` without a class loads every controller but still no services."
             }
           ]
         },

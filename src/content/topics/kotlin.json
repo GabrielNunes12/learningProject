@@ -34,11 +34,20 @@
               "body": "Kotlin has two keywords for variables:\n\n- `val` is **read-only**: assign it once (like a `final` variable in Java).\n- `var` is **reassignable**.\n\n```kotlin\nval name = \"Ada\"     // type inferred as String\nvar count = 0        // type inferred as Int\ncount = count + 1    // fine\nval pi: Double = 3.14 // explicit type, if you want one\n```\n\nNo semicolons, no `new`, and the type comes *after* the name. Idiomatic Kotlin uses `val` by default and switches to `var` only when it must."
             },
             {
-              "type": "mcq",
+              "type": "bug",
               "id": "q-reassign",
-              "prompt": "Which line doesn't compile?\n\n```kotlin\nval a = 10   // line 1\nvar b = 20   // line 2\nb = 25       // line 3\na = 15       // line 4\n```",
-              "choices": ["Line 1", "Line 2", "Line 3", "Line 4"],
-              "answer": 3,
+              "prompt": "This should print `15 25`. Click the line with the bug.",
+              "language": "kotlin",
+              "code": "val a = 10\nvar b = 20\nb = 25\na = 15\nprintln(\"$a $b\")",
+              "error": "error: 'val' cannot be reassigned.",
+              "lines": [4, 1],
+              "fixes": [
+                "Change line 1 to `var a = 10`",
+                "Change line 4 to `val a = 15`",
+                "Change line 4 to `a += 5`",
+                "Change line 4 to `a.inc()`"
+              ],
+              "answer": 0,
               "explanation": "`a` is a `val`, so it can't be reassigned: the compiler reports *Val cannot be reassigned*. Reassigning the `var` `b` on line 3 is fine."
             },
             {
@@ -76,17 +85,95 @@
               "answer": "`Ada knows 2 languages`, then `Ada.length`."
             },
             {
-              "type": "mcq",
+              "type": "output",
               "id": "q-template-expr",
-              "prompt": "What does this print?\n\n```kotlin\nval price = 4\nval qty = 3\nprintln(\"Total: ${price * qty}\")\nprintln(\"Total: $price * $qty\")\n```",
-              "choices": [
-                "`Total: 12` then `Total: 12`",
-                "`Total: 12` then `Total: 4 * 3`",
-                "`Total: ${price * qty}` then `Total: 4 * 3`",
-                "A compile error on the last line"
-              ],
-              "answer": 1,
+              "prompt": "What does this print? Type each printed line on its own line.",
+              "language": "kotlin",
+              "code": "val price = 4\nval qty = 3\nprintln(\"Total: ${price * qty}\")\nprintln(\"Total: $price * $qty\")",
+              "output": "Total: 12\nTotal: 4 * 3",
               "explanation": "`${price * qty}` evaluates the whole expression → `12`. In the second string only `$price` and `$qty` are templates. The `*` between them is literal text, so you get `Total: 4 * 3`."
+            },
+            {
+              "type": "trace",
+              "id": "q-trace-template-snapshot",
+              "prompt": "Step through and predict the values when asked (quotes optional). Watch what a template does when `count` changes later.",
+              "language": "kotlin",
+              "code": "var count = 1\nval name = \"Ann\"\nvar msg = \"$name has $count\"\ncount = count + 2\nmsg = \"$name has $count\"\nval items = mutableListOf(1, 2)\nitems.add(count)\nprintln(\"$msg, items = $items\")",
+              "frames": [
+                {
+                  "line": 1,
+                  "vars": {
+                    "count": "1"
+                  }
+                },
+                {
+                  "line": 2,
+                  "vars": {
+                    "count": "1",
+                    "name": "\"Ann\""
+                  },
+                  "note": "`name` is a `val`: it can never be reassigned."
+                },
+                {
+                  "line": 3,
+                  "vars": {
+                    "count": "1",
+                    "name": "\"Ann\"",
+                    "msg": "\"Ann has 1\""
+                  }
+                },
+                {
+                  "line": 4,
+                  "vars": {
+                    "count": "3",
+                    "name": "\"Ann\"",
+                    "msg": "\"Ann has 1\""
+                  },
+                  "note": "`count` changed. Did `msg`?",
+                  "ask": "msg"
+                },
+                {
+                  "line": 5,
+                  "vars": {
+                    "count": "3",
+                    "name": "\"Ann\"",
+                    "msg": "\"Ann has 3\""
+                  },
+                  "ask": "msg"
+                },
+                {
+                  "line": 6,
+                  "vars": {
+                    "count": "3",
+                    "name": "\"Ann\"",
+                    "msg": "\"Ann has 3\"",
+                    "items": "[1, 2]"
+                  }
+                },
+                {
+                  "line": 7,
+                  "vars": {
+                    "count": "3",
+                    "name": "\"Ann\"",
+                    "msg": "\"Ann has 3\"",
+                    "items": "[1, 2, 3]"
+                  },
+                  "note": "`items` is a `val`, yet its list just grew.",
+                  "ask": "items"
+                },
+                {
+                  "line": 8,
+                  "vars": {
+                    "count": "3",
+                    "name": "\"Ann\"",
+                    "msg": "\"Ann has 3\"",
+                    "items": "[1, 2, 3]"
+                  },
+                  "out": "Ann has 3, items = [1, 2, 3]"
+                }
+              ],
+              "explanation": "A string template is evaluated **once**, when that line runs: `msg` stores the text `\"Ann has 1\"`, not a formula, so changing `count` afterwards doesn't touch it until line 5 builds a new string. `items` is a `val`, but `val` only freezes the reference, so `items.add(count)` still changes the list's contents.",
+              "hint": "A string is built from the values at the moment its line runs."
             },
             {
               "type": "text",
@@ -141,24 +228,29 @@
               "answer": "`1x2x3`, `5x2x3`, `1x9x3`, `4x2x0`"
             },
             {
-              "type": "mcq",
+              "type": "output",
               "id": "q-skip-default",
-              "prompt": "What does this print?\n\n```kotlin\nfun price(amount: Int, discount: Int = 0, tax: Int = 10) =\n    amount - discount + tax\n\nprintln(price(100, tax = 5))\n```",
-              "choices": ["105", "115", "95", "Compile error: you can't skip `discount`"],
-              "answer": 0,
+              "prompt": "What does this print?",
+              "language": "kotlin",
+              "code": "fun price(amount: Int, discount: Int = 0, tax: Int = 10) =\n    amount - discount + tax\n\nprintln(price(100, tax = 5))",
+              "output": "105",
               "explanation": "`discount` falls back to its default `0`, and `tax` is named as `5`: 100 − 0 + 5 = **105**. Named arguments let you skip any defaulted parameter."
             },
             {
-              "type": "mcq",
+              "type": "bug",
               "id": "q-bad-call",
-              "prompt": "Given `fun connect(host: String, port: Int = 80, secure: Boolean = false)`, which call does **not** compile?",
-              "choices": [
-                "`connect(\"a.com\")`",
-                "`connect(\"a.com\", secure = true)`",
-                "`connect(port = 443, host = \"a.com\")`",
-                "`connect(\"a.com\", true)`"
+              "prompt": "The last call should connect to `a.com` on the default port with `secure` turned on. Click the line with the bug.",
+              "language": "kotlin",
+              "code": "fun connect(host: String, port: Int = 80, secure: Boolean = false) =\n    println(\"$host:$port secure=$secure\")\n\nconnect(\"a.com\")\nconnect(\"a.com\", secure = true)\nconnect(port = 443, host = \"a.com\")\nconnect(\"a.com\", true)",
+              "error": "error: argument type mismatch: actual type is 'Boolean', but 'Int' was expected.",
+              "lines": [7],
+              "fixes": [
+                "Change line 7 to `connect(\"a.com\", secure = true)`",
+                "Change line 7 to `connect(secure = true, \"a.com\")`",
+                "Change line 7 to `connect(\"a.com\", true, 80)`",
+                "Change line 7 to `connect(\"a.com\", null, true)`"
               ],
-              "answer": 3,
+              "answer": 0,
               "hint": "Positional arguments fill parameters in order.",
               "explanation": "The second positional argument goes to `port`, which is an `Int`, so `true` is a type mismatch. To set only `secure`, name it: `connect(\"a.com\", secure = true)`."
             },
@@ -189,11 +281,12 @@
               "body": "```kotlin\nval label = when (code) {\n    200 -> \"OK\"\n    301, 302 -> \"Redirect\"\n    in 400..499 -> \"Client error\"\n    else -> \"Other\"\n}\n```\n\n- Branches can match values, several values, ranges (`in`) or types (`is`).\n- The **first** matching branch wins. There's no fall-through and no `break`.\n- Without a subject, `when { cond -> ... }` is a clean `if`/`else if` chain."
             },
             {
-              "type": "mcq",
+              "type": "output",
               "id": "q-when-first",
-              "prompt": "What does this print?\n\n```kotlin\nval score = 72\nval grade = when {\n    score >= 90 -> \"A\"\n    score >= 70 -> \"B\"\n    score >= 50 -> \"C\"\n    else -> \"F\"\n}\nprintln(grade)\n```",
-              "choices": ["A", "B", "C", "B, then C"],
-              "answer": 1,
+              "prompt": "What does this print?",
+              "language": "kotlin",
+              "code": "val score = 72\nval grade = when {\n    score >= 90 -> \"A\"\n    score >= 70 -> \"B\"\n    score >= 50 -> \"C\"\n    else -> \"F\"\n}\nprintln(grade)",
+              "output": "B",
               "explanation": "Branches are checked top to bottom and the **first** true condition wins: 72 ≥ 70 → `B`. Even though 72 ≥ 50 is also true, `when` never falls through."
             },
             {
@@ -220,6 +313,24 @@
               "explanation": "`0 until 10` excludes 10, and `step 2` gives 0, 2, 4, 6, 8: **5** iterations."
             },
             {
+              "type": "bug",
+              "id": "q-bug-countdown",
+              "prompt": "This should print `5 4 3 2 1 Liftoff!`. Click the line with the bug.",
+              "language": "kotlin",
+              "code": "for (i in 5..1) print(\"$i \")\nprintln(\"Liftoff!\")",
+              "error": "Liftoff!",
+              "lines": [1],
+              "fixes": [
+                "Change line 1 to `for (i in 5 downTo 1) print(\"$i \")`",
+                "Change line 1 to `for (i in 5..1 step -1) print(\"$i \")`",
+                "Change line 1 to `for (i in 5 until 1) print(\"$i \")`",
+                "Change line 1 to `for (i in 1..5) print(\"$i \")`"
+              ],
+              "answer": 0,
+              "hint": "How many numbers are in the range `5..1`?",
+              "explanation": "`..` only counts up, so `5..1` is an **empty** range: the loop body never runs and only `Liftoff!` is printed. `5 downTo 1` counts down. `step` must be positive (it sets the stride, not the direction), so `step -1` throws an exception. `5 until 1` is just as empty, and `1..5` prints the numbers in the wrong order."
+            },
+            {
               "type": "mcq",
               "id": "q-no-ternary",
               "prompt": "Which is the Kotlin version of Java's `String sign = x > 0 ? \"positive\" : \"non-positive\";`?",
@@ -233,11 +344,12 @@
               "explanation": "Kotlin has no ternary operator; `if`/`else` is the expression. An `if` without `else` can't produce a value, and `when` needs braces and `->` branches."
             },
             {
-              "type": "mcq",
+              "type": "output",
               "id": "q-in-range",
-              "prompt": "What does this print?\n\n```kotlin\nprintln(5 in 1..5)\nprintln(5 in 1 until 5)\n```",
-              "choices": ["`true` then `true`", "`true` then `false`", "`false` then `false`", "`false` then `true`"],
-              "answer": 1,
+              "prompt": "What does this print? Type each printed line on its own line.",
+              "language": "kotlin",
+              "code": "println(5 in 1..5)\nprintln(5 in 1 until 5)",
+              "output": "true\nfalse",
               "explanation": "`1..5` includes its end, so 5 is in it. `1 until 5` stops *before* 5 (it's 1 to 4), so 5 is not in it."
             }
           ]
@@ -262,11 +374,20 @@
               "body": "In Java any object reference can secretly be `null`. In Kotlin, a plain type **can't**:\n\n```kotlin\nval a: String = \"hi\"\nval b: String = null   // compile error\nval c: String? = null  // OK: the ? makes it nullable\n```\n\nAnd you can't call members of a `String?` directly. `c.length` won't compile, because `c` might be null. The compiler forces you to deal with null **before** your code runs."
             },
             {
-              "type": "mcq",
+              "type": "bug",
               "id": "q-null-assign",
-              "prompt": "Which line doesn't compile?\n\n```kotlin\nvar a: String = \"hi\"    // line 1\nvar b: String? = \"hi\"   // line 2\nb = null                // line 3\na = null                // line 4\n```",
-              "choices": ["Line 1", "Line 2", "Line 3", "Line 4"],
-              "answer": 3,
+              "prompt": "Like `b`, `a` should be cleared to `null`, so this should print `null null`. Click the line with the bug.",
+              "language": "kotlin",
+              "code": "var a: String = \"hi\"\nvar b: String? = \"hi\"\nb = null\na = null\nprintln(\"$a $b\")",
+              "error": "error: null cannot be a value of a non-null type 'String'.",
+              "lines": [4, 1],
+              "fixes": [
+                "Change line 1 to `var a: String? = \"hi\"`",
+                "Change line 4 to `a = null!!`",
+                "Change line 4 to `a = b`",
+                "Change line 4 to `a = null as String`"
+              ],
+              "answer": 0,
               "explanation": "`a` has the non-null type `String`, so `null` is not a valid value for it. `b` is declared `String?`, so line 3 is fine."
             },
             {
@@ -287,11 +408,12 @@
               "answer": "`Oslo`, `Unknown`, `Unknown`"
             },
             {
-              "type": "mcq",
+              "type": "output",
               "id": "q-elvis-loop",
-              "prompt": "What does this print?\n\n```kotlin\nval names: List<String?> = listOf(\"Ann\", null, \"Bo\")\nfor (n in names) print(\"${n?.length ?: -1} \")\n```",
-              "choices": ["`3 -1 2`", "`3 null 2`", "`3 0 2`", "It throws a NullPointerException"],
-              "answer": 0,
+              "prompt": "What does this print?",
+              "language": "kotlin",
+              "code": "val names: List<String?> = listOf(\"Ann\", null, \"Bo\")\nfor (n in names) print(\"${n?.length ?: -1} \")",
+              "output": "3 -1 2",
               "explanation": "For `\"Ann\"` and `\"Bo\"` the safe call gives 3 and 2. For `null`, `n?.length` is `null`, so Elvis substitutes `-1`. Nothing throws, because `?.` never dereferences a null."
             },
             {
@@ -309,22 +431,99 @@
               "explanation": "`?.` gives the length or null, and `?:` turns null into 0. Using `!!` would throw when `name` is null; `name.length` doesn't compile on a `String?`; and `?.length!!` crashes on null too."
             },
             {
+              "type": "trace",
+              "id": "q-trace-elvis",
+              "prompt": "Step through and predict each value when asked (quotes optional; write `null` for null).",
+              "language": "kotlin",
+              "code": "var name: String? = \"Kim\"\nvar len = name?.length ?: 0\nname = null\nval upper = name?.uppercase()\nlen = name?.length ?: 0\nval shown = name ?: \"guest\"\nprintln(\"$shown $len $upper\")",
+              "frames": [
+                {
+                  "line": 1,
+                  "vars": {
+                    "name": "\"Kim\""
+                  }
+                },
+                {
+                  "line": 2,
+                  "vars": {
+                    "name": "\"Kim\"",
+                    "len": "3"
+                  },
+                  "note": "`name` isn't null, so `?.length` is 3 and the elvis isn't needed."
+                },
+                {
+                  "line": 3,
+                  "vars": {
+                    "name": "null",
+                    "len": "3"
+                  },
+                  "note": "Now `name` is `null`."
+                },
+                {
+                  "line": 4,
+                  "vars": {
+                    "name": "null",
+                    "len": "3",
+                    "upper": "null"
+                  },
+                  "ask": "upper"
+                },
+                {
+                  "line": 5,
+                  "vars": {
+                    "name": "null",
+                    "len": "0",
+                    "upper": "null"
+                  },
+                  "ask": "len"
+                },
+                {
+                  "line": 6,
+                  "vars": {
+                    "name": "null",
+                    "len": "0",
+                    "upper": "null",
+                    "shown": "\"guest\""
+                  },
+                  "ask": "shown"
+                },
+                {
+                  "line": 7,
+                  "vars": {
+                    "name": "null",
+                    "len": "0",
+                    "upper": "null",
+                    "shown": "\"guest\""
+                  },
+                  "out": "guest 0 null"
+                }
+              ],
+              "explanation": "While `name` is `\"Kim\"`, `name?.length` is 3. Once it's `null`, every safe call `?.` short-circuits to `null`: `upper` is `null`, not a crash. The elvis `?:` replaces a `null` on its left, so `len` becomes 0 and `shown` becomes `\"guest\"`.",
+              "hint": "`x?.foo()` is `null` when `x` is null. `a ?: b` is `a`, unless `a` is null, then `b`."
+            },
+            {
               "type": "explain",
               "title": "Smart casts and let",
               "body": "After a null check, the compiler **smart-casts** the value to its non-null type:\n\n```kotlin\nfun shout(name: String?) {\n    if (name == null) return\n    println(name.uppercase())   // name is String here\n}\n```\n\nThis works for local variables and parameters. It doesn't work for a mutable (`var`) class property, which could change between the check and the use.\n\nFor \"do this only if not null\", use `?.let`. Inside the lambda the value is `it`, already non-null:\n\n```kotlin\nemail?.let { sendWelcome(it) }\n```"
             },
             {
-              "type": "mcq",
+              "type": "output",
               "id": "q-let-null",
-              "prompt": "What does this print?\n\n```kotlin\nval inputs = listOf<String?>(null, \"kotlin\")\nfor (s in inputs) {\n    s?.let { println(\"got ${it.uppercase()}\") }\n}\n```",
-              "choices": [
-                "`got KOTLIN`",
-                "`got null` then `got KOTLIN`",
-                "`got NULL` then `got KOTLIN`",
-                "Nothing: the `null` element throws first"
-              ],
-              "answer": 0,
+              "prompt": "What does this print?",
+              "language": "kotlin",
+              "code": "val inputs = listOf<String?>(null, \"kotlin\")\nfor (s in inputs) {\n    s?.let { println(\"got ${it.uppercase()}\") }\n}",
+              "output": "got KOTLIN",
               "explanation": "For the `null` element, `s?.let { ... }` short-circuits and the lambda never runs. For `\"kotlin\"`, the lambda runs with `it = \"kotlin\"` and prints `got KOTLIN`."
+            },
+            {
+              "type": "output",
+              "id": "q-out-elvis",
+              "prompt": "What does this print? Type each printed line on its own line.",
+              "language": "kotlin",
+              "code": "val words = listOf(\"kiwi\", null, \"fig\")\nfor (w in words) {\n    println(w?.uppercase() ?: \"?\")\n}\nprintln(words.count { it != null })",
+              "output": "KIWI\n?\nFIG\n2",
+              "hint": "For `null`, `w?.uppercase()` is `null` too, so the Elvis operator kicks in.",
+              "explanation": "For `\"kiwi\"` and `\"fig\"`, the safe call returns the uppercase string. For `null`, `w?.uppercase()` short-circuits to `null`, so `?:` supplies `\"?\"`. `count { it != null }` counts the two non-null words."
             }
           ]
         },
@@ -357,16 +556,12 @@
               "answer": "`x` is an `Int`. If `flag` is false, the assignment never completes."
             },
             {
-              "type": "mcq",
+              "type": "output",
               "id": "q-unit-print",
-              "prompt": "What does this print?\n\n```kotlin\nfun log(msg: String) { println(msg) }\n\nval r = log(\"hi\")\nprintln(r)\n```",
-              "choices": [
-                "`hi` then `kotlin.Unit`",
-                "`hi` then `null`",
-                "`hi` and nothing else",
-                "Compile error: `log` doesn't return a value"
-              ],
-              "answer": 0,
+              "prompt": "What does this print? Type each printed line on its own line.",
+              "language": "kotlin",
+              "code": "fun log(msg: String) { println(msg) }\n\nval r = log(\"hi\")\nprintln(r)",
+              "output": "hi\nkotlin.Unit",
               "explanation": "`log` returns `Unit`, a real object, so you can store it in `r`. Printing it calls `Unit.toString()`, which is `kotlin.Unit`."
             },
             {
@@ -379,12 +574,74 @@
               "explanation": "`Nothing` is a subtype of `Int`, so `Int? ?: Nothing` is `Int`. With `Unit` or `Any` the result would be `Any`, a type mismatch. `Nothing?` would make the result `Int?`, which can't go into an `Int`."
             },
             {
-              "type": "mcq",
+              "type": "bug",
               "id": "q-any-null",
-              "prompt": "Given `fun show(x: Any) = println(x)`, which call doesn't compile?",
-              "choices": ["`show(1)`", "`show(\"a\")`", "`show(null)`", "`show(listOf(1))`"],
-              "answer": 2,
+              "prompt": "`show` should print any value it gets, including `null`. Click the line with the bug.",
+              "language": "kotlin",
+              "code": "fun show(x: Any) = println(x)\n\nshow(1)\nshow(\"a\")\nshow(null)\nshow(listOf(1))",
+              "error": "error: null cannot be a value of a non-null type 'Any'.",
+              "lines": [5, 1],
+              "fixes": [
+                "Change line 1 to `fun show(x: Any?) = println(x)`",
+                "Change line 5 to `show(null!!)`",
+                "Change line 5 to `show(null as Any)`",
+                "Change line 1 to `fun show(x: Any) = println(x ?: \"null\")`"
+              ],
+              "answer": 0,
               "explanation": "`Any` is the root of **non-null** types only. To accept null too, the parameter must be `Any?`."
+            },
+            {
+              "type": "buckets",
+              "id": "q-buckets-compiles",
+              "prompt": "Each line is inside `fun greet(name: String?)`, and `fun fail(msg: String): Nothing = throw IllegalStateException(msg)` is declared. Which lines compile?",
+              "buckets": [
+                "Compiles",
+                "Compile error"
+              ],
+              "items": [
+                {
+                  "text": "`val s: String = name ?: throw IllegalStateException(\"no name\")`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`val s: String = name ?: return`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`val n: Int = name?.length ?: fail(\"no name\")`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`val a: Any? = name`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`val u: Unit = println(name)`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`val n: Int = TODO()`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`val s: String = name`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`val a: Any = name`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`val n: Int = name?.length ?: println(\"no name\")`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`val a: Any = null`",
+                  "bucket": 1
+                }
+              ],
+              "hint": "`Nothing` fits into every type, `Unit` is an ordinary type, and `Any` (without `?`) can't hold null.",
+              "explanation": "`throw`, `return`, `fail(...)` and `TODO()` all have type `Nothing`, which fits anywhere, so `String? ?: Nothing` is a `String` and `TODO()` can stand in for an `Int`. `Any?` accepts everything, and `println` really returns `Unit`. The errors: a `String?` doesn't fit a `String` or an `Any`, because `Any` is the root of *non-null* types only (that's why `Any = null` fails too). And `Int? ?: Unit` gives `Any`, the common supertype of `Int` and `Unit`, so kotlinc says *expected 'Int', actual 'Any'*."
             }
           ]
         }
@@ -408,18 +665,22 @@
               "body": "The constructor goes right in the class header. Marking a parameter `val` or `var` turns it into a **property**:\n\n```kotlin\nclass User(val name: String, var age: Int) {\n    fun greet() = \"Hi, I'm $name\"\n}\n\nval u = User(\"Ann\", 30)   // no `new`\nu.age += 1               // calls the generated setter\nprintln(u.greet())       // Hi, I'm Ann\n```\n\nThat one line replaces a Java constructor, two fields, getters and a setter. Classes are **final by default**; mark them `open` to allow subclassing."
             },
             {
-              "type": "mcq",
+              "type": "bug",
               "id": "q-param-vs-prop",
-              "prompt": "Which line doesn't compile?\n\n```kotlin\nclass Point(val x: Int, y: Int)\n\nval p = Point(1, 2)\nprintln(p.x)\nprintln(p.y)\n```",
-              "choices": [
-                "`class Point(...)`: a class needs a body `{ }`",
-                "`val p = Point(1, 2)`: Kotlin needs `new`",
-                "`println(p.x)`",
-                "`println(p.y)`"
+              "prompt": "This should print `1` and then `2`. Click the line with the bug.",
+              "language": "kotlin",
+              "code": "class Point(val x: Int, y: Int)\n\nval p = Point(1, 2)\nprintln(p.x)\nprintln(p.y)",
+              "error": "error: unresolved reference 'y' on receiver of type 'Point'.",
+              "lines": [5, 1],
+              "fixes": [
+                "Change line 1 to `class Point(val x: Int, val y: Int)`",
+                "Change line 3 to `val p = Point(x = 1, y = 2)`",
+                "Change line 5 to `println(p.y())`",
+                "Change line 1 to `class Point(val x: Int, y: Int) { }`"
               ],
-              "answer": 3,
+              "answer": 0,
               "hint": "Look closely at how `x` and `y` are declared.",
-              "explanation": "Without `val` or `var`, `y` is only a constructor parameter, not a property, so `p.y` doesn't exist. Classes don't need a body, and Kotlin never uses `new`."
+              "explanation": "Without `val` or `var`, `y` is only a constructor parameter, not a property, so `p.y` doesn't exist. Adding `val` on line 1 makes it a property. Naming the arguments, calling `p.y()` or adding an empty body `{ }` changes nothing: there's still no property called `y`."
             },
             {
               "type": "explain",
@@ -439,24 +700,21 @@
               "answer": "`true`, `false`, `User(name=Ann, age=31)`, `Ann is 31`"
             },
             {
-              "type": "mcq",
+              "type": "output",
               "id": "q-data-equals",
-              "prompt": "What does this print?\n\n```kotlin\nclass A(val x: Int)\ndata class B(val x: Int)\n\nprintln(A(1) == A(1))\nprintln(B(1) == B(1))\n```",
-              "choices": ["`false` then `true`", "`true` then `true`", "`false` then `false`", "`true` then `false`"],
-              "answer": 0,
+              "prompt": "What does this print? Type each printed line on its own line.",
+              "language": "kotlin",
+              "code": "class A(val x: Int)\ndata class B(val x: Int)\n\nprintln(A(1) == A(1))\nprintln(B(1) == B(1))",
+              "output": "false\ntrue",
               "explanation": "A regular class inherits `equals` from `Any`, which compares identity, so two separate `A(1)` objects aren't equal. The data class `B` compares by value → `true`."
             },
             {
-              "type": "mcq",
+              "type": "output",
               "id": "q-body-property",
-              "prompt": "What does this print?\n\n```kotlin\ndata class Item(val name: String) {\n    var qty = 0\n}\n\nval a = Item(\"pen\")\na.qty = 5\nval b = Item(\"pen\")\nprintln(a == b)\nprintln(a)\n```",
-              "choices": [
-                "`true` then `Item(name=pen)`",
-                "`false` then `Item(name=pen, qty=5)`",
-                "`true` then `Item(name=pen, qty=5)`",
-                "`false` then `Item(name=pen)`"
-              ],
-              "answer": 0,
+              "prompt": "What does this print? Type each printed line on its own line.",
+              "language": "kotlin",
+              "code": "data class Item(val name: String) {\n    var qty = 0\n}\n\nval a = Item(\"pen\")\na.qty = 5\nval b = Item(\"pen\")\nprintln(a == b)\nprintln(a)",
+              "output": "true\nItem(name=pen)",
               "hint": "Which properties does the generated code look at?",
               "explanation": "Generated `equals` and `toString` only use properties declared in the **primary constructor**. `qty` lives in the body, so it's ignored: `a == b` is `true` and `toString` omits it."
             },
@@ -519,13 +777,22 @@
               "explanation": "`\"hello\"` → 5, `listOf(1, 2)` → 2, and `3` matches neither type → −1. Total: 5 + 2 − 1 = **6**."
             },
             {
-              "type": "mcq",
+              "type": "bug",
               "id": "q-smart-scope",
-              "prompt": "Which line doesn't compile?\n\n```kotlin\nfun check(x: Any) {\n    if (x is String) println(x.length)  // A\n    if (x !is Int) return\n    println(x + 1)                      // B\n    println(x.length)                   // C\n}\n```",
-              "choices": ["Line A", "Line B", "Line C", "Lines B and C: smart casts end at the `if`"],
-              "answer": 2,
+              "prompt": "`check(41)` should print `42` and then its number of digits, `2`. Click the line with the bug.",
+              "language": "kotlin",
+              "code": "fun check(x: Any) {\n    if (x is String) println(x.length)\n    if (x !is Int) return\n    println(x + 1)\n    println(x.length)\n}\n\ncheck(41)",
+              "error": "error: unresolved reference 'length' on receiver of type 'Int'.",
+              "lines": [5],
+              "fixes": [
+                "Change line 5 to `println(x.toString().length)`",
+                "Change line 5 to `println((x as String).length)`",
+                "Move line 5 up to just above line 3",
+                "Change line 3 to `if (x !is Int && x !is String) return`"
+              ],
+              "answer": 0,
               "hint": "After the early `return`, what does the compiler know about `x`?",
-              "explanation": "The early `return` means that past it, `x` must be an `Int`, so line B works. But `Int` has no `length`, so line C fails. Line A is fine: inside that `if`, `x` is a `String`."
+              "explanation": "The early `return` means that past it, `x` must be an `Int`, so line 4 works. But `Int` has no `length`, so line 5 fails; convert first with `x.toString().length`. Line 2 is fine: inside that `if`, `x` is a `String`. Casting with `as String` compiles but crashes, because `x` really is an `Int`. Above line 3, `x` is still just `Any`, and letting Strings past line 3 breaks `x + 1`."
             },
             {
               "type": "mcq",
@@ -555,16 +822,12 @@
               "body": "Kotlin has no `static` keyword. Class-level members go in a **companion object**:\n\n```kotlin\nclass User private constructor(val name: String) {\n    companion object {\n        const val MAX_NAME = 50\n        fun create(name: String) = User(name.take(MAX_NAME))\n    }\n}\n\nval u = User.create(\"Ann\")\n```\n\nYou call members through the class name, like statics. A private constructor plus a factory in the companion is a common pattern."
             },
             {
-              "type": "mcq",
+              "type": "output",
               "id": "q-object-init",
-              "prompt": "What does this print?\n\n```kotlin\nobject Counter {\n    init { println(\"init\") }\n    var n = 0\n}\n\nCounter.n++\nCounter.n++\nprintln(Counter.n)\n```",
-              "choices": [
-                "`init` once, then `2`",
-                "`init` twice, then `2`",
-                "`init` twice, then `1`",
-                "Only `2`: `init` never runs in an object"
-              ],
-              "answer": 0,
+              "prompt": "What does this print? Type each printed line on its own line.",
+              "language": "kotlin",
+              "code": "object Counter {\n    init { println(\"init\") }\n    var n = 0\n}\n\nCounter.n++\nCounter.n++\nprintln(Counter.n)",
+              "output": "init\n2",
               "explanation": "There's only one `Counter`, initialized on first access, so `init` runs **once**. Both increments update the same instance → `2`."
             },
             {
@@ -626,12 +889,21 @@
               "body": "Kotlin separates collections you can only read from ones you can change:\n\n- `listOf(1, 2, 3)` → `List` (no `add`)\n- `mutableListOf(1, 2)` → `MutableList`\n- `setOf(...)` / `mutableSetOf(...)`\n- `mapOf(\"a\" to 1, \"b\" to 2)` / `mutableMapOf(...)`\n\n`\"a\" to 1` creates a `Pair`. Reading a map with `map[\"a\"]` returns a **nullable** `Int?`, because the key might be missing. Default to the read-only versions."
             },
             {
-              "type": "mcq",
+              "type": "bug",
               "id": "q-readonly",
-              "prompt": "Which line doesn't compile?\n\n```kotlin\nval a = listOf(1, 2)\nval b = mutableListOf(1, 2)\nb.add(3)          // A\na.add(3)          // B\nval m = mapOf(\"x\" to 1)\nprintln(m[\"y\"])   // C\n```",
-              "choices": ["Line A", "Line B", "Line C", "Line A: `b` is a `val`"],
-              "answer": 1,
-              "explanation": "`listOf` returns a read-only `List`, which has no `add`. Line A is fine: `val` only stops reassigning `b`, not changing the list's contents. Line C compiles and prints `null`."
+              "prompt": "This should print `[1, 2, 3] [1, 2, 3] null`. Click the line with the bug.",
+              "language": "kotlin",
+              "code": "val a = listOf(1, 2)\nval b = mutableListOf(1, 2)\nb.add(3)\na.add(3)\nval m = mapOf(\"x\" to 1)\nprintln(\"$a $b ${m[\"y\"]}\")",
+              "error": "error: unresolved reference 'add' on receiver of type 'List<Int>'.",
+              "lines": [4, 1],
+              "fixes": [
+                "Change line 1 to `val a = mutableListOf(1, 2)`",
+                "Change line 1 to `var a = listOf(1, 2)`",
+                "Change line 4 to `a.plus(3)`",
+                "Change line 4 to `(a as MutableList<Int>).add(3)`"
+              ],
+              "answer": 0,
+              "explanation": "`listOf` returns a read-only `List`, which has no `add`. Create `a` with `mutableListOf`, like `b`. Line 3 is fine: `val` only stops reassigning `b`, not changing the list's contents. `m[\"y\"]` compiles and gives `null`. `var` doesn't help (the type is still a read-only `List`), `plus` returns a new list and leaves `a` alone, and casting to `MutableList` compiles but `add` throws `UnsupportedOperationException`."
             },
             {
               "type": "explain",
@@ -656,12 +928,69 @@
               "answer": "`[Ann, Ann, Cy]`, `{Ann=50, Bo=15, Cy=50}`, `115`"
             },
             {
-              "type": "mcq",
+              "type": "output",
               "id": "q-filter-map",
-              "prompt": "What does this print?\n\n```kotlin\nval nums = listOf(3, 8, 1, 6)\nprintln(nums.filter { it > 2 }.map { it * 10 })\n```",
-              "choices": ["`[30, 80, 60]`", "`[30, 80, 10, 60]`", "`[80, 60]`", "`[3, 8, 6]`"],
-              "answer": 0,
+              "prompt": "What does this print?",
+              "language": "kotlin",
+              "code": "val nums = listOf(3, 8, 1, 6)\nprintln(nums.filter { it > 2 }.map { it * 10 })",
+              "output": "[30, 80, 60]",
               "explanation": "`filter { it > 2 }` keeps 3, 8 and 6 (1 is dropped), then `map` multiplies each by 10 → `[30, 80, 60]`."
+            },
+            {
+              "type": "trace",
+              "id": "q-trace-filter-map",
+              "prompt": "Each call returns a **new** collection. Step through and predict the values when asked.",
+              "language": "kotlin",
+              "code": "val nums = listOf(3, 8, 5, 6)\nval evens = nums.filter { it % 2 == 0 }\nval squares = evens.map { it * it }\nval total = squares.sum()\nprintln(\"$nums -> $total\")",
+              "frames": [
+                {
+                  "line": 1,
+                  "vars": {
+                    "nums": "[3, 8, 5, 6]"
+                  }
+                },
+                {
+                  "line": 2,
+                  "vars": {
+                    "nums": "[3, 8, 5, 6]",
+                    "evens": "[8, 6]"
+                  },
+                  "note": "`nums` is unchanged: `filter` built a new list.",
+                  "ask": "evens"
+                },
+                {
+                  "line": 3,
+                  "vars": {
+                    "nums": "[3, 8, 5, 6]",
+                    "evens": "[8, 6]",
+                    "squares": "[64, 36]"
+                  },
+                  "ask": "squares"
+                },
+                {
+                  "line": 4,
+                  "vars": {
+                    "nums": "[3, 8, 5, 6]",
+                    "evens": "[8, 6]",
+                    "squares": "[64, 36]",
+                    "total": "100"
+                  },
+                  "ask": "total"
+                },
+                {
+                  "line": 5,
+                  "vars": {
+                    "nums": "[3, 8, 5, 6]",
+                    "evens": "[8, 6]",
+                    "squares": "[64, 36]",
+                    "total": "100"
+                  },
+                  "out": "[3, 8, 5, 6] -> 100",
+                  "note": "`nums` is still the original list."
+                }
+              ],
+              "explanation": "`filter` keeps 8 and 6 (the even numbers) in a new list. `map` squares each of those into another new list, `[64, 36]`, and `sum()` adds them up: 100. `nums` never changes.",
+              "hint": "`it % 2 == 0` is true for even numbers."
             },
             {
               "type": "mcq",
@@ -677,12 +1006,32 @@
               "explanation": "Filter first, then map. Mapping to `active` first leaves only Booleans and loses the names; `forEach` returns `Unit`, not a list; and `it` only exists inside a lambda's braces."
             },
             {
-              "type": "text",
+              "type": "output",
               "id": "q-join",
-              "prompt": "What does this print?\n\n```kotlin\nprintln(listOf(\"kiwi\", \"fig\", \"plum\").joinToString(\"-\") { it.uppercase() })\n```",
-              "accept": ["KIWI-FIG-PLUM"],
+              "prompt": "What does this print?",
+              "language": "kotlin",
+              "code": "println(listOf(\"kiwi\", \"fig\", \"plum\").joinToString(\"-\") { it.uppercase() })",
+              "output": "KIWI-FIG-PLUM",
               "hint": "`joinToString` takes a separator and an optional lambda that transforms each element.",
               "explanation": "Each element goes through the trailing lambda (`uppercase()`) and the results are joined with `-` → `KIWI-FIG-PLUM`."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-map-ignored",
+              "prompt": "The second line should show the doubled total, 120. Click the line with the bug.",
+              "language": "kotlin",
+              "code": "val prices = listOf(10, 20, 30)\nprintln(\"Before: ${prices.sum()}\")\nprices.map { it * 2 }\nprintln(\"After doubling: ${prices.sum()}\")",
+              "error": "Before: 60\nAfter doubling: 60",
+              "lines": [3],
+              "fixes": [
+                "Change line 3 to `val doubled = prices.map { it * 2 }` and print `doubled.sum()` on line 4",
+                "Change line 1 to `val prices = mutableListOf(10, 20, 30)`",
+                "Change line 3 to `prices.forEach { it * 2 }`",
+                "Change line 4 to `println(\"After doubling: ${prices.sum() * 1}\")`"
+              ],
+              "answer": 0,
+              "hint": "Does `map` change the list it's called on?",
+              "explanation": "`map` returns a **new** list and leaves `prices` untouched. Line 3 computes `[20, 40, 60]` and throws it away. Keep the result in a variable and sum that. Making the list mutable doesn't help, because `map` still doesn't modify it, and `forEach` also discards the lambda's result."
             }
           ]
         },
@@ -723,11 +1072,12 @@
               "answer": "`before: [1, 2]`, then `Hello, Kotlin / 13 / [1, 2, 3]`"
             },
             {
-              "type": "mcq",
+              "type": "output",
               "id": "q-let-vs-also",
-              "prompt": "What does this print?\n\n```kotlin\nval a = \"kotlin\".let { it.length }\nval b = \"kotlin\".also { it.length }\nprintln(\"$a $b\")\n```",
-              "choices": ["`6 kotlin`", "`6 6`", "`kotlin kotlin`", "`kotlin 6`"],
-              "answer": 0,
+              "prompt": "What does this print?",
+              "language": "kotlin",
+              "code": "val a = \"kotlin\".let { it.length }\nval b = \"kotlin\".also { it.length }\nprintln(\"$a $b\")",
+              "output": "6 kotlin",
               "explanation": "`let` returns the lambda's result (`6`). `also` ignores the lambda's result and returns the original object (`\"kotlin\"`)."
             },
             {
@@ -743,6 +1093,24 @@
               "answer": 0,
               "hint": "You need `this` as the receiver *and* the object as the return value.",
               "explanation": "`apply` makes the person `this` (so `name = ...` sets its property) and returns the person. In `let`/`also` the person is `it`, so a bare `name` doesn't refer to it, and `run` returns the lambda's result (`Unit`), not the person."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-let-config",
+              "prompt": "This should create a `Person`, fill in its name and age, and print `Ann is 30`. Click the line with the bug.",
+              "language": "kotlin",
+              "code": "class Person { var name = \"\"; var age = 0 }\n\nval p = Person().let {\n    it.name = \"Ann\"\n    it.age = 30\n}\nprintln(\"${p.name} is ${p.age}\")",
+              "error": "error: unresolved reference 'name' on receiver of type 'Unit'.\nerror: unresolved reference 'age' on receiver of type 'Unit'.",
+              "lines": [3],
+              "fixes": [
+                "Change line 3 to `val p = Person().also {`",
+                "Change line 3 to `val p = Person().apply {`",
+                "Change line 3 to `val p = Person().run {`",
+                "Change line 7 to `println(\"${p?.name} is ${p?.age}\")`"
+              ],
+              "answer": 0,
+              "hint": "What does `let` return: the object, or the lambda's result?",
+              "explanation": "`let` returns the **lambda's result**. The lambda ends with an assignment, which has no value, so it returns `Unit` and `p` is `Unit`, not a `Person`. `also` also calls the object `it` but returns the object itself. `apply` returns the object too, but calls it `this`, so `it.name` no longer compiles (you'd write `name = \"Ann\"`). `run` has both problems, and `?.` doesn't help: `p` isn't null, it's the wrong type."
             },
             {
               "type": "mcq",
@@ -798,17 +1166,21 @@
               "explanation": "Both `async` blocks start immediately and wait **concurrently**, so the total is about 1 second, not 2. `await()` returns the `Int` results → 1 + 2 = `3`."
             },
             {
-              "type": "mcq",
+              "type": "bug",
               "id": "q-suspend-call",
-              "prompt": "Which line doesn't compile?\n\n```kotlin\nsuspend fun load(): String { delay(10); return \"data\" }\n\nfun a() { println(load()) }                 // A\nsuspend fun b() { println(load()) }         // B\nfun c() = runBlocking { println(load()) }   // C\n```",
-              "choices": [
-                "Line A",
-                "Line B",
-                "Line C",
-                "Line B: a suspend function can't call another suspend function"
+              "prompt": "`a`, `b` and `c` should each print `data`. Click the line with the bug.",
+              "language": "kotlin",
+              "code": "import kotlinx.coroutines.*\n\nsuspend fun load(): String { delay(10); return \"data\" }\n\nfun a() { println(load()) }\nsuspend fun b() { println(load()) }\nfun c() = runBlocking { println(load()) }\n\nfun main() {\n    a()\n    runBlocking { b() }\n    c()\n}",
+              "error": "error: suspend function 'suspend fun load(): String' can only be called from a coroutine or another suspend function.",
+              "lines": [5],
+              "fixes": [
+                "Change line 5 to `fun a() = runBlocking { println(load()) }`",
+                "Add `suspend` to the start of line 5",
+                "Remove `suspend` from line 3",
+                "Change line 5 to `fun a() { launch { println(load()) } }`"
               ],
               "answer": 0,
-              "explanation": "`a` is a regular function, so it can't call the suspending `load()`. `b` is itself `suspend`, and `c` calls `load()` inside a coroutine started by `runBlocking`, so both are fine."
+              "explanation": "`a` is a regular function, so it can't call the suspending `load()`. `b` is itself `suspend`, and `c` calls `load()` inside a coroutine started by `runBlocking`, so both are fine. Wrapping `a`'s body in `runBlocking`, like `c`, fixes it. Making `a` `suspend` just moves the error to `main`, which calls it outside a coroutine. Removing `suspend` from `load` breaks its call to `delay`, and `launch` needs a coroutine scope."
             },
             {
               "type": "mcq",

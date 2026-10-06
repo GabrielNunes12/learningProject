@@ -7,6 +7,7 @@ import { isQuestion, type Course, type ExampleStep, type Lesson } from '../types
 import { PlayerHeader } from './Layout';
 import { Markdown } from './Markdown';
 import { BottomBar, QuestionView } from './QuestionView';
+import { SimStepView } from './sims/SimStepView';
 import { accentStyle, Ring, useBodyAccent } from './ui';
 
 export function LessonPlayer({ course, lesson }: { course: Course; lesson: Lesson }) {
@@ -66,6 +67,8 @@ export function LessonPlayer({ course, lesson }: { course: Course; lesson: Lesso
         )}
 
         {step.type === 'example' && <ExampleView key={index} step={step} onContinue={next} />}
+
+        {step.type === 'sim' && <SimStepView key={index} step={step} onContinue={next} />}
 
         {isQuestion(step) && (
           <article className="step-card" key={index}>

@@ -1,4 +1,4 @@
-import type { QuestionStep } from '../types';
+import type { BugStep, BucketsStep, ClassicQuestionStep, OrderStep, TraceFrame, TraceStep } from '../types';
 
 /**
  * Reads what a learner typed into a number. Accepts "0.25", "1/4", "25%", "1,000", "0,5" and "$-3".
@@ -24,10 +24,25 @@ export const normalizeText = (s: string) =>
     .replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9]/g, '');
 
-export function checkAnswer(step: QuestionStep, response: number | string | null): boolean {
+/** Program output as lines: trims each line, collapses runs of spaces, drops blank lines at the ends. */
+export const normalizeOutput = (s: string) =>
+  s
+    .replace(/\r\n?/g, '\n')
+    .split('\n')
+    .map((line) => line.trim().replace(/[ \t]+/g, ' '))
+    .join('\n')
+    .replace(/^\n+|\n+$/g, '');
+
+/** For "bug" steps, response is the chosen fix; the line is checked separately with isBugLine. */
+export function checkAnswer(step: ClassicQuestionStep, response: number | string | null): boolean {
   switch (step.type) {
     case 'mcq':
+    case 'bug':
       return response === step.answer;
+    case 'output': {
+      const r = normalizeOutput(String(response ?? ''));
+      return r !== '' && r === normalizeOutput(step.output);
+    }
     case 'numeric': {
       const tol = step.tolerance ?? (Number.isInteger(step.answer) ? 0 : Math.abs(step.answer) * 0.01);
       return parseNumberCandidates(String(response ?? '')).some((n) => Math.abs(n - step.answer) <= tol + 1e-9);
@@ -39,7 +54,7 @@ export function checkAnswer(step: QuestionStep, response: number | string | null
   }
 }
 
-export function answerLabel(step: QuestionStep): string {
+export function answerLabel(step: ClassicQuestionStep): string {
   switch (step.type) {
     case 'mcq':
       return step.choices[step.answer];
@@ -49,8 +64,14 @@ export function answerLabel(step: QuestionStep): string {
     }
     case 'text':
       return step.accept[0];
+    case 'output':
+      return step.output;
+    case 'bug':
+      return `Line ${step.lines[0]}: ${step.fixes[step.answer]}`;
   }
 }
+
+export const isBugLine = (step: BugStep, line: number | null) => line !== null && step.lines.includes(line);
 
 export function shuffled<T>(items: readonly T[]): T[] {
   const a = [...items];
@@ -59,4 +80,50 @@ export function shuffled<T>(items: readonly T[]): T[] {
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
+}
+
+// ---------- mini-games (order, buckets, trace) ----------
+
+/** `order` lists item indexes (into step.items) as the learner arranged them. Returns, per position, whether it's right. */
+export const orderMarks = (step: OrderStep, order: number[]) => step.items.map((_, pos) => order[pos] === pos);
+
+export const isOrderCorrect = (step: OrderStep, order: number[]) =>
+  order.length === step.items.length && orderMarks(step, order).every(Boolean);
+
+export const isRightBucket = (step: BucketsStep, item: number, bucket: number) => step.items[item]?.bucket === bucket;
+
+/** The frames that ask the learner for a value. */
+export const askedFrames = (step: TraceStep) => step.frames.filter((f) => f.ask);
+
+/** The value the learner must predict at this frame. */
+export const expectedValue = (frame: TraceFrame) => (frame.ask ? frame.vars[frame.ask] : undefined);
+
+const QUOTED = /^(['"])(.*)\1$/s;
+
+/** Compares a prediction with the frame's value. Spacing is ignored, and a string may be typed with or without its quotes. */
+export function checkTraceValue(frame: TraceFrame, input: string): boolean {
+  const expected = expectedValue(frame);
+  if (expected === undefined) return false;
+  const got = normalizeOutput(input);
+  if (got === '') return false;
+  const want = normalizeOutput(expected);
+  if (got === want) return true;
+  const unquoted = want.match(QUOTED);
+  return unquoted !== null && got === unquoted[2];
+}
+
+/** Short text for "Correct answer:" lines. */
+export function gameAnswerLabel(step: OrderStep | BucketsStep | TraceStep): string {
+  switch (step.type) {
+    case 'order':
+      return step.items.join(' → ');
+    case 'buckets':
+      return step.buckets
+        .map((b, bi) => `**${b}:** ${step.items.filter((it) => it.bucket === bi).map((it) => it.text).join(', ')}`)
+        .join(' · ');
+    case 'trace':
+      return askedFrames(step)
+        .map((f) => `\`${f.ask} = ${expectedValue(f)}\` after line ${f.line}`)
+        .join(', ');
+  }
 }

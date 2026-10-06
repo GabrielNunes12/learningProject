@@ -154,6 +154,22 @@ function highlight(code: string, lang: string): ReactNode[] {
   return out;
 }
 
+/** Highlights each line on its own (for clickable lines). The language is resolved once for the whole snippet. */
+export function highlightLines(code: string, lang = ''): ReactNode[][] {
+  const name = ALIASES[lang] ?? lang;
+  const resolved = PLAIN.has(lang) || LANGS[name] ? lang : (guessLanguage(code) ?? 'text');
+  return code.split('\n').map((line) => highlight(line, resolved));
+}
+
+/** A standalone code block, e.g. the program in an output question. */
+export function CodeBlock({ code, lang = '', className = '' }: { code: string; lang?: string; className?: string }) {
+  return (
+    <pre className={`code ${className}`.trim()}>
+      <code>{highlight(code, lang)}</code>
+    </pre>
+  );
+}
+
 // ---------- blocks ----------
 
 const isBullet = (line: string) => /^\s*- /.test(line);

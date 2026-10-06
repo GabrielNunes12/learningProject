@@ -47,6 +47,24 @@
               "hint": "List the orders that pass each condition, then keep the ones on both lists."
             },
             {
+              "type": "bug",
+              "id": "q-bug-double-quotes",
+              "prompt": "This should list the customers in Lisbon (Ana and Cara), but it fails. Click the line that causes the error.",
+              "language": "sql",
+              "code": "SELECT name\nFROM customers\nWHERE city = \"Lisbon\";",
+              "error": "ERROR:  column \"Lisbon\" does not exist",
+              "lines": [3],
+              "fixes": [
+                "Change line 3 to `WHERE city = 'Lisbon';`",
+                "Change line 3 to `WHERE city = Lisbon;`",
+                "Change line 3 to `WHERE \"city\" = \"Lisbon\";`",
+                "Change line 3 to `WHERE city LIKE \"Lisbon\";`"
+              ],
+              "answer": 0,
+              "hint": "Which kind of quotes are for values, and which for column names?",
+              "explanation": "Double quotes name a **column**, so `\"Lisbon\"` asks for a column called Lisbon, which doesn't exist. Text values go in single quotes: `city = 'Lisbon'` returns Ana and Cara. Without any quotes, `Lisbon` is also read as a column name (PostgreSQL lowercases it to `lisbon`), and `LIKE` doesn't change how the value is quoted. Quoting `\"city\"` is fine; it's the value that's wrong."
+            },
+            {
               "type": "explain",
               "title": "IN, BETWEEN and LIKE",
               "body": "Three shortcuts you'll see in almost every codebase:\n\n- `city IN ('Lisbon', 'Porto')` is short for `city = 'Lisbon' OR city = 'Porto'`.\n- `total BETWEEN 25 AND 50` means `total >= 25 AND total <= 50`. **Both ends are included**, and the smaller value goes first.\n- `name LIKE 'C%'` matches patterns: `%` is any run of characters (even none), `_` is exactly one character. `'%son'` means \"ends with son\".\n\nIn PostgreSQL `LIKE` is **case-sensitive** (`'a%'` doesn't match `Ana`); use `ILIKE` for case-insensitive matching. MySQL and SQL Server usually compare case-insensitively by default."
@@ -126,6 +144,24 @@
               "explanation": "Most recent means newest dates first, so sort `DESC`, then keep 2 rows: orders 106 and 105. Ascending order gives the two **oldest**. `LIMIT` must come after `ORDER BY`, and aggregates like `MAX` aren't allowed in `WHERE` (you'll see why in the GROUP BY lesson)."
             },
             {
+              "type": "bug",
+              "id": "q-bug-top-three",
+              "prompt": "This should return the **3 biggest** orders (103, 105 and 101), but it returns the wrong ones. Click the line with the bug.\n\n(Totals: 101: 40.00, 102: 25.00, 103: 80.00, 104: 15.00, 105: 50.00, 106: 30.00.)",
+              "language": "sql",
+              "code": "SELECT id, total\nFROM orders\nORDER BY total\nLIMIT 3;",
+              "error": " id  | total\n-----+-------\n 104 | 15.00\n 102 | 25.00\n 106 | 30.00",
+              "lines": [3],
+              "fixes": [
+                "Change line 3 to `ORDER BY total DESC`",
+                "Change line 3 to `ORDER BY total ASC`",
+                "Change line 3 to `ORDER BY id DESC`",
+                "Change line 4 to `LIMIT 3 DESC;`"
+              ],
+              "answer": 0,
+              "hint": "What direction does `ORDER BY` sort in when you don't say?",
+              "explanation": "`ORDER BY` sorts ascending by default, so the smallest totals come first and `LIMIT 3` keeps the 3 **smallest** orders. `ORDER BY total DESC` puts the biggest first: 103, 105, 101. Writing `ASC` changes nothing, sorting by `id DESC` gives the newest ids (106, 105, 104), and `DESC` belongs to `ORDER BY`, not `LIMIT` (that's a syntax error)."
+            },
+            {
               "type": "explain",
               "title": "DISTINCT, aliases and expressions",
               "body": "`SELECT DISTINCT` removes duplicate result rows:\n\n```sql\nSELECT DISTINCT city FROM customers;\n-- Lisbon, Porto, Madrid and NULL: 4 rows\n```\n\n`DISTINCT` treats all `NULL`s as one value, so the missing city shows up once.\n\nYou can also compute columns and name them with `AS`:\n\n```sql\nSELECT id, total, total * 1.23 AS total_with_vat\nFROM orders;\n```\n\nTo glue text together, PostgreSQL, SQLite and Oracle use `||` (`name || ' from ' || city`). MySQL uses `CONCAT(name, ' from ', city)` (there `||` means OR), and SQL Server uses `+` or `CONCAT`."
@@ -191,17 +227,21 @@
               "body": "SQL logic has three values: **true**, **false** and **unknown**.\n\n- `NULL = NULL` is unknown (two unknowns aren't known to be equal), so `WHERE city = NULL` matches nothing, ever.\n- Use `IS NULL` and `IS NOT NULL` instead: they always return true or false.\n- `NOT unknown` is still unknown.\n- `true OR unknown` is true; `false AND unknown` is false. Otherwise `AND`/`OR` with an unknown give unknown.\n- Arithmetic and text with `NULL` give `NULL`: `total + NULL` is `NULL`, and so is `'Dev from ' || NULL`."
             },
             {
-              "type": "mcq",
+              "type": "bug",
               "id": "q-eq-null",
-              "prompt": "What's wrong with this query?\n\n```sql\nSELECT name\nFROM customers\nWHERE city = NULL;\n```",
-              "choices": [
-                "It returns no rows: `city = NULL` is never true, so it should be `city IS NULL`",
-                "It's a syntax error: `NULL` can't appear in a `WHERE` clause",
-                "It returns every customer, because `NULL` matches anything",
-                "Nothing: it correctly returns Dev"
+              "prompt": "This should list the customers whose city is unknown (that's Dev), but it returns no rows. Click the line with the bug.",
+              "language": "sql",
+              "code": "SELECT name\nFROM customers\nWHERE city = NULL;",
+              "error": " name\n------\n(0 rows)",
+              "lines": [3],
+              "fixes": [
+                "Change line 3 to `WHERE city IS NULL;`",
+                "Change line 3 to `WHERE city = 'NULL';`",
+                "Change line 3 to `WHERE city <> NULL;`",
+                "Change line 3 to `WHERE NOT (city = NULL);`"
               ],
               "answer": 0,
-              "explanation": "The query runs, but `city = NULL` is unknown for every row (even Dev's), so nothing comes back. `IS NULL` is the only reliable test for missing values."
+              "explanation": "The query runs, but `city = NULL` is unknown for every row (even Dev's), so nothing comes back. `IS NULL` is the only reliable test for missing values. `'NULL'` is just a four-letter string, and `city <> NULL` or `NOT (city = NULL)` are still unknown for every row."
             },
             {
               "type": "explain",
@@ -236,6 +276,16 @@
                 "COALESCE"
               ],
               "explanation": "Gluing text to `NULL` makes the whole result `NULL`. `COALESCE(city, 'unknown')` swaps in a fallback first, so the concatenation always has a value. (MySQL users would write `CONCAT(name, ' (', COALESCE(city, 'unknown'), ')')`.)"
+            },
+            {
+              "type": "output",
+              "id": "q-out-coalesce",
+              "prompt": "Using the `customers` table from this lesson (Ana and Cara in Lisbon, Ben in Porto, Dev with a `NULL` city, Eli in Madrid; ids 1 to 5 in that order), what does this return? Type one value per line, without the header.",
+              "language": "sql",
+              "code": "SELECT COALESCE(city, '?') AS city\nFROM customers\nWHERE city <> 'Lisbon' OR city IS NULL\nORDER BY id;",
+              "output": "Porto\n?\nMadrid",
+              "hint": "Ben and Eli pass `city <> 'Lisbon'`. For Dev that comparison is unknown, so he needs the `IS NULL` part.",
+              "explanation": "Ben (Porto) and Eli (Madrid) pass `city <> 'Lisbon'`. For Dev it's unknown, but `city IS NULL` is true, so `OR` lets him through. Ana and Cara are filtered out. `COALESCE` then shows Dev's missing city as `?`, and `ORDER BY id` gives the order 2, 4, 5."
             }
           ]
         },
@@ -289,17 +339,37 @@
               "hint": "Apply WHERE first, then count what is left in each group."
             },
             {
-              "type": "mcq",
+              "type": "bug",
               "id": "q-agg-in-where",
-              "prompt": "This query fails. Why?\n\n```sql\nSELECT customer_id, SUM(total)\nFROM orders\nWHERE SUM(total) > 50\nGROUP BY customer_id;\n```",
-              "choices": [
-                "`GROUP BY` must come before `WHERE`",
-                "`customer_id` must also be wrapped in an aggregate",
-                "`SUM` only works together with `DISTINCT`",
-                "Aggregates aren't allowed in `WHERE`, which runs before grouping; the condition belongs in `HAVING SUM(total) > 50`"
+              "prompt": "This should list the customers who spent more than 50 in total, but it fails. Click the line that causes the error.",
+              "language": "sql",
+              "code": "SELECT customer_id, SUM(total)\nFROM orders\nWHERE SUM(total) > 50\nGROUP BY customer_id;",
+              "error": "ERROR:  aggregate functions are not allowed in WHERE",
+              "lines": [3],
+              "fixes": [
+                "Delete line 3 and add `HAVING SUM(total) > 50` below line 4",
+                "Move line 4 above line 3",
+                "Change line 3 to `WHERE total > 50`",
+                "Change line 1 to `SELECT SUM(customer_id), SUM(total)`"
               ],
-              "answer": 3,
-              "explanation": "`WHERE` looks at individual rows before any groups exist, so there's no `SUM` to test yet. PostgreSQL says *aggregate functions are not allowed in WHERE*. Move the condition to `HAVING`, which runs after `GROUP BY`. `customer_id` is fine because it's in `GROUP BY`."
+              "answer": 0,
+              "explanation": "`WHERE` looks at individual rows before any groups exist, so there's no `SUM` to test yet. PostgreSQL says *aggregate functions are not allowed in WHERE*. Move the condition to `HAVING`, which runs after `GROUP BY`. `customer_id` is fine because it's in `GROUP BY`. Swapping the lines is a syntax error (`WHERE` must come before `GROUP BY`), and `WHERE total > 50` tests single orders, so it returns only customer 2 with 80.00."
+            },
+            {
+              "type": "order",
+              "id": "q-order-logical",
+              "prompt": "Put the clauses of this query in the order the database **logically runs** them, not the order you write them:\n\n```sql\nSELECT customer_id, SUM(total) AS spent\nFROM orders\nWHERE total > 20\nGROUP BY customer_id\nHAVING COUNT(*) >= 2\nORDER BY spent DESC\nLIMIT 3;\n```",
+              "items": [
+                "`FROM orders`",
+                "`WHERE total > 20`",
+                "`GROUP BY customer_id`",
+                "`HAVING COUNT(*) >= 2`",
+                "`SELECT customer_id, SUM(total) AS spent`",
+                "`ORDER BY spent DESC`",
+                "`LIMIT 3`"
+              ],
+              "hint": "Rows must exist before you can filter them, and groups must exist before you can filter *them*. Which clause is the first that may use the alias `spent`?",
+              "explanation": "Pick the table (`FROM`), drop rows (`WHERE`), form groups (`GROUP BY`), drop groups (`HAVING`), compute the output columns (`SELECT`), sort them (`ORDER BY`), then cut the list (`LIMIT`). This order explains the classic errors: PostgreSQL rejects `WHERE COUNT(*) > 1` (*aggregate functions are not allowed in WHERE*) and `WHERE spent > 50` (*column \"spent\" does not exist*), because `WHERE` runs before any aggregate or alias exists. `ORDER BY spent` works because it runs after `SELECT`."
             },
             {
               "type": "text",
@@ -340,6 +410,88 @@
               "hint": "Which order has no matching customer?"
             },
             {
+              "type": "sim",
+              "sim": "join",
+              "title": "See the matches",
+              "body": "Each line connects a customer to an order whose `customer_id` equals the customer's `id`. Hover or tap a row in the result to see the two rows it came from.\n\nNotice who is missing: Dev and Eli have no orders, and order 106 has a `NULL` `customer_id`, which never matches anything.",
+              "left": {
+                "name": "customers",
+                "columns": [
+                  "id",
+                  "name"
+                ],
+                "rows": [
+                  [
+                    1,
+                    "Ana"
+                  ],
+                  [
+                    2,
+                    "Ben"
+                  ],
+                  [
+                    3,
+                    "Cara"
+                  ],
+                  [
+                    4,
+                    "Dev"
+                  ],
+                  [
+                    5,
+                    "Eli"
+                  ]
+                ]
+              },
+              "right": {
+                "name": "orders",
+                "columns": [
+                  "id",
+                  "customer_id",
+                  "total"
+                ],
+                "rows": [
+                  [
+                    101,
+                    1,
+                    "40.00"
+                  ],
+                  [
+                    102,
+                    1,
+                    "25.00"
+                  ],
+                  [
+                    103,
+                    2,
+                    "80.00"
+                  ],
+                  [
+                    104,
+                    3,
+                    "15.00"
+                  ],
+                  [
+                    105,
+                    2,
+                    "50.00"
+                  ],
+                  [
+                    106,
+                    null,
+                    "30.00"
+                  ]
+                ]
+              },
+              "on": [
+                "id",
+                "customer_id"
+              ],
+              "joins": [
+                "inner"
+              ]
+            },
+            {
               "type": "explain",
               "title": "Joins multiply rows",
               "body": "A join produces one row **per matching pair**. Ana has two orders, so she appears twice:\n\n```\n id  | name | total\n-----+------+------\n 101 | Ana  | 40.00\n 102 | Ana  | 25.00\n 103 | Ben  | 80.00\n 104 | Cara | 15.00\n 105 | Ben  | 50.00\n```\n\nThat's correct for \"list orders with names\", but watch out when you aggregate after joining: summing a customer-level column (say, a credit limit) over this result would count Ana's twice.\n\nYou'll also see the old comma style, `FROM orders o, customers c WHERE c.id = o.customer_id`. It's the same inner join. Forget the condition and you get every combination: a *cross join*."
@@ -364,23 +516,27 @@
               "explanation": "With no condition, every customer is paired with every order: 5 × 6 = **30** rows. This *cross join* is a classic cause of wildly inflated totals. If a joined result has suspiciously many rows, check your `ON` / `WHERE` conditions."
             },
             {
-              "type": "mcq",
+              "type": "bug",
               "id": "q-join-bug",
-              "prompt": "This query should list who bought a Kettle, but one join condition is wrong. Which line has the bug?\n\n```sql\nSELECT c.name\nFROM customers c\nJOIN orders o       ON o.customer_id = c.id     -- line A\nJOIN order_items oi ON oi.order_id = c.id       -- line B\nJOIN products p     ON p.id = oi.product_id     -- line C\nWHERE p.name = 'Kettle';                        -- line D\n```\n\n(`order_items(order_id, product_id, quantity)` lists what is in each order.)",
-              "choices": [
-                "Line A",
-                "Line B",
-                "Line C",
-                "Line D"
+              "prompt": "This query should list who bought a Kettle, but one join condition is wrong. (`order_items(order_id, product_id, quantity)` lists what is in each order.) Click the line with the bug.",
+              "language": "sql",
+              "code": "SELECT c.name\nFROM customers c\nJOIN orders o       ON o.customer_id = c.id\nJOIN order_items oi ON oi.order_id = c.id\nJOIN products p     ON p.id = oi.product_id\nWHERE p.name = 'Kettle';",
+              "error": " name\n------\n(0 rows)",
+              "lines": [4],
+              "fixes": [
+                "Change line 4 to `JOIN order_items oi ON oi.order_id = o.id`",
+                "Change line 3 to `JOIN orders o       ON o.id = c.id`",
+                "Change line 4 to `LEFT JOIN order_items oi ON oi.order_id = c.id`",
+                "Change line 5 to `JOIN products p     ON p.id = oi.order_id`"
               ],
-              "answer": 1,
-              "explanation": "Line B compares an **order** id with a **customer** id. On our sample data it returns nothing, since customer ids (1–5) never equal order ids (101–106); in a real database where the ranges overlap, it would return random customers. It should be `ON oi.order_id = o.id`. Follow the arrows: customers → orders (by customer id) → order_items (by order id) → products (by product id).",
-              "hint": "For each ON, check that both sides describe the same thing."
+              "answer": 0,
+              "hint": "For each ON, check that both sides describe the same thing.",
+              "explanation": "Line 4 compares an **order** id with a **customer** id. On our sample data it returns nothing, since customer ids (1–5) never equal order ids (101–106); in a real database where the ranges overlap, it would return random customers. It should be `ON oi.order_id = o.id`. Follow the arrows: customers → orders (by customer id) → order_items (by order id) → products (by product id). A `LEFT JOIN` doesn't help: the unmatched rows have no product, so `WHERE p.name = 'Kettle'` drops them."
             },
             {
               "type": "numeric",
               "id": "q-kettle-rows",
-              "prompt": "With line B fixed, how many rows does the query return?\n\n```sql\nSELECT c.name\nFROM customers c\nJOIN orders o       ON o.customer_id = c.id\nJOIN order_items oi ON oi.order_id = o.id\nJOIN products p     ON p.id = oi.product_id\nWHERE p.name = 'Kettle';\n```\n\nKettles appear in `order_items` for orders **101** (Ana), **103** (Ben) and **105** (Ben).",
+              "prompt": "With line 4 fixed, how many rows does the query return?\n\n```sql\nSELECT c.name\nFROM customers c\nJOIN orders o       ON o.customer_id = c.id\nJOIN order_items oi ON oi.order_id = o.id\nJOIN products p     ON p.id = oi.product_id\nWHERE p.name = 'Kettle';\n```\n\nKettles appear in `order_items` for orders **101** (Ana), **103** (Ben) and **105** (Ben).",
               "answer": 3,
               "explanation": "One row per matching order item: Ana, Ben, Ben. Ben shows up twice because he bought Kettles in two orders. If you want each customer once, use `SELECT DISTINCT c.name` (2 rows).",
               "hint": "Joins return one row per match, not one row per customer."
@@ -406,6 +562,85 @@
               "answer": 6,
               "explanation": "`orders` is now the left table, so **every order** is kept: 101–105 with their customer's name, and guest order 106 with `name` = `NULL`. Customers without orders (Dev, Eli) don't appear: they're on the right side.",
               "hint": "Which table is on the left now?"
+            },
+            {
+              "type": "sim",
+              "sim": "join",
+              "title": "Compare the join types",
+              "body": "Same tables, four join types. Switch between them and watch which unmatched rows survive:\n\n- **INNER**: only matching pairs (5 rows).\n- **LEFT**: every customer; Dev and Eli get `NULL` order columns.\n- **RIGHT**: every order; guest order 106 gets `NULL` customer columns. That's the swapped-tables LEFT JOIN from the last question.\n- **FULL**: unmatched rows from both sides.",
+              "left": {
+                "name": "customers",
+                "columns": [
+                  "id",
+                  "name"
+                ],
+                "rows": [
+                  [
+                    1,
+                    "Ana"
+                  ],
+                  [
+                    2,
+                    "Ben"
+                  ],
+                  [
+                    3,
+                    "Cara"
+                  ],
+                  [
+                    4,
+                    "Dev"
+                  ],
+                  [
+                    5,
+                    "Eli"
+                  ]
+                ]
+              },
+              "right": {
+                "name": "orders",
+                "columns": [
+                  "id",
+                  "customer_id",
+                  "total"
+                ],
+                "rows": [
+                  [
+                    101,
+                    1,
+                    "40.00"
+                  ],
+                  [
+                    102,
+                    1,
+                    "25.00"
+                  ],
+                  [
+                    103,
+                    2,
+                    "80.00"
+                  ],
+                  [
+                    104,
+                    3,
+                    "15.00"
+                  ],
+                  [
+                    105,
+                    2,
+                    "50.00"
+                  ],
+                  [
+                    106,
+                    null,
+                    "30.00"
+                  ]
+                ]
+              },
+              "on": [
+                "id",
+                "customer_id"
+              ]
             },
             {
               "type": "explain",
@@ -456,6 +691,26 @@
               "prompt": "How many rows does this return?\n\n```sql\nSELECT c.name\nFROM customers c\nLEFT JOIN orders o ON o.customer_id = c.id\nWHERE o.total > 20;\n```\n\n```\norders\n id  | customer_id | total | created_at\n-----+-------------+-------+-----------\n 101 | 1           | 40.00 | 2026-01-05\n 102 | 1           | 25.00 | 2026-02-10\n 103 | 2           | 80.00 | 2026-02-14\n 104 | 3           | 15.00 | 2026-03-01\n 105 | 2           | 50.00 | 2026-03-03\n 106 | NULL        | 30.00 | 2026-03-08\n```",
               "answer": 4,
               "explanation": "After the join, `WHERE o.total > 20` keeps Ana/101 (40), Ana/102 (25), Ben/103 (80) and Ben/105 (50). Cara's only order is 15.00, and Dev and Eli have `NULL` totals, so they're all dropped. The `WHERE` on the right table made this behave like an inner join."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-left-where",
+              "prompt": "This should list **every** customer with how many orders over 20 they placed, showing 0 for customers with none. Customers without such an order are missing from the result. Click the line with the bug.",
+              "language": "sql",
+              "code": "SELECT c.name, COUNT(o.id) AS big_orders\nFROM customers c\nLEFT JOIN orders o ON o.customer_id = c.id\nWHERE o.total > 20\nGROUP BY c.name;",
+              "error": "Only customers who have at least one order over 20 appear.\nCustomers with no orders, or only small ones, are missing instead of showing 0.",
+              "lines": [
+                4
+              ],
+              "fixes": [
+                "Delete line 4 and change line 3 to `LEFT JOIN orders o ON o.customer_id = c.id AND o.total > 20`",
+                "Change line 1 to `SELECT c.name, COUNT(*) AS big_orders`",
+                "Change line 3 to `INNER JOIN orders o ON o.customer_id = c.id`",
+                "Change line 4 to `WHERE o.total > 20 OR o.total = 0`"
+              ],
+              "answer": 0,
+              "hint": "What is `o.total` for a customer the LEFT JOIN couldn't match, and what does `WHERE` do with that row?",
+              "explanation": "For customers without a matching order, the LEFT JOIN fills `o.total` with `NULL`. `NULL > 20` is unknown, so `WHERE` drops those rows and the LEFT JOIN behaves like an inner join. Moving the condition into `ON` keeps every customer and only joins their big orders, so `COUNT(o.id)` is 0 for the rest. `COUNT(*)` would count 1 for them, and `INNER JOIN` drops them on purpose."
             }
           ]
         },
@@ -529,6 +784,24 @@
                 "WITH"
               ],
               "explanation": "`WITH name AS (query)` defines a CTE that the following `SELECT` can use like a table. Here it counts 2 big orders (103 and 105)."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-cte-average",
+              "prompt": "This should list the customers whose total spend is above the **average spend per customer**. Only Ben (130.00) should qualify, but Ana shows up too. Click the line with the bug.",
+              "language": "sql",
+              "code": "WITH spend AS (\n  SELECT customer_id, SUM(total) AS spent\n  FROM orders\n  WHERE customer_id IS NOT NULL\n  GROUP BY customer_id\n)\nSELECT c.name, s.spent\nFROM spend s\nJOIN customers c ON c.id = s.customer_id\nWHERE s.spent > (SELECT AVG(total) FROM orders);",
+              "error": "It returns two rows: Ana (65.00) and Ben (130.00).",
+              "lines": [10],
+              "fixes": [
+                "Change line 10 to `WHERE s.spent > (SELECT AVG(spent) FROM spend);`",
+                "Change line 10 to `WHERE s.spent > (SELECT AVG(total) FROM orders WHERE customer_id IS NOT NULL);`",
+                "Change line 10 to `WHERE s.spent > (SELECT AVG(total) FROM spend);`",
+                "Change line 10 to `WHERE s.spent >= (SELECT AVG(total) FROM orders);`"
+              ],
+              "answer": 0,
+              "hint": "Is `AVG(total) FROM orders` an average per customer, or per order?",
+              "explanation": "`AVG(total) FROM orders` is the average **order** (40), so Ana's 65.00 passes too. The average per customer has to be taken over the CTE's rows: `AVG(spent) FROM spend` is (65 + 130 + 15) / 3 = 70, and only Ben beats it. Leaving out the guest order still averages orders (42), `spend` has no `total` column (that's an error), and `>=` doesn't fix the wrong average."
             }
           ]
         },
@@ -645,6 +918,24 @@
               "answer": "Preview → BEGIN → UPDATE (check the count) → verify → COMMIT or ROLLBACK."
             },
             {
+              "type": "bug",
+              "id": "q-bug-update-or",
+              "prompt": "Using the `products` table above: Kitchen and Home products under 30 (that's the Mug and the Lamp) should get 10% more expensive. PostgreSQL reports one row too many. Click the line with the bug.",
+              "language": "sql",
+              "code": "UPDATE products\nSET price = price * 1.10\nWHERE category = 'Kitchen' OR category = 'Home' AND price < 30;",
+              "error": "UPDATE 3\nThe Kettle went from 35.00 to 38.50 as well.",
+              "lines": [3],
+              "fixes": [
+                "Change line 3 to `WHERE (category = 'Kitchen' OR category = 'Home') AND price < 30;`",
+                "Change line 3 to `WHERE category = 'Kitchen' OR (category = 'Home' AND price < 30);`",
+                "Change line 3 to `WHERE category = 'Kitchen' OR category = 'Home' AND price <= 30;`",
+                "Change line 3 to `WHERE category IN ('Kitchen', 'Home') OR price < 30;`"
+              ],
+              "answer": 0,
+              "hint": "Which binds tighter, `AND` or `OR`?",
+              "explanation": "`AND` is evaluated before `OR`, so the condition means `Kitchen OR (Home AND price < 30)`: every Kitchen product matches, including the 35.00 Kettle. Parentheses around the `OR` make the price limit apply to both categories: `UPDATE 2`. (`category IN ('Kitchen', 'Home') AND price < 30` works too.) Adding parentheses around the `AND` part just spells out the buggy meaning, `<= 30` still lets every Kitchen product through, and `IN (...) OR price < 30` updates all 5 products. The count PostgreSQL prints is your cue: the preview said 2."
+            },
+            {
               "type": "mcq",
               "id": "q-stray-semicolon",
               "prompt": "You type this into `psql`, which sends each statement as soon as it reaches a `;` (autocommit is on, the default). What happens?\n\n```sql\nUPDATE orders SET total = 0;\nWHERE id = 104;\n```",
@@ -737,6 +1028,24 @@
               "answer": 3,
               "explanation": "- Stapler: fine.\n- Mug: `name` is `UNIQUE` and a Mug already exists. **Fails.**\n- Tray: `category` has no `NOT NULL`, so `NULL` is allowed. Fine.\n- Bowl: id 3 is taken (Mug). **Fails** on the primary key.\n- Vase: `CHECK (price > 0)` rejects 0. **Fails.**",
               "hint": "Check each row against PRIMARY KEY, UNIQUE, NOT NULL and CHECK in turn."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-missing-default",
+              "prompt": "New orders should get today's date automatically when an `INSERT` leaves `created_at` out, but the insert fails. Click the line with the bug.",
+              "language": "sql",
+              "code": "CREATE TABLE orders (\n  id          integer PRIMARY KEY,\n  customer_id integer REFERENCES customers (id),\n  total       numeric(10, 2) NOT NULL CHECK (total >= 0),\n  created_at  date NOT NULL\n);\n\nINSERT INTO orders (id, customer_id, total) VALUES (107, 2, 19.99);",
+              "error": "ERROR:  null value in column \"created_at\" of relation \"orders\" violates not-null constraint",
+              "lines": [5],
+              "fixes": [
+                "Change line 5 to `created_at  date NOT NULL DEFAULT current_date`",
+                "Change line 5 to `created_at  date`",
+                "Change line 5 to `created_at  date NOT NULL CHECK (created_at = current_date)`",
+                "Change line 8 to `INSERT INTO orders (id, customer_id, total, created_at) VALUES (107, 2, 19.99, NULL);`"
+              ],
+              "answer": 0,
+              "hint": "A column left out of an `INSERT` gets its default. What is the default when none is declared?",
+              "explanation": "Without a `DEFAULT`, a column the `INSERT` leaves out gets `NULL`, and `NOT NULL` rejects it. `DEFAULT current_date` fills in today's date instead, so the insert succeeds. Dropping `NOT NULL` lets the insert through with no date at all, a `CHECK` doesn't supply a value (the `NULL` still fails `NOT NULL` first), and inserting `NULL` explicitly fails the same way."
             },
             {
               "type": "mcq",

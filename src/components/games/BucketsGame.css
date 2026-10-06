@@ -1,0 +1,116 @@
+/* "Sort the cards" mini-game */
+.bg-hud { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 18px; }
+.bg-stat { display: inline-flex; align-items: center; gap: 5px; padding: 4px 11px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); font-size: 0.82rem; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.bg-stat strong { color: var(--text); display: inline-block; }
+.bg-stat.bad { background: var(--bad-bg); border-color: var(--bad-border); }
+.bg-stat.bad strong { color: var(--bad); }
+.bg-clock { margin-left: auto; }
+.bump { animation: bg-bump 0.35s ease; }
+@keyframes bg-bump { 0% { transform: scale(0.5); } 60% { transform: scale(1.35); } 100% { transform: scale(1); } }
+
+.bg-progress { height: 6px; margin-top: 10px; border-radius: 999px; background: var(--track); overflow: hidden; }
+.bg-progress span { display: block; height: 100%; border-radius: inherit; background: var(--accent); transition: width 0.3s ease; }
+
+/* The deck: the current card sits on top of a small stack of what's left. */
+.bg-stage { display: grid; place-items: center; min-height: 168px; margin: 18px 0 16px; }
+.bg-deck { position: relative; width: min(100%, 380px); }
+.bg-deck::before, .bg-deck::after {
+  content: ''; position: absolute; inset: 0; border-radius: 18px;
+  background: var(--surface-2); border: 2px solid var(--border); display: none;
+}
+.bg-deck::before { transform: translate(6px, 7px) rotate(1.6deg); }
+.bg-deck::after { transform: translate(-5px, 4px) rotate(-1.4deg); }
+.bg-deck[data-left='1']::before, .bg-deck[data-left='2']::before, .bg-deck[data-left='2']::after { display: block; }
+
+.bg-card {
+  position: relative; z-index: 1; touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none;
+  transition: transform 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.2), opacity 0.25s;
+}
+.bg-card.dragging { z-index: 5; cursor: grabbing; transition: none; }
+.bg-card.dragging .bg-face { box-shadow: var(--shadow-lg); border-color: var(--accent); }
+.bg-card.flying { transition: transform 0.34s cubic-bezier(0.5, 0, 0.75, 0.4), opacity 0.34s ease-in; pointer-events: none; }
+
+.bg-face {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  min-height: 140px; padding: 22px 20px; text-align: center;
+  background: var(--surface); color: var(--text);
+  border: 2px solid color-mix(in srgb, var(--accent) 40%, var(--border)); border-bottom-width: 5px; border-radius: 18px;
+  box-shadow: var(--shadow);
+  animation: bg-deal 0.32s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+.bg-face-text { font-size: 1.3rem; font-weight: 650; line-height: 1.35; overflow-wrap: anywhere; }
+.bg-face-text code { font-size: 0.92em; }
+.bg-face-tip { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.bg-face.shake { animation: bg-shake 0.4s ease; border-color: var(--bad); }
+@keyframes bg-deal { from { opacity: 0; transform: translateY(-14px) rotate(-3deg) scale(0.96); } }
+@keyframes bg-shake { 20% { transform: translateX(-9px) rotate(-2deg); } 40% { transform: translateX(8px) rotate(2deg); } 60% { transform: translateX(-5px); } 80% { transform: translateX(3px); } }
+
+.bg-done {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center;
+  padding: 22px 26px; border-radius: 18px; background: var(--good-bg); border: 2px solid var(--good-border);
+  animation: pop 0.4s ease;
+}
+.bg-done strong { font-size: 1.2rem; color: var(--good); }
+.bg-done.missed { background: var(--surface-2); border-color: var(--border); }
+.bg-done.missed strong { color: var(--text); }
+
+/* Buckets: drop zones and buttons at once. */
+.bg-buckets { display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (min-width: 640px) {
+  .bg-buckets.n3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .bg-buckets.n4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+.bg-buckets.n3 .bg-bucket:last-child:nth-child(odd) { grid-column: 1 / -1; }
+@media (min-width: 640px) { .bg-buckets.n3 .bg-bucket:last-child:nth-child(odd) { grid-column: auto; } }
+
+.bg-bucket {
+  display: flex; flex-direction: column; align-items: stretch; gap: 8px; min-height: 92px; min-width: 0;
+  padding: 10px; text-align: left; font: inherit; color: var(--text); cursor: pointer;
+  background: var(--surface-2); border: 2px dashed color-mix(in srgb, var(--accent) 35%, var(--border)); border-radius: 14px;
+  transition: border-color 0.15s, background 0.15s, transform 0.12s;
+}
+.bg-bucket:hover:not(:disabled) { border-color: var(--accent); }
+.bg-bucket:active:not(:disabled) { transform: translateY(2px); }
+.bg-bucket:disabled { cursor: default; }
+.bg-bucket.over { border-style: solid; border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--surface)); transform: scale(1.03); }
+.bg-bucket-head { display: flex; align-items: center; gap: 8px; }
+.bg-bucket-head .choice-key { width: 24px; height: 24px; font-size: 0.75rem; border-radius: 7px; }
+.bg-bucket-label { flex: 1; min-width: 0; font-weight: 750; font-size: 0.95rem; line-height: 1.25; overflow-wrap: anywhere; }
+.bg-count {
+  flex-shrink: 0; min-width: 26px; height: 26px; padding: 0 7px; border-radius: 999px; display: grid; place-items: center;
+  background: var(--surface); border: 1.5px solid var(--border); font-weight: 800; font-size: 0.8rem; font-variant-numeric: tabular-nums;
+}
+.bg-count.bump { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+
+.bg-stack { display: flex; flex-wrap: wrap; gap: 5px; }
+.bg-chip {
+  max-width: 100%; padding: 3px 8px; border-radius: 8px; font-size: 0.8rem; line-height: 1.35; overflow-wrap: anywhere;
+  background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--good);
+  animation: bg-land 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.3);
+}
+.bg-chip code { font-size: 0.9em; padding: 0.05em 0.3em; }
+.bg-chip.missed { border-left-color: var(--bad); background: var(--bad-bg); }
+@keyframes bg-land { from { opacity: 0; transform: translateY(-10px) scale(0.6); } }
+
+/* Feedback flashes. Two identical animations per tone, so a repeat flash restarts the animation. */
+.bg-bucket.flash-good.f0 { animation: bg-good-a 0.45s ease; }
+.bg-bucket.flash-good.f1 { animation: bg-good-b 0.45s ease; }
+.bg-bucket.flash-bad.f0 { animation: bg-bad-a 0.5s ease; }
+.bg-bucket.flash-bad.f1 { animation: bg-bad-b 0.5s ease; }
+@keyframes bg-good-a { 40% { border-color: var(--good); background: var(--good-bg); transform: scale(1.04); } }
+@keyframes bg-good-b { 40% { border-color: var(--good); background: var(--good-bg); transform: scale(1.04); } }
+@keyframes bg-bad-a { 0%, 60% { border-color: var(--bad); border-style: solid; background: var(--bad-bg); } 20% { transform: translateX(-5px); } 40% { transform: translateX(5px); } }
+@keyframes bg-bad-b { 0%, 60% { border-color: var(--bad); border-style: solid; background: var(--bad-bg); } 20% { transform: translateX(-5px); } 40% { transform: translateX(5px); } }
+
+.bg-howto { margin: 12px 0 0; text-align: center; }
+
+@media (max-width: 480px) {
+  .bg-face { min-height: 120px; padding: 18px 14px; }
+  .bg-face-text { font-size: 1.15rem; }
+  .bg-stage { min-height: 140px; margin: 14px 0 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bg-card, .bg-card.flying, .bg-progress span, .bg-bucket { transition: none; }
+  .bg-face, .bg-face.shake, .bg-chip, .bg-done, .bump, .bg-bucket[class*='flash-'] { animation: none; }
+}

@@ -56,7 +56,15 @@ Output ONLY valid JSON matching this schema:
         { "type": "numeric", "id": "q-...", "prompt": "text", "answer": 0.25,
           "tolerance": 0.01, "unit": "optional", "hint": "optional", "explanation": "text" },
         { "type": "text", "id": "q-...", "prompt": "text",
-          "accept": ["answer", "alternative spelling"], "explanation": "text" }
+          "accept": ["answer", "alternative spelling"], "explanation": "text" },
+        { "type": "output", "id": "q-...", "prompt": "What does this print?",
+          "language": "python", "code": "plain code, no fences",
+          "output": "exact printed text, one line per printed line", "explanation": "text" },
+        { "type": "bug", "id": "q-...", "prompt": "What should happen. Click the line with the bug.",
+          "language": "python", "code": "plain code, no fences",
+          "error": "the error message or wrong output it produces (optional)",
+          "lines": [3], "fixes": ["Change line 3 to `...`", "...", "..."], "answer": 0,
+          "explanation": "text" }
       ]
     }
     ] }
@@ -66,6 +74,16 @@ Output ONLY valid JSON matching this schema:
 Code blocks may name a language for highlighting: ```python, ```java or ```kotlin.
 Any asterisk outside backticks becomes emphasis, so keep code like `*args` in backticks.
 For "text" answers, comparison keeps only letters and digits — use mcq for symbol answers like "?:".
+
+Programming topics: add at least one "output" or "bug" question to most lessons — they make the
+learner produce an answer instead of recognizing one.
+- "output": the learner types what the code prints. Comparison is case-sensitive but ignores extra
+  spaces and blank lines at the ends. Keep output short (1–4 lines) and deterministic: no set or
+  hash ordering, no timestamps, no memory addresses.
+- "bug": the learner clicks the broken line, then picks the fix. "lines" lists the 1-based line
+  numbers that count as finding the bug (usually one; add a second only if it's equally fair).
+  Write fixes that refer to line numbers, and make the wrong fixes plausible attempts that would
+  NOT work. "error" shows the real message (or the wrong output) — take it from an actual run.
 
 Formatting inside text fields: **bold**, *italic*, `code`, lines starting with "- " for
 bullet lists, a blank line ("\n\n") between paragraphs, and ``` fences for code blocks.

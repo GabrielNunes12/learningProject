@@ -1,5 +1,6 @@
 import { isQuestion, type Course, type CourseFile, type Lesson, type QuestionStep, type Unit } from '../types';
-import { validateCourse } from './validate';
+import roadmapData from './roadmap.json';
+import { validateCourse, validateRoadmap } from './validate';
 
 // Every JSON file in ./topics becomes a course. Add a file, refresh, done.
 const modules = import.meta.glob<unknown>('./topics/*.json', { eager: true, import: 'default' });
@@ -55,3 +56,23 @@ export const allQuestions: QuestionRef[] = courses.flatMap((course) =>
 );
 
 export const questionByKey = new Map(allQuestions.map((q) => [q.key, q]));
+
+// ---------- roadmap: goal-based tracks that chain courses together ----------
+
+export interface TrackNode {
+  course: string;
+  /** Courses (earlier nodes) to take first. */
+  after?: string[];
+  note?: string;
+}
+export interface Track {
+  id: string;
+  title: string;
+  icon: string;
+  description: string;
+  nodes: TrackNode[];
+}
+
+const roadmapErrors = validateRoadmap(roadmapData, courses.map((c) => c.id));
+contentErrors.push(...roadmapErrors);
+export const tracks: Track[] = roadmapErrors.length ? [] : (roadmapData as { tracks: Track[] }).tracks;

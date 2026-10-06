@@ -1,68 +1,89 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { createPortal } from 'react-dom';
-import { answerLabel, checkAnswer, shuffled } from '../lib/answers';
-import { XP } from '../lib/storage';
-import type { QuestionStep } from '../types';
-import { InlineMarkdown, Markdown } from './Markdown';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { answerLabel, checkAnswer, isBugLine, shuffled } from '../lib/answers';
+import type { ClassicQuestionStep } from '../types';
+import { BucketsGame } from './games/BucketsGame';
+import { OrderGame } from './games/OrderGame';
+import { TraceGame } from './games/TraceGame';
+import { CodeBlock, highlightLines, InlineMarkdown } from './Markdown';
+import { AnswerLine, QuestionFrame, useCheckFlow, type QuestionProps } from './QuestionFrame';
 
-type Status = 'answering' | 'wrong' | 'correct' | 'revealed';
+export { BottomBar } from './QuestionFrame';
 
-interface Props {
-  step: QuestionStep;
-  /** learn: retries + hints allowed. test: one attempt, then the answer is shown. */
-  mode: 'learn' | 'test';
-  shuffle?: boolean;
-  context?: ReactNode;
-  /** Called when the learner presses Continue. Reports whether the *first* attempt was right. */
-  onDone: (firstTryCorrect: boolean) => void;
+/** Renders any graded step: a classic question or a mini-game. */
+export function QuestionView(props: QuestionProps) {
+  const { step } = props;
+  switch (step.type) {
+    case 'order':
+      return <OrderGame {...props} step={step} />;
+    case 'buckets':
+      return <BucketsGame {...props} step={step} />;
+    case 'trace':
+      return <TraceGame {...props} step={step} />;
+    default:
+      return <ClassicQuestion {...props} step={step} />;
+  }
 }
 
-const KIND_LABEL = { mcq: 'Choose one', numeric: 'Enter a number', text: 'Type your answer' };
+const KIND_LABEL = {
+  mcq: 'Choose one',
+  numeric: 'Enter a number',
+  text: 'Type your answer',
+  output: 'Predict the output',
+  bug: 'Find the bug: click the broken line',
+};
 
-export function QuestionView({ step, mode, shuffle = false, context, onDone }: Props) {
+function ClassicQuestion({ step, mode, shuffle = false, context, onDone }: QuestionProps<ClassicQuestionStep>) {
+  // Multiple-choice options: the choices of an mcq, or the candidate fixes of a bug hunt.
+  const choices = step.type === 'mcq' ? step.choices : step.type === 'bug' ? step.fixes : null;
   const order = useMemo(() => {
-    if (step.type !== 'mcq') return [];
-    const idx = step.choices.map((_, i) => i);
-    return shuffle ? shuffled(idx) : idx;
-  }, [step, shuffle]);
+    if (!choices) return [];
+    const idx = choices.map((_, i) => i);
+    // Fixes are always shuffled: authors tend to write the right one first.
+    return shuffle || step.type === 'bug' ? shuffled(idx) : idx;
+  }, [choices, shuffle, step.type]);
+  const codeLines = useMemo(() => (step.type === 'bug' ? highlightLines(step.code, step.language) : []), [step]);
 
+  const flow = useCheckFlow(mode, onDone);
+  const { status, finished, tone } = flow;
   const [selected, setSelected] = useState<number | null>(null);
   const [input, setInput] = useState('');
-  const [status, setStatus] = useState<Status>('answering');
-  const [first, setFirst] = useState<boolean | null>(null);
-  const [showHint, setShowHint] = useState(false);
-  const feedbackRef = useRef<HTMLDivElement>(null);
+  // Bug hunts have two parts: find the line, then pick the fix.
+  const [line, setLine] = useState<number | null>(null);
+  const [lineFound, setLineFound] = useState(false);
+  const fixesRef = useRef<HTMLParagraphElement>(null);
 
-  const finished = status === 'correct' || status === 'revealed';
-  const canCheck = status === 'answering' && (step.type === 'mcq' ? selected !== null : input.trim() !== '');
+  const pickingLine = step.type === 'bug' && !lineFound;
+  const showChoices = step.type === 'mcq' || (step.type === 'bug' && (lineFound || finished));
+  const choiceAnswer = step.type === 'mcq' || step.type === 'bug' ? step.answer : -1;
+  const canCheck = pickingLine ? line !== null : choices ? selected !== null : input.trim() !== '';
 
   useEffect(() => {
-    if (status !== 'answering') feedbackRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }, [status]);
+    if (lineFound) fixesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [lineFound]);
 
   function check() {
-    if (!canCheck) return;
-    const ok = checkAnswer(step, step.type === 'mcq' ? selected : input);
-    if (first === null) setFirst(ok);
-    setStatus(ok ? 'correct' : mode === 'test' ? 'revealed' : 'wrong');
+    if (step.type === 'bug' && pickingLine) {
+      if (isBugLine(step, line)) setLineFound(true);
+      else flow.grade(false);
+      return;
+    }
+    flow.grade(checkAnswer(step, choices ? selected : input));
   }
 
   function retry() {
-    setStatus('answering');
-    if (step.type === 'mcq') setSelected(null);
-    if (step.hint) setShowHint(true);
+    if (pickingLine) setLine(null);
+    else if (choices) setSelected(null);
   }
 
-  const primary = finished ? () => onDone(first ?? false) : status === 'wrong' ? retry : check;
-
-  // Keyboard: 1-9 picks a choice, Enter checks / continues.
+  // Keyboard: 1-9 picks a choice (Enter is handled by the frame).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLButtonElement || e.target instanceof HTMLAnchorElement) return;
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        primary();
-      } else if (step.type === 'mcq' && status === 'answering' && /^[1-9]$/.test(e.key) && !(e.target instanceof HTMLInputElement)) {
+      if (
+        showChoices &&
+        status === 'answering' &&
+        /^[1-9]$/.test(e.key) &&
+        !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)
+      ) {
         const pos = Number(e.key) - 1;
         if (pos < order.length) setSelected(order[pos]);
       }
@@ -71,24 +92,77 @@ export function QuestionView({ step, mode, shuffle = false, context, onDone }: P
     return () => window.removeEventListener('keydown', onKey);
   });
 
-  const tone = status === 'correct' ? 'right' : status === 'wrong' ? 'wrong' : status === 'revealed' ? 'revealed' : 'neutral';
-
   return (
-    <>
-      <div className="question">
-        {context}
-        <span className="q-kind">{KIND_LABEL[step.type]}</span>
-        <div className="q-prompt">
-          <Markdown text={step.prompt} />
-        </div>
+    <QuestionFrame
+      step={step}
+      flow={flow}
+      mode={mode}
+      context={context}
+      kind={step.type === 'bug' && lineFound ? 'Now pick the fix' : KIND_LABEL[step.type]}
+      canCheck={canCheck}
+      onCheck={check}
+      onRetry={retry}
+      answer={
+        step.type === 'output' ? (
+          <div className="answer-line">
+            <strong>It prints:</strong>
+            <pre className="code">{step.output}</pre>
+          </div>
+        ) : (
+          <AnswerLine text={answerLabel(step)} />
+        )
+      }
+    >
+        {step.type === 'output' && <CodeBlock code={step.code} lang={step.language} />}
 
-        {step.type === 'mcq' ? (
+        {step.type === 'bug' && (
+          <>
+            <div className="code code-lines" role="group" aria-label="Code: pick the line with the bug">
+              {codeLines.map((nodes, i) => {
+                const n = i + 1;
+                const isBug = step.lines.includes(n);
+                let cls = 'code-line';
+                if (line === n) cls += ' selected';
+                if ((lineFound || finished) && isBug) cls += ' correct';
+                if (status !== 'answering' && !lineFound && line === n && !isBug) cls += ' incorrect';
+                return (
+                  <button
+                    key={n}
+                    className={cls}
+                    aria-pressed={line === n}
+                    aria-label={`Line ${n}`}
+                    disabled={!pickingLine || status !== 'answering'}
+                    onClick={() => setLine(n)}
+                  >
+                    <span className="line-no" aria-hidden>
+                      {n}
+                    </span>
+                    <code>{step.code.split('\n')[i] === '' ? '\u200b' : nodes}</code>
+                  </button>
+                );
+              })}
+            </div>
+            {step.error && (
+              <div className="run-result">
+                <span className="eyebrow">When you run it</span>
+                <pre className="code">{step.error}</pre>
+              </div>
+            )}
+            {lineFound && !finished && (
+              <p className="line-found" ref={fixesRef}>
+                ✓ Line {line} is the culprit. Which change fixes it?
+              </p>
+            )}
+          </>
+        )}
+
+        {showChoices && choices ? (
           <div className="choices" role="radiogroup">
             {order.map((orig, pos) => {
               let cls = 'choice';
               if (selected === orig) cls += ' selected';
-              if (finished && orig === step.answer) cls += ' correct';
-              if (status !== 'answering' && status !== 'correct' && selected === orig && orig !== step.answer) cls += ' incorrect';
+              if (finished && orig === choiceAnswer) cls += ' correct';
+              if (status !== 'answering' && status !== 'correct' && selected === orig && orig !== choiceAnswer) cls += ' incorrect';
               return (
                 <button
                   key={orig}
@@ -99,12 +173,26 @@ export function QuestionView({ step, mode, shuffle = false, context, onDone }: P
                   onClick={() => setSelected(orig)}
                 >
                   <span className="choice-key">{pos + 1}</span>
-                  <InlineMarkdown text={step.choices[orig]} />
+                  <InlineMarkdown text={choices[orig]} />
                 </button>
               );
             })}
           </div>
-        ) : (
+        ) : step.type === 'output' ? (
+          <div className={`answer-input ${tone}`}>
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              disabled={status !== 'answering'}
+              placeholder="Type exactly what it prints"
+              rows={Math.max(2, input.split('\n').length)}
+              aria-label="Output"
+              autoComplete="off"
+              spellCheck={false}
+              autoFocus
+            />
+          </div>
+        ) : step.type === 'numeric' || step.type === 'text' ? (
           <div className={`answer-input ${tone}`}>
             <input
               value={input}
@@ -118,85 +206,11 @@ export function QuestionView({ step, mode, shuffle = false, context, onDone }: P
             />
             {step.type === 'numeric' && step.unit && <span className="answer-unit">{step.unit}</span>}
           </div>
+        ) : null}
+        {step.type === 'output' && status === 'answering' && (
+          <p className="muted small kbd-tip">One line per printed line. Press Ctrl/⌘ + Enter to check.</p>
         )}
 
-        {mode === 'learn' && step.hint && status === 'answering' && !showHint && (
-          <button className="link hint-link" onClick={() => setShowHint(true)}>
-            💡 Need a hint?
-          </button>
-        )}
-        {showHint && step.hint && status !== 'correct' && (
-          <div className="hint">
-            <strong>Hint:</strong> <InlineMarkdown text={step.hint} />
-          </div>
-        )}
-
-        <div ref={feedbackRef}>
-          {finished && (
-            <div className={`explanation ${tone}`}>
-              {status === 'revealed' && (
-                <p className="answer-line">
-                  <strong>Correct answer:</strong> <InlineMarkdown text={answerLabel(step)} />
-                </p>
-              )}
-              <span className="eyebrow">Why</span>
-              <Markdown text={step.explanation} />
-            </div>
-          )}
-        </div>
-      </div>
-
-      <BottomBar tone={tone}>
-        <div className="bb-status" role="status">
-          {status === 'correct' && (
-            <>
-              <span className="bb-icon">✓</span>
-              <div>
-                <strong>{first ? 'Correct!' : 'Got it!'}</strong>
-                <span>{first ? `+${XP.correct} XP` : 'Second tries count too.'}</span>
-              </div>
-            </>
-          )}
-          {status === 'wrong' && (
-            <>
-              <span className="bb-icon">✗</span>
-              <div>
-                <strong>Not quite.</strong>
-                <span>Think it through once more — retries are where learning happens.</span>
-              </div>
-            </>
-          )}
-          {status === 'revealed' && (
-            <>
-              <span className="bb-icon">i</span>
-              <div>
-                <strong>{mode === 'test' && first === false ? 'Incorrect' : 'Here’s the answer'}</strong>
-                <span>Read why, and it'll come back in your reviews.</span>
-              </div>
-            </>
-          )}
-        </div>
-        <div className="bb-actions">
-          {status === 'wrong' && (
-            <button className="btn ghost" onClick={() => setStatus('revealed')}>
-              Show answer
-            </button>
-          )}
-          <button className="btn primary big" onClick={primary} disabled={status === 'answering' && !canCheck}>
-            {finished ? 'Continue' : status === 'wrong' ? 'Try again' : 'Check'}
-          </button>
-        </div>
-      </BottomBar>
-    </>
-  );
-}
-
-/** Fixed action bar at the bottom of the screen. Portaled to <body> so animated ancestors can't trap it. */
-export function BottomBar({ tone = 'neutral', children }: { tone?: string; children: ReactNode }) {
-  return createPortal(
-    <div className={`bottom-bar ${tone}`}>
-      <div className="bottom-bar-inner">{children}</div>
-    </div>,
-    document.body,
+    </QuestionFrame>
   );
 }

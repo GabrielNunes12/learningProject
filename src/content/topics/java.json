@@ -50,53 +50,132 @@
               "answer": "It prints `5 99`."
             },
             {
-              "type": "mcq",
+              "type": "output",
               "id": "q-int-division",
-              "prompt": "What does this print?\n\n```java\nint total = 7;\nint count = 2;\ndouble avg = total / count;\nSystem.out.println(avg);\n```",
-              "choices": [
-                "`3.5`",
-                "`3.0`",
-                "`3`",
-                "It doesn't compile"
-              ],
-              "answer": 1,
+              "prompt": "What does this print?",
+              "language": "java",
+              "code": "int total = 7;\nint count = 2;\ndouble avg = total / count;\nSystem.out.println(avg);",
+              "output": "3.0",
               "hint": "Which division happens first — and with which types?",
               "explanation": "`total / count` is `int / int`, which is **integer division**: 7 / 2 = 3. Only then is 3 widened to the `double` 3.0. Fix it with `(double) total / count`, which gives 3.5."
             },
             {
-              "type": "mcq",
+              "type": "output",
               "id": "q-pass-by-value",
-              "prompt": "Java passes arguments **by value**. What does this print?\n\n```java\nstatic void reset(int n) { n = 0; }\nstatic void reset(int[] arr) { arr[0] = 0; }\n\n// in main:\nint n = 5;\nint[] arr = {5};\nreset(n);\nreset(arr);\nSystem.out.println(n + \" \" + arr[0]);\n```",
-              "choices": [
-                "`5 5`",
-                "`5 0`",
-                "`0 0`",
-                "`0 5`"
-              ],
-              "answer": 1,
+              "prompt": "Java passes arguments **by value**. What does this print?",
+              "language": "java",
+              "code": "static void reset(int n) { n = 0; }\nstatic void reset(int[] arr) { arr[0] = 0; }\n\n// in main:\nint n = 5;\nint[] arr = {5};\nreset(n);\nreset(arr);\nSystem.out.println(n + \" \" + arr[0]);",
+              "output": "5 0",
               "hint": "What gets copied into the parameter in each case: a value, or a reference?",
               "explanation": "The first `reset` gets a copy of the number 5 and changes only its own copy. The second gets a copy of the **reference**, which still points to the caller's array, so `arr[0] = 0` changes the real array. Result: `5 0`."
             },
             {
-              "type": "mcq",
-              "id": "q-sb-alias",
-              "prompt": "`StringBuilder` is a *mutable* text buffer. What does this print?\n\n```java\nStringBuilder a = new StringBuilder(\"hi\");\nStringBuilder b = a;\nb.append(\"!\");\nSystem.out.println(a);\n```",
-              "choices": [
-                "`hi`",
-                "`hi!`",
-                "`hi!hi!`",
-                "It doesn't compile"
+              "type": "trace",
+              "id": "q-trace-pass-ref",
+              "prompt": "Step into `change`. Java copies each argument: for an array, it copies the **reference**. Predict the values when asked.",
+              "language": "java",
+              "code": "static void change(int[] arr, int n) {\n    arr[0] = 99;\n    n = 99;\n    arr = new int[]{7, 7};\n}\n\n// in main:\nint[] nums = {1, 2};\nint count = 1;\nchange(nums, count);\nSystem.out.println(nums[0] + \" \" + count);",
+              "frames": [
+                {
+                  "line": 8,
+                  "vars": {
+                    "nums": "[1, 2]"
+                  }
+                },
+                {
+                  "line": 9,
+                  "vars": {
+                    "nums": "[1, 2]",
+                    "count": "1"
+                  }
+                },
+                {
+                  "line": 2,
+                  "vars": {
+                    "nums": "[99, 2]",
+                    "count": "1",
+                    "arr": "[99, 2]",
+                    "n": "1"
+                  },
+                  "note": "Inside `change`: `arr` and `nums` point to the same array.",
+                  "ask": "nums"
+                },
+                {
+                  "line": 3,
+                  "vars": {
+                    "nums": "[99, 2]",
+                    "count": "1",
+                    "arr": "[99, 2]",
+                    "n": "99"
+                  },
+                  "note": "`n` is only a copy of `count`.",
+                  "ask": "count"
+                },
+                {
+                  "line": 4,
+                  "vars": {
+                    "nums": "[99, 2]",
+                    "count": "1",
+                    "arr": "[7, 7]",
+                    "n": "99"
+                  },
+                  "note": "`arr` now points to a brand-new array.",
+                  "ask": "nums"
+                },
+                {
+                  "line": 10,
+                  "vars": {
+                    "nums": "[99, 2]",
+                    "count": "1"
+                  },
+                  "note": "`change` returned: its `arr` and `n` are gone."
+                },
+                {
+                  "line": 11,
+                  "vars": {
+                    "nums": "[99, 2]",
+                    "count": "1"
+                  },
+                  "out": "99 1"
+                }
               ],
-              "answer": 1,
+              "explanation": "`arr` starts as a copy of the reference in `nums`, so `arr[0] = 99` changes the one array both point to. `n` is a copy of `count`, so `n = 99` can't touch `count`. `arr = new int[]{7, 7}` points the **copy** at a new array; `nums` still points at the old one. Output: `99 1`.",
+              "hint": "Ask yourself which object each variable points to. Changing an object is visible through every reference; reassigning a variable isn't."
+            },
+            {
+              "type": "output",
+              "id": "q-sb-alias",
+              "prompt": "`StringBuilder` is a *mutable* text buffer. What does this print?",
+              "language": "java",
+              "code": "StringBuilder a = new StringBuilder(\"hi\");\nStringBuilder b = a;\nb.append(\"!\");\nSystem.out.println(a);",
+              "output": "hi!",
               "explanation": "`a` and `b` are two references to the **same** `StringBuilder`. Appending through `b` changes the object that `a` also sees, so it prints `hi!`."
             },
             {
-              "type": "text",
-              "id": "q-int-div-text",
-              "prompt": "What does `System.out.println(10 / 4);` print?",
-              "accept": [
-                "2"
+              "type": "bug",
+              "id": "q-bug-array-alias",
+              "prompt": "This should sort a copy and leave `original` untouched, printing `3 1`. Click the line with the bug.",
+              "language": "java",
+              "code": "int[] original = {3, 1, 2};\nint[] sorted = original;\nArrays.sort(sorted);\nSystem.out.println(original[0] + \" \" + sorted[0]);",
+              "error": "1 1",
+              "lines": [2],
+              "fixes": [
+                "Change line 2 to `int[] sorted = Arrays.copyOf(original, original.length);`",
+                "Change line 1 to `final int[] original = {3, 1, 2};`",
+                "Change line 2 to `int[] sorted = (int[]) original;`",
+                "Change line 2 to `int[] sorted = new int[3]; sorted = original;`"
               ],
+              "answer": 0,
+              "hint": "After line 2, how many arrays exist?",
+              "explanation": "`int[] sorted = original` copies the **reference**, not the array: there is still only one array, and `Arrays.sort(sorted)` sorts it in place, so `original[0]` is 1 as well. `Arrays.copyOf(original, original.length)` builds a second array with the same values, and only that copy gets sorted. `final` only stops `original` from pointing at a different array — its contents can still change. A cast copies nothing, and `sorted = original` throws away the fresh `new int[3]` and points at the shared array again."
+            },
+            {
+              "type": "output",
+              "id": "q-int-div-text",
+              "prompt": "What does this print?",
+              "language": "java",
+              "code": "System.out.println(10 / 4);",
+              "output": "2",
               "explanation": "Both operands are `int`, so this is integer division: the fractional part is dropped and 10 / 4 = **2**. Write `10 / 4.0` to get 2.5."
             }
           ]
@@ -130,17 +209,31 @@
               "body": "- For **primitives**, `==` compares values: `3 == 3` is true.\n- For **objects**, `==` asks *\"are these the very same object?\"* — it compares references.\n- `.equals()` compares **content**, as defined by the class. `String`, `Integer`, `List` and records all define it sensibly.\n\nRule: **compare objects with `.equals()`**. Sometimes `==` on strings appears to work because identical literals are shared, but that's luck, not a guarantee.\n\nIf a value might be `null`, write `\"admin\".equals(name)` or `Objects.equals(a, b)` — calling `.equals` on `null` throws a `NullPointerException`."
             },
             {
-              "type": "mcq",
+              "type": "output",
               "id": "q-equals",
-              "prompt": "What does this print?\n\n```java\nString a = \"hello\";\nString b = new String(\"hello\");\nSystem.out.println(a == b);\nSystem.out.println(a.equals(b));\n```",
-              "choices": [
-                "`true` then `true`",
-                "`false` then `true`",
-                "`true` then `false`",
-                "`false` then `false`"
-              ],
-              "answer": 1,
+              "prompt": "What does this print? Type each printed line on its own line.",
+              "language": "java",
+              "code": "String a = \"hello\";\nString b = new String(\"hello\");\nSystem.out.println(a == b);\nSystem.out.println(a.equals(b));",
+              "output": "false\ntrue",
               "explanation": "`new String(...)` always creates a distinct object, so `a == b` (same object?) is **false**. The characters are identical, so `a.equals(b)` is **true**."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-string-eq",
+              "prompt": "This should print `Welcome, admin`. Click the line with the bug.",
+              "language": "java",
+              "code": "String input = \"ADMIN\".toLowerCase();\nif (input == \"admin\") {\n    System.out.println(\"Welcome, admin\");\n} else {\n    System.out.println(\"Access denied\");\n}",
+              "error": "Access denied",
+              "lines": [2],
+              "fixes": [
+                "Change line 2 to `if (input.equals(\"admin\")) {`",
+                "Change line 2 to `if (\"admin\" == input) {`",
+                "Change line 1 to `final String input = \"ADMIN\".toLowerCase();`",
+                "Change line 1 to `String input = \"ADMIN\".toLowerCase().trim();`"
+              ],
+              "answer": 0,
+              "hint": "`toLowerCase()` returns a new string. Is it the same object as the literal `\"admin\"`?",
+              "explanation": "`toLowerCase()` builds a **new** `String` object containing `admin`. `==` asks whether `input` and the literal are the very same object, and they aren't, so it goes to `else`. `.equals()` compares the characters and gives `true`. Swapping the sides of `==` still compares references, `final` doesn't change what `==` means, and `trim()` has no whitespace to remove — the strings were never the problem, the comparison was."
             },
             {
               "type": "mcq",
@@ -169,14 +262,91 @@
               "explanation": "Because strings are immutable, each `+=` copies everything built so far — O(n²) work overall. A `StringBuilder` appends in place. (And `concat` without assigning does nothing useful: the result is thrown away.)"
             },
             {
-              "type": "text",
-              "id": "q-replace-result",
-              "prompt": "What does this print?\n\n```java\nString s = \"cat\";\ns.replace('c', 'b');\ns = s + \"s\";\nSystem.out.println(s);\n```",
-              "accept": [
-                "cats"
+              "type": "trace",
+              "id": "q-trace-immutable",
+              "prompt": "Strings never change; methods return new ones. Step through and predict each value when asked (quotes optional).",
+              "language": "java",
+              "code": "String s = \"java\";\ns.toUpperCase();\nString t = s.toUpperCase();\ns = s + \"!\";\nString u = s;\ns = s.replace('a', 'o');\nSystem.out.println(s + \" \" + t + \" \" + u);",
+              "frames": [
+                {
+                  "line": 1,
+                  "vars": {
+                    "s": "\"java\""
+                  }
+                },
+                {
+                  "line": 2,
+                  "vars": {
+                    "s": "\"java\""
+                  },
+                  "note": "The uppercase copy was created and thrown away.",
+                  "ask": "s"
+                },
+                {
+                  "line": 3,
+                  "vars": {
+                    "s": "\"java\"",
+                    "t": "\"JAVA\""
+                  },
+                  "ask": "t"
+                },
+                {
+                  "line": 4,
+                  "vars": {
+                    "s": "\"java!\"",
+                    "t": "\"JAVA\""
+                  }
+                },
+                {
+                  "line": 5,
+                  "vars": {
+                    "s": "\"java!\"",
+                    "t": "\"JAVA\"",
+                    "u": "\"java!\""
+                  },
+                  "note": "`u` and `s` point to the same string object."
+                },
+                {
+                  "line": 6,
+                  "vars": {
+                    "s": "\"jovo!\"",
+                    "t": "\"JAVA\"",
+                    "u": "\"java!\""
+                  },
+                  "ask": "u"
+                },
+                {
+                  "line": 7,
+                  "vars": {
+                    "s": "\"jovo!\"",
+                    "t": "\"JAVA\"",
+                    "u": "\"java!\""
+                  },
+                  "out": "jovo! JAVA java!"
+                }
               ],
+              "explanation": "`s.toUpperCase()` on line 2 builds `\"JAVA\"` and throws it away: `s` is untouched. Line 3 keeps the result in `t`. `s = s + \"!\"` makes a new string and points `s` at it. `u = s` copies that reference, so when line 6 points `s` at yet another new string, `u` still refers to `\"java!\"`.",
+              "hint": "A String method never changes the string it's called on. Only `=` changes what a variable points to."
+            },
+            {
+              "type": "output",
+              "id": "q-replace-result",
+              "prompt": "What does this print?",
+              "language": "java",
+              "code": "String s = \"cat\";\ns.replace('c', 'b');\ns = s + \"s\";\nSystem.out.println(s);",
+              "output": "cats",
               "hint": "Was the result of `replace` stored anywhere?",
               "explanation": "`replace` returned `\"bat\"` but nobody kept it, so `s` is still `\"cat\"`. Then `s + \"s\"` is assigned back, giving **cats**."
+            },
+            {
+              "type": "output",
+              "id": "q-out-string-ref",
+              "prompt": "What does this print? Type each printed line on its own line.",
+              "language": "java",
+              "code": "String a = \"Hi\";\nString b = a;\na = a + \"!\";\nSystem.out.println(a);\nSystem.out.println(b);\nSystem.out.println(a.length() + b.length());",
+              "output": "Hi!\nHi\n5",
+              "hint": "`a + \"!\"` builds a new string. Which variables point at it?",
+              "explanation": "`b = a` makes both variables point at the same `\"Hi\"` object. `a + \"!\"` can't change that object (strings are immutable), so it creates a new `\"Hi!\"` and only `a` is moved to it. `b` still points at `\"Hi\"`. The lengths are 3 and 2, and `+` between two `int`s adds them: `5`."
             }
           ]
         },
@@ -214,17 +384,21 @@
               "answer": "It prints `Woof`."
             },
             {
-              "type": "mcq",
+              "type": "bug",
               "id": "q-private-access",
-              "prompt": "This code is in a **different class** from `Counter`. Which line fails to compile?\n\n```java\nclass Counter {\n    private int count;\n    public void increment() { count++; }\n    public int get() { return count; }\n}\n\n// elsewhere, in another class:\nCounter c = new Counter();    // line A\nc.increment();                // line B\nc.count = 5;                  // line C\nSystem.out.println(c.get());  // line D\n```",
-              "choices": [
-                "Line A",
-                "Line B",
-                "Line C",
-                "Line D"
+              "prompt": "The last three lines are in a **different class** from `Counter`. They should count one click and print `1`, but the code doesn't compile. Click the line with the bug.",
+              "language": "java",
+              "code": "class Counter {\n    private int count;\n    public void increment() { count++; }\n    public int get() { return count; }\n}\n\n// elsewhere, in another class:\nCounter c = new Counter();\nc.increment();\nSystem.out.println(c.count);",
+              "error": "error: count has private access in Counter",
+              "lines": [10],
+              "fixes": [
+                "Change line 10 to `System.out.println(c.get());`",
+                "Change line 10 to `System.out.println(c.count());`",
+                "Change line 2 to `private static int count;`",
+                "Change line 10 to `System.out.println(Counter.count);`"
               ],
-              "answer": 2,
-              "explanation": "`count` is `private`, so only code inside `Counter` can touch it. Lines B and D go through public methods, which is exactly the point of encapsulation."
+              "answer": 0,
+              "explanation": "`count` is `private`, so only code inside `Counter` can touch it — even just reading it from another class fails to compile. Go through the public method instead: `c.get()`. That's exactly the point of encapsulation. `c.count()` doesn't exist (Java doesn't generate getters for you), and making the field `static` or reaching it through the class name doesn't change the fact that it's `private`."
             },
             {
               "type": "mcq",
@@ -241,16 +415,12 @@
               "explanation": "A class extends **at most one** class and may implement any number of interfaces, with `extends` written before `implements`. Interfaces extend other interfaces (`interface I extends J`); they never `implements`."
             },
             {
-              "type": "mcq",
+              "type": "output",
               "id": "q-super-call",
-              "prompt": "What does this print?\n\n```java\nclass Base {\n    void hello() { System.out.println(\"Base\"); }\n}\nclass Child extends Base {\n    @Override\n    void hello() {\n        super.hello();\n        System.out.println(\"Child\");\n    }\n}\n\nBase b = new Child();\nb.hello();\n```",
-              "choices": [
-                "`Base` only",
-                "`Child` only",
-                "`Base` then `Child`",
-                "`Child` then `Base`"
-              ],
-              "answer": 2,
+              "prompt": "What does this print? Type each printed line on its own line.",
+              "language": "java",
+              "code": "class Base {\n    void hello() { System.out.println(\"Base\"); }\n}\nclass Child extends Base {\n    @Override\n    void hello() {\n        super.hello();\n        System.out.println(\"Child\");\n    }\n}\n\nBase b = new Child();\nb.hello();",
+              "output": "Base\nChild",
               "explanation": "The object is a `Child`, so `Child.hello()` runs. Its first line calls the parent's version (`Base`), then it prints `Child`."
             },
             {
@@ -300,14 +470,18 @@
               "explanation": "A `Set` ignores duplicates — the second `add(\"x\")` returns false and changes nothing. Size: **2**."
             },
             {
-              "type": "mcq",
+              "type": "bug",
               "id": "q-list-int",
-              "prompt": "Which line fails to compile?",
-              "choices": [
-                "`List<int> nums = new ArrayList<>();`",
-                "`List<Integer> nums = new ArrayList<>();`",
-                "`Map<String, List<Integer>> m = new HashMap<>();`",
-                "`Set<Character> cs = new TreeSet<>();`"
+              "prompt": "This should print `7`, but it doesn't compile. Click the line with the bug.",
+              "language": "java",
+              "code": "List<int> nums = new ArrayList<>();\nnums.add(3);\nnums.add(4);\nSystem.out.println(nums.get(0) + nums.get(1));",
+              "error": "error: unexpected type\n  required: reference\n  found:    int",
+              "lines": [1],
+              "fixes": [
+                "Change line 1 to `List<Integer> nums = new ArrayList<>();`",
+                "Change line 1 to `ArrayList<int> nums = new ArrayList<>();`",
+                "Change line 2 to `nums.add(Integer.valueOf(3));`",
+                "Change line 1 to `List<Int> nums = new ArrayList<>();`"
               ],
               "answer": 0,
               "explanation": "Type arguments must be reference types. Use the wrapper `Integer` instead of `int`; autoboxing handles the conversion when you add and read numbers."
@@ -326,17 +500,31 @@
               "explanation": "A `HashMap` gives O(1) average lookup by key and returns the `User` itself. Searching a list is O(n), and a set of emails only tells you whether the email exists."
             },
             {
-              "type": "mcq",
+              "type": "output",
               "id": "q-treemap-order",
-              "prompt": "What does this print?\n\n```java\nMap<String, Integer> ages = new TreeMap<>();\nages.put(\"Zoe\", 30);\nages.put(\"Al\", 25);\nfor (Map.Entry<String, Integer> e : ages.entrySet()) {\n    System.out.print(e.getKey() + \"=\" + e.getValue() + \" \");\n}\n```",
-              "choices": [
-                "`Zoe=30 Al=25`",
-                "`Al=25 Zoe=30`",
-                "An unpredictable order",
-                "It doesn't compile"
-              ],
-              "answer": 1,
+              "prompt": "What does this print?",
+              "language": "java",
+              "code": "Map<String, Integer> ages = new TreeMap<>();\nages.put(\"Zoe\", 30);\nages.put(\"Al\", 25);\nfor (Map.Entry<String, Integer> e : ages.entrySet()) {\n    System.out.print(e.getKey() + \"=\" + e.getValue() + \" \");\n}",
+              "output": "Al=25 Zoe=30",
               "explanation": "A `TreeMap` keeps its keys **sorted** (alphabetically for strings), so `Al` comes before `Zoe` regardless of insertion order. A `HashMap` would give no guaranteed order."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-remove-in-loop",
+              "prompt": "This should remove the empty names, but it crashes. Click the line that causes the crash.",
+              "language": "java",
+              "code": "List<String> names = new ArrayList<>(List.of(\"ann\", \"\", \"bo\", \"\"));\nfor (String n : names) {\n    if (n.isEmpty()) {\n        names.remove(n);\n    }\n}\nSystem.out.println(names);",
+              "error": "Exception in thread \"main\" java.util.ConcurrentModificationException\n    ...",
+              "lines": [4],
+              "fixes": [
+                "Replace lines 2–6 with `names.removeIf(String::isEmpty);`",
+                "Change line 4 to `names.remove(names.indexOf(n));`",
+                "Change line 1 to `List<String> names = List.of(\"ann\", \"\", \"bo\", \"\");`",
+                "Change line 3 to `if (n.equals(\"\")) {`"
+              ],
+              "answer": 0,
+              "hint": "A for-each loop walks the list with an iterator. What happens to that iterator when the list changes underneath it?",
+              "explanation": "A for-each loop uses an iterator, and `ArrayList`'s iterator fails fast: if the list is changed by anything other than the iterator itself, the next step throws `ConcurrentModificationException`. `removeIf` removes matching elements safely in one call. Removing by index still modifies the list mid-loop, and `List.of` is immutable, so `remove` would throw `UnsupportedOperationException` instead. (An explicit `Iterator` with `it.remove()` also works.)"
             }
           ]
         },
@@ -370,39 +558,93 @@
               "body": "Files, sockets and database connections must be closed. Since Java 7, declare them in the `try` header and Java closes them for you — even if an exception is thrown:\n\n```java\ntry (BufferedReader in = Files.newBufferedReader(Path.of(\"data.txt\"))) {\n    System.out.println(in.readLine());\n} catch (IOException e) {\n    System.err.println(\"Could not read: \" + e.getMessage());\n}\n```\n\n- Works with anything that implements `AutoCloseable`.\n- Several resources are separated by `;` and closed in **reverse** order.\n- Since Java 9 you can also list an existing effectively-final variable: `try (in) { ... }`."
             },
             {
-              "type": "mcq",
+              "type": "bug",
               "id": "q-checked",
-              "prompt": "Which method fails to compile?",
-              "choices": [
-                "`void a() { throw new IllegalStateException(); }`",
-                "`void b() throws IOException { throw new IOException(); }`",
-                "`void c() { throw new IOException(); }`",
-                "`void d() { throw new NullPointerException(); }`"
+              "prompt": "Calling `readConfig(\"\")` should print `failed: no path`, but the code doesn't compile. Click the line with the bug.",
+              "language": "java",
+              "code": "static String readConfig(String path) {\n    if (path.isEmpty()) {\n        throw new IOException(\"no path\");\n    }\n    return \"config from \" + path;\n}\n\n// in main:\ntry {\n    System.out.println(readConfig(\"\"));\n} catch (IOException e) {\n    System.out.println(\"failed: \" + e.getMessage());\n}",
+              "error": "error: unreported exception IOException; must be caught or declared to be thrown\nerror: exception IOException is never thrown in body of corresponding try statement\n2 errors",
+              "lines": [1, 3],
+              "fixes": [
+                "Change line 1 to `static String readConfig(String path) throws IOException {`",
+                "Change line 3 to `throw new RuntimeException(\"no path\");`",
+                "Change line 11 to `} catch (Exception e) {`",
+                "Change line 1 to `static String readConfig(String path) throws RuntimeException {`"
               ],
-              "answer": 2,
-              "explanation": "`IOException` is **checked**: a method that throws it must declare `throws IOException` (or catch it). `IllegalStateException` and `NullPointerException` are unchecked, so `a` and `d` compile."
+              "answer": 0,
+              "hint": "Is `IOException` checked or unchecked? What does the compiler demand for checked ones?",
+              "explanation": "`IOException` is **checked**: a method that throws it must declare `throws IOException` (or catch it itself). Once line 1 declares it, both errors disappear: the caller's `catch (IOException e)` now has something to catch, and the program prints `failed: no path`. Throwing a `RuntimeException` instead makes the method compile, but then catching `IOException` is an error because nothing in the `try` can throw it. Catching `Exception` in main doesn't fix `readConfig` itself, and declaring `throws RuntimeException` says nothing about `IOException`."
             },
             {
-              "type": "mcq",
-              "id": "q-close-order",
-              "prompt": "What does this print?\n\n```java\nclass R implements AutoCloseable {\n    private final String name;\n    R(String name) { this.name = name; }\n    public void close() { System.out.println(\"close \" + name); }\n}\n\ntry (R a = new R(\"A\"); R b = new R(\"B\")) {\n    System.out.println(\"body\");\n}\n```",
-              "choices": [
-                "`body`, `close A`, `close B`",
-                "`body`, `close B`, `close A`",
-                "`close A`, `close B`, `body`",
-                "`body` only"
+              "type": "buckets",
+              "id": "q-buckets-checked",
+              "prompt": "A method throws each of these and has no `try`. Sort them: does the compiler make it declare `throws`?",
+              "buckets": [
+                "Checked: catch it or declare `throws`",
+                "Unchecked: no declaration needed"
               ],
-              "answer": 1,
+              "items": [
+                {
+                  "text": "`IOException`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`FileNotFoundException`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`SQLException`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`InterruptedException`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`NullPointerException`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`IllegalArgumentException`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`NumberFormatException`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`ArithmeticException`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`ArrayIndexOutOfBoundsException`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`UncheckedIOException`",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Unchecked exceptions extend `RuntimeException` and usually mean a bug or bad input. Checked ones come from the world outside your code: files, databases, other threads.",
+              "explanation": "**Checked**: `IOException`, its subclass `FileNotFoundException`, `SQLException` and `InterruptedException` extend `Exception` but not `RuntimeException`, so `javac` says *unreported exception ...; must be caught or declared to be thrown*. **Unchecked**: `NullPointerException`, `IllegalArgumentException` and its subclass `NumberFormatException`, `ArithmeticException` (`1 / 0` on `int`s) and `ArrayIndexOutOfBoundsException` all extend `RuntimeException`. So does `UncheckedIOException`, despite its name: it exists to wrap an `IOException` *without* forcing every caller to declare it."
+            },
+            {
+              "type": "output",
+              "id": "q-close-order",
+              "prompt": "What does this print? Type each printed line on its own line.",
+              "language": "java",
+              "code": "class R implements AutoCloseable {\n    private final String name;\n    R(String name) { this.name = name; }\n    public void close() { System.out.println(\"close \" + name); }\n}\n\ntry (R a = new R(\"A\"); R b = new R(\"B\")) {\n    System.out.println(\"body\");\n}",
+              "output": "body\nclose B\nclose A",
               "hint": "Resources are closed in the opposite order to how they were opened.",
               "explanation": "The body runs first, then resources are closed in **reverse** order of declaration: B, then A. That way a resource that depends on an earlier one is closed first."
             },
             {
-              "type": "text",
+              "type": "output",
               "id": "q-finally-print",
-              "prompt": "What does `System.out.println(test());` print?\n\n```java\nstatic String test() {\n    try {\n        throw new IllegalStateException(\"boom\");\n    } catch (IllegalStateException e) {\n        return \"caught \" + e.getMessage();\n    } finally {\n        System.out.print(\"finally \");\n    }\n}\n```",
-              "accept": [
-                "finally caught boom"
-              ],
+              "prompt": "What does `System.out.println(test());` print?",
+              "language": "java",
+              "code": "static String test() {\n    try {\n        throw new IllegalStateException(\"boom\");\n    } catch (IllegalStateException e) {\n        return \"caught \" + e.getMessage();\n    } finally {\n        System.out.print(\"finally \");\n    }\n}",
+              "output": "finally caught boom",
               "hint": "`finally` runs before the method hands its return value back to the caller.",
               "explanation": "The `catch` computes the return value `\"caught boom\"`, then `finally` prints `finally ` **before** `test()` returns. Only then does `println` print the returned string: **finally caught boom**."
             }
@@ -538,39 +780,49 @@
               "body": "- **`Optional<T>`** — a return type for \"maybe no value\", instead of returning `null`. `findFirst()` returns one. Use `map`, `orElse`, `orElseGet`, `ifPresent` rather than calling `get()` blindly.\n- **`java.time`** — `LocalDate`, `LocalDateTime`, `Instant`, `Duration`, `ZonedDateTime`. Immutable and clear; it replaces the old `Date` and `Calendar`.\n- **Default and static interface methods** — interfaces can now contain method bodies. That's how `List.sort` and `Collection.stream()` were added without breaking every existing implementation.\n- **`CompletableFuture`** — async pipelines (covered in the Concurrency unit)."
             },
             {
-              "type": "mcq",
+              "type": "output",
               "id": "q-optional",
-              "prompt": "What does this print?\n\n```java\nOptional<String> first = Stream.of(\"kiwi\", \"apple\", \"fig\")\n    .filter(s -> s.startsWith(\"b\"))\n    .findFirst();\nSystem.out.println(first.map(String::length).orElse(0));\n```",
-              "choices": [
-                "`0`",
-                "`Optional.empty`",
-                "`null`",
-                "It throws `NoSuchElementException`"
-              ],
-              "answer": 0,
+              "prompt": "What does this print?",
+              "language": "java",
+              "code": "Optional<String> first = Stream.of(\"kiwi\", \"apple\", \"fig\")\n    .filter(s -> s.startsWith(\"b\"))\n    .findFirst();\nSystem.out.println(first.map(String::length).orElse(0));",
+              "output": "0",
               "explanation": "No fruit starts with \"b\", so `findFirst()` returns an empty `Optional`. `map` on an empty Optional stays empty, and `orElse(0)` supplies the fallback: **0**."
             },
             {
-              "type": "mcq",
+              "type": "output",
               "id": "q-lazy",
-              "prompt": "What does this print?\n\n```java\nStream.of(\"a\", \"b\", \"c\")\n    .peek(s -> System.out.print(s))\n    .filter(s -> !s.equals(\"b\"));\nSystem.out.println(\"end\");\n```",
-              "choices": [
-                "`abcend`",
-                "`end`",
-                "`acend`",
-                "`abend`"
-              ],
-              "answer": 1,
+              "prompt": "What does this print?",
+              "language": "java",
+              "code": "Stream.of(\"a\", \"b\", \"c\")\n    .peek(s -> System.out.print(s))\n    .filter(s -> !s.equals(\"b\"));\nSystem.out.println(\"end\");",
+              "output": "end",
               "hint": "Does this pipeline have a terminal operation?",
               "explanation": "`peek` and `filter` are intermediate, lazy operations. With no terminal operation, the pipeline never runs, so only `end` is printed."
             },
             {
-              "type": "text",
-              "id": "q-plus-months",
-              "prompt": "What does this print? (Write the date as Java prints it.)\n\n```java\nSystem.out.println(LocalDate.of(2024, 1, 31).plusMonths(1));\n```",
-              "accept": [
-                "2024-02-29"
+              "type": "bug",
+              "id": "q-bug-stream-reuse",
+              "prompt": "This should print `2 of 3`, but it crashes. Click the line that causes the crash.",
+              "language": "java",
+              "code": "List<String> words = Arrays.asList(\"kiwi\", \"apple\", \"fig\");\nStream<String> s = words.stream();\nlong longOnes = s.filter(w -> w.length() > 3).count();\nlong total = s.count();\nSystem.out.println(longOnes + \" of \" + total);",
+              "error": "Exception in thread \"main\" java.lang.IllegalStateException: stream has already been operated upon or closed\n    ...",
+              "lines": [4],
+              "fixes": [
+                "Change line 4 to `long total = words.stream().count();`",
+                "Change line 2 to `final Stream<String> s = words.stream();`",
+                "Change line 4 to `long total = s.filter(w -> true).count();`",
+                "Change line 4 to `long total = s.collect(Collectors.toList()).size();`"
               ],
+              "answer": 0,
+              "hint": "Line 3 ends with a terminal operation. What state is `s` in afterwards?",
+              "explanation": "A stream can be used **only once**. Line 3 runs the pipeline to its terminal `count()`, which uses `s` up, so any further operation on it — even another `filter` or `collect` — throws `IllegalStateException`. Ask the source for a fresh stream instead: `words.stream()`. `final` only stops the variable being reassigned; it doesn't make the stream reusable."
+            },
+            {
+              "type": "output",
+              "id": "q-plus-months",
+              "prompt": "What does this print? (Write the date as Java prints it.)",
+              "language": "java",
+              "code": "System.out.println(LocalDate.of(2024, 1, 31).plusMonths(1));",
+              "output": "2024-02-29",
               "hint": "There's no February 31st — and 2024 is a leap year.",
               "explanation": "`java.time` clamps to the last valid day of the month, and 2024 is a leap year, so you get **2024-02-29** (ISO format `yyyy-MM-dd`)."
             }
@@ -618,29 +870,29 @@
               "explanation": "`List.of` returns an **immutable** list. The type is still `List`, so `add` compiles, but calling it throws `UnsupportedOperationException`. Use `new ArrayList<>(List.of(...))` when you need to modify it."
             },
             {
-              "type": "mcq",
+              "type": "bug",
               "id": "q-var-invalid",
-              "prompt": "On Java 11, which line fails to compile?",
-              "choices": [
-                "`var count = 10;`",
-                "`var names = new ArrayList<String>();`",
-                "`var x;`",
-                "`for (var s : List.of(\"a\", \"b\")) { }`"
-              ],
-              "answer": 2,
-              "explanation": "`var` infers the type from the initializer, so `var x;` has nothing to infer from. `var` works for local variables and loop variables like the for-each one."
-            },
-            {
-              "type": "mcq",
-              "id": "q-strip-repeat",
-              "prompt": "What does this print?\n\n```java\nString s = \"  hi  \";\nSystem.out.println(\"[\" + s.strip() + \"]\" + \"-\".repeat(3));\n```",
-              "choices": [
-                "`[hi]---`",
-                "`[  hi  ]---`",
-                "`[hi]-`",
-                "`[hi ]---`"
+              "prompt": "On Java 11, this should print `12`, but it doesn't compile. Click the line with the bug.",
+              "language": "java",
+              "code": "var count = 10;\nvar names = new ArrayList<String>();\nvar total;\nfor (var s : List.of(\"a\", \"b\")) {\n    names.add(s);\n}\ntotal = count + names.size();\nSystem.out.println(total);",
+              "error": "error: cannot infer type for local variable total\n  (cannot use 'var' on variable without initializer)",
+              "lines": [3],
+              "fixes": [
+                "Change line 3 to `int total;`",
+                "Change line 3 to `var total = null;`",
+                "Change line 3 to `final var total;`",
+                "Change line 3 to `var total = \"\";`"
               ],
               "answer": 0,
+              "explanation": "`var` infers the type from the initializer, so `var total;` has nothing to infer from — declare the type yourself. `null` has no useful type either, `final` doesn't add one, and `var total = \"\"` makes `total` a `String`, so assigning an `int` to it fails. `var` works for local variables and loop variables like the for-each one."
+            },
+            {
+              "type": "output",
+              "id": "q-strip-repeat",
+              "prompt": "What does this print?",
+              "language": "java",
+              "code": "String s = \"  hi  \";\nSystem.out.println(\"[\" + s.strip() + \"]\" + \"-\".repeat(3));",
+              "output": "[hi]---",
               "explanation": "`strip()` (Java 11) removes leading and trailing whitespace, and `\"-\".repeat(3)` gives `---`. Result: `[hi]---`."
             },
             {
@@ -672,16 +924,12 @@
               "body": "Previewed in 12 and 13, final in **14**:\n\n```java\nint n = 4;\nString size = switch (n) {\n    case 1, 2 -> \"small\";\n    case 3, 4 -> \"medium\";\n    default -> {\n        String label = \"large\";\n        yield label;\n    }\n};\n```\n\n- The switch **returns a value**, and must cover every case.\n- Arrow labels **never fall through** — no `break` needed.\n- Several labels per case: `case 1, 2`.\n- `yield` returns a value from a block.\n\nJava 14 also made **helpful NullPointerExceptions** the default: the message says which call failed and what was null."
             },
             {
-              "type": "mcq",
+              "type": "output",
               "id": "q-fall-through",
-              "prompt": "Here's an old-style switch with no `break`s. What does it print?\n\n```java\nint day = 6;\nString type = \"\";\nswitch (day) {\n    case 6: type += \"Sat \";\n    case 7: type += \"Sun \";\n    default: type += \"?\";\n}\nSystem.out.println(type);\n```",
-              "choices": [
-                "`Sat `",
-                "`Sat Sun ?`",
-                "`?`",
-                "`Sat ?`"
-              ],
-              "answer": 1,
+              "prompt": "Here's an old-style switch with no `break`s. What does it print?",
+              "language": "java",
+              "code": "int day = 6;\nString type = \"\";\nswitch (day) {\n    case 6: type += \"Sat \";\n    case 7: type += \"Sun \";\n    default: type += \"?\";\n}\nSystem.out.println(type);",
+              "output": "Sat Sun ?",
               "hint": "Without `break`, where does execution go after a case?",
               "explanation": "Old colon-style cases **fall through**: execution starts at `case 6` and keeps running every following case. That bug-prone behavior is exactly what arrow-style `case 6 ->` removes."
             },
@@ -691,17 +939,31 @@
               "body": "**Text blocks** (final in 15) are multi-line strings; common indentation is stripped:\n\n```java\nString json = \"\"\"\n    {\n      \"name\": \"Ada\"\n    }\n    \"\"\";\n```\n\n**Records** (final in 16) are concise immutable data classes:\n\n```java\nrecord Point(int x, int y) {}\n```\n\nYou get private final fields, a constructor, accessors `x()` and `y()`, plus `equals`, `hashCode` and `toString`.\n\n**Pattern matching for instanceof** (16) tests and casts in one step: `if (obj instanceof String s) { ... s.length() ... }`. Java 16 also added `Stream.toList()`."
             },
             {
-              "type": "mcq",
+              "type": "output",
               "id": "q-record-print",
-              "prompt": "What does this print?\n\n```java\nrecord Point(int x, int y) {}\n\nvar p = new Point(3, 4);\nvar q = new Point(3, 4);\nSystem.out.println(p.equals(q) + \" \" + p);\n```",
-              "choices": [
-                "`true Point[x=3, y=4]`",
-                "`false Point@1b6d3586`",
-                "`true Point(x=3, y=4)`",
-                "`false Point[x=3, y=4]`"
+              "prompt": "What does this print?",
+              "language": "java",
+              "code": "record Point(int x, int y) {}\n\nvar p = new Point(3, 4);\nvar q = new Point(3, 4);\nSystem.out.println(p.equals(q) + \" \" + p);",
+              "output": "true Point[x=3, y=4]",
+              "explanation": "Records generate `equals` that compares the components, so two points with the same values are equal. The generated `toString` uses the format `Point[x=3, y=4]`."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-record-set",
+              "prompt": "This should move the point to x = 10 and print `Point[x=10, y=4]`, but it doesn't compile. Click the line with the bug.",
+              "language": "java",
+              "code": "record Point(int x, int y) {}\n\nvar p = new Point(3, 4);\np.x = 10;\nSystem.out.println(p);",
+              "error": "error: cannot assign a value to final variable x",
+              "lines": [4],
+              "fixes": [
+                "Change line 4 to `p = new Point(10, p.y());`",
+                "Change line 4 to `p.setX(10);`",
+                "Change line 4 to `p.x() = 10;`",
+                "Change line 3 to `Point p = new Point(3, 4);`"
               ],
               "answer": 0,
-              "explanation": "Records generate `equals` that compares the components, so two points with the same values are equal. The generated `toString` uses the format `Point[x=3, y=4]`."
+              "hint": "What kind of fields does a record generate?",
+              "explanation": "Record components become **private final** fields, so a record can't be changed after it's built. To \"change\" one, create a new record with the new value and copy the rest: `new Point(10, p.y())`. Records have no setters, `p.x()` is a method call that returns a value (you can't assign to it), and `var` versus `Point` makes no difference — the field is still final."
             },
             {
               "type": "mcq",
@@ -782,38 +1044,39 @@
               "answer": "```java\nstatic String describe(Object o) {\n    return switch (o) {\n        case Integer i when i > 100 -> \"big number\";\n        case Integer i -> \"number\";\n        case String s -> \"text of length \" + s.length();\n        default -> \"unknown\";\n    };\n}\n```"
             },
             {
-              "type": "mcq",
+              "type": "output",
               "id": "q-pattern-switch",
-              "prompt": "What does this print on Java 21?\n\n```java\nObject o = 42;\nString r = switch (o) {\n    case Integer i when i > 100 -> \"big\";\n    case Integer i -> \"int \" + i;\n    case String s -> \"str\";\n    default -> \"other\";\n};\nSystem.out.println(r);\n```",
-              "choices": [
-                "`big`",
-                "`int 42`",
-                "`other`",
-                "It doesn't compile"
-              ],
-              "answer": 1,
+              "prompt": "What does this print on Java 21?",
+              "language": "java",
+              "code": "Object o = 42;\nString r = switch (o) {\n    case Integer i when i > 100 -> \"big\";\n    case Integer i -> \"int \" + i;\n    case String s -> \"str\";\n    default -> \"other\";\n};\nSystem.out.println(r);",
+              "output": "int 42",
               "explanation": "`42` is autoboxed to an `Integer`. The first case's guard (`i > 100`) is false, so the next case `Integer i` matches: `int 42`."
             },
             {
-              "type": "mcq",
+              "type": "bug",
               "id": "q-dominance",
-              "prompt": "Each option shows the first two cases of a `switch (o)` on an `Object`, followed by a `default`. Which one **fails to compile**?",
-              "choices": [
-                "`case Integer i when i > 100 -> \"big\"; case Integer i -> \"int\";`",
-                "`case Integer i -> \"int\"; case Integer i when i > 100 -> \"big\";`",
-                "`case String s -> \"str\"; case Integer i -> \"int\";`"
+              "prompt": "On Java 21, this should print `big` (250 is over 100), but it doesn't compile. Click the line with the bug.",
+              "language": "java",
+              "code": "Object o = 250;\nString r = switch (o) {\n    case Integer i -> \"int\";\n    case Integer i when i > 100 -> \"big\";\n    case String s -> \"str\";\n    default -> \"other\";\n};\nSystem.out.println(r);",
+              "error": "error: this case label is dominated by a preceding case label",
+              "lines": [3, 4],
+              "fixes": [
+                "Swap lines 3 and 4",
+                "Change line 3 to `case Number n -> \"int\";`",
+                "Delete line 4",
+                "Change line 4 to `case Integer j when j > 100 -> \"big\";`"
               ],
-              "answer": 1,
+              "answer": 0,
               "hint": "Can the second case ever be reached?",
               "explanation": "An unguarded `case Integer i` matches **every** Integer, so a later `case Integer i when ...` could never run. The compiler rejects it as *dominated*. Put more specific cases first."
             },
             {
-              "type": "text",
+              "type": "output",
               "id": "q-sequenced",
-              "prompt": "What does this print on Java 21?\n\n```java\nList<String> list = new ArrayList<>(List.of(\"a\", \"b\", \"c\"));\nSystem.out.println(list.getLast() + list.reversed().getFirst() + list.getFirst());\n```",
-              "accept": [
-                "cca"
-              ],
+              "prompt": "What does this print on Java 21?",
+              "language": "java",
+              "code": "List<String> list = new ArrayList<>(List.of(\"a\", \"b\", \"c\"));\nSystem.out.println(list.getLast() + list.reversed().getFirst() + list.getFirst());",
+              "output": "cca",
               "explanation": "`getLast()` is `c`; the first element of the reversed view is also `c`; `getFirst()` is `a`. Concatenated: **cca**."
             },
             {
@@ -894,6 +1157,24 @@
               "explanation": "A compact source file still needs a `main` **method** with a return type, but it can be an instance method with no parameters and no enclosing class. Java doesn't allow bare top-level statements."
             },
             {
+              "type": "bug",
+              "id": "q-bug-compact-println",
+              "prompt": "This compact source file, `Hello.java`, should print `Hi Ada` and then `Hi Linus` on Java 25, but it doesn't compile. Click the line with the bug.",
+              "language": "java",
+              "code": "void main() {\n    var names = List.of(\"Ada\", \"Linus\");\n    for (var n : names) {\n        println(\"Hi \" + n);\n    }\n}",
+              "error": "error: cannot find symbol\n  symbol:   method println(String)\n  location: class Hello",
+              "lines": [4],
+              "fixes": [
+                "Change line 4 to `IO.println(\"Hi \" + n);`",
+                "Add `import module java.base;` above line 1",
+                "Change line 1 to `static void main() {`",
+                "Change line 4 to `System.println(\"Hi \" + n);`"
+              ],
+              "answer": 0,
+              "hint": "A compact source file imports classes like `List` automatically. Does that include methods?",
+              "explanation": "A compact source file automatically imports the **classes** of `java.base` — that's why `List` works — but not a bare `println` method. Console output goes through the `IO` class: `IO.println(...)`. `import module java.base;` imports the same classes again, not methods; making `main` static changes nothing about name lookup; and `println` lives on `System.out`, not `System`. (Early previews in Java 23–24 did allow a bare `println`; the final Java 25 version dropped it.)"
+            },
+            {
               "type": "mcq",
               "id": "q-flexible-ctor",
               "prompt": "`Shape` has a constructor `Shape(String name)`. From which version does this compile **without preview flags**?\n\n```java\nclass Square extends Shape {\n    Square(double side) {\n        if (side <= 0) throw new IllegalArgumentException(\"side\");\n        super(\"square\");\n    }\n}\n```",
@@ -907,12 +1188,12 @@
               "explanation": "Before flexible constructor bodies, `super(...)` had to be the very first statement. The feature was previewed in 22–24 and became final in **25**."
             },
             {
-              "type": "text",
+              "type": "output",
               "id": "q-compact-print",
-              "prompt": "This is a complete Java 25 compact source file. What does it print?\n\n```java\nvoid main() {\n    var words = List.of(\"modern\", \"java\");\n    IO.println(words.reversed().getFirst().toUpperCase());\n}\n```",
-              "accept": [
-                "JAVA"
-              ],
+              "prompt": "This is a complete Java 25 compact source file. What does it print?",
+              "language": "java",
+              "code": "void main() {\n    var words = List.of(\"modern\", \"java\");\n    IO.println(words.reversed().getFirst().toUpperCase());\n}",
+              "output": "JAVA",
               "explanation": "`List` needs no import in a compact source file. `reversed()` (Java 21) gives `[java, modern]`, `getFirst()` is `\"java\"`, uppercased: **JAVA**."
             }
           ]
@@ -948,14 +1229,18 @@
               "explanation": "Records became final in **16** — a common reason for a 16+ requirement. Lambdas are 8, `var` is 10 (both work on 16 but don't require it), and virtual threads need 21."
             },
             {
-              "type": "mcq",
+              "type": "bug",
               "id": "q-java9-compat",
-              "prompt": "A codebase must still compile on **Java 9**. Which line has to change?",
-              "choices": [
-                "`var x = 5;`",
-                "`List<Integer> xs = List.of(1, 2);`",
-                "`Optional<String> o = Optional.ofNullable(s);`",
-                "`Stream.iterate(1, n -> n < 100, n -> n * 2)`"
+              "prompt": "This codebase must still compile on **Java 9** (`javac --release 9`) and print `14 false`. Click the line that has to change.",
+              "language": "java",
+              "code": "var x = 5;\nList<Integer> xs = List.of(1, 2);\nOptional<String> o = Optional.ofNullable(null);\nlong n = Stream.iterate(1, i -> i < 100, i -> i * 2).count();\nSystem.out.println(x + xs.size() + n + \" \" + o.isPresent());",
+              "error": "warning: as of release 10, 'var' is a restricted type name and cannot be used for type declarations or as the element type of an array\nerror: cannot find symbol\n  symbol:   class var",
+              "lines": [1],
+              "fixes": [
+                "Change line 1 to `int x = 5;`",
+                "Change line 2 to `List<Integer> xs = Arrays.asList(1, 2);`",
+                "Change line 4 to `long n = Stream.iterate(1, i -> i * 2).limit(7).count();`",
+                "Change line 1 to `final var x = 5;`"
               ],
               "answer": 0,
               "explanation": "`var` arrived in **10**. `List.of` and the three-argument `Stream.iterate` are Java 9; `Optional.ofNullable` is Java 8."
@@ -1135,16 +1420,12 @@
               "explanation": "The two futures run independently; `thenCombine` waits for both and applies `Integer::sum` to their results: 20 + 5 = **25**."
             },
             {
-              "type": "mcq",
+              "type": "output",
               "id": "q-exceptionally",
-              "prompt": "What does this print?\n\n```java\nint result = CompletableFuture\n    .supplyAsync(() -> Integer.parseInt(\"oops\"))\n    .thenApply(n -> n * 2)\n    .exceptionally(ex -> -1)\n    .join();\nSystem.out.println(result);\n```",
-              "choices": [
-                "`-1`",
-                "`-2`",
-                "It throws a `NumberFormatException`",
-                "`0`"
-              ],
-              "answer": 0,
+              "prompt": "What does this print?",
+              "language": "java",
+              "code": "int result = CompletableFuture\n    .supplyAsync(() -> Integer.parseInt(\"oops\"))\n    .thenApply(n -> n * 2)\n    .exceptionally(ex -> -1)\n    .join();\nSystem.out.println(result);",
+              "output": "-1",
               "explanation": "`parseInt(\"oops\")` fails, so the future completes exceptionally. `thenApply` is **skipped** for failed stages, and `exceptionally` replaces the failure with -1."
             },
             {

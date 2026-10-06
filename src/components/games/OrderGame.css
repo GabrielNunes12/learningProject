@@ -1,0 +1,86 @@
+/* "Put these in order" mini-game */
+.og-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 18px; }
+.og-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); font-size: 0.82rem; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.og-chip strong { color: var(--text); }
+.og-score { background: var(--warn-bg); }
+.og-tip { margin-left: auto; }
+
+.og-list { position: relative; list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 10px; }
+
+.og-card {
+  position: relative; display: flex; align-items: center; gap: 10px;
+  padding: 10px 10px 10px 8px; min-height: 56px;
+  background: var(--surface); color: var(--text);
+  border: 2px solid var(--border); border-bottom-width: 4px; border-radius: 14px;
+  cursor: grab; user-select: none; -webkit-user-select: none; touch-action: manipulation;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+.og-card:hover:not(.locked) { border-color: color-mix(in srgb, var(--accent) 55%, var(--border)); }
+.og-card:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 55%, transparent); outline-offset: 2px; }
+.og-card.locked { cursor: default; }
+/* Neighbours glide aside while a card is being dragged; the dragged card itself follows the pointer exactly. */
+.og-list.dragging .og-card { transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.15s; }
+.og-list.dragging .og-card.lifted { transition: none; }
+.og-card.lifted {
+  z-index: 3; cursor: grabbing;
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+  box-shadow: var(--shadow-lg);
+}
+
+.og-handle { flex-shrink: 0; display: grid; place-items: center; width: 28px; align-self: stretch; margin: -10px 0 -10px -8px; padding-left: 8px; color: var(--muted); touch-action: none; cursor: grab; }
+.og-handle svg { fill: currentColor; }
+.og-card.locked .og-handle { opacity: 0.35; cursor: default; }
+
+.og-pos {
+  flex-shrink: 0; width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center;
+  font-size: 0.8rem; font-weight: 800; color: var(--muted); border: 1.5px solid var(--border);
+  font-variant-numeric: tabular-nums;
+}
+.og-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; font-size: 1rem; line-height: 1.4; overflow-wrap: anywhere; }
+.og-mark { font-size: 0.76rem; font-weight: 750; letter-spacing: 0.01em; }
+.og-mark.right { color: var(--good); }
+.og-mark.wrong { color: var(--bad); }
+
+.og-nudges { flex-shrink: 0; display: flex; gap: 4px; }
+.og-nudge {
+  width: 34px; height: 34px; display: grid; place-items: center; padding: 0;
+  border: 1.5px solid var(--border); border-radius: 9px; background: var(--surface-2); color: var(--text-2);
+  font: inherit; font-weight: 800; font-size: 0.95rem; cursor: pointer;
+}
+.og-nudge:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.og-nudge:disabled { opacity: 0.3; cursor: default; }
+
+/* Marks after a check: a coloured edge plus the text label. */
+.og-card.right { border-color: var(--good-border); border-left: 6px solid var(--good); }
+.og-card.wrong { border-color: var(--bad-border); border-left: 6px solid var(--bad); background: color-mix(in srgb, var(--bad-bg) 55%, var(--surface)); }
+.og-card.right .og-pos { background: var(--good); border-color: var(--good); color: #fff; }
+.og-card.wrong .og-pos { background: var(--bad); border-color: var(--bad); color: #fff; }
+
+/* Solved: every card turns green and settles in a quick wave. */
+.og-list.solved .og-card { background: var(--good-bg); border-color: var(--good); animation: og-settle 0.5s cubic-bezier(0.3, 1.4, 0.5, 1) both; animation-delay: calc(var(--i, 0) * 60ms); }
+@keyframes og-settle {
+  0% { transform: translateY(0) scale(1); }
+  40% { transform: translateY(-5px) scale(1.025); box-shadow: 0 8px 22px color-mix(in srgb, var(--good) 25%, transparent); }
+  100% { transform: translateY(0) scale(1); }
+}
+.og-list.solved .og-pos { animation: og-pop 0.35s ease both; animation-delay: calc(var(--i, 0) * 60ms + 120ms); }
+@keyframes og-pop { 0% { transform: scale(0.4); } 70% { transform: scale(1.2); } 100% { transform: scale(1); } }
+
+/* Revealed answer: the cards slide into the correct order with an accent edge. */
+.og-list.answer .og-card { border-left: 6px solid var(--accent); }
+.og-list.answer .og-pos { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 50%, var(--border)); }
+
+.og-result { margin: 14px 0 0; padding: 10px 14px; border-radius: 12px; background: var(--good-bg); border: 1px solid var(--good-border); color: var(--text); font-size: 0.95rem; animation: rise 0.3s ease; }
+
+@media (max-width: 480px) {
+  .og-tip { display: none; }
+  .og-card { gap: 8px; }
+  .og-nudge { width: 32px; height: 32px; }
+  .og-body { font-size: 0.95rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .og-list.dragging .og-card, .og-card { transition: none; }
+  .og-list.solved .og-card, .og-list.solved .og-pos { animation: none; }
+}

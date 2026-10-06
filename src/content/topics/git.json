@@ -77,6 +77,22 @@
               "explanation": "A commit only advances the branch HEAD is attached to, here `bugfix`. `main` still points at `E`. Pushing is about sharing with a remote and has nothing to do with how your local pointers move."
             },
             {
+              "type": "sim",
+              "sim": "git",
+              "title": "Move the pointers yourself",
+              "body": "This repo has one commit on `main`. Type real commands in the terminal and watch the graph: circles are commits, pills are branches, and `HEAD → main` marks where you are.\n\n1. Run `git branch feature`. A new label appears, but does HEAD move?\n2. Run `git commit -m \"Add README\"` twice. Which pointer moves with each commit, and which one stays behind?\n\n(There are no files here: every `git commit` simply saves a new snapshot.)",
+              "goal": {
+                "text": "Create a branch called feature with git branch, then make 2 commits.",
+                "head": "main",
+                "branches": [
+                  "feature"
+                ],
+                "minCommits": {
+                  "main": 3
+                }
+              }
+            },
+            {
               "type": "explain",
               "title": "Naming commits relative to HEAD",
               "body": "You can name a commit relative to another one:\n\n- `HEAD~1` (or `HEAD~`): the parent of the current commit\n- `HEAD~3`: three commits back, following parent links\n- `main~2`: two commits before the tip of `main`\n\nYou'll use these with commands like `git show HEAD~1` and, later, to undo commits. A short hash such as `3f9a2c1` works anywhere a commit is expected, too."
@@ -281,6 +297,22 @@
               "explanation": "`-c` means create. `git branch dark-mode` creates the branch but leaves you on `main`, so your next commit lands on `main`. Plain `git switch dark-mode` fails because the branch doesn't exist yet, and `git branch -c` copies the current branch without switching. The older equivalent is `git checkout -b dark-mode`."
             },
             {
+              "type": "sim",
+              "sim": "git",
+              "title": "Work on a branch",
+              "body": "Start the dark-mode work without touching `main`:\n\n1. Create the branch and switch to it in one go: `git switch -c dark-mode`.\n2. Make two commits. Only `dark-mode` moves; `main` stays put.\n3. Switch back with `git switch main` and run `git log --oneline`. Your new commits aren't in `main`'s history yet.\n\nThe older spellings work too: `git checkout -b dark-mode` and `git checkout main`.",
+              "goal": {
+                "text": "Make 2 commits on a new branch dark-mode, then switch back to main.",
+                "head": "main",
+                "branches": [
+                  "dark-mode"
+                ],
+                "minCommits": {
+                  "dark-mode": 3
+                }
+              }
+            },
+            {
               "type": "example",
               "title": "Switching with uncommitted changes",
               "problem": "On `feature` you've edited `cfg.txt` but not committed. You run `git switch main` and get:\n\n```\nerror: Your local changes to the following files would be overwritten by checkout:\n        cfg.txt\nPlease commit your changes or stash them before you switch branches.\nAborting\n```\n\nWhat's going on, and what are your options?",
@@ -355,6 +387,31 @@
               "explanation": "`main` hasn't moved since `fix` branched off, so `main`'s commit is an ancestor of `fix`. Git only has to slide the `main` pointer forward: a fast-forward. The commits keep their hashes because nothing is recreated."
             },
             {
+              "type": "sim",
+              "sim": "git",
+              "title": "Try a fast-forward",
+              "setup": [
+                "git commit -m \"Add homepage\""
+              ],
+              "body": "`main` has two commits. Create a branch `fix`, make two commits on it, then switch to `main` and run `git merge fix`.\n\nWatch what the merge prints and what happens to the `main` label. Did Git create a new commit?",
+              "goal": {
+                "text": "Create fix, make 2 commits on it, then merge it into main while you're on main.",
+                "head": "main",
+                "branches": [
+                  "fix"
+                ],
+                "merged": [
+                  {
+                    "from": "fix",
+                    "into": "main"
+                  }
+                ],
+                "minCommits": {
+                  "main": 4
+                }
+              }
+            },
+            {
               "type": "example",
               "title": "Counting commits after a real merge",
               "problem": "`main` has commits A and B. You create `feature` from B and commit C and D on it. Back on `main` you also commit a quick fix, E. Then you run `git switch main` and `git merge feature`. What does history look like, and how many lines does `git log --oneline` print?",
@@ -386,6 +443,33 @@
               ],
               "answer": 1,
               "explanation": "`git merge X` always updates the **current** branch by bringing X's commits into it. Here that pulls `main`'s latest work into `feature`, which is a common way to keep a feature branch up to date. `main` isn't touched."
+            },
+            {
+              "type": "sim",
+              "sim": "git",
+              "title": "Make a merge commit",
+              "setup": [
+                "git commit -m \"Add homepage\"",
+                "git switch -c feature",
+                "git commit -m \"Add login form\"",
+                "git commit -m \"Validate password\"",
+                "git switch main",
+                "git commit -m \"Fix typo in README\""
+              ],
+              "body": "This is the history from the example above: `feature` has two new commits, and `main` has moved on since `feature` branched off, so a fast-forward is impossible.\n\nMerge `feature` into `main` and look for the new commit with **two parents**. Then run `git log --oneline` and count the lines.\n\nCurious? Press **Start over**, then run `git merge main` while you're on `feature`. Which pointer moves this time?",
+              "goal": {
+                "text": "Merge feature into main, so main contains every commit.",
+                "head": "main",
+                "merged": [
+                  {
+                    "from": "feature",
+                    "into": "main"
+                  }
+                ],
+                "minCommits": {
+                  "main": 6
+                }
+              }
             }
           ]
         },
@@ -772,6 +856,22 @@
               ],
               "hint": "After a fetch, the freshest copy of the remote's `main` lives in a remote-tracking branch.",
               "explanation": "`git fetch` updates `origin/main`, and `git merge origin/main` merges that into your current branch. Your local `main` stays wherever it was."
+            },
+            {
+              "type": "order",
+              "id": "q-order-github-flow",
+              "prompt": "You're fixing a typo on the pricing page. Put the GitHub flow in order, from a fresh start to merged.",
+              "items": [
+                "`git switch main`, then `git pull`",
+                "`git switch -c fix-pricing-typo`",
+                "Edit the page, then `git add` and `git commit`",
+                "`git push -u origin fix-pricing-typo`",
+                "Open a pull request on GitHub",
+                "Commit and push fixes for the review comments",
+                "Merge on GitHub and delete the branch"
+              ],
+              "hint": "GitHub can only show a pull request for a branch it has, and reviewers comment on an open PR.",
+              "explanation": "Update `main` first, so the branch starts from the latest code. Create the branch **before** committing, or the commit lands on `main`. Push, because GitHub can only open a PR for a branch it has. Review fixes are new commits on the same branch, and pushing them updates the open PR. Merging and deleting the branch come last, once the PR is approved and the checks pass. Then `git switch main` and `git pull` bring the merged work to your machine."
             }
           ]
         }

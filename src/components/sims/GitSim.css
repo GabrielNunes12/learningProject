@@ -1,0 +1,88 @@
+/* Git playground: commit graph + terminal. Uses the app's tokens only, so dark mode follows automatically. */
+.gitsim {
+  --gs-lane-0: var(--accent);
+  --gs-lane-1: var(--tok-number);
+  --gs-lane-2: var(--tok-type);
+  --gs-lane-3: var(--tok-string);
+  --gs-lane-4: var(--tok-annotation);
+  --gs-lane-5: var(--tok-keyword);
+  display: flex; flex-direction: column; gap: 12px; min-width: 0;
+}
+
+/* ---------- graph ---------- */
+.gs-graph {
+  overflow-x: auto; overflow-y: hidden; border-radius: var(--radius-sm); background: var(--surface-2);
+  border: 1px solid var(--border); padding: 4px 0; min-height: 96px; scrollbar-width: thin;
+}
+.gs-graph svg { display: block; margin: 0 auto 0 0; font-family: var(--mono); }
+.gs-edge { fill: none; stroke-width: 3; stroke-linecap: round; animation: gs-fade 0.35s ease-out both; }
+.gs-node { transition: transform 0.35s cubic-bezier(0.3, 0.8, 0.3, 1); }
+.gs-node-pop { transform-box: fill-box; transform-origin: center; animation: gs-pop 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.3) both; }
+.gs-dot { fill: var(--surface); stroke-width: 3.5; }
+.gs-head-ring { fill: none; stroke-width: 2; stroke-dasharray: 3 3; opacity: 0.85; }
+.gs-hash { font-size: 10.5px; fill: var(--muted); }
+.gs-row-text { font-size: 12px; fill: var(--text); }
+.gs-row-text .gs-hash { font-size: 12px; }
+.gs-pill { transition: transform 0.35s cubic-bezier(0.3, 0.8, 0.3, 1); }
+.gs-pill rect { fill: var(--surface); stroke-width: 1.5; }
+.gs-pill text { font-size: 11.5px; font-weight: 700; fill: var(--text); }
+.gs-pill.head text { fill: var(--surface); }
+
+@keyframes gs-pop {
+  0% { transform: scale(0.2); opacity: 0; }
+  70% { transform: scale(1.18); opacity: 1; }
+  100% { transform: none; }
+}
+@keyframes gs-fade { from { opacity: 0; } }
+
+/* ---------- terminal ---------- */
+.gs-term {
+  border-radius: var(--radius-sm); border: 2px solid var(--border); background: var(--code-bg);
+  font-family: var(--mono); font-size: 0.84rem; overflow: hidden;
+}
+.gs-term-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 6px 4px 12px;
+  border-bottom: 1px solid var(--border); background: var(--surface-2); font-family: var(--font);
+}
+.gs-term-title { font-size: 0.75rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.gs-screen {
+  max-height: 220px; min-height: 64px; overflow-y: auto; padding: 10px 12px; line-height: 1.5;
+  white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.gs-screen:focus-visible { outline-offset: -3px; }
+.gs-entry + .gs-entry { margin-top: 6px; }
+.gs-cmd { color: var(--text); font-weight: 600; }
+.gs-prompt { color: var(--accent); font-weight: 700; white-space: nowrap; }
+.gs-line.out { color: var(--text-2); }
+.gs-line.err { color: var(--bad); }
+.gs-line.hint { color: var(--muted); font-style: italic; }
+.gs-entry:last-child { animation: gs-fade 0.25s ease-out both; }
+
+.gs-input-row { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 12px; border-top: 1px solid var(--border); background: var(--surface); }
+.gs-input-label { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; cursor: text; }
+.gs-input {
+  flex: 1; min-width: 0; border: 0; background: transparent; color: var(--text); font: inherit;
+  padding: 6px 0; outline: none;
+}
+@media (pointer: coarse) { .gs-input { font-size: 16px; } } /* 16px: no zoom-on-focus on iOS */
+.gs-input::placeholder { color: var(--muted); opacity: 0.7; }
+.gs-input-row:focus-within { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent); }
+
+/* ---------- suggestion chips ---------- */
+.gs-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.gs-chip {
+  font-family: var(--mono); font-size: 0.8rem; padding: 6px 10px; border-radius: 999px; cursor: pointer;
+  background: var(--surface); color: var(--text-2); border: 1.5px solid var(--border); border-bottom-width: 3px;
+}
+.gs-chip:hover { border-color: color-mix(in srgb, var(--accent) 50%, var(--border)); color: var(--text); }
+.gs-chip:active { transform: translateY(1px); }
+
+@media (max-width: 480px) {
+  .gs-term { font-size: 0.8rem; }
+  .gs-screen { max-height: 180px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gs-node, .gs-pill { transition: none; }
+  .gs-node-pop, .gs-edge, .gs-entry:last-child { animation: none; }
+}

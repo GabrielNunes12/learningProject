@@ -52,6 +52,24 @@
               "explanation": "A self-checking test encodes the expected result, so the runner can decide pass/fail on its own. Printing makes a *human* the assertion — they get bored, skim, and miss the one wrong number."
             },
             {
+              "type": "bug",
+              "id": "q-bug-print-not-assert",
+              "prompt": "`discount` is broken: VIPs get 2% off instead of 20%. The test below should catch that, but the suite reports `1 passed`. Click the line in the **test** that lets the bug slip through.",
+              "language": "python",
+              "code": "def discount(price, tier):\n    if tier == \"VIP\":\n        return price * 0.98\n    return price\n\ndef test_vip_gets_20_percent_off():\n    print(discount(100, \"VIP\"))",
+              "error": "1 passed\n(discount(100, \"VIP\") actually returns 98.0)",
+              "lines": [7],
+              "fixes": [
+                "Change line 7 to `assert discount(100, \"VIP\") == 80`",
+                "Change line 7 to `assert discount(100, \"VIP\")`",
+                "Change line 7 to `assert discount(100, \"VIP\") is not None`",
+                "Change line 7 to `print(discount(100, \"VIP\") == 80)`"
+              ],
+              "answer": 0,
+              "hint": "What does the test runner do with printed output?",
+              "explanation": "The test only **prints** the result, so it can never fail: it isn't self-checking. With `assert discount(100, \"VIP\") == 80` the runner compares for you and reports `assert 98.0 == 80`. `assert discount(...)` and `is not None` pass for 98.0 (any non-zero number counts as true), and printing `False` still leaves the decision to a human who isn't looking."
+            },
+            {
               "type": "mcq",
               "id": "q-not-unit",
               "prompt": "A test calls a real payment API over the internet, takes 4 seconds, and sometimes fails when the Wi-Fi drops. Which unit-test properties does it break?",
@@ -115,6 +133,81 @@
               "answer": 2,
               "explanation": "Lines 1–2 build the situation (Arrange). Line 3 calls the behavior the test is about, `total()` (Act). Line 4 checks it (Assert). Adding the item is *setup* here, because the test is about the total, not about adding.",
               "hint": "What behavior does the test name say it checks?"
+            },
+            {
+              "type": "trace",
+              "id": "q-trace-aaa-cart",
+              "prompt": "pytest runs this test. Step through its three parts and predict the values when asked.",
+              "language": "python",
+              "code": "def cart_total(cart, coupon):\n    return sum(cart) - coupon\n\ndef test_coupon_is_subtracted():\n    cart = []\n    cart.append(20)\n    cart.append(15)\n    coupon = 5\n\n    total = cart_total(cart, coupon)\n\n    assert total == 30",
+              "frames": [
+                {
+                  "line": 5,
+                  "vars": {
+                    "cart": "[]"
+                  },
+                  "note": "**Arrange:** build the inputs."
+                },
+                {
+                  "line": 6,
+                  "vars": {
+                    "cart": "[20]"
+                  }
+                },
+                {
+                  "line": 7,
+                  "vars": {
+                    "cart": "[20, 15]"
+                  },
+                  "ask": "cart"
+                },
+                {
+                  "line": 8,
+                  "vars": {
+                    "cart": "[20, 15]",
+                    "coupon": "5"
+                  }
+                },
+                {
+                  "line": 10,
+                  "vars": {
+                    "cart": "[20, 15]",
+                    "coupon": "5",
+                    "total": "30"
+                  },
+                  "note": "**Act:** one call to the code under test.",
+                  "ask": "total"
+                },
+                {
+                  "line": 12,
+                  "vars": {
+                    "cart": "[20, 15]",
+                    "coupon": "5",
+                    "total": "30"
+                  },
+                  "note": "**Assert:** `30 == 30`, so the test passes silently."
+                }
+              ],
+              "explanation": "Lines 5–8 **arrange** the inputs, line 10 is the single **act** (the call under test), and line 12 **asserts** the outcome: 20 + 15 − 5 = 30. A passing `assert` does nothing at all; a failing one stops the test with an `AssertionError`.",
+              "hint": "The cart holds 20 and 15; the coupon takes 5 off the sum."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-act-too-early",
+              "prompt": "`Cart.total()` works correctly, yet this test fails. It should pass: a book priced 20 plus 10% tax totals 22. Click the line with the bug.",
+              "language": "python",
+              "code": "def test_cart_total_includes_tax():\n    cart = Cart(tax_rate=0.10)\n    total = cart.total()\n    cart.add(Item(\"book\", price=20))\n    assert total == pytest.approx(22)",
+              "error": "FAILED test_cart_total_includes_tax - assert 0.0 == 22 ± 2.2e-05\n1 failed",
+              "lines": [3, 4],
+              "fixes": [
+                "Move line 3 below line 4",
+                "Change line 2 to `cart = Cart(tax_rate=10)`",
+                "Change line 4 to `cart.add(Item(\"book\", price=22))`",
+                "Add `cart.total()` above line 5"
+              ],
+              "answer": 0,
+              "hint": "Label each line Arrange, Act or Assert. Are they in that order?",
+              "explanation": "The Act (`cart.total()`) runs before the Arrange is finished, so it totals an **empty** cart and stores 0.0. Adding the book afterwards doesn't change the number already in `total`. Moving the Act below the `add` gives Arrange → Act → Assert and a total of 22. Changing the tax rate or the price still totals an empty cart, and calling `cart.total()` again without storing it leaves `total` at 0.0."
             },
             {
               "type": "explain",
@@ -223,6 +316,24 @@
               "explanation": "Each boundary deserves a test on both sides: 7 (invalid) / 8 (valid) at the bottom, 64 (valid) / **65** (invalid) at the top. A `<= 64` written as `< 65` is fine; one written as `<= 65` is caught only by 65."
             },
             {
+              "type": "bug",
+              "id": "q-bug-upper-boundary",
+              "prompt": "Passwords must be 8 to 64 characters long (inclusive). All three tests pass, but users with a 64-character password are rejected. Click the line with the bug.",
+              "language": "python",
+              "code": "def is_valid_password(pw):\n    return 8 <= len(pw) < 64\n\ndef test_typical_length_is_valid():\n    assert is_valid_password(\"a\" * 12)\n\ndef test_eight_characters_is_valid():\n    assert is_valid_password(\"a\" * 8)\n\ndef test_seven_characters_is_too_short():\n    assert not is_valid_password(\"a\" * 7)",
+              "error": "3 passed\n(but is_valid_password(\"a\" * 64) returns False)",
+              "lines": [2],
+              "fixes": [
+                "Change line 2 to `return 8 <= len(pw) <= 64`",
+                "Change line 2 to `return 8 < len(pw) <= 64`",
+                "Change line 2 to `return 7 <= len(pw) < 65`",
+                "Change line 2 to `return 8 <= len(pw) <= 65`"
+              ],
+              "answer": 0,
+              "hint": "Which boundary do the tests never touch?",
+              "explanation": "`< 64` excludes 64 itself, the classic off-by-one. The tests only probe the **lower** boundary (7 and 8) and a typical value, so the upper one goes unchecked. `<= 64` accepts 8 to 64 exactly. `8 < len(pw)` now rejects 8, `7 <= ...` accepts 7, and `<= 65` accepts 65. Pin it down by adding tests for 64 (valid) and 65 (invalid)."
+            },
+            {
               "type": "explain",
               "title": "Test behavior, not implementation",
               "body": "Test through the **public API** — the methods real callers use — and check **observable results**: return values, state you can read back, exceptions thrown, messages sent to collaborators.\n\nDon't call private helpers directly, and don't assert *how* the result was computed (which internal list was used, how many times a helper ran). Such tests break on every refactor even though nothing is wrong, and they make people afraid to improve the code."
@@ -266,6 +377,24 @@
               ],
               "answer": 3,
               "explanation": "`\"hello world\"` is a non-None string of length 11 — exactly like `\"hello-world\"`. All three weak assertions pass with the bug. Only comparing to the exact expected value catches it."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-expected-from-code",
+              "prompt": "`total_with_tax(100, 0.2)` should return 120, but it returns 100.2. The test below still passes. Click the line in the **test** that lets the bug slip through.",
+              "language": "python",
+              "code": "def total_with_tax(price, rate):\n    return price + rate\n\ndef test_total_with_tax():\n    expected = total_with_tax(100, 0.2)\n    assert total_with_tax(100, 0.2) == expected",
+              "error": "1 passed\n(total_with_tax(100, 0.2) actually returns 100.2)",
+              "lines": [5],
+              "fixes": [
+                "Change line 5 to `expected = 120`",
+                "Change line 6 to `assert total_with_tax(100, 0.2) == pytest.approx(expected)`",
+                "Change line 5 to `expected = 100 + 0.2`",
+                "Change line 6 to `assert total_with_tax(100, 0.2) > 100`"
+              ],
+              "answer": 0,
+              "hint": "Where does the expected value come from?",
+              "explanation": "The expected value is computed **by the code under test**, so the test compares the function with itself and passes whatever it returns. Write the exact expected value by hand: with `expected = 120` the test fails with `assert 100.2 == 120`, as it should. `approx` still compares the function with itself, `100 + 0.2` copies the bug into the test, and `> 100` is a weak assertion that 100.2 satisfies."
             },
             {
               "type": "explain",
@@ -399,6 +528,24 @@
               "answer": 3,
               "explanation": "The JUnit 5 engine only looks for Jupiter annotations; a JUnit 4 `@Test` is silently ignored unless the \"vintage\" engine is installed. A wrong auto-import is an easy way to get a test that never runs. Package-private methods are fine in JUnit 5, and `@DisplayName` is optional.",
               "hint": "Check the import line."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-csv-row",
+              "prompt": "`Years.isLeapYear` follows the real calendar rules and is correct, yet this parameterized test fails. Click the line with the bug.",
+              "language": "java",
+              "code": "@ParameterizedTest\n@CsvSource({\n    \"2024, true\",\n    \"1900, false\",\n    \"2000, false\"\n})\nvoid leapYears(int year, boolean expected) {\n    assertEquals(expected, Years.isLeapYear(year));\n}",
+              "error": "2 tests successful\n1 tests failed\norg.opentest4j.AssertionFailedError: expected: <false> but was: <true>",
+              "lines": [5],
+              "fixes": [
+                "Change line 5 to `\"2000, true\"`",
+                "Change line 8 to `assertEquals(Years.isLeapYear(year), expected);`",
+                "Change line 7 to `void leapYears(int year, Boolean expected) {`",
+                "Change line 4 to `\"1900, true\",`"
+              ],
+              "answer": 0,
+              "hint": "Century years are leap years only when divisible by 400.",
+              "explanation": "The code is right; the **test data** is wrong. 2000 is divisible by 400, so it is a leap year: the row should read `\"2000, true\"`. The failure says the test expected `false` and the code returned `true`, and only two rows expect `false`. 1900 really isn't a leap year (divisible by 100 but not 400), so changing that row adds a second failure. Swapping the `assertEquals` arguments only flips the message, and `Boolean` instead of `boolean` changes nothing."
             }
           ]
         },
@@ -444,6 +591,24 @@
               ],
               "answer": 1,
               "explanation": "The default fixture scope is `\"function\"`: one fresh value per test. Wider scopes (`scope=\"module\"`, `\"session\"`) share one value — useful for expensive read-only setup, risky for anything a test modifies."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-fixture-scope",
+              "prompt": "Each test should get its own fresh cart, so both tests should pass. Instead the second one fails. Click the line with the bug.",
+              "language": "python",
+              "code": "@pytest.fixture(scope=\"module\")\ndef cart():\n    return Cart(tax_rate=0.10)\n\ndef test_total_includes_tax(cart):\n    cart.add(Item(\"book\", price=20))\n    assert cart.total() == pytest.approx(22)\n\ndef test_empty_cart_total_is_zero(cart):\n    assert cart.total() == 0",
+              "error": "FAILED test_empty_cart_total_is_zero - assert 22.0 == 0\n1 failed, 1 passed",
+              "lines": [1],
+              "fixes": [
+                "Change line 1 to `@pytest.fixture`",
+                "Change line 1 to `@pytest.fixture(scope=\"session\")`",
+                "Change line 3 to `yield Cart(tax_rate=0.10)`",
+                "Change line 10 to `assert cart.total() == pytest.approx(0)`"
+              ],
+              "answer": 0,
+              "hint": "How often does a `scope=\"module\"` fixture run?",
+              "explanation": "`scope=\"module\"` builds **one** cart for the whole file, so the second test sees the book the first test added. The default scope (`\"function\"`) runs the fixture again for every test. `\"session\"` shares the cart even more widely, `yield` only adds a place for cleanup (the cart is still shared), and `approx(0)` can't turn 22 into 0."
             },
             {
               "type": "explain",
@@ -631,6 +796,71 @@
               ],
               "answer": 1,
               "explanation": "The dependency is hard-wired. Inject it instead — `WeatherAlert(weather_client)` with a `get_temp(city)` method — and the test can pass a stub returning 36 or 35 to check both sides of the boundary, instantly and offline."
+            },
+            {
+              "type": "buckets",
+              "id": "q-buckets-doubles",
+              "prompt": "Which kind of test double is each one?",
+              "buckets": [
+                "Stub",
+                "Mock",
+                "Fake",
+                "Spy"
+              ],
+              "items": [
+                {
+                  "text": "`findUser(42)` always returns a hard-coded Ada",
+                  "bucket": 0
+                },
+                {
+                  "text": "Returns an exchange rate of 1.1, whatever currency you ask for",
+                  "bucket": 0
+                },
+                {
+                  "text": "Afterwards, the test verifies `send(\"ada@example.com\", \"Welcome!\")` was called once",
+                  "bucket": 1
+                },
+                {
+                  "text": "Does nothing itself; the test checks that `charge(30)` was called",
+                  "bucket": 1
+                },
+                {
+                  "text": "An `InMemoryUserRepository` that keeps saved users in a `HashMap`",
+                  "bucket": 2
+                },
+                {
+                  "text": "A working in-memory queue standing in for the real message broker",
+                  "bucket": 2
+                },
+                {
+                  "text": "Wraps a real `ArrayList`: `add` really adds, and every call is recorded",
+                  "bucket": 3
+                },
+                {
+                  "text": "The real `PriceCalculator` runs, and the test also checks `round()` was called twice",
+                  "bucket": 3
+                }
+              ],
+              "hint": "Stub: canned answers in. Mock: calls out, verified. Fake: a lightweight version that really works. Spy: the real object, with its calls recorded.",
+              "explanation": "**Stubs** only feed canned data *in*: a fixed user, a fixed rate. **Mocks** exist so their calls can be *verified*; their own behavior doesn't matter. **Fakes** really work, just lightly: a `HashMap` instead of a database, an in-memory queue instead of a broker. **Spies** wrap a real object, so real methods run and calls are recorded too. Choose by what the test needs: data in → stub, an outgoing call to check → mock, write-then-read behavior → fake."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-ignored-injection",
+              "prompt": "`SalesRepository` talks to the production database, which tests can't reach. This test passes a stub instead, so it should pass without a database, but it crashes. Click the line with the bug.",
+              "language": "python",
+              "code": "class ReportService:\n    def __init__(self, repo):\n        self.repo = SalesRepository()\n\n    def total_sales(self):\n        return sum(self.repo.monthly_sales())\n\nclass StubSalesRepository:\n    def monthly_sales(self):\n        return [100, 250, 50]\n\ndef test_total_sales_adds_up_months():\n    service = ReportService(StubSalesRepository())\n    assert service.total_sales() == 400",
+              "error": "FAILED test_total_sales_adds_up_months - ConnectionError: could not connect to sales-db:5432\n1 failed",
+              "lines": [3],
+              "fixes": [
+                "Change line 3 to `self.repo = repo`",
+                "Change line 13 to `service = ReportService(repo=StubSalesRepository())`",
+                "Change line 13 to `service = ReportService(StubSalesRepository)`",
+                "Change line 2 to `def __init__(self, repo=None):`"
+              ],
+              "answer": 0,
+              "hint": "The constructor receives a `repo`. Does it use it?",
+              "explanation": "The constructor accepts `repo` but then ignores it and builds a real `SalesRepository`, so the stub never gets used. That's a hard-wired dependency in disguise. Storing the argument (`self.repo = repo`) is real constructor injection: production passes the real repository, the test passes the stub, and the total is 400. Passing the stub by keyword, passing the class, or giving `repo` a default all leave line 3 throwing the stub away."
             }
           ]
         },
@@ -674,6 +904,24 @@
                 "rates.rate.side_effect"
               ],
               "explanation": "Setting `side_effect` to an exception instance (or class) makes every call raise it — perfect for testing error handling. It can also be a list of values to return on successive calls, or a function to compute the result."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-mock-return-value",
+              "prompt": "Using `PriceService` from above (`to_euros` multiplies the amount by `self.rates.rate(\"USD\", \"EUR\")`), this test should pass. Instead it crashes. Click the line with the bug.",
+              "language": "python",
+              "code": "def test_converts_and_logs():\n    rates = Mock()\n    rates.return_value = 0.5\n    log = Mock()\n\n    service = PriceService(rates, log)\n    eur = service.to_euros(100)\n\n    assert eur == 50\n    log.record.assert_called_once_with(\"converted 100 USD\")",
+              "error": "TypeError: unsupported operand type(s) for *: 'int' and 'Mock'",
+              "lines": [3],
+              "fixes": [
+                "Change line 3 to `rates.rate.return_value = 0.5`",
+                "Change line 3 to `rates.rate = 0.5`",
+                "Change line 2 to `rates = Mock(return_value=0.5)`",
+                "Change line 3 to `rates.rate(\"USD\", \"EUR\").return_value = 0.5`"
+              ],
+              "answer": 0,
+              "hint": "The code calls `rates.rate(...)`, not `rates(...)`.",
+              "explanation": "`rates.return_value` stubs what calling `rates(...)` itself returns. The code calls the **method** `rates.rate(...)`, which is a separate, unstubbed child mock that returns another `Mock`, and `100 * Mock` is a `TypeError`. Stub the method: `rates.rate.return_value = 0.5`. `rates.rate = 0.5` replaces the method with a float (\"'float' object is not callable\"), `Mock(return_value=0.5)` is the same mistake as line 3, and the last option stubs the mock that `rate(...)` *returns*, not `rate` itself."
             },
             {
               "type": "explain",
@@ -790,6 +1038,20 @@
               ],
               "answer": 3,
               "explanation": "A refactor should change structure, not behavior, so the suite should stay green. Red means either you broke something — undo is cheap, since you changed only a little — or the test was coupled to implementation details and should be rewritten against the public API."
+            },
+            {
+              "type": "order",
+              "id": "q-order-tdd-loop",
+              "prompt": "You're adding the next feature TDD-style. Put one full loop in order.",
+              "items": [
+                "Write a small test for the next bit of behavior",
+                "Run it and watch it fail",
+                "Write the simplest code that makes it pass",
+                "Run the tests and see them all pass",
+                "Clean up the code while every test stays green"
+              ],
+              "hint": "Red, green, refactor, and the test always comes first.",
+              "explanation": "That's **red → green → refactor**. The test comes first and must fail, which proves it can detect the missing behavior. Then the simplest code that passes, confirmed by a green run. Only with everything green is it safe to refactor: any test that turns red now points straight at the change you just made. Then the loop starts again with the next test."
             }
           ]
         },
