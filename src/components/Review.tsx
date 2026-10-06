@@ -6,6 +6,8 @@ import { MemoryStrength, ReviewForecast } from './charts';
 import { Page, PageHeader } from './Layout';
 import { Session } from './Session';
 import { accentStyle, plural } from './ui';
+import { CourseIcon } from './CourseIcon';
+import { Icon } from './icons';
 
 const SESSION_SIZE = 20;
 
@@ -92,9 +94,7 @@ export function Review() {
           <div className="review-courses">
             {perCourse.map(({ course, due: d, seen }) => (
               <div key={course.id} className="review-course" style={accentStyle(course.color)}>
-                <span className="course-icon small" aria-hidden>
-                  {course.icon}
-                </span>
+                <CourseIcon icon={course.icon} color={course.color} size={44} />
                 <div className="grow">
                   <strong>{course.title}</strong>
                   <span className="muted small">
@@ -133,7 +133,7 @@ export function ReviewSession({ mode, courseId }: { mode: 'start' | 'weak'; cour
       <Page>
         <section className="center empty-state">
           <div className="celebrate" aria-hidden>
-            🌿
+            <Icon name="seedling" size={56} />
           </div>
           <h1>Nothing to review{course ? ` in ${course.title}` : ''}</h1>
           <p className="lead">You're all caught up. Come back later, or learn something new.</p>
@@ -159,7 +159,7 @@ export function ReviewSession({ mode, courseId }: { mode: 'start' | 'weak'; cour
         return (
           <>
             <div className="celebrate" aria-hidden>
-              ✅
+              <Icon name="check" size={56} />
             </div>
             <h1>Review done</h1>
             <p className="lead">

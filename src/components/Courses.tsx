@@ -6,6 +6,7 @@ import { useProgress } from '../lib/storage';
 import type { Course } from '../types';
 import { Page, PageHeader } from './Layout';
 import { accentStyle, ProgressBar } from './ui';
+import { CourseIcon } from './CourseIcon';
 
 export function CourseCard({ course }: { course: Course }) {
   const p = useProgress();
@@ -13,9 +14,7 @@ export function CourseCard({ course }: { course: Course }) {
   return (
     <a className="course-card" href={href('course', course.id)} style={accentStyle(course.color)}>
       <div className="course-banner">
-        <span className="course-icon" aria-hidden>
-          {course.icon}
-        </span>
+        <CourseIcon icon={course.icon} color={course.color} size={60} />
         {course.level && <span className="level-pill">{course.level}</span>}
       </div>
       <div className="course-body">

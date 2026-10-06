@@ -6,6 +6,7 @@ import type { BucketsStep } from '../../types';
 import { InlineMarkdown } from '../Markdown';
 import { AnswerLine, QuestionFrame, useCheckFlow, type QuestionProps } from '../QuestionFrame';
 import './BucketsGame.css';
+import { Icon } from '../icons';
 
 interface Drag {
   pointerId: number;
@@ -224,7 +225,9 @@ export function BucketsGame({ step, mode, context, onDone }: QuestionProps<Bucke
         <span className={`bg-stat${misses ? ' bad' : ''}`}>
           Misses <strong key={misses} className={misses ? 'bump' : undefined}>{misses}</strong>
         </span>
-        <span className="bg-stat bg-clock">⏱ {formatClock(elapsed)}</span>
+        <span className="bg-stat bg-clock">
+          <Icon name="clock" size={14} /> {formatClock(elapsed)}
+        </span>
       </div>
       <div className="bg-progress" role="progressbar" aria-label="Cards sorted" aria-valuemin={0} aria-valuemax={total} aria-valuenow={pos}>
         <span style={{ width: `${(pos / total) * 100}%` }} />

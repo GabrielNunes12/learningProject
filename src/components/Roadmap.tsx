@@ -15,6 +15,8 @@ import type { Course } from '../types';
 import { Page, PageHeader } from './Layout';
 import { accentStyle, plural, ProgressBar, Ring } from './ui';
 import './Roadmap.css';
+import { CourseIcon } from './CourseIcon';
+import { Icon } from './icons';
 
 // ---------- data ----------
 
@@ -96,7 +98,7 @@ export function Roadmap({ trackId }: { trackId?: string }) {
       <Page>
         <PageHeader title="Roadmap" />
         <div className="panel rm-empty">
-          <span aria-hidden>🗺️</span>
+          <Icon name="route" size={56} />
           <p>
             <strong>The roadmap isn't available right now.</strong>
           </p>
@@ -122,9 +124,7 @@ export function Roadmap({ trackId }: { trackId?: string }) {
           const pct = Math.round(t.fraction * 100);
           return (
             <a key={t.track.id} className={`rm-track${on ? ' on' : ''}`} href={href('roadmap', t.track.id)} aria-current={on ? 'page' : undefined}>
-              <span className="rm-track-icon" aria-hidden>
-                {t.track.icon}
-              </span>
+              <CourseIcon icon={t.track.icon} size={44} />
               <span className="rm-track-body">
                 <strong>{t.track.title}</strong>
                 <span className="rm-track-desc">{t.track.description}</span>
@@ -189,11 +189,11 @@ function TrackMap({ info }: { info: TrackInfo }) {
       <div className="rm-map-head">
         <div>
           <h2 id="rm-track-title">
-            <span aria-hidden>{info.track.icon}</span> {info.track.title}
+            <CourseIcon icon={info.track.icon} size={30} className="title-icon" /> {info.track.title}
           </h2>
           <p className="muted small">
             {info.doneCount === info.nodes.length
-              ? `Track complete — all ${info.nodes.length} courses done. 🎉`
+              ? `Track complete — all ${info.nodes.length} courses done.`
               : `${info.doneCount} of ${plural(info.nodes.length, 'course')} done${next ? ` · Next: ${next.course.title}` : ''}`}
           </p>
         </div>
@@ -314,9 +314,7 @@ function MapNode({
       aria-expanded={expanded}
     >
       <Ring value={value} size={compact ? 44 : 50} stroke={compact ? 4 : 5}>
-        <span className="rm-node-icon" aria-hidden>
-          {course.icon}
-        </span>
+        <CourseIcon icon={course.icon} color={course.color} size={compact ? 30 : 34} />
       </Ring>
       <span className="rm-node-text">
         <strong className="rm-node-title">{course.title}</strong>
@@ -381,9 +379,7 @@ function DetailPanel({ n, info, onClose }: { n: NodeInfo; info: TrackInfo; onClo
       <div className="rm-detail" role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1} ref={ref} onKeyDown={trap}>
         <div className="rm-grabber" aria-hidden />
         <header className="rm-detail-head">
-          <span className="rm-detail-icon" aria-hidden>
-            {course.icon}
-          </span>
+          <CourseIcon icon={course.icon} color={course.color} size={52} />
           <div className="grow">
             <span className="eyebrow">
               {course.category}
@@ -418,7 +414,7 @@ function DetailPanel({ n, info, onClose }: { n: NodeInfo; info: TrackInfo; onClo
           <p>{course.description}</p>
           {n.node.note && (
             <p className="rm-note">
-              <span aria-hidden>💡</span> {n.node.note}
+              <Icon name="bulb" size={15} /> {n.node.note}
             </p>
           )}
 
@@ -501,16 +497,14 @@ export function RoadmapTeaser() {
   const next = t.next ? t.byId.get(t.next) : undefined;
   return (
     <a className="rm-teaser" href={href('roadmap', t.track.id)} style={accentStyle(next?.course.color)}>
-      <span className="rm-teaser-icon" aria-hidden>
-        {t.track.icon}
-      </span>
+      <CourseIcon icon={t.track.icon} size={48} />
       <span className="rm-teaser-body">
         <span className="eyebrow">Roadmap</span>
         {next ? (
           <span className="rm-teaser-text">
             Next on your {t.track.title} track:{' '}
             <strong>
-              <span aria-hidden>{next.course.icon}</span> {next.course.title}
+              <CourseIcon icon={next.course.icon} color={next.course.color} size={18} /> {next.course.title}
             </strong>
           </span>
         ) : (

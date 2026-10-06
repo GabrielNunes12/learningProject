@@ -21,6 +21,7 @@ import {
 import type { TruthTableStep } from '../../types';
 import { AnswerLine, QuestionFrame, useCheckFlow, type QuestionProps } from '../QuestionFrame';
 import './TruthTableGame.css';
+import { Icon } from '../icons';
 
 const LIGHT_MS = 130;
 const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
@@ -256,7 +257,7 @@ export function TruthTableGame({ step, mode, context, onDone }: QuestionProps<Tr
       )}
       {status === 'correct' && lit === nRows && (
         <p className="tt-result" role="status">
-          ✨ Every row checks out: {total} {total === 1 ? 'cell' : 'cells'}, all right.
+          <Icon name="sparkle" size={16} /> Every row checks out: {total} {total === 1 ? 'cell' : 'cells'}, all right.
         </p>
       )}
 

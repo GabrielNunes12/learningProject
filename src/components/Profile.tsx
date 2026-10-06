@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useRef, useState, type FormEvent } from 'react';
 import { courses } from '../content';
 import { api, ApiError } from '../lib/api';
@@ -19,6 +20,8 @@ import {
 import { ActivityHeatmap } from './charts';
 import { Page } from './Layout';
 import { accentStyle, Avatar, Field, Notice, ProgressBar } from './ui';
+import { CourseIcon } from './CourseIcon';
+import { Icon } from './icons';
 
 export function Profile() {
   const p = useProgress();
@@ -59,7 +62,7 @@ export function Profile() {
         </div>
         {user ? (
           <span className={`sync-pill ${sync}`}>
-            {sync === 'saving' ? 'Saving…' : sync === 'offline' ? 'Offline — will retry' : '☁ Synced'}
+            {sync === 'saving' ? 'Saving…' : sync === 'offline' ? 'Offline — will retry' : <><Icon name="check" size={14} /> Synced</>}
           </span>
         ) : (
           <div className="profile-cta">
@@ -75,7 +78,14 @@ export function Profile() {
 
       <div className="stat-grid six">
         <Stat label="Total XP" value={p.xp} />
-        <Stat label="Current streak" value={`🔥 ${streak(p)}`} />
+        <Stat
+          label="Current streak"
+          value={
+            <>
+              <Icon name="flame" size={18} className="flame" /> {streak(p)}
+            </>
+          }
+        />
         <Stat label="Best streak" value={bestStreak(p)} />
         <Stat label="Lessons done" value={lessonsDone} />
         <Stat label="Questions mastered" value={mastered} />
@@ -116,9 +126,7 @@ export function Profile() {
               const s = courseStats(c, p);
               return (
                 <a key={c.id} className="course-progress" href={href('course', c.id)} style={accentStyle(c.color)}>
-                  <span className="course-icon small" aria-hidden>
-                    {c.icon}
-                  </span>
+                  <CourseIcon icon={c.icon} color={c.color} size={44} />
                   <div className="grow">
                     <div className="level-text">
                       <strong>{c.title}</strong>
@@ -142,7 +150,7 @@ export function Profile() {
   );
 }
 
-function Stat({ label, value }: { label: string; value: string | number }) {
+function Stat({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="mini-stat">
       <strong>{value}</strong>

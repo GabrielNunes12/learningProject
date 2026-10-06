@@ -78,7 +78,7 @@ describe('content validation', () => {
   const course = (step: object) => ({
     id: 'demo',
     title: 'Demo',
-    icon: '🧪',
+    icon: 'T',
     description: 'Demo course.',
     keyIdeas: ['One idea.'],
     lessons: [{ id: 'l1', title: 'Lesson', pareto: 'core', takeaway: 'Takeaway.', steps: [step] }],

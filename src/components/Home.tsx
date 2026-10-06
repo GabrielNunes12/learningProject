@@ -8,6 +8,8 @@ import { Page, useDueCount } from './Layout';
 import { CourseCard } from './Courses';
 import { RoadmapTeaser } from './Roadmap';
 import { accentStyle, ProgressBar, Ring } from './ui';
+import { CourseIcon } from './CourseIcon';
+import { Icon } from './icons';
 
 function greeting() {
   const h = new Date().getHours();
@@ -39,8 +41,8 @@ function ContinueCard({ p }: { p: Progress }) {
 
   return (
     <section className="continue-card" style={accentStyle(course.color)}>
-      <div className="continue-icon" aria-hidden>
-        {course.icon}
+      <div className="continue-icon">
+        <CourseIcon icon={course.icon} color={course.color} size={76} />
       </div>
       <div className="continue-body">
         <span className="eyebrow">{s.started ? 'Continue learning' : 'Start here'}</span>
@@ -135,8 +137,8 @@ export function Home() {
           </div>
         </a>
         <a className="stat-card" href="#/profile">
-          <div className="stat-emoji" aria-hidden>
-            🔥
+          <div className="stat-emoji flame" aria-hidden>
+            <Icon name="flame" size={30} />
           </div>
           <div>
             <span className="stat-label">Streak</span>
@@ -159,7 +161,7 @@ export function Home() {
         </a>
         <a className={`stat-card${due ? ' attention' : ''}`} href="#/review">
           <div className="stat-emoji" aria-hidden>
-            {due ? '🔁' : '🌿'}
+            <Icon name={due ? 'review' : 'seedling'} size={30} />
           </div>
           <div>
             <span className="stat-label">Reviews</span>

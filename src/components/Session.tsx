@@ -4,6 +4,7 @@ import { recordAnswer, XP } from '../lib/storage';
 import { PlayerHeader } from './Layout';
 import { QuestionView } from './QuestionView';
 import { accentStyle, useBodyAccent } from './ui';
+import { CourseIcon } from './CourseIcon';
 
 export interface SessionResult {
   ref: QuestionRef;
@@ -55,7 +56,7 @@ export function Session({ questions, exitHref, onFinish, renderEnd }: Props) {
             shuffle
             context={
               <div className="context-chip">
-                <span aria-hidden>{q.course.icon}</span> {q.course.title} · {q.lesson.title}
+                <CourseIcon icon={q.course.icon} color={q.course.color} size={18} /> {q.course.title} · {q.lesson.title}
               </div>
             }
             onDone={(ok) => {

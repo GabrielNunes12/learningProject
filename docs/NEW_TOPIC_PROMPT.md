@@ -35,7 +35,7 @@ Output ONLY valid JSON matching this schema:
 {
   "id": "kebab-case-id",
   "title": "Short Title",
-  "icon": "one emoji",
+  "icon": "logo:python | a 1–5 character monogram like P(x) — never an emoji",
   "color": "#hex color",
   "order": 20,
   "category": "Programming | Math | Learning | ...",
@@ -136,6 +136,10 @@ instead of recognizing one):
   fewest possible moves counts as a first-try success.
 - Non-programming topics use order, buckets, truthtable, logicgrid, balance and the matching simulators —
   not output/bug/trace.
+
+"icon": use "logo:<name>" for a technology with a logo in src/assets/logos/ (python, java, kotlin, git, spring),
+otherwise a short monogram in the subject's own notation: "P(x)", "O(n)", "∴", "%", "SQL". The app draws it as
+a tile in the course colour. Emoji are rejected: they make the app look generated. Keep emoji out of lesson text too.
 
 Formatting inside text fields: **bold**, *italic*, `code`, lines starting with "- " for
 bullet lists, a blank line ("\n\n") between paragraphs, and ``` fences for code blocks.

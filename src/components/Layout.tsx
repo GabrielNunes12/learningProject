@@ -4,18 +4,19 @@ import { signOut, useAuth } from '../lib/auth';
 import { useRoute } from '../lib/router';
 import { dueKeys, levelInfo, streak, useProgress, xpToday } from '../lib/storage';
 import { Avatar, Ring } from './ui';
+import { BrandMark, Icon, type IconName } from './icons';
 
 export function useDueCount() {
   const p = useProgress();
   return dueKeys(p).filter((k) => questionByKey.has(k)).length;
 }
 
-const NAV = [
-  { id: '', label: 'Home', icon: '⌂' },
-  { id: 'courses', label: 'Courses', icon: '▦' },
-  { id: 'roadmap', label: 'Roadmap', icon: '⟿' },
-  { id: 'review', label: 'Review', icon: '↻' },
-  { id: 'profile', label: 'Profile', icon: '◉' },
+const NAV: { id: string; label: string; icon: IconName }[] = [
+  { id: '', label: 'Home', icon: 'home' },
+  { id: 'courses', label: 'Courses', icon: 'grid' },
+  { id: 'roadmap', label: 'Roadmap', icon: 'route' },
+  { id: 'review', label: 'Review', icon: 'review' },
+  { id: 'profile', label: 'Profile', icon: 'user' },
 ];
 
 export function NavBar() {
@@ -33,7 +34,7 @@ export function NavBar() {
         <div className="nav-inner">
           <a className="brand" href="#/">
             <span className="brand-mark" aria-hidden>
-              🧠
+              <BrandMark />
             </span>
             <span className="brand-name">ProjectLearn</span>
           </a>
@@ -49,7 +50,7 @@ export function NavBar() {
 
           <div className="nav-right">
             <a className="chip tip tip-below" href="#/profile" data-tip={`${streak(p)}-day streak`}>
-              <span aria-hidden>🔥</span> {streak(p)}
+              <Icon name="flame" size={16} /> {streak(p)}
             </a>
             <a className="chip tip tip-below goal-chip" href="#/profile" data-tip={`Today ${xpToday(p)} / ${p.dailyGoal} XP · Level ${lvl.level}`}>
               <Ring value={goal} size={20} stroke={3} label="Daily goal progress" />
@@ -75,7 +76,7 @@ export function NavBar() {
         {NAV.map((n) => (
           <a key={n.id} href={`#/${n.id}`} className={active(n.id) ? 'active' : ''} aria-current={active(n.id) ? 'page' : undefined}>
             <span className="tab-icon" aria-hidden>
-              {n.icon}
+              <Icon name={n.icon} size={22} />
             </span>
             {n.label}
             {n.id === 'review' && due > 0 && <span className="badge">{due}</span>}

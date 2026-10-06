@@ -5,6 +5,23 @@ import { parseLogic } from '../lib/logic.ts';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const isStr = (v: unknown) => typeof v === 'string' && v.trim() !== '';
 
+/** Logos available as "logo:<name>" icons; each needs src/assets/logos/<name>.svg. */
+export const LOGOS = ['python', 'java', 'kotlin', 'git', 'spring'];
+
+/**
+ * A course or track icon is a real logo ("logo:python") or a short monogram ("P(x)", "∴", "SQL").
+ * Emoji are rejected: they made the app look generated.
+ */
+export function iconProblem(icon: unknown): string | null {
+  if (typeof icon !== 'string' || icon.trim() === '') return 'missing "icon"';
+  if (icon.startsWith('logo:')) {
+    return LOGOS.includes(icon.slice(5)) ? null : `unknown logo "${icon}" (available: ${LOGOS.map((l) => `logo:${l}`).join(', ')})`;
+  }
+  if (/\p{Extended_Pictographic}/u.test(icon)) return `"icon" can't be an emoji ("${icon}"): use "logo:<name>" or a 1–5 character monogram like "P(x)"`;
+  if ([...icon].length > 5) return `"icon" monogram "${icon}" is too long (1–5 characters)`;
+  return null;
+}
+
 /** Step types that count as interactive practice. Every lesson needs at least one. */
 export const INTERACTIVE_TYPES = ['output', 'bug', 'order', 'buckets', 'trace', 'truthtable', 'logicgrid', 'balance', 'sim'];
 
@@ -16,7 +33,8 @@ export function validateCourse(t: any, where: string): string[] {
 
   req(isStr(t?.id) && /^[a-z0-9-]+$/.test(t.id), '"id" must be kebab-case (a-z, 0-9, -)');
   req(isStr(t?.title), 'missing "title"');
-  req(isStr(t?.icon), 'missing "icon"');
+  const ip = iconProblem(t?.icon);
+  req(ip === null, ip ?? '');
   req(isStr(t?.description), 'missing "description"');
   req(Array.isArray(t?.keyIdeas) && t.keyIdeas.every(isStr), '"keyIdeas" must be a list of strings');
   req(t?.level === undefined || ['Beginner', 'Intermediate', 'Advanced'].includes(t.level), '"level" must be Beginner, Intermediate or Advanced');
@@ -252,7 +270,8 @@ export function validateRoadmap(r: any, courseIds: string[]): string[] {
     req(isStr(t?.id) && !trackIds.has(t.id), `${tw}: needs a unique "id"`);
     trackIds.add(t?.id);
     req(isStr(t?.title), `${tw}: missing "title"`);
-    req(isStr(t?.icon), `${tw}: missing "icon"`);
+    const ip = iconProblem(t?.icon);
+    req(ip === null, `${tw}: ${ip}`);
     req(isStr(t?.description), `${tw}: missing "description"`);
     const nodes: any[] = Array.isArray(t?.nodes) ? t.nodes : [];
     req(nodes.length >= 2, `${tw}: needs at least 2 "nodes"`);

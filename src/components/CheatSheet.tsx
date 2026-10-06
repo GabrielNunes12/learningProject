@@ -3,6 +3,7 @@ import type { Course } from '../types';
 import { Page } from './Layout';
 import { InlineMarkdown, Markdown } from './Markdown';
 import { accentStyle } from './ui';
+import { CourseIcon } from './CourseIcon';
 
 export function CheatSheet({ course }: { course: Course }) {
   return (
@@ -17,7 +18,7 @@ export function CheatSheet({ course }: { course: Course }) {
           </button>
         </div>
         <h1>
-          {course.icon} {course.title} — cheat sheet
+          <CourseIcon icon={course.icon} color={course.color} size={40} className="title-icon" /> {course.title} — cheat sheet
         </h1>
         <p className="muted">Try this first: cover the page and explain each idea out loud. Wherever you get stuck is what to review.</p>
 

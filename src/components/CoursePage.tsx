@@ -7,6 +7,7 @@ import { CoursePath } from './CoursePath';
 import { Page } from './Layout';
 import { InlineMarkdown } from './Markdown';
 import { accentStyle, plural, ProgressBar, Ring } from './ui';
+import { CourseIcon } from './CourseIcon';
 
 const FAST_KEY = 'projectlearn:fasttrack';
 const VIEW_KEY = 'projectlearn:pathview';
@@ -85,8 +86,8 @@ export function CoursePage({ course }: { course: Course }) {
           ← All courses
         </a>
         <header className="course-hero">
-          <div className="course-hero-icon" aria-hidden>
-            {course.icon}
+          <div className="course-hero-icon">
+            <CourseIcon icon={course.icon} color={course.color} size={120} />
           </div>
           <div className="course-hero-text">
             <span className="eyebrow">

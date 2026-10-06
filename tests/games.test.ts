@@ -72,7 +72,7 @@ describe('validation', () => {
   const course = (step: object) => ({
     id: 'demo',
     title: 'Demo',
-    icon: '🧪',
+    icon: 'T',
     description: 'Demo.',
     keyIdeas: ['Idea.'],
     lessons: [{ id: 'l1', title: 'L', pareto: 'core', takeaway: 'T.', steps: [step] }],
@@ -119,7 +119,7 @@ describe('validation', () => {
   });
 
   test('checks the roadmap against known courses', () => {
-    const ok = { tracks: [{ id: 't', title: 'T', icon: '🧭', description: 'D', nodes: [{ course: 'a' }, { course: 'b', after: ['a'] }] }] };
+    const ok = { tracks: [{ id: 't', title: 'T', icon: 'R', description: 'D', nodes: [{ course: 'a' }, { course: 'b', after: ['a'] }] }] };
     assert.deepEqual(validateRoadmap(ok, ['a', 'b']), []);
     assert.match(validateRoadmap(ok, ['a']).join('\n'), /unknown course "b"/);
     const cycle = { tracks: [{ ...ok.tracks[0], nodes: [{ course: 'a', after: ['b'] }, { course: 'b' }] }] };

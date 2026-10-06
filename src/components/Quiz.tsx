@@ -6,6 +6,7 @@ import { recordQuiz, XP } from '../lib/storage';
 import type { Course } from '../types';
 import { Page } from './Layout';
 import { Session, type SessionResult } from './Session';
+import { Icon } from './icons';
 
 const QUIZ_SIZE = 12;
 
@@ -55,7 +56,7 @@ function QuizEnd({ course, results, xp, onRetake }: { course: Course; results: S
   return (
     <>
       <div className="celebrate" aria-hidden>
-        {pct >= 80 ? '🎯' : pct >= 50 ? '💪' : '🌱'}
+        <Icon name={pct >= 80 ? 'target' : pct >= 50 ? 'trendUp' : 'seedling'} size={72} />
       </div>
       <h1>{pct}%</h1>
       <p className="lead">

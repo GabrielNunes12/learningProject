@@ -3,13 +3,15 @@ import { api, ApiError } from '../lib/api';
 import { completeVerification, signIn, useAuth } from '../lib/auth';
 import { href } from '../lib/router';
 import { Field, Notice } from './ui';
+import { BrandMark } from './icons';
+import { Icon } from './icons';
 
 function AuthCard({ title, subtitle, children, footer }: { title: string; subtitle?: ReactNode; children?: ReactNode; footer?: ReactNode }) {
   return (
     <div className="auth-page">
       <a className="brand auth-brand" href="#/">
         <span className="brand-mark" aria-hidden>
-          🧠
+          <BrandMark />
         </span>
         <span className="brand-name">ProjectLearn</span>
       </a>
@@ -141,7 +143,7 @@ export function CheckEmail({ email }: { email: string }) {
   return (
     <AuthCard title="Check your email" subtitle={<>We sent a confirmation link to <strong>{email}</strong>. Click it to activate your profile.</>}>
       <div className="mail-art" aria-hidden>
-        ✉️
+        <Icon name="mail" size={56} />
       </div>
       <DevMailboxHint />
       <p className="muted small">Can't find it? Check your spam folder. The link expires in 24 hours.</p>
@@ -250,7 +252,7 @@ export function Verify({ token }: { token: string }) {
       </AuthCard>
     );
   return (
-    <AuthCard title="Email confirmed 🎉" subtitle="Your profile is active and you're signed in. Your progress now syncs across devices.">
+    <AuthCard title="Email confirmed" subtitle="Your profile is active and you're signed in. Your progress now syncs across devices.">
       <a className="btn primary big full" href="#/">
         Start learning
       </a>

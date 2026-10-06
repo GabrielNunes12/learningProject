@@ -13,6 +13,7 @@ import { Review, ReviewSession } from './components/Review';
 import { Roadmap } from './components/Roadmap';
 import { useAuth } from './lib/auth';
 import { useRoute } from './lib/router';
+import { Icon } from './components/icons';
 
 export function App() {
   const route = useRoute();
@@ -82,7 +83,7 @@ function Route({ route }: { route: string[] }) {
     <Page>
       <section className="center empty-state">
         <div className="celebrate" aria-hidden>
-          🧭
+          <Icon name="compass" size={72} />
         </div>
         <h1>Page not found</h1>
         <p className="lead">That link doesn't lead anywhere.</p>

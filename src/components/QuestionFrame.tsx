@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { XP } from '../lib/storage';
 import type { QuestionStep } from '../types';
 import { InlineMarkdown, Markdown } from './Markdown';
+import { Icon } from './icons';
 
 export type Status = 'answering' | 'wrong' | 'correct' | 'revealed';
 
@@ -135,7 +136,7 @@ export function QuestionFrame({
 
         {mode === 'learn' && step.hint && status === 'answering' && !showHint && (
           <button className="link hint-link" onClick={() => setShowHint(true)}>
-            💡 Need a hint?
+            <Icon name="bulb" size={16} /> Need a hint?
           </button>
         )}
         {showHint && step.hint && status !== 'correct' && (

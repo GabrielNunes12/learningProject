@@ -108,7 +108,7 @@ describe('truth table, logic grid and balance checks', () => {
 describe('validation of the new games', () => {
   const errors = (step: object) =>
     validateCourse(
-      { id: 'd', title: 'D', icon: '🧪', description: 'D.', keyIdeas: ['I.'], lessons: [{ id: 'l', title: 'L', pareto: 'core', takeaway: 'T.', steps: [step] }] },
+      { id: 'd', title: 'D', icon: 'T', description: 'D.', keyIdeas: ['I.'], lessons: [{ id: 'l', title: 'L', pareto: 'core', takeaway: 'T.', steps: [step] }] },
       'd.json',
     ).join('\n');
 
@@ -127,5 +127,26 @@ describe('validation of the new games', () => {
     assert.match(errors({ ...balance, right: [0, 8] }), /must be a whole number/);
     assert.match(errors({ ...balance, right: [2, 9] }), /different x-coefficients/);
     assert.match(errors({ ...balance, left: [1, 0], right: [0, 4] }), /already solved/);
+  });
+});
+
+describe('course icons', async () => {
+  const { iconProblem, LOGOS } = await import('../src/content/validate.ts');
+  const { existsSync } = await import('node:fs');
+
+  test('accepts logos and short monograms', () => {
+    for (const icon of ['logo:python', 'P(x)', '∴', '80/20', 'SQL', '✓', '%']) assert.equal(iconProblem(icon), null, icon);
+  });
+
+  test('rejects emoji, unknown logos and long monograms', () => {
+    assert.match(iconProblem('🐍') ?? '', /can't be an emoji/);
+    assert.match(iconProblem('🧠') ?? '', /can't be an emoji/);
+    assert.match(iconProblem('logo:rust') ?? '', /unknown logo/);
+    assert.match(iconProblem('Python') ?? '', /too long/);
+    assert.match(iconProblem('') ?? '', /missing/);
+  });
+
+  test('every logo has its SVG file', () => {
+    for (const name of LOGOS) assert.ok(existsSync(new URL(`../src/assets/logos/${name}.svg`, import.meta.url)), name);
   });
 });

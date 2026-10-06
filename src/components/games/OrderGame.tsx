@@ -6,6 +6,7 @@ import type { OrderStep } from '../../types';
 import { InlineMarkdown } from '../Markdown';
 import { AnswerLine, QuestionFrame, useCheckFlow, type QuestionProps } from '../QuestionFrame';
 import './OrderGame.css';
+import { Icon } from '../icons';
 
 interface Drag {
   item: number;
@@ -311,7 +312,7 @@ export function OrderGame({ step, mode, context, onDone }: QuestionProps<OrderSt
         <p className="og-result" role="status">
           {moves <= fewest ? (
             <>
-              🎯 Sorted in <strong>{moves}</strong> {moves === 1 ? 'move' : 'moves'}: the fewest possible!
+              <Icon name="target" size={16} /> Sorted in <strong>{moves}</strong> {moves === 1 ? 'move' : 'moves'}: the fewest possible!
             </>
           ) : (
             <>

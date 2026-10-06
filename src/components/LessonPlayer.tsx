@@ -9,6 +9,8 @@ import { Markdown } from './Markdown';
 import { BottomBar, QuestionView } from './QuestionView';
 import { SimStepView } from './sims/SimStepView';
 import { accentStyle, Ring, useBodyAccent } from './ui';
+import { CourseIcon } from './CourseIcon';
+import { Icon } from './icons';
 
 export function LessonPlayer({ course, lesson }: { course: Course; lesson: Lesson }) {
   const [index, setIndex] = useState(0);
@@ -40,13 +42,13 @@ export function LessonPlayer({ course, lesson }: { course: Course; lesson: Lesso
         total={steps.length}
         right={
           <span className="xp-pill" aria-label={`${xp} XP earned this lesson`}>
-            ⭐ {xp}
+            <Icon name="star" size={15} className="star" /> {xp}
           </span>
         }
       />
       <main className="player-body">
         <div className="lesson-crumb">
-          <span aria-hidden>{course.icon}</span> {unitOf(course, lesson).title} · <strong>{lesson.title}</strong>
+          <CourseIcon icon={course.icon} color={course.color} size={20} /> {unitOf(course, lesson).title} · <strong>{lesson.title}</strong>
         </div>
 
         {step.type === 'explain' && (
@@ -101,7 +103,9 @@ function ExampleView({ step, onContinue }: { step: ExampleStep; onContinue: () =
         <span className="eyebrow">Worked example</span>
         {step.title && <h2>{step.title}</h2>}
         <Markdown text={step.problem} />
-        {shown === 0 && <p className="try-first">✍️ Try it yourself first, then reveal the solution one step at a time.</p>}
+        {shown === 0 && <p className="try-first">
+            <Icon name="pencil" size={16} /> Try it yourself first, then reveal the solution one step at a time.
+          </p>}
         {shown > 0 && (
           <ol className="solution">
             {step.steps.slice(0, shown).map((s, i) => (
@@ -160,7 +164,7 @@ function LessonComplete({ course, lesson, score, xp }: { course: Course; lesson:
       <PlayerHeader exitHref={href('course', course.id)} done={1} total={1} />
       <main className="player-body complete">
         <div className="celebrate" aria-hidden>
-          🎉
+          <Icon name="medal" size={72} />
         </div>
         <h1>Lesson complete!</h1>
         <p className="lead">{lesson.title}</p>
@@ -176,7 +180,9 @@ function LessonComplete({ course, lesson, score, xp }: { course: Course; lesson:
           </div>
           <div className="result-tile">
             <span>Streak</span>
-            <strong>🔥 {streak(p)}</strong>
+            <strong>
+              <Icon name="flame" size={18} className="flame" /> {streak(p)}
+            </strong>
           </div>
           <div className="result-tile">
             <Ring value={today / Math.max(p.dailyGoal, 1)} size={44} stroke={5} label="Daily goal" />

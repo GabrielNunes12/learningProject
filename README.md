@@ -76,3 +76,7 @@ server/
   mail.ts                 email via SMTP (or dev mailbox)
   db.ts                   SQLite schema (node:sqlite, nothing to install)
 ```
+
+## Credits
+
+Technology logos in `src/assets/logos/` (Python, Java, Kotlin, Git, Spring) come from [Devicon](https://github.com/devicons/devicon) (MIT licence). The logos themselves are trademarks of their respective owners and are used only to identify the course topics.

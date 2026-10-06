@@ -30,6 +30,7 @@ import type { LogicGridStep } from '../../types';
 import { InlineMarkdown } from '../Markdown';
 import { AnswerLine, QuestionFrame, useCheckFlow, type QuestionProps } from '../QuestionFrame';
 import './LogicGridGame.css';
+import { Icon } from '../icons';
 
 const LONG_PRESS_MS = 450;
 const UNDO_LIMIT = 60;
@@ -436,7 +437,7 @@ export function LogicGridGame({ step, mode, context, onDone }: QuestionProps<Log
       )}
       {solved && (
         <p className="lg-result" role="status">
-          🧩 Solved! All {size} rows matched from {step.clues.length} {step.clues.length === 1 ? 'clue' : 'clues'}.
+          <Icon name="sparkle" size={16} /> Solved! All {size} rows matched from {step.clues.length} {step.clues.length === 1 ? 'clue' : 'clues'}.
         </p>
       )}
 

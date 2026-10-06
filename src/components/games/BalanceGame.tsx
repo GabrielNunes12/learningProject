@@ -26,6 +26,7 @@ import {
 import type { BalanceStep } from '../../types';
 import { AnswerLine, QuestionFrame, useCheckFlow, type QuestionProps } from '../QuestionFrame';
 import './BalanceGame.css';
+import { Icon } from '../icons';
 
 interface Entry {
   eq: Equation;
@@ -510,7 +511,7 @@ export function BalanceGame({ step, mode, context, onDone }: QuestionProps<Balan
         <p className="bal-result" role="status">
           {solvedIn! <= par ? (
             <>
-              ⚖️ {v} = {value} in <strong>{solvedIn}</strong> {solvedIn === 1 ? 'move' : 'moves'}: right on par!
+              <Icon name="scale" size={16} /> {v} = {value} in <strong>{solvedIn}</strong> {solvedIn === 1 ? 'move' : 'moves'}: right on par!
             </>
           ) : (
             <>
