@@ -7,7 +7,7 @@ import { QuestionView } from './QuestionView';
 import { SimStepView } from './sims/SimStepView';
 import { accentStyle } from './ui';
 
-const VISUAL = new Set(['order', 'buckets', 'trace', 'sim']);
+const VISUAL = new Set(['order', 'buckets', 'trace', 'sim', 'truthtable', 'logicgrid', 'balance']);
 
 const entries = courses.flatMap((course) =>
   course.lessons.flatMap((lesson) =>

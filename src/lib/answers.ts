@@ -1,4 +1,16 @@
-import type { BugStep, BucketsStep, ClassicQuestionStep, OrderStep, TraceFrame, TraceStep } from '../types';
+import type {
+  BalanceStep,
+  BucketsStep,
+  BugStep,
+  ClassicQuestionStep,
+  LogicGridStep,
+  OrderStep,
+  TraceFrame,
+  TraceStep,
+  TruthTableStep,
+} from '../types';
+// Explicit .ts extension so node:test can load this file directly.
+import { truthTableAnswers } from './logic.ts';
 
 /**
  * Reads what a learner typed into a number. Accepts "0.25", "1/4", "25%", "1,000", "0,5" and "$-3".
@@ -113,8 +125,21 @@ export function checkTraceValue(frame: TraceFrame, input: string): boolean {
 }
 
 /** Short text for "Correct answer:" lines. */
-export function gameAnswerLabel(step: OrderStep | BucketsStep | TraceStep): string {
+export function gameAnswerLabel(
+  step: OrderStep | BucketsStep | TraceStep | TruthTableStep | LogicGridStep | BalanceStep,
+): string {
   switch (step.type) {
+    case 'truthtable': {
+      const answers = truthTableAnswers(step.vars, step.columns.map((c) => c.expr));
+      return step.columns
+        .map((c, ci) => (c.given ? null : `\`${c.label ?? c.expr}\`: ${answers.map((row) => (row[ci] ? 'T' : 'F')).join(' ')}`))
+        .filter(Boolean)
+        .join(' · ');
+    }
+    case 'logicgrid':
+      return step.categories[0].items.map((item, i) => `**${item}:** ${step.solution[i].join(', ')}`).join(' · ');
+    case 'balance':
+      return `${step.variable ?? 'x'} = ${balanceSolution(step)}`;
     case 'order':
       return step.items.join(' → ');
     case 'buckets':
@@ -127,3 +152,32 @@ export function gameAnswerLabel(step: OrderStep | BucketsStep | TraceStep): stri
         .join(', ');
   }
 }
+
+// ---------- truth table, logic grid, balance ----------
+
+/** The correct value of each learner-filled cell: [row][column]; `given` columns are included too. */
+export const truthTableKey = (step: TruthTableStep) => truthTableAnswers(step.vars, step.columns.map((c) => c.expr));
+
+/** Per cell: is the learner's value right? Cells left empty (null) count as wrong. Given columns are always right. */
+export function truthTableMarks(step: TruthTableStep, cells: (boolean | null)[][]): boolean[][] {
+  return truthTableKey(step).map((row, r) => row.map((want, c) => step.columns[c].given || cells[r]?.[c] === want));
+}
+
+export const isTruthTableCorrect = (step: TruthTableStep, cells: (boolean | null)[][]) =>
+  truthTableMarks(step, cells).every((row) => row.every(Boolean));
+
+/**
+ * `picks[row][k]` is the learner's chosen item (index into categories[k + 1].items) for the row's first-category item,
+ * or null. Returns whether every pick matches the solution.
+ */
+export function isLogicGridSolved(step: LogicGridStep, picks: (number | null)[][]): boolean {
+  return step.categories[0].items.every((_, row) =>
+    step.categories.slice(1).every((cat, k) => {
+      const pick = picks[row]?.[k];
+      return pick !== null && pick !== undefined && cat.items[pick] === step.solution[row][k];
+    }),
+  );
+}
+
+/** x in a·x + b = c·x + d. */
+export const balanceSolution = (step: BalanceStep) => (step.right[1] - step.left[1]) / (step.left[0] - step.right[0]);

@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { answerLabel, checkAnswer, isBugLine, shuffled } from '../lib/answers';
 import type { ClassicQuestionStep } from '../types';
+import { BalanceGame } from './games/BalanceGame';
 import { BucketsGame } from './games/BucketsGame';
+import { LogicGridGame } from './games/LogicGridGame';
 import { OrderGame } from './games/OrderGame';
 import { TraceGame } from './games/TraceGame';
+import { TruthTableGame } from './games/TruthTableGame';
 import { CodeBlock, highlightLines, InlineMarkdown } from './Markdown';
 import { AnswerLine, QuestionFrame, useCheckFlow, type QuestionProps } from './QuestionFrame';
 
@@ -19,6 +22,12 @@ export function QuestionView(props: QuestionProps) {
       return <BucketsGame {...props} step={step} />;
     case 'trace':
       return <TraceGame {...props} step={step} />;
+    case 'truthtable':
+      return <TruthTableGame {...props} step={step} />;
+    case 'logicgrid':
+      return <LogicGridGame {...props} step={step} />;
+    case 'balance':
+      return <BalanceGame {...props} step={step} />;
     default:
       return <ClassicQuestion {...props} step={step} />;
   }

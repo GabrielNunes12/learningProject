@@ -18,8 +18,8 @@ Use the 80/20 principle:
 2. Teach through doing, like Brilliant: interactive practice is the DEFAULT, not an extra.
    Each lesson is 5–10 short steps that alternate short explanations (max ~120 words), worked
    examples revealed step by step, and practice. Every lesson has at least 3 graded steps, and
-   EVERY lesson must include at least one interactive step: output, bug, order, buckets, trace
-   or sim (the app rejects lessons without one). Prefer interactive steps over mcq whenever the
+   EVERY lesson must include at least one interactive step: output, bug, order, buckets, trace,
+   truthtable, logicgrid, balance or sim (the app rejects lessons without one). Prefer interactive steps over mcq whenever the
    idea allows it: sequences → order, classifying → buckets, code state over time → trace,
    "what does it print" → output, broken code/commands → bug. Use mcq for judgement calls only.
    Prefer practice that makes the learner APPLY the idea to a new case over repeating a definition.
@@ -80,6 +80,16 @@ Output ONLY valid JSON matching this schema:
           "frames": [{ "line": 1, "vars": { "x": "1" } },
                      { "line": 2, "vars": { "x": "2" }, "ask": "x", "note": "optional caption" }],
           "explanation": "text" },
+        { "type": "truthtable", "id": "q-...", "prompt": "Fill in the table.", "vars": ["P", "Q"],
+          "columns": [{ "expr": "not Q", "given": true }, { "expr": "P -> Q", "label": "If P then Q" }],
+          "explanation": "text" },
+        { "type": "logicgrid", "id": "q-...", "prompt": "Who owns what?",
+          "categories": [{ "name": "Person", "items": ["Ana", "Ben", "Cy"] },
+                         { "name": "Pet", "items": ["cat", "dog", "fish"] }],
+          "clues": ["Ana is allergic to fur.", "..."],
+          "solution": [["fish"], ["cat"], ["dog"]], "explanation": "text" },
+        { "type": "balance", "id": "q-...", "prompt": "Get x alone.",
+          "left": [2, 3], "right": [0, 9], "explanation": "text" },
         { "type": "sim", "sim": "git", "title": "optional", "body": "task text",
           "goal": { "text": "Merge feature into main", "merged": [{ "from": "feature", "into": "main" }] } },
         { "type": "sim", "sim": "dice", "dice": 2, "sides": 6, "target": [7], "goalRolls": 500 },
@@ -115,7 +125,17 @@ instead of recognizing one):
 - "sim" (ungraded playground; "goal" or "goalRolls" unlocks Continue): "git" supports commit, branch,
   switch/checkout (-c/-b), merge, log, status; "dice" rolls 1–3 dice; "growth" races complexity
   classes ("1", "log n", "n", "n log n", "n^2", "2^n"); "join" shows INNER/LEFT/RIGHT/FULL joins.
-- Non-programming topics use order, buckets and the matching simulators — not output/bug/trace.
+- "truthtable": 1–3 "vars"; each column's "expr" uses not/and/or/xor/->/<-> (or ¬ ∧ ∨ ⊕ → ↔) and parentheses.
+  The correct cells are computed from the expression, so only the expression must be right. "given": true
+  shows a helper column already filled in.
+- "logicgrid": 2–3 categories of 3–5 items; the first category labels the rows. "solution" has one row
+  per first-category item listing its match in each other category. The clues must lead to exactly ONE
+  solution — check it with a brute-force solver before publishing.
+- "balance": the equation a·x + b = c·x + d as "left": [a, b], "right": [c, d], whole numbers from -20
+  to 20, with a whole-number solution. The learner applies the same move to both sides; solving in the
+  fewest possible moves counts as a first-try success.
+- Non-programming topics use order, buckets, truthtable, logicgrid, balance and the matching simulators —
+  not output/bug/trace.
 
 Formatting inside text fields: **bold**, *italic*, `code`, lines starting with "- " for
 bullet lists, a blank line ("\n\n") between paragraphs, and ``` fences for code blocks.

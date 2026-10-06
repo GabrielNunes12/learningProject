@@ -1,11 +1,12 @@
 // Validates one course JSON file and returns human-readable problems.
-// Has no runtime imports so scripts/check-content.ts can run it with plain Node.
+// Its only runtime import uses an explicit .ts extension so scripts/check-content.ts can run it with plain Node.
+import { parseLogic } from '../lib/logic.ts';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const isStr = (v: unknown) => typeof v === 'string' && v.trim() !== '';
 
 /** Step types that count as interactive practice. Every lesson needs at least one. */
-export const INTERACTIVE_TYPES = ['output', 'bug', 'order', 'buckets', 'trace', 'sim'];
+export const INTERACTIVE_TYPES = ['output', 'bug', 'order', 'buckets', 'trace', 'truthtable', 'logicgrid', 'balance', 'sim'];
 
 export function validateCourse(t: any, where: string): string[] {
   const errs: string[] = [];
@@ -89,6 +90,9 @@ function validateLesson(
       case 'order':
       case 'buckets':
       case 'trace':
+      case 'truthtable':
+      case 'logicgrid':
+      case 'balance':
         req(isStr(s.id), `${sw}: questions need an "id"`);
         req(!stepIds.has(s.id), `${sw}: duplicate question id "${s.id}"`);
         stepIds.add(s.id);
@@ -151,6 +155,12 @@ function validateLesson(
             req(f?.ask === undefined || (isStr(f.ask) && typeof f?.vars?.[f.ask] === 'string'), `${fw}: "ask" must name one of this frame's "vars"`);
           });
           req(frames.some((f) => f?.ask), `${sw}: trace needs at least one frame with "ask" (a value to predict)`);
+        } else if (s.type === 'truthtable') {
+          validateTruthTable(s, sw, req);
+        } else if (s.type === 'logicgrid') {
+          validateLogicGrid(s, sw, req);
+        } else if (s.type === 'balance') {
+          validateBalance(s, sw, req);
         } else {
           req(Array.isArray(s.accept) && s.accept.length > 0 && s.accept.every(isStr), `${sw}: text needs an "accept" list`);
         }
@@ -260,4 +270,70 @@ export function validateRoadmap(r: any, courseIds: string[]): string[] {
     });
   });
   return errs;
+}
+
+function validateTruthTable(s: any, sw: string, req: (ok: boolean, msg: string) => void) {
+  const vars: unknown[] = Array.isArray(s.vars) ? s.vars : [];
+  req(
+    vars.length >= 1 && vars.length <= 3 && vars.every((v) => typeof v === 'string' && /^[A-Za-z_][A-Za-z0-9_]*$/.test(v)),
+    `${sw}: truthtable needs 1–3 "vars" (simple names like "P")`,
+  );
+  req(new Set(vars).size === vars.length, `${sw}: truthtable "vars" must all be different`);
+  const cols: any[] = Array.isArray(s.columns) ? s.columns : [];
+  req(cols.length >= 1 && cols.length <= 4, `${sw}: truthtable needs 1–4 "columns"`);
+  req(cols.some((c) => !c?.given), `${sw}: truthtable needs at least one column that isn't "given"`);
+  cols.forEach((c, ci) => {
+    const cw = `${sw}, column ${ci + 1}`;
+    req(c?.label === undefined || isStr(c.label), `${cw}: "label" must be a string`);
+    req(c?.given === undefined || typeof c.given === 'boolean', `${cw}: "given" must be true or false`);
+    if (!isStr(c?.expr)) {
+      req(false, `${cw}: needs an "expr" like "P -> Q"`);
+      return;
+    }
+    try {
+      parseLogic(c.expr, vars as string[]);
+    } catch (e) {
+      req(false, `${cw}: can't read "${c.expr}": ${(e as Error).message}`);
+    }
+  });
+}
+
+function validateLogicGrid(s: any, sw: string, req: (ok: boolean, msg: string) => void) {
+  const cats: any[] = Array.isArray(s.categories) ? s.categories : [];
+  req(cats.length >= 2 && cats.length <= 3, `${sw}: logicgrid needs 2–3 "categories"`);
+  const size = cats[0]?.items?.length ?? 0;
+  cats.forEach((c, ci) => {
+    const items: unknown[] = Array.isArray(c?.items) ? c.items : [];
+    req(isStr(c?.name), `${sw}: logicgrid category ${ci + 1} needs a "name"`);
+    req(items.length >= 3 && items.length <= 5 && items.every(isStr), `${sw}: logicgrid category ${ci + 1} needs 3–5 string "items"`);
+    req(items.length === size, `${sw}: every logicgrid category needs the same number of items (${size})`);
+    req(new Set(items).size === items.length, `${sw}: logicgrid category ${ci + 1} items must all be different`);
+  });
+  req(Array.isArray(s.clues) && s.clues.length > 0 && s.clues.every(isStr), `${sw}: logicgrid needs "clues"`);
+  const sol: any[] = Array.isArray(s.solution) ? s.solution : [];
+  req(
+    sol.length === size && sol.every((row) => Array.isArray(row) && row.length === cats.length - 1),
+    `${sw}: logicgrid "solution" needs ${size} rows of ${Math.max(cats.length - 1, 0)} items (one per category after the first)`,
+  );
+  cats.slice(1).forEach((c, k) => {
+    const column = sol.map((row) => row?.[k]);
+    const items: unknown[] = Array.isArray(c?.items) ? c.items : [];
+    req(
+      column.length === items.length && items.every((it) => column.filter((v) => v === it).length === 1),
+      `${sw}: logicgrid "solution" must use each "${c?.name}" item exactly once`,
+    );
+  });
+}
+
+function validateBalance(s: any, sw: string, req: (ok: boolean, msg: string) => void) {
+  const side = (v: unknown) => Array.isArray(v) && v.length === 2 && v.every((n) => Number.isInteger(n) && Math.abs(n as number) <= 20);
+  req(side(s.left) && side(s.right), `${sw}: balance "left" and "right" must be [coefficient, constant] whole numbers from -20 to 20`);
+  req(s.variable === undefined || (isStr(s.variable) && /^[a-z]$/i.test(s.variable)), `${sw}: balance "variable" must be one letter`);
+  if (!side(s.left) || !side(s.right)) return;
+  const [a, b] = s.left;
+  const [c, d] = s.right;
+  req(a !== c, `${sw}: balance needs different x-coefficients on the two sides, or there's no single solution`);
+  req(a === c || Number.isInteger((d - b) / (a - c)), `${sw}: balance solution x = (${d} − ${b}) / (${a} − ${c}) must be a whole number`);
+  const solved = (p: number[], q: number[]) => p[0] === 1 && p[1] === 0 && q[0] === 0;
+  req(!solved(s.left, s.right) && !solved(s.right, s.left), `${sw}: balance starts already solved`);
 }

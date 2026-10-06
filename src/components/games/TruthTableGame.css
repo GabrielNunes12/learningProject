@@ -1,0 +1,121 @@
+/* "Fill in the truth table" mini-game */
+.tt-hud { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 18px; }
+.tt-stat { display: inline-flex; align-items: center; gap: 5px; padding: 4px 11px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); font-size: 0.82rem; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.tt-stat strong { color: var(--text); display: inline-block; }
+.tt-stat.warn { background: var(--warn-bg); }
+.tt-stat.good { background: var(--good-bg); border-color: var(--good-border); }
+.tt-stat.good strong { color: var(--good); }
+.tt-stat.done { animation: pop 0.4s ease; }
+.tt-stat .bump { animation: tt-bump 0.3s ease; }
+@keyframes tt-bump { 0% { transform: scale(0.6); } 60% { transform: scale(1.3); } 100% { transform: scale(1); } }
+.tt-clear { padding: 3px 10px; font-size: 0.8rem; }
+.tt-tip { margin-left: auto; }
+
+.tt-progress { height: 6px; margin-top: 10px; border-radius: 999px; background: var(--track); overflow: hidden; }
+.tt-progress span { display: block; height: 100%; border-radius: inherit; background: var(--accent); transition: width 0.25s ease; }
+.tt-progress.good span { background: var(--good); }
+
+/* The table scrolls sideways inside its own box on narrow screens; the page never does. */
+.tt-scroll {
+  max-width: 100%; overflow-x: auto; margin-top: 14px; padding: 4px 2px 8px;
+  -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain;
+}
+.tt-table { border-collapse: separate; border-spacing: 0; margin: 0 auto; min-width: min(100%, 320px); }
+.tt-table th, .tt-table td { padding: 5px 6px; text-align: center; vertical-align: middle; }
+
+.tt-table thead th {
+  padding-bottom: 10px; border-bottom: 2px solid var(--border);
+  font-weight: 750; font-size: 0.95rem; color: var(--text); line-height: 1.25;
+}
+.tt-var { font-family: var(--mono); color: var(--text-2); min-width: 44px; }
+.tt-var.last, .tt-in.last { border-right: 2px solid var(--border); padding-right: 12px; }
+.tt-head { min-width: 64px; max-width: 150px; font-family: var(--mono); vertical-align: bottom; }
+.tt-head-main { display: block; overflow-wrap: anywhere; }
+.tt-head-expr { display: block; margin-top: 2px; font-size: 0.75rem; font-weight: 500; color: var(--muted); overflow-wrap: anywhere; }
+.tt-head:has(.tt-head-expr) .tt-head-main { font-family: var(--font); }
+.tt-given-tag {
+  display: inline-block; margin-top: 4px; padding: 1px 7px; border-radius: 999px;
+  font-family: var(--font); font-size: 0.62rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
+  background: var(--surface-2); color: var(--muted);
+}
+.tt-head.given { color: var(--text-2); }
+
+/* Input chips (pre-filled) and given cells (helpers) */
+.tt-chip {
+  display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 9px;
+  font-weight: 800; font-size: 0.92rem; font-family: var(--mono);
+}
+.tt-chip.t { background: color-mix(in srgb, var(--accent) 16%, var(--surface)); color: color-mix(in srgb, var(--accent) 80%, var(--text)); }
+.tt-chip.f { background: var(--surface-2); color: var(--muted); }
+.tt-chip.ghost { background: transparent; border: 1.5px dashed var(--border); }
+.tt-chip.ghost.t { border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); }
+
+/* Learner cells: pressable tiles */
+.tt-cell {
+  position: relative; display: grid; place-items: center; width: 48px; height: 44px; margin: 0 auto; padding: 0;
+  border: 2px solid var(--border); border-bottom-width: 4px; border-radius: 11px;
+  background: var(--surface); color: var(--text); cursor: pointer;
+  font: inherit; font-family: var(--mono); font-weight: 800; font-size: 1.05rem;
+  touch-action: manipulation; user-select: none; -webkit-user-select: none;
+  transition: border-color 0.12s, background 0.12s, transform 0.08s;
+}
+.tt-cell:not(.t):not(.f) { border-style: dashed; border-bottom-width: 2px; height: 44px; background: var(--surface-2); }
+.tt-cell:hover:not([aria-disabled]) { border-color: var(--accent); }
+.tt-cell:active:not([aria-disabled]) { transform: translateY(2px); }
+.tt-cell:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 55%, transparent); outline-offset: 2px; }
+.tt-cell[aria-disabled] { cursor: default; }
+.tt-cell.t { border-color: color-mix(in srgb, var(--accent) 55%, var(--border)); background: color-mix(in srgb, var(--accent) 12%, var(--surface)); color: color-mix(in srgb, var(--accent) 80%, var(--text)); }
+.tt-cell.f { background: var(--surface-3); color: var(--text-2); }
+.tt-val { animation: tt-flip 0.18s ease; }
+@keyframes tt-flip { from { transform: scale(0.4) rotateX(80deg); opacity: 0; } }
+
+/* Marks after a wrong check: a coloured ring plus a ✓ / ✗ badge */
+.tt-cell.right { border-color: var(--good); }
+.tt-cell.wrong { border-color: var(--bad); background: var(--bad-bg); animation: shake 0.35s ease; }
+.tt-mark {
+  position: absolute; top: -8px; right: -8px; width: 19px; height: 19px; border-radius: 999px;
+  display: grid; place-items: center; font-family: var(--font); font-size: 0.66rem; font-weight: 900; color: #fff;
+  animation: pop 0.3s ease both;
+}
+.tt-mark.right { background: var(--good); }
+.tt-mark.wrong { background: var(--bad); }
+
+/* Revealed answer: the right values, with the learner's misses highlighted */
+.tt-table.answer .tt-cell { border-style: solid; border-bottom-width: 4px; }
+.tt-cell.missed { border-color: var(--bad); box-shadow: 0 0 0 3px color-mix(in srgb, var(--bad) 22%, transparent); }
+.tt-was {
+  position: absolute; top: -8px; right: -8px; min-width: 19px; height: 19px; padding: 0 4px; border-radius: 999px;
+  display: grid; place-items: center; font-size: 0.66rem; font-weight: 800; text-decoration: line-through;
+  background: var(--bad); color: #fff;
+}
+.tt-legend { display: flex; align-items: center; gap: 8px; margin: 6px 0 0; justify-content: center; }
+.tt-legend-swatch { width: 14px; height: 14px; border-radius: 4px; border: 2px solid var(--bad); box-shadow: 0 0 0 2px color-mix(in srgb, var(--bad) 22%, transparent); }
+
+/* Solved: rows light up one after another */
+.tt-table tbody tr td { transition: background 0.25s ease; }
+.tt-table tbody tr.lit td { background: var(--good-bg); }
+.tt-table tbody tr.lit td:first-child { border-radius: 10px 0 0 10px; }
+.tt-table tbody tr.lit td:last-child { border-radius: 0 10px 10px 0; }
+.tt-table tbody tr.lit .tt-cell { border-color: var(--good); animation: tt-light 0.45s cubic-bezier(0.3, 1.4, 0.5, 1); }
+@keyframes tt-light {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.14); box-shadow: 0 0 0 6px color-mix(in srgb, var(--good) 25%, transparent); }
+  100% { transform: scale(1); }
+}
+
+.tt-result { margin: 12px 0 0; padding: 10px 14px; border-radius: 12px; background: var(--good-bg); border: 1px solid var(--good-border); color: var(--text); font-size: 0.95rem; text-align: center; animation: rise 0.3s ease; }
+
+@media (max-width: 480px) {
+  .tt-tip { display: none; }
+  .tt-table th, .tt-table td { padding: 4px 3px; }
+  .tt-var { min-width: 34px; }
+  .tt-head { min-width: 52px; max-width: 110px; font-size: 0.85rem; }
+  .tt-chip { width: 30px; height: 30px; }
+  .tt-cell { width: 44px; height: 42px; }
+  .tt-cell:not(.t):not(.f) { height: 42px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tt-progress span, .tt-cell, .tt-table tbody tr td { transition: none; }
+  .tt-val, .tt-mark, .tt-cell.wrong, .tt-stat.done, .tt-stat .bump, .tt-result, .tt-table tbody tr.lit .tt-cell { animation: none; }
+}

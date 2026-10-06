@@ -116,7 +116,52 @@ export interface TraceStep extends QuestionBase {
   frames: TraceFrame[];
 }
 
-export type QuestionStep = McqStep | NumericStep | TextStep | OutputStep | BugStep | OrderStep | BucketsStep | TraceStep;
+/** Fill in a truth table. The correct cells are computed from each column's expression. */
+export interface TruthTableStep extends QuestionBase {
+  type: 'truthtable';
+  /** 1–3 input variables, e.g. ["P", "Q"]. Rows come in the usual order: TT, TF, FT, FF. */
+  vars: string[];
+  /**
+   * Columns to the right of the inputs. `expr` uses the variables with not / and / or / xor / -> / <->
+   * (also ¬ ∧ ∨ ⊕ → ↔ ! && ||) and parentheses. `given` columns are shown filled in, as helpers.
+   */
+  columns: { expr: string; label?: string; given?: boolean }[];
+}
+
+/** An Einstein-style logic grid: use the clues to match every item of the first category with one of each other. */
+export interface LogicGridStep extends QuestionBase {
+  type: 'logicgrid';
+  /** 2–3 categories with the same number (3–5) of items. The first one labels the rows. */
+  categories: { name: string; items: string[] }[];
+  /** The clues, in the order shown. They must lead to exactly one solution. */
+  clues: string[];
+  /** One row per item of the first category: the matching item from each other category, in category order. */
+  solution: string[][];
+}
+
+/** Solve a·x + b = c·x + d on a balance scale by doing the same move to both sides. */
+export interface BalanceStep extends QuestionBase {
+  type: 'balance';
+  /** [a, b] for the left side a·x + b. Whole numbers from -20 to 20. */
+  left: [number, number];
+  /** [c, d] for the right side c·x + d. The solution x = (d − b) / (a − c) must be a whole number. */
+  right: [number, number];
+  /** Name of the unknown (default "x"). */
+  variable?: string;
+}
+
+export type QuestionStep =
+  | McqStep
+  | NumericStep
+  | TextStep
+  | OutputStep
+  | BugStep
+  | OrderStep
+  | BucketsStep
+  | TraceStep
+  | TruthTableStep
+  | LogicGridStep
+  | BalanceStep;
 /** Questions checked by QuestionView's classic answer UI (not a mini-game). */
 export type ClassicQuestionStep = McqStep | NumericStep | TextStep | OutputStep | BugStep;
 
@@ -219,6 +264,18 @@ export interface Course extends CourseFile {
   lessons: Lesson[];
 }
 
-export const QUESTION_TYPES = ['mcq', 'numeric', 'text', 'output', 'bug', 'order', 'buckets', 'trace'] as const;
+export const QUESTION_TYPES = [
+  'mcq',
+  'numeric',
+  'text',
+  'output',
+  'bug',
+  'order',
+  'buckets',
+  'trace',
+  'truthtable',
+  'logicgrid',
+  'balance',
+] as const;
 
 export const isQuestion = (s: Step): s is QuestionStep => (QUESTION_TYPES as readonly string[]).includes(s.type);
