@@ -1229,6 +1229,24 @@
               "explanation": "With a platform type the compiler lets you choose `String`, and inserts a runtime null check at the assignment, which fails immediately with a `NullPointerException`. Declaring `String?` would force you to handle null at compile time."
             },
             {
+              "type": "bug",
+              "id": "q-bug-platform-getenv",
+              "prompt": "Java's `System.getenv` returns `null` when a variable isn't set. With `APP_MODE` unset, this should print `Mode: default`. Click the line with the bug.",
+              "language": "kotlin",
+              "code": "fun main() {\n    val mode: String = System.getenv(\"APP_MODE\")\n    val shown = if (mode == null) \"default\" else mode\n    println(\"Mode: $shown\")\n}",
+              "error": "warning: condition is always 'false'.\nException in thread \"main\" java.lang.NullPointerException: getenv(...) must not be null\n  ...",
+              "lines": [2],
+              "fixes": [
+                "Change line 2 to `val mode: String? = System.getenv(\"APP_MODE\")`",
+                "Change line 3 to `val shown = mode ?: \"default\"`",
+                "Change line 2 to `val mode: String = System.getenv(\"APP_MODE\")!!`",
+                "Change line 2 to `val mode: String = System.getenv(\"APP_MODE\").toString()`"
+              ],
+              "answer": 0,
+              "hint": "`getenv` returns a platform type, `String!`. Which type did line 2 choose for it?",
+              "explanation": "Declaring `mode: String` tells Kotlin the Java value is never null, so it inserts a null check right at the assignment, and line 2 throws before the null test on line 3 can run. That's also why the compiler warns the condition is *always false*. Declaring `String?` keeps the null, and line 3 handles it. An elvis on line 3 never gets the chance, `!!` throws its own `NullPointerException`, and calling `.toString()` on the null Java string fails as well."
+            },
+            {
               "type": "explain",
               "title": "Calling Kotlin from Java",
               "body": "A few annotations make Kotlin code pleasant to use from Java:\n\n- `@JvmStatic` on a companion member → a real static method: `User.create()` instead of `User.Companion.create()`.\n- `@JvmOverloads` → generates Java overloads for default arguments.\n- `@JvmField` → exposes a property as a plain public field.\n- Top-level functions in `Utils.kt` become static methods on `UtilsKt`; rename that class with `@file:JvmName(\"Utils\")`.\n- Properties become getters and setters: `val name` → `getName()`."

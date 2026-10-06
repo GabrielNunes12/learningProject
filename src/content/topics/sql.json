@@ -850,17 +850,22 @@
               "explanation": "Lisbon gives Ana and Cara. Names ending in lowercase `a` are also Ana and Cara. `UNION ALL` keeps duplicates, so that's **4** rows. With `UNION` it would be 2."
             },
             {
-              "type": "mcq",
+              "type": "bug",
               "id": "q-union-error",
-              "prompt": "Why does this fail?\n\n```sql\nSELECT name, city FROM customers\nUNION\nSELECT id FROM orders;\n```",
-              "choices": [
-                "You can't `UNION` two different tables",
-                "`UNION` requires an `ORDER BY`",
-                "It doesn't fail; it just returns duplicates",
-                "The two queries return different numbers of columns"
+              "prompt": "This should build one contact list: every customer's name and city, plus the name of every member of `staff(id, name, manager_id)`, who have no city on file. It fails. Click the line with the bug.",
+              "language": "sql",
+              "code": "SELECT name, city FROM customers\nUNION ALL\nSELECT name FROM staff;",
+              "error": "ERROR:  each UNION query must have the same number of columns",
+              "lines": [3],
+              "fixes": [
+                "Change line 3 to `SELECT name, NULL FROM staff;`",
+                "Change line 2 to `UNION`",
+                "Change line 3 to `SELECT name, manager_id FROM staff;`",
+                "Change line 3 to `SELECT name FROM staff ORDER BY name;`"
               ],
-              "answer": 3,
-              "explanation": "Each query in a `UNION` must return the same number of columns (here 2 vs 1), and matching columns need compatible types. Different tables are fine; that's the usual case."
+              "answer": 0,
+              "hint": "Count the columns on each side of `UNION ALL`.",
+              "explanation": "Each query in a `UNION` must return the same number of columns, here 2 vs 1, and matching columns need compatible types. `SELECT name, NULL` gives staff an empty city, so every staff row stacks under the customers with a blank city. `UNION` checks the column count just the same; `manager_id` makes two columns but stacks an integer under the text `city` (*UNION types text and integer cannot be matched*); and `ORDER BY` only sorts the combined result. Using two different tables is fine; that's the usual case."
             },
             {
               "type": "text",
@@ -1133,6 +1138,53 @@
               ],
               "answer": 0,
               "explanation": "The database only knows the *current* price, so every report recomputes January's revenue with 39.00. The price paid is a separate fact that belongs to the order line: add `unit_price` to `order_items` and fill it in at checkout."
+            },
+            {
+              "type": "buckets",
+              "id": "q-buckets-which-table",
+              "prompt": "Each fact gets exactly one home. Sort these facts into the table where they belong in our schema: `customers`, `products`, `orders` and `order_items`.",
+              "buckets": [
+                "`customers`",
+                "`products`",
+                "`orders`",
+                "`order_items`"
+              ],
+              "items": [
+                {
+                  "text": "Ana's city",
+                  "bucket": 0
+                },
+                {
+                  "text": "Ana's email address",
+                  "bucket": 0
+                },
+                {
+                  "text": "The Kettle's current price",
+                  "bucket": 1
+                },
+                {
+                  "text": "The Kettle's category",
+                  "bucket": 1
+                },
+                {
+                  "text": "The date order 101 was placed",
+                  "bucket": 2
+                },
+                {
+                  "text": "Which customer placed order 102",
+                  "bucket": 2
+                },
+                {
+                  "text": "How many Pens are in order 101",
+                  "bucket": 3
+                },
+                {
+                  "text": "The price Ana actually paid per Pen in order 101",
+                  "bucket": 3
+                }
+              ],
+              "hint": "Ask what each fact describes: a person, a catalogue item, a whole order, or one product within one order?",
+              "explanation": "A fact goes with the thing it describes. City and email describe a **customer**. The current price and category describe a **product**. The date and the buyer describe a whole **order**, which points to the customer by `customer_id`. A quantity, and the price paid at checkout, describe one product *within* one order, so they depend on the pair (order, product) and live in `order_items`. That's why the price paid is a separate fact from `products.price`: changing the catalogue mustn't rewrite old orders."
             }
           ]
         }
@@ -1201,6 +1253,16 @@
               "explanation": "Query A is an error: window functions aren't allowed in `WHERE`, which runs before them. Query C is also an error: `id` is neither grouped nor aggregated, and `MAX` wouldn't tell you *which* order had the max anyway. Query B computes the number in a CTE, then filters: orders 101, 103 and 104, plus guest order 106 in its own `NULL` partition. This \"rank in a CTE, filter outside\" pattern is the standard top-N-per-group answer."
             },
             {
+              "type": "output",
+              "id": "q-out-second-biggest",
+              "prompt": "Using the `orders` table below, what does this return? Type one value per line, without the header.\n\n```\norders\n id  | customer_id | total | created_at\n-----+-------------+-------+-----------\n 101 | 1           | 40.00 | 2026-01-05\n 102 | 1           | 25.00 | 2026-02-10\n 103 | 2           | 80.00 | 2026-02-14\n 104 | 3           | 15.00 | 2026-03-01\n 105 | 2           | 50.00 | 2026-03-03\n 106 | NULL        | 30.00 | 2026-03-08\n```",
+              "language": "sql",
+              "code": "WITH ranked AS (\n  SELECT id,\n         ROW_NUMBER() OVER (PARTITION BY customer_id\n                            ORDER BY total DESC) AS rn\n  FROM orders\n)\nSELECT id FROM ranked\nWHERE rn = 2\nORDER BY id;",
+              "output": "102\n105",
+              "hint": "Number each customer's orders from biggest to smallest, starting at 1 for every customer. Who has a second order?",
+              "explanation": "The numbering restarts in every partition. Customer 1: 101 (40.00) is 1, 102 (25.00) is **2**. Customer 2: 103 (80.00) is 1, 105 (50.00) is **2**. Customer 3 and the `NULL` partition have one order each, so they never reach 2. That's each customer's *second-biggest* order: the same rank-in-a-CTE, filter-outside pattern with a different number."
+            },
+            {
               "type": "numeric",
               "id": "q-running-per-customer",
               "prompt": "What value does this show for order **105**?\n\n```sql\nSELECT id,\n       SUM(total) OVER (PARTITION BY customer_id\n                        ORDER BY created_at) AS running\nFROM orders;\n```\n\n```\norders\n id  | customer_id | total | created_at\n-----+-------------+-------+-----------\n 101 | 1           | 40.00 | 2026-01-05\n 102 | 1           | 25.00 | 2026-02-10\n 103 | 2           | 80.00 | 2026-02-14\n 104 | 3           | 15.00 | 2026-03-01\n 105 | 2           | 50.00 | 2026-03-03\n 106 | NULL        | 30.00 | 2026-03-08\n```",
@@ -1263,6 +1325,51 @@
               "answer": 5,
               "explanation": "`EXPLAIN ANALYZE` really **executes** the statement to measure it, so order 104 (15.00) is deleted and committed. To profile a write safely, wrap it: `BEGIN; EXPLAIN ANALYZE DELETE ...; ROLLBACK;`",
               "hint": "ANALYZE means the query actually runs."
+            },
+            {
+              "type": "buckets",
+              "id": "q-buckets-composite-index",
+              "prompt": "`orders` has millions of rows and an index on `(customer_id, created_at)`. For each `WHERE` clause, can PostgreSQL use the index to jump straight to the matching rows?",
+              "buckets": [
+                "Jumps straight to the rows",
+                "Can't jump: has to scan"
+              ],
+              "items": [
+                {
+                  "text": "`customer_id = 2`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`customer_id = 2 AND created_at >= '2026-03-01'`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`created_at >= '2026-03-01' AND customer_id = 2`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`customer_id IN (1, 2)`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`customer_id = 2 AND EXTRACT(YEAR FROM created_at) = 2025`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`created_at >= '2026-03-01'`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`customer_id + 0 = 2`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`EXTRACT(YEAR FROM created_at) = 2025`",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Think of the phone book sorted by last name, then first name. Do you know where to open it? And does the condition test the bare column?",
+              "explanation": "The index is sorted by `customer_id` first, so any condition on the bare `customer_id` (`=`, `IN`, plus a date range within that customer) finds its spot directly. The order you write the `AND` parts in doesn't matter. With `EXTRACT(...)` next to `customer_id = 2`, PostgreSQL jumps to customer 2's entries and checks the year on those few rows. Dates alone are scattered across every customer, so `created_at` without `customer_id` can't jump. In a test on 2 million rows, PostgreSQL 17 chose a `Seq Scan` for the date range; for a single day it did use the index, but at an estimated cost of roughly 22,000, because it reads the *whole* index, versus roughly 5 for `customer_id = 2`. `customer_id + 0` and `EXTRACT(...)` alone hide the column inside an expression, just like `lower(email)`."
             },
             {
               "type": "text",

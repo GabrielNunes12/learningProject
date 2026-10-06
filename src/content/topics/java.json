@@ -704,17 +704,57 @@
               "explanation": "Releases come every six months, March and September, so 22 → March 2024 and 23 → **September 2024**. Then 24 in March 2025 and 25 in September 2025."
             },
             {
-              "type": "mcq",
+              "type": "buckets",
               "id": "q-lts-list",
-              "prompt": "Your company only allows LTS versions in production. Which list contains **only** LTS releases?",
-              "choices": [
-                "8, 11, 17, 21, 25",
-                "8, 10, 15, 20, 25",
-                "9, 11, 17, 22",
-                "11, 14, 17, 23"
+              "prompt": "Your company only allows LTS versions in production. Sort these releases: which ones may you deploy?",
+              "buckets": [
+                "LTS: years of updates",
+                "Non-LTS: updated for six months"
               ],
-              "answer": 0,
-              "explanation": "The LTS releases are **8, 11, 17, 21 and 25**. Versions like 9, 10, 14, 15, 20, 22 and 23 were each supported only until the next release six months later."
+              "items": [
+                {
+                  "text": "Java 8",
+                  "bucket": 0
+                },
+                {
+                  "text": "Java 11",
+                  "bucket": 0
+                },
+                {
+                  "text": "Java 17",
+                  "bucket": 0
+                },
+                {
+                  "text": "Java 21",
+                  "bucket": 0
+                },
+                {
+                  "text": "Java 25",
+                  "bucket": 0
+                },
+                {
+                  "text": "Java 9",
+                  "bucket": 1
+                },
+                {
+                  "text": "Java 10",
+                  "bucket": 1
+                },
+                {
+                  "text": "Java 15",
+                  "bucket": 1
+                },
+                {
+                  "text": "Java 22",
+                  "bucket": 1
+                },
+                {
+                  "text": "Java 24",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Since 17, an LTS arrives every two years, which is every fourth release.",
+              "explanation": "The LTS releases are **8, 11, 17, 21 and 25**. Versions like 9, 10, 15, 22 and 24 were each supported only until the next release six months later, so running one of them in production means upgrading every six months to keep getting security fixes."
             },
             {
               "type": "numeric",
@@ -1375,6 +1415,24 @@
               "explanation": "`shutdown()` is a polite close: no new tasks, existing ones finish. It doesn't wait — use `awaitTermination` for that. `shutdownNow()` is the one that interrupts running tasks."
             },
             {
+              "type": "bug",
+              "id": "q-bug-shutdown-early",
+              "prompt": "This should print `142` and then let the program exit. Click the line with the bug.",
+              "language": "java",
+              "code": "ExecutorService pool = Executors.newFixedThreadPool(4);\nFuture<Integer> a = pool.submit(() -> 6 * 7);\npool.shutdown();\nFuture<Integer> b = pool.submit(() -> 100);\nSystem.out.println(a.get() + b.get());",
+              "error": "Exception in thread \"main\" java.util.concurrent.RejectedExecutionException: Task java.util.concurrent.FutureTask@... rejected from java.util.concurrent.ThreadPoolExecutor@...\n  ...",
+              "lines": [3, 4],
+              "fixes": [
+                "Move line 3 (`pool.shutdown();`) to after line 4",
+                "Delete line 3",
+                "Change line 3 to `pool.shutdownNow();`",
+                "Add `pool.awaitTermination(1, TimeUnit.SECONDS);` after line 3"
+              ],
+              "answer": 0,
+              "hint": "What does a pool do with new tasks once `shutdown()` has been called?",
+              "explanation": "`shutdown()` means *accept no new tasks*, so the `submit` on line 4 is rejected with `RejectedExecutionException`. Call `shutdown()` once, after the **last** submit: task `b` is accepted, both results arrive and the pool's threads end. Deleting `shutdown()` prints `142` but the program never exits, because the pool's threads keep waiting for work. `shutdownNow()` rejects new tasks too, and `awaitTermination` only waits for the pool to finish: line 4 is still rejected afterwards."
+            },
+            {
               "type": "text",
               "id": "q-future-get",
               "prompt": "Which `Future` method blocks until the task's result is ready?",
@@ -1385,6 +1443,16 @@
                 "f.get()"
               ],
               "explanation": "**`get()`** waits for the result (there's also an overload with a timeout). Calling it right after submitting turns async work back into a blocking wait, so call it only when you actually need the value."
+            },
+            {
+              "type": "output",
+              "id": "q-get-order",
+              "prompt": "The first task takes half a second; the second finishes almost instantly. What does this print?",
+              "language": "java",
+              "code": "ExecutorService pool = Executors.newFixedThreadPool(2);\nFuture<String> slow = pool.submit(() -> { Thread.sleep(500); return \"slow\"; });\nFuture<String> fast = pool.submit(() -> \"fast\");\nSystem.out.println(slow.get());\nSystem.out.println(fast.get());\npool.shutdown();",
+              "output": "slow\nfast",
+              "hint": "The tasks finish in one order, but which thread prints, and in what order does it ask?",
+              "explanation": "Both tasks run at the same time on the pool's two threads, and `fast` finishes first. But only the main thread prints, and it calls `slow.get()` first, which **blocks** for about half a second until `slow` is ready. Then `fast.get()` returns at once, because that result is already waiting. Output order follows the order of your `get()` calls, not the order the tasks finish."
             }
           ]
         },
@@ -1478,17 +1546,49 @@
               "body": "- **Don't pool virtual threads.** They're cheap — create one per task.\n- **Limit access to scarce resources with a `Semaphore`** (or the resource's own pool, like a DB connection pool), not by capping threads.\n- **Be careful with big `ThreadLocal` caches** — with millions of threads they multiply. Scoped values (final in Java 25) are the lighter alternative.\n- **On Java 21–23, blocking inside `synchronized` pins** the virtual thread to its carrier; prefer `ReentrantLock` there. Java 24 removed this limitation.\n- **Structured concurrency** (`StructuredTaskScope`) is still a preview in Java 25."
             },
             {
-              "type": "mcq",
+              "type": "buckets",
               "id": "q-io-vs-cpu",
-              "prompt": "Which workload benefits most from switching to virtual threads?",
-              "choices": [
-                "A web service where each request waits about 200 ms for a database",
-                "Resizing 1,000 images on an 8-core machine",
-                "A tight loop that searches for prime numbers",
-                "A single-threaded command-line calculator"
+              "prompt": "You're moving each workload from a platform-thread pool to one virtual thread per task. Will it get a big throughput boost?",
+              "buckets": [
+                "Big win: tasks mostly wait",
+                "Little or no gain: cores are the limit"
               ],
-              "answer": 0,
-              "explanation": "Virtual threads help when many tasks spend their time **waiting**. Image resizing and prime searching are CPU-bound: the cores are the limit, not the number of threads."
+              "items": [
+                {
+                  "text": "A web service where each request waits about 200 ms for a database",
+                  "bucket": 0
+                },
+                {
+                  "text": "Calling three slow HTTP APIs for each of 5,000 orders",
+                  "bucket": 0
+                },
+                {
+                  "text": "A chat server holding 50,000 mostly idle connections",
+                  "bucket": 0
+                },
+                {
+                  "text": "Sending 10,000 emails, each waiting on a mail server",
+                  "bucket": 0
+                },
+                {
+                  "text": "Resizing 1,000 images on an 8-core machine",
+                  "bucket": 1
+                },
+                {
+                  "text": "A tight loop that searches for prime numbers",
+                  "bucket": 1
+                },
+                {
+                  "text": "Training a model on in-memory data",
+                  "bucket": 1
+                },
+                {
+                  "text": "A single-threaded command-line calculator",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Does the task spend its time waiting for something outside, or computing?",
+              "explanation": "Virtual threads help when many tasks spend their time **waiting**: on a database, an HTTP API, a socket or a mail server. A blocked virtual thread unmounts, so thousands can wait at once without thousands of OS threads. Resizing images, searching for primes and training on in-memory data are **CPU-bound**: the 8 cores are the limit, not the number of threads. And a single-threaded program has nothing to run concurrently at all."
             },
             {
               "type": "numeric",

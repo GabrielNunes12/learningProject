@@ -4,6 +4,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const isStr = (v: unknown) => typeof v === 'string' && v.trim() !== '';
 
+/** Step types that count as interactive practice. Every lesson needs at least one. */
+export const INTERACTIVE_TYPES = ['output', 'bug', 'order', 'buckets', 'trace', 'sim'];
+
 export function validateCourse(t: any, where: string): string[] {
   const errs: string[] = [];
   const req = (ok: boolean, msg: string) => {
@@ -62,6 +65,11 @@ function validateLesson(
     req(false, `${lw}: "steps" must be a non-empty list`);
     return;
   }
+  // Interactive learning is the default: every lesson needs at least one step the learner manipulates or produces.
+  req(
+    l.steps.some((s: any) => INTERACTIVE_TYPES.includes(s?.type)),
+    `${lw}: needs at least one interactive step (${INTERACTIVE_TYPES.join(', ')}) — see docs/NEW_TOPIC_PROMPT.md`,
+  );
   const stepIds = new Set<string>();
   l.steps.forEach((s: any, si: number) => {
     const sw = `${lw}, step ${si + 1}`;

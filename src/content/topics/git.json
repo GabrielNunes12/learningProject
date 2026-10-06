@@ -141,6 +141,53 @@
               "explanation": "Only `index.html` was staged. `about.html` is already tracked (it's in earlier commits), so its edit is listed as *not staged*. \"Untracked\" is only for brand-new files Git has never recorded."
             },
             {
+              "type": "buckets",
+              "id": "q-buckets-status-section",
+              "prompt": "Each card starts from a clean repo where `app.js`, `style.css` and `README.md` are already committed. After the commands on the card, where does `git status` list the file?",
+              "buckets": [
+                "Changes to be committed",
+                "Changes not staged for commit",
+                "Untracked files",
+                "Not listed: nothing to commit"
+              ],
+              "items": [
+                {
+                  "text": "Edit `app.js`, then `git add app.js`",
+                  "bucket": 0
+                },
+                {
+                  "text": "Create `todo.txt`, then `git add todo.txt`",
+                  "bucket": 0
+                },
+                {
+                  "text": "Edit `style.css` and do nothing else",
+                  "bucket": 1
+                },
+                {
+                  "text": "Edit `style.css`, `git add style.css`, then `git restore --staged style.css`",
+                  "bucket": 1
+                },
+                {
+                  "text": "Create `notes.txt` and do nothing else",
+                  "bucket": 2
+                },
+                {
+                  "text": "Create `draft.md`, `git add draft.md`, then `git restore --staged draft.md`",
+                  "bucket": 2
+                },
+                {
+                  "text": "Edit `README.md`, `git add README.md`, then `git commit -m \"Fix typo\"`",
+                  "bucket": 3
+                },
+                {
+                  "text": "Edit `app.js`, `git add .`, then `git commit -m \"Tweak app\"`",
+                  "bucket": 3
+                }
+              ],
+              "hint": "`git add` moves a change into the staging area, `git commit` moves it into the repository, and `restore --staged` takes it back out of the staging area.",
+              "explanation": "`git add` puts a change under **Changes to be committed**, whether the file is edited or brand new (`git status` shows the new one as `new file:`). An edit to a tracked file you haven't added is **not staged**. A new file Git has never recorded is **untracked**. `restore --staged` undoes only the `git add`: the tracked `style.css` goes back to *not staged*, and the new `draft.md` goes back to *untracked*. Once a change is committed, the working tree matches the last commit again, so `git status` has nothing to list."
+            },
+            {
               "type": "explain",
               "title": "Seeing exact changes with git diff",
               "body": "`git status` says *which* files changed; `git diff` shows *what* changed, line by line:\n\n- `git diff`: working tree vs staging area, i.e. changes you haven't staged yet.\n- `git diff --staged`: staging area vs last commit, i.e. exactly what the next commit will contain. (`--cached` is an older synonym.)\n\n```\n-color = blue\n+color = green\n```\n\nLines starting with `-` were removed, `+` were added. Checking `git diff --staged` right before committing is a great habit: it's your last look at what you're about to record."
@@ -245,17 +292,53 @@
               "answer": "`git rm --cached .env`, commit, and rotate the leaked secret."
             },
             {
-              "type": "mcq",
+              "type": "buckets",
               "id": "q-ignore-pattern",
-              "prompt": "Your `.gitignore` contains:\n\n```\n*.log\nbuild/\n```\n\nYou create these four new files. Which one still shows up as untracked in `git status`?",
-              "choices": [
-                "`server.log`",
-                "`build/app.js`",
-                "`logs/error.log`",
-                "`src/logger.js`"
+              "prompt": "Your `.gitignore` contains:\n\n```\nnode_modules/\n*.log\n!keep.log\nbuild/\n.env\n```\n\nYou create each of these new files. Sort them: ignored by Git, or still listed as untracked in `git status`?",
+              "buckets": [
+                "Ignored",
+                "Still shows as untracked"
               ],
-              "answer": 3,
-              "explanation": "`*.log` matches files ending in `.log` at any depth, so `server.log` and `logs/error.log` are ignored, and `build/` ignores everything inside that folder. `src/logger.js` ends in `.js`, so no pattern matches it."
+              "items": [
+                {
+                  "text": "`server.log`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`logs/error.log`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`node_modules/react/index.js`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`build/app.js`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`.env`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`keep.log`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`src/logger.js`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`src/build.js`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`.env.example`",
+                  "bucket": 1
+                }
+              ],
+              "hint": "A pattern has to match the whole file name (or a folder on its path). A leading `!` brings a file back.",
+              "explanation": "`*.log` matches files ending in `.log` at any depth, so `server.log` and `logs/error.log` are ignored, but `!keep.log` re-includes `keep.log`. `node_modules/` and `build/` ignore everything inside those folders. `src/build.js` is a *file* named `build.js`, not a `build` folder, so it isn't matched, and `src/logger.js` ends in `.js`, not `.log`. `.env` matches only a file named exactly `.env`, so `.env.example` still shows up. That's good, because it's the safe template you *do* want to commit. To see which pattern decides a file, run `git check-ignore -v <file>`."
             }
           ]
         }
@@ -504,6 +587,24 @@
               "explanation": "The `HEAD` half is the branch you're on, `main`, so `limit = 50` is yours and `limit = 100` comes from `theme`. Commit dates play no role in how Git labels the sides."
             },
             {
+              "type": "bug",
+              "id": "q-bug-leftover-marker",
+              "prompt": "You merged `theme` into `main`. Both branches changed the `color` and `size` lines, and the team agreed on `theme`'s `color = green` and `main`'s `size = 14`. This is `cfg.txt` after your edit. Before staging it, you run `git diff --check`, which flags conflict markers you forgot. Click the line that's still wrong.",
+              "language": "ini",
+              "code": "title = \"Shop\"\ncolor = green\n=======\nsize = 14\nfont = serif",
+              "error": "cfg.txt:3: leftover conflict marker",
+              "lines": [3],
+              "fixes": [
+                "Leave the file as it is: `git add cfg.txt` marks the conflict resolved and cleans up the file",
+                "Change line 3 to `>>>>>>> theme`, so the markers are balanced",
+                "Delete line 3",
+                "Delete lines 3 and 4, so only one side of the conflict is left"
+              ],
+              "answer": 2,
+              "hint": "Every line that starts with `<<<<<<<`, `=======` or `>>>>>>>` has to go.",
+              "explanation": "The `<<<<<<< HEAD` and `>>>>>>> theme` lines were deleted, but the `=======` divider on line 3 survived. Deleting it leaves exactly the agreed content. `git add` doesn't inspect the file: it would happily stage the marker, and the merge commit would contain it. Swapping in another marker is still a marker, and deleting line 4 as well throws away `size = 14`, which the team wanted to keep."
+            },
+            {
               "type": "example",
               "title": "Resolving step by step",
               "problem": "You're merging `theme` into `main` and `cfg.txt` conflicts on `color` (red on `main`, green on `theme`). The team agreed on green. Finish the merge.",
@@ -543,6 +644,21 @@
                 "merge --abort"
               ],
               "explanation": "`git merge --abort` throws away the in-progress merge and restores your branch, staging area and working tree to their pre-merge state. It's cleanest when you had no uncommitted changes before starting the merge."
+            },
+            {
+              "type": "order",
+              "id": "q-order-resolve",
+              "prompt": "You're on `main` and merge `theme`, which changed the same line of `cfg.txt`. Put what happens, and what you do, in order until the merge is finished.",
+              "items": [
+                "`git merge theme` stops: `CONFLICT (content): Merge conflict in cfg.txt`",
+                "`git status` lists `cfg.txt` under Unmerged paths as `both modified`",
+                "Edit `cfg.txt` into the final version and delete every marker line",
+                "`git add cfg.txt` to mark it resolved",
+                "`git status` says `All conflicts fixed but you are still merging.`",
+                "`git commit` creates the merge commit"
+              ],
+              "hint": "Git can only call the conflict fixed after you've told it so, and you should only tell it once the file is really fixed.",
+              "explanation": "The merge pauses on the conflict and `git status` shows the file as `both modified`. You fix the content first, markers included, because `git add` is how you *tell* Git the file is resolved; it doesn't check. Once every conflicted file is staged, `git status` reports that all conflicts are fixed but the merge is still in progress, and `git commit` finishes it with a merge commit."
             }
           ]
         },
@@ -594,17 +710,49 @@
               "answer": "Resolve, `git add`, then `git rebase --continue`."
             },
             {
-              "type": "mcq",
+              "type": "buckets",
               "id": "q-golden",
-              "prompt": "Which of these breaks the golden rule of rebasing?",
-              "choices": [
-                "Rebasing 3 local commits you haven't pushed onto the latest `main`",
-                "Using `git pull --rebase` to put your unpushed commits on top of fetched ones",
-                "Rebasing your personal draft branch, which only you use, before opening a pull request",
-                "Rebasing `main`, which the whole team pulls from, to tidy up last week's history"
+              "prompt": "Apply the golden rule of rebasing. Is it fine to rebase these commits, or should you leave their history alone?",
+              "buckets": [
+                "Fine to rebase",
+                "Don't rebase"
               ],
-              "answer": 3,
-              "explanation": "Teammates already have last week's `main` commits; rewriting them forces everyone to untangle duplicate history. The other options only rewrite commits nobody else has (or, for the draft branch, that nobody else uses)."
+              "items": [
+                {
+                  "text": "3 local commits you haven't pushed, onto the latest `main`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`git pull --rebase` to put your unpushed commits on top of fetched ones",
+                  "bucket": 0
+                },
+                {
+                  "text": "Your personal draft branch, which only you use, before opening a pull request",
+                  "bucket": 0
+                },
+                {
+                  "text": "A branch you created this morning and never pushed",
+                  "bucket": 0
+                },
+                {
+                  "text": "`main`, which the whole team pulls from, to tidy up last week's history",
+                  "bucket": 1
+                },
+                {
+                  "text": "`checkout-v2`, which you and a teammate both push to",
+                  "bucket": 1
+                },
+                {
+                  "text": "A `release-2.0` branch that other teams build from",
+                  "bucket": 1
+                },
+                {
+                  "text": "A teammate's pushed feature branch that you checked out to review",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Ask one question per card: could someone else already have these commits?",
+              "explanation": "Rebasing replaces commits with new copies. That's harmless when nobody else has the originals: unpushed commits, `pull --rebase` (which only replays your *unpushed* commits), and a pushed branch only you use (then push with `--force-with-lease`). Shared branches are different. Teammates and other teams already have those commits, so rewriting `main`, `checkout-v2`, a release branch or someone else's branch forces everyone to untangle duplicate history. Merge into those instead."
             },
             {
               "type": "mcq",
@@ -652,6 +800,20 @@
               "explanation": "Plain `git stash` saves changes to tracked files only, so the `app.js` edit goes onto the stash and the untracked `new-widget.js` stays in the working tree. `git stash -u` would have taken it too."
             },
             {
+              "type": "order",
+              "id": "q-order-stash",
+              "prompt": "You're halfway through a change on `feature` when an urgent bug report arrives. Put the steps in order, ending with your half-done work back in place.",
+              "items": [
+                "`git stash` (the working tree is clean again)",
+                "`git switch main`",
+                "Fix the bug, then `git add` and `git commit`",
+                "`git switch feature`",
+                "`git stash pop`"
+              ],
+              "hint": "Shelve the work before you leave the branch, and bring it back only once you're on the branch again.",
+              "explanation": "Stash first, so the half-done edits don't block the switch or tag along to `main`. Fix and commit on `main`, return to `feature`, and only then `pop`: it re-applies the changes to whatever branch you're on and removes the entry from the stash."
+            },
+            {
               "type": "example",
               "title": "Work started on the wrong branch",
               "problem": "You've been editing for an hour and realise you're on `main`, but this work belongs on a branch called `search`. Nothing is committed yet.",
@@ -663,11 +825,14 @@
               "answer": "New branch: just `git switch -c search`. Existing branch: stash, switch, pop."
             },
             {
-              "type": "numeric",
+              "type": "output",
               "id": "q-stash-count",
-              "prompt": "Starting with an empty stash, you stash three separate times (editing files in between). Then you run `git stash pop`, followed by `git stash drop`. How many entries does `git stash list` show?",
-              "answer": 1,
-              "explanation": "Three stashes make 3 entries. `pop` applies the newest and removes it (2 left). `drop` deletes the new newest without applying it, leaving **1**."
+              "prompt": "On `feature`, starting with an empty stash, you run these commands (editing files in between). What does the last command print?\n\nEach line of `git stash list` looks like `stash@{0}: On feature: <label>`.",
+              "language": "bash",
+              "code": "git stash push -m \"nav menu\"\n# ...edit more files...\ngit stash push -m \"search box\"\n# ...edit more files...\ngit stash push -m \"footer\"\ngit stash pop\ngit stash drop\ngit stash list",
+              "output": "stash@{0}: On feature: nav menu",
+              "hint": "The stash is a stack: `pop` and `drop` both act on the newest entry, `stash@{0}`.",
+              "explanation": "Three stashes make 3 entries, newest first: footer, search box, nav menu. `pop` applies the newest (footer) and removes it. `drop` deletes the new newest (search box) without applying it. That leaves **1** entry, `nav menu`, and since it's now the newest, it's `stash@{0}`."
             },
             {
               "type": "text",
@@ -769,6 +934,52 @@
                 "push --set-upstream origin pricing"
               ],
               "explanation": "`git push -u origin pricing` creates `pricing` on the remote and records `origin/pricing` as its upstream, so future `git push` and `git pull` need no arguments."
+            },
+            {
+              "type": "buckets",
+              "id": "q-buckets-fetch-pull-push",
+              "prompt": "Which command does each job?",
+              "buckets": [
+                "`git fetch`",
+                "`git pull`",
+                "`git push`"
+              ],
+              "items": [
+                {
+                  "text": "Download teammates' new commits without touching your branch or your files",
+                  "bucket": 0
+                },
+                {
+                  "text": "Refresh `origin/main` so `git status` ahead/behind counts are current",
+                  "bucket": 0
+                },
+                {
+                  "text": "Look at what's new on GitHub before deciding whether to integrate it",
+                  "bucket": 0
+                },
+                {
+                  "text": "Download teammates' commits and merge them into your current branch in one step",
+                  "bucket": 1
+                },
+                {
+                  "text": "`git status` says `Your branch is behind 'origin/main' by 3 commits, and can be fast-forwarded.` Get those commits.",
+                  "bucket": 1
+                },
+                {
+                  "text": "Your push was rejected with `(fetch first)`. The next command to run",
+                  "bucket": 1
+                },
+                {
+                  "text": "`git status` says `Your branch is ahead of 'origin/main' by 2 commits.` Share them.",
+                  "bucket": 2
+                },
+                {
+                  "text": "Publish the new local branch `search` to GitHub for the first time",
+                  "bucket": 2
+                }
+              ],
+              "hint": "fetch only downloads, pull downloads and integrates, push uploads.",
+              "explanation": "`git fetch` only downloads and moves remote-tracking branches like `origin/main`, so it's the safe way to look first and the way to refresh ahead/behind counts. `git pull` is fetch plus integration into your branch: use it when you're behind, and after a rejected push. `git push` uploads commits the remote doesn't have yet. That's what \"ahead\" means, and `git push -u origin search` publishes a new branch."
             }
           ]
         },
@@ -952,6 +1163,53 @@
                 "git checkout style.css"
               ],
               "explanation": "`git restore style.css` overwrites the working-tree file with the staged version, which is the last committed version since nothing is staged. The edits are gone for good, because Git never had a copy. (Old spelling: `git checkout -- style.css`.)"
+            },
+            {
+              "type": "buckets",
+              "id": "q-buckets-undo",
+              "prompt": "Pick the undo for each mistake.",
+              "buckets": [
+                "`git restore <file>`",
+                "`git restore --staged <file>`",
+                "`git commit --amend`",
+                "`git revert <commit>`"
+              ],
+              "items": [
+                {
+                  "text": "Throw away your experiments in `style.css` (nothing staged)",
+                  "bucket": 0
+                },
+                {
+                  "text": "Make `app.js` match the last commit again, discarding your edits",
+                  "bucket": 0
+                },
+                {
+                  "text": "You ran `git add secrets.env` by mistake; keep the edits in the file",
+                  "bucket": 1
+                },
+                {
+                  "text": "`git add .` grabbed `debug.log`; take it out of the next commit",
+                  "bucket": 1
+                },
+                {
+                  "text": "Typo in the message of the commit you made a minute ago (not pushed)",
+                  "bucket": 2
+                },
+                {
+                  "text": "Your last local commit is missing `pdf_utils.py`",
+                  "bucket": 2
+                },
+                {
+                  "text": "A commit pushed to `main` last week broke checkout",
+                  "bucket": 3
+                },
+                {
+                  "text": "Teammates already pulled a bad commit, and it must be undone",
+                  "bucket": 3
+                }
+              ],
+              "hint": "Find where the mistake lives: the working tree, the staging area, your latest local commit, or a commit others already have.",
+              "explanation": "Unstaged edits in the working tree → `git restore <file>` (gone for good). Something staged by accident → `git restore --staged <file>`, which only unstages and keeps your edits. The latest commit, still local → `git commit --amend` fixes its message or adds the missing file. A commit others already have → `git revert`, which adds an undo commit instead of rewriting history (more on that in the next lesson)."
             }
           ]
         },
@@ -1032,6 +1290,53 @@
                 "reset --soft HEAD~1"
               ],
               "explanation": "`git reset --soft HEAD~1` moves the branch back to the parent commit without touching the staging area or working tree, so everything from that commit is staged again, ready to recommit."
+            },
+            {
+              "type": "buckets",
+              "id": "q-buckets-revert-reset",
+              "prompt": "Which command fits each situation?",
+              "buckets": [
+                "`git revert`",
+                "`git reset --soft`",
+                "`git reset` (mixed)",
+                "`git reset --hard`"
+              ],
+              "items": [
+                {
+                  "text": "Back out a bad commit on `main` that teammates already pulled",
+                  "bucket": 0
+                },
+                {
+                  "text": "Undo a commit but keep a record in history that it was undone",
+                  "bucket": 0
+                },
+                {
+                  "text": "Uncommit your latest local commit, keeping its changes staged",
+                  "bucket": 1
+                },
+                {
+                  "text": "Squash your last 3 local commits into one, together with a new `git commit`",
+                  "bucket": 1
+                },
+                {
+                  "text": "Uncommit your latest local commit, keeping the changes in your files but unstaged",
+                  "bucket": 2
+                },
+                {
+                  "text": "Undo your latest local commit so you can re-pick which files go into new commits",
+                  "bucket": 2
+                },
+                {
+                  "text": "Delete 2 junk local commits and their changes entirely",
+                  "bucket": 3
+                },
+                {
+                  "text": "Move `main` back one commit after `git branch feature` saved it (working tree clean)",
+                  "bucket": 3
+                }
+              ],
+              "hint": "Shared history → add a commit. Local history → move the pointer, and pick the mode by where the changes should end up: staged, unstaged, or gone.",
+              "explanation": "`revert` is the only one that adds a commit instead of rewriting history, so it's the choice for anything already shared, and the undone commit stays on record. The reset modes differ only in where the changes go: `--soft` keeps them **staged** (handy for squashing), mixed, the default, keeps them **unstaged**, and `--hard` **discards** them. Use `--hard` only when the commits are junk or still held by another branch, as in the \"committed to main by mistake\" example."
             }
           ]
         },
@@ -1088,6 +1393,24 @@
               ],
               "answer": 3,
               "explanation": "Creating a branch right where you are gives the commits a pointer, so they're safe and you can merge them later. Switching to `main` first would leave them unreferenced (recoverable only through the reflog). Stash only handles uncommitted changes."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-detached-branch",
+              "prompt": "You want to try an idea starting from an old commit and keep the result on a new branch `fast-parser`. But afterwards `git log --oneline fast-parser` doesn't show \"Try faster parser\" at all. Click the line where it went wrong.",
+              "language": "bash",
+              "code": "git switch --detach 3f9a2c1\n# ...edit parser.py...\ngit commit -am \"Try faster parser\"\ngit switch main\ngit switch -c fast-parser",
+              "error": "Warning: you are leaving 1 commit behind, not connected to\nany of your branches:\n\n  e1b2c3d Try faster parser\n\nIf you want to keep it by creating a new branch, this may be a good time\nto do so with:\n\n git branch <new-branch-name> e1b2c3d\n\nSwitched to branch 'main'\nSwitched to a new branch 'fast-parser'",
+              "lines": [4, 5],
+              "fixes": [
+                "Change line 1 to `git checkout 3f9a2c1`",
+                "Change line 5 to `git branch fast-parser`",
+                "Change line 3 to `git commit --amend -am \"Try faster parser\"`",
+                "Swap lines 4 and 5, so the branch is created before you switch away"
+              ],
+              "answer": 3,
+              "hint": "A new branch starts wherever HEAD is when you create it.",
+              "explanation": "In detached HEAD, the new commit has no branch pointing at it. Line 4 switches to `main` first (Git even warns that it's leaving a commit behind), so line 5 creates `fast-parser` from `main`, not from the experiment. Creating the branch *before* leaving gives the commit a pointer. `git checkout 3f9a2c1` detaches HEAD just the same, `git branch fast-parser` still starts at `main`, and amending in detached HEAD just makes a different unreferenced commit. If it has already happened, the warning's hash (or `git reflog`) rescues it: `git branch fast-parser e1b2c3d`."
             },
             {
               "type": "explain",

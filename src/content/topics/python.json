@@ -1310,17 +1310,14 @@
               "body": "```python\ndef greet(name: str, excited: bool = False) -> str:\n    return f'Hi {name}' + ('!' if excited else '.')\n\nscores: dict[str, list[int]] = {}\nnickname: str | None = None\n```\n\n`name: str` annotates a parameter and `-> str` annotates the return value. `list[int]` (Python 3.9+) and `str | None` (3.10+) are the modern spelling. Older code writes `List[int]` and `Optional[str]` from the `typing` module. Editors use hints for autocompletion, and checkers like mypy or pyright use them to find bugs before you run anything."
             },
             {
-              "type": "mcq",
+              "type": "output",
               "id": "q-hints-runtime",
-              "prompt": "What happens when you run this?\n\n```python\ndef double(x: int) -> int:\n    return x * 2\n\nprint(double('ab'))\n```",
-              "choices": [
-                "It prints `abab`",
-                "It raises `TypeError`, because `'ab'` isn't an `int`",
-                "It refuses to start, because Python checks hints before running",
-                "It prints `None`"
-              ],
-              "answer": 0,
-              "explanation": "Python does **not** enforce type hints at runtime. `'ab' * 2` is `'abab'`, so that's what prints. A type checker like mypy would flag the call before you run it, which is where hints pay off."
+              "prompt": "What does this print? (If you think it fails, type the error name.)",
+              "language": "python",
+              "code": "def double(x: int) -> int:\n    return x * 2\n\nprint(double('ab'))",
+              "output": "abab",
+              "hint": "Does Python look at `: int` when the function is called?",
+              "explanation": "Python does **not** enforce type hints at runtime: no `TypeError`, no refusal to start. `'ab' * 2` is `'abab'`, so that's what prints. A type checker like mypy would flag the call before you run it, which is where hints pay off."
             },
             {
               "type": "mcq",
@@ -1357,18 +1354,22 @@
               "explanation": "`job(1)` takes 1 s on its own. Then the two gathered jobs run concurrently, so they take as long as the slower one, 3 s. That's 1 + 3 = **4 s**."
             },
             {
-              "type": "mcq",
+              "type": "bug",
               "id": "q-forgot-await",
-              "prompt": "What does this print?\n\n```python\nimport asyncio\n\nasync def get_num():\n    return 42\n\nasync def main():\n    n = get_num()\n    print(type(n).__name__)\n\nasyncio.run(main())\n```",
-              "choices": [
-                "`coroutine`, plus a warning that it was never awaited",
-                "`int`",
-                "`NoneType`",
-                "`function`"
+              "prompt": "Each price is 10, so this should print `20`. Instead it crashes. Click the line with the bug.",
+              "language": "python",
+              "code": "import asyncio\n\nasync def get_price(item):\n    await asyncio.sleep(0.1)\n    return 10\n\nasync def main():\n    total = 0\n    for item in ['tea', 'cake']:\n        total += get_price(item)\n    print(total)\n\nasyncio.run(main())",
+              "error": "  ...: RuntimeWarning: coroutine 'get_price' was never awaited\nTraceback (most recent call last):\n  ...\nTypeError: unsupported operand type(s) for +=: 'int' and 'coroutine'",
+              "lines": [10],
+              "fixes": [
+                "Change line 10 to `total += await get_price(item)`",
+                "Change line 10 to `total += int(get_price(item))`",
+                "Change line 10 to `total += asyncio.run(get_price(item))`",
+                "Change line 3 to `def get_price(item):`"
               ],
               "answer": 0,
               "hint": "Calling an `async def` function doesn't run its body.",
-              "explanation": "Calling `get_num()` only creates a coroutine object; nothing runs until it's awaited. Python also warns `coroutine 'get_num' was never awaited`. The fix is `n = await get_num()`, which gives `42`."
+              "explanation": "Calling `get_price(item)` only creates a **coroutine object**; nothing runs until it's awaited. So line 10 tries to add a coroutine to an int, and Python also warns that the coroutine was *never awaited*. `await get_price(item)` runs it and gives `10`. `int(...)` can't convert a coroutine either, `asyncio.run` refuses to start inside an already running event loop, and a plain `def` can't contain `await` at all (`SyntaxError`)."
             }
           ]
         }

@@ -110,6 +110,14 @@ describe('validation', () => {
     assert.match(errors({ type: 'sim', sim: 'chess' }), /unknown simulator/);
   });
 
+  test('requires an interactive step in every lesson', () => {
+    const mcq = { type: 'mcq', id: 'q-m', prompt: 'P', choices: ['a', 'b'], answer: 0, explanation: 'E.' };
+    assert.match(errors(mcq), /needs at least one interactive step/);
+    assert.match(errors({ type: 'explain', body: 'Just reading.' }), /needs at least one interactive step/);
+    assert.doesNotMatch(errors(order), /interactive step/);
+    assert.doesNotMatch(errors({ type: 'sim', sim: 'growth', curves: ['n', 'n^2'] }), /interactive step/);
+  });
+
   test('checks the roadmap against known courses', () => {
     const ok = { tracks: [{ id: 't', title: 'T', icon: '🧭', description: 'D', nodes: [{ course: 'a' }, { course: 'b', after: ['a'] }] }] };
     assert.deepEqual(validateRoadmap(ok, ['a', 'b']), []);

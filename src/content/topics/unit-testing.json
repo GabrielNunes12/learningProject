@@ -708,18 +708,22 @@
               "answer": "One assertion on the whole value: shorter than checking each field, and the failure shows exactly which field differs."
             },
             {
-              "type": "mcq",
+              "type": "bug",
               "id": "q-kt-beforeall",
-              "prompt": "You want expensive setup to run once per class with `@BeforeAll`. Written as an ordinary `fun` inside a Kotlin test class, JUnit rejects it because it must be static. Which fix works?",
-              "choices": [
-                "Make the function `private`",
-                "Mark the function `open`",
-                "Rename it to `setUpAll`",
-                "Move it into a `companion object` and annotate it `@JvmStatic`"
+              "prompt": "`Prices.load()` is slow, so it should run **once** for the whole class. Instead, JUnit refuses to run the class. Click the line with the bug.",
+              "language": "kotlin",
+              "code": "import org.junit.jupiter.api.BeforeAll\nimport org.junit.jupiter.api.Test\nimport kotlin.test.assertEquals\n\nclass PriceTest {\n    @BeforeAll\n    fun loadPrices() {\n        Prices.load()\n    }\n\n    @Test\n    fun `apple costs 30`() {\n        assertEquals(30, Prices.of(\"apple\"))\n    }\n}",
+              "error": "JUnit Jupiter ✘ TestEngine with ID 'junit-jupiter' encountered a critical issue during test discovery:\n(1) [ERROR] @BeforeAll method 'public final void PriceTest.loadPrices()' must be static unless the test class is annotated with @TestInstance(Lifecycle.PER_CLASS).\n  ...",
+              "lines": [6, 7],
+              "fixes": [
+                "Wrap lines 6–9 in `companion object { ... }` and add `@JvmStatic` above line 7",
+                "Wrap lines 6–9 in `companion object { ... }`",
+                "Add `@JvmStatic` above line 7",
+                "Change line 7 to `private fun loadPrices() {`"
               ],
-              "answer": 3,
-              "explanation": "Kotlin has no `static` keyword; a `companion object` member marked `@JvmStatic` compiles to a real static method, which is what JUnit needs. The alternative is `@TestInstance(Lifecycle.PER_CLASS)`, which lets `@BeforeAll` be a normal method.",
-              "hint": "How does Kotlin produce a Java static method?"
+              "answer": 0,
+              "hint": "How does Kotlin produce a Java static method?",
+              "explanation": "Kotlin has no `static` keyword; a `companion object` member marked `@JvmStatic` compiles to a real static method on `PriceTest`, which is what JUnit needs. Without `@JvmStatic`, the function lives only on the separate `Companion` class, so JUnit never finds it: the class runs, `load()` never happens, and the test fails with *Key apple is missing in the map*. `@JvmStatic` outside an object doesn't compile, and `private` is still not static. The alternative is `@TestInstance(Lifecycle.PER_CLASS)`, which lets `@BeforeAll` be a normal method."
             }
           ]
         }
@@ -1106,6 +1110,24 @@
               "explanation": "Randomness, like time, should be an input. A seeded generator makes the shuffle reproducible; property checks (same 52 cards, no duplicates) don't depend on the order at all. 2% ≈ 1 in 52 — the test was just getting lucky."
             },
             {
+              "type": "bug",
+              "id": "q-bug-set-order",
+              "prompt": "This test passes on some runs and fails on others, with no code change. Click the line that makes it flaky.",
+              "language": "python",
+              "code": "def unique_tags(posts):\n    return list({tag for post in posts for tag in post['tags']})\n\ndef test_unique_tags():\n    posts = [{'tags': ['python', 'testing']}, {'tags': ['testing', 'ci']}]\n    assert unique_tags(posts) == ['python', 'testing', 'ci']",
+              "error": "Run 1: 1 passed\nRun 2: 1 failed\nE       AssertionError: assert ['python', 'ci', 'testing'] == ['python', 'testing', 'ci']",
+              "lines": [6, 2],
+              "fixes": [
+                "Change line 6 to `assert sorted(unique_tags(posts)) == ['ci', 'python', 'testing']`",
+                "Change line 6 to `assert unique_tags(posts) == ['ci', 'python', 'testing']`",
+                "Change line 2 to `return [tag for post in posts for tag in post['tags']]`",
+                "Add `random.seed(0)` before line 5 (and `import random` at the top)"
+              ],
+              "answer": 0,
+              "hint": "In what order does a `set` of strings hand back its items?",
+              "explanation": "`unique_tags` builds a **set**, and a set has no defined order: Python randomizes string hashes in every new process, so the list comes out in a different order from run to run. The test asserts one particular order. Sorting both sides checks *which* tags came back, which is the real contract. Comparing with a different fixed order is just as flaky, a list comprehension keeps the duplicate `'testing'` and fails every time, and `random.seed` doesn't touch hash randomization."
+            },
+            {
               "type": "explain",
               "title": "Don't sleep — wait or remove the wait",
               "body": "`Thread.sleep(500)` or `time.sleep(0.5)` \"to let the background job finish\" is a classic flake: too short on a busy CI machine, wasted time everywhere else.\n\nBetter options:\n\n- In unit tests, make the work **synchronous** — inject an executor that runs tasks immediately.\n- When you truly must wait, **poll for the condition** with a timeout (e.g. Awaitility in Java).\n\nAnd never \"fix\" flakiness with automatic retries alone: that hides a real bug, sometimes one your users will hit."
@@ -1122,6 +1144,59 @@
               ],
               "answer": 0,
               "explanation": "Each test must set up everything it relies on and leave nothing behind. Fresh state per test makes order irrelevant — which also lets you run tests in parallel."
+            },
+            {
+              "type": "buckets",
+              "id": "q-buckets-flaky",
+              "prompt": "Sort each test ingredient: can it make a test flaky, or does it give the same result on every run?",
+              "buckets": [
+                "Can flake: depends on something the test doesn't control",
+                "Deterministic: same result every run"
+              ],
+              "items": [
+                {
+                  "text": "Asserting `greet()`'s result when it reads `datetime.now()` internally",
+                  "bucket": 0
+                },
+                {
+                  "text": "Shuffling with an unseeded `random.shuffle`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`time.sleep(0.5)` to let a background job finish",
+                  "bucket": 0
+                },
+                {
+                  "text": "Asserting `list(tags)` equals a fixed list, where `tags` is a set of strings",
+                  "bucket": 0
+                },
+                {
+                  "text": "Two tests that add to and read the same static list",
+                  "bucket": 0
+                },
+                {
+                  "text": "A unit test that calls a real third-party weather API",
+                  "bucket": 0
+                },
+                {
+                  "text": "Passing the greeter a `Clock.fixed(...)` set to 9 a.m.",
+                  "bucket": 1
+                },
+                {
+                  "text": "Shuffling with an injected `random.Random(42)`",
+                  "bucket": 1
+                },
+                {
+                  "text": "Comparing `sorted(result)` with an expected list",
+                  "bucket": 1
+                },
+                {
+                  "text": "Each test creating its own fresh list in `@BeforeEach`",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Ask: could this give a different result tomorrow, on another machine, or in another test order?",
+              "explanation": "Flaky tests depend on an input the test doesn't set: the real clock, unseeded randomness, timing (`sleep`), hash order, shared state left by another test, or a real network. Each deterministic version turns that input into something the test controls: a fixed clock, a seeded generator, an order-independent comparison, fresh state per test."
             }
           ]
         },
@@ -1196,6 +1271,52 @@
               ],
               "answer": 3,
               "explanation": "Most rules (validation, pricing, edge cases) can be checked by unit tests in milliseconds. Keep end-to-end tests for \"can a user sign up and check out?\" — the few journeys where the whole system must work together."
+            },
+            {
+              "type": "buckets",
+              "id": "q-buckets-pyramid",
+              "prompt": "Which layer of the test pyramid does each test belong to?",
+              "buckets": [
+                "Unit",
+                "Integration",
+                "End-to-end"
+              ],
+              "items": [
+                {
+                  "text": "`shipping(20) == 5`, checked in memory in a millisecond",
+                  "bucket": 0
+                },
+                {
+                  "text": "Password rules checked with the user repository mocked out",
+                  "bucket": 0
+                },
+                {
+                  "text": "A parameterized test of a date-parsing function",
+                  "bucket": 0
+                },
+                {
+                  "text": "A repository's SQL query run against a real Postgres started in a container",
+                  "bucket": 1
+                },
+                {
+                  "text": "Saving an order through the repository, then reading it back from a real database",
+                  "bucket": 1
+                },
+                {
+                  "text": "Checking your consumer really reads messages from a Kafka broker in a container",
+                  "bucket": 1
+                },
+                {
+                  "text": "A browser script signs up, fills a cart and checks out on the running app",
+                  "bucket": 2
+                },
+                {
+                  "text": "Logging in through the real UI and checking the dashboard loads",
+                  "bucket": 2
+                }
+              ],
+              "hint": "Unit: your code alone, with fakes or mocks. Integration: your code plus one real piece of infrastructure. End-to-end: the whole app, driven like a user.",
+              "explanation": "**Unit** tests run your logic alone, in milliseconds, with collaborators mocked or faked. **Integration** tests check a seam between your code and something real, such as a database or a message broker, so they catch wiring mistakes like a typo in SQL. **End-to-end** tests drive the whole system through its UI like a user: valuable for a few critical journeys, but the slowest and most brittle, which is why they sit at the narrow top."
             }
           ]
         }

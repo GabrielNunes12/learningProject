@@ -321,17 +321,22 @@
               "body": "- `@Primary` on one implementation: it wins whenever there's ambiguity.\n- `@Qualifier` on the injection point: pick a bean by name. A scanned class's default bean name is its simple name with a lowercase first letter (`paypalClient`); a `@Bean` method's is the method name.\n- Inject them all: `List<PaymentClient>`, or `Map<String, PaymentClient>` keyed by bean name. Handy for strategy-style code.\n\n```java\n@Service\npublic class RefundService {\n    public RefundService(@Qualifier(\"paypalClient\") PaymentClient payments) { ... }\n}\n```"
             },
             {
-              "type": "mcq",
+              "type": "bug",
               "id": "q-two-beans",
-              "prompt": "Startup fails with *required a single bean, but 2 were found* for `PaymentClient`. Which change does **not** fix it?",
-              "choices": [
-                "Mark one implementation with `@Primary`",
-                "Add `@Autowired` to the constructor",
-                "Add `@Qualifier(\"stripeClient\")` to the constructor parameter",
-                "Change the parameter type to `List<PaymentClient>`"
+              "prompt": "Orders should be charged through Stripe. PayPal is used elsewhere, so both clients must stay beans. The app fails at startup. Click the line with the bug.",
+              "language": "java",
+              "code": "@Component\npublic class StripeClient implements PaymentClient { /* ... */ }\n\n@Component\npublic class PaypalClient implements PaymentClient { /* ... */ }\n\n@Service\npublic class OrderService {\n    private final PaymentClient payments;\n\n    public OrderService(PaymentClient payments) {\n        this.payments = payments;\n    }\n}",
+              "error": "***************************\nAPPLICATION FAILED TO START\n***************************\n\nDescription:\n\nParameter 0 of constructor in com.example.shop.OrderService required a single bean, but 2 were found:\n\t- paypalClient: defined in file [  ...]\n\t- stripeClient: defined in file [  ...]\n  ...\n\nAction:\n\nConsider marking one of the beans as @Primary, updating the consumer to accept multiple beans, or using @Qualifier to identify the bean that should be consumed",
+              "lines": [11],
+              "fixes": [
+                "Change line 11 to `public OrderService(@Qualifier(\"stripeClient\") PaymentClient payments) {`",
+                "Add `@Autowired` above line 11",
+                "Change line 11 to `public OrderService(@Qualifier(\"StripeClient\") PaymentClient payments) {`",
+                "Add `@Primary` above line 1 and above line 4"
               ],
-              "answer": 1,
-              "explanation": "`@Autowired` only says \"inject this\"; Spring was already doing that via the single constructor. It does nothing to resolve which of the two beans to use. `@Primary`, `@Qualifier` or injecting all of them each remove the ambiguity."
+              "answer": 0,
+              "hint": "The error lists the two candidates by bean name. Which line has to say which one it wants?",
+              "explanation": "The constructor asks for *a* `PaymentClient` and two beans match, so Spring refuses to guess. `@Qualifier(\"stripeClient\")` names the one it wants, using the default bean name: the class name with a lowercase first letter, exactly as the error lists it. `@Autowired` only says \"inject this\", which the single constructor already does, so the same error comes back. `\"StripeClient\"` with a capital S matches no bean, so startup fails with *No qualifying bean*. And `@Primary` on **both** fails with *more than one 'primary' bean found*; on `StripeClient` alone it would work too."
             },
             {
               "type": "explain",
@@ -946,6 +951,51 @@
               "explanation": "`rebuild()` is called on `this`, the raw object, not on the proxy that other beans see. Fixes: put `@Transactional` on `nightly()`, or move `rebuild()` into another bean."
             },
             {
+              "type": "buckets",
+              "id": "q-buckets-rollback",
+              "prompt": "Each method below saves an order, then ends as described. The call comes from another bean, through the proxy. When the call is over, is the saved order undone or kept?\n\n(`InsufficientFundsException extends Exception`; `PaymentDeclinedException extends RuntimeException`.)",
+              "buckets": [
+                "Rolled back: order undone",
+                "Kept: order committed"
+              ],
+              "items": [
+                {
+                  "text": "`@Transactional`, throws `IllegalStateException`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`@Transactional`, throws `PaymentDeclinedException`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`@Transactional(rollbackFor = Exception.class)`, throws `IOException`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`@Transactional`, throws `AssertionError`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`@Transactional`, throws `IOException`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`@Transactional`, throws `InsufficientFundsException`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`@Transactional`, catches its own `IllegalStateException` and returns normally",
+                  "bucket": 1
+                },
+                {
+                  "text": "Not annotated: calls `this.rebuild()`, a `@Transactional` method that saves, then throws `IllegalStateException`",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Ask two questions: did an exception actually leave the proxy, and is it unchecked (`RuntimeException` or `Error`) or listed in `rollbackFor`?",
+              "explanation": "By default the proxy rolls back only when an **unchecked** exception (`RuntimeException` or `Error`, including your own subclasses) escapes the method; `rollbackFor` adds others. Checked exceptions like `IOException` or a custom `extends Exception` **commit** the half-finished work. If the method catches the exception itself, the proxy sees a normal return and commits. And `this.rebuild()` bypasses the proxy, so there is no transaction at all: the save commits on its own before the exception is thrown."
+            },
+            {
               "type": "explain",
               "title": "The N+1 problem",
               "body": "```java\n@Entity\npublic class Author {\n    @Id @GeneratedValue private Long id;\n    private String name;\n\n    @OneToMany(mappedBy = \"author\")     // LAZY by default\n    private List<Book> books;\n}\n```\n\n```java\nList<Author> authors = authorRepository.findAll();          // 1 query\nfor (var a : authors) {\n    System.out.println(a.getName() + \": \" + a.getBooks().size()); // +1 query each\n}\n```\n\nEach `getBooks()` fires its own `select` the first time it's touched. 100 authors → 101 queries. It feels fine with ten rows of test data and crawls in production."
@@ -1150,6 +1200,52 @@
               "explanation": "Ann is authenticated, so it isn't a 401, but the matching rule requires role `ADMIN`. Authenticated-but-not-allowed is **403**."
             },
             {
+              "type": "buckets",
+              "id": "q-buckets-401-403",
+              "prompt": "Using the `SecurityConfig` above with CSRF disabled, users `ann` (role `USER`) and `max` (role `ADMIN`), and the actuator health endpoint on the classpath, what does each request get?",
+              "buckets": [
+                "Allowed (2xx)",
+                "401 Unauthorized",
+                "403 Forbidden"
+              ],
+              "items": [
+                {
+                  "text": "No credentials, `GET /api/public/opening-hours`",
+                  "bucket": 0
+                },
+                {
+                  "text": "No credentials, `GET /actuator/health`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`ann`, `GET /api/books`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`max`, `DELETE /api/books/3`",
+                  "bucket": 0
+                },
+                {
+                  "text": "No credentials, `GET /api/books`",
+                  "bucket": 1
+                },
+                {
+                  "text": "No credentials, `DELETE /api/books/3`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`ann` with a wrong password, `GET /api/books`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`ann`, `DELETE /api/books/3`",
+                  "bucket": 2
+                }
+              ],
+              "hint": "First ask: do we know who this is? Only then ask: are they allowed?",
+              "explanation": "The first matching rule decides. Public paths and health are `permitAll()`, so anyone gets through. Everything else needs a known user: no credentials or a wrong password means we don't know who you are, so **401**, even for the `DELETE` that would need `ADMIN` anyway. Once Ann is authenticated, she can `GET` (`authenticated()`), but the `DELETE` rule wants role `ADMIN`: known but not allowed is **403**. Max has `ADMIN`, so his `DELETE` succeeds."
+            },
+            {
               "type": "example",
               "title": "The health check that broke",
               "problem": "After adding Spring Security, the platform's health probe (`GET /actuator/health`) starts failing and your containers keep restarting. Fix it.",
@@ -1210,6 +1306,51 @@
               ],
               "answer": 1,
               "explanation": "Endpoints are opt-in for web exposure because several reveal internals. Security blocking it would give 401/403, not 404. Treat `env`, `heapdump` and similar endpoints as sensitive and never expose them publicly."
+            },
+            {
+              "type": "buckets",
+              "id": "q-buckets-exposure",
+              "prompt": "Actuator is on the classpath and Spring Security is not. With the setting shown, what does a plain `GET` to each endpoint return?",
+              "buckets": [
+                "Answers (200)",
+                "404 Not Found"
+              ],
+              "items": [
+                {
+                  "text": "`/actuator/health`, default settings",
+                  "bucket": 0
+                },
+                {
+                  "text": "`/actuator/metrics`, with `include=health,info,metrics`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`/actuator/info`, with `include=health,info,metrics`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`/actuator/loggers`, with `include=*`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`/actuator/info`, default settings",
+                  "bucket": 1
+                },
+                {
+                  "text": "`/actuator/metrics`, default settings",
+                  "bucket": 1
+                },
+                {
+                  "text": "`/actuator/env`, default settings",
+                  "bucket": 1
+                },
+                {
+                  "text": "`/actuator/env`, with `include=health,info,metrics`",
+                  "bucket": 1
+                }
+              ],
+              "hint": "`include=...` is short for `management.endpoints.web.exposure.include`. Out of the box, which single endpoint is exposed over HTTP?",
+              "explanation": "Over HTTP only `health` is exposed by default; every other endpoint answers 404 until you list it in `management.endpoints.web.exposure.include`. Listing `health,info,metrics` exposes exactly those three, so `env` stays hidden, and `*` exposes everything that's enabled, `loggers` included. Be careful with `*` in production: it also exposes sensitive endpoints like `env`, so keep those off public networks."
             },
             {
               "type": "explain",

@@ -15,10 +15,14 @@ Use the 80/20 principle:
    Those lessons get "pareto": "core"; useful-but-secondary material gets "pareto": "extra".
    Aim for roughly 2/3 core, 1/3 extra. Group lessons into 2–4 units; within each unit,
    core lessons come first. Lesson ids must be unique across the whole course.
-2. Teach through doing, like Brilliant: each lesson is 5–8 short steps that alternate
-   short explanations (max ~120 words), worked examples revealed step by step, and questions.
-   Every lesson has at least 3 questions. Prefer questions that make the learner APPLY the
-   idea to a new case over questions that ask them to repeat a definition.
+2. Teach through doing, like Brilliant: interactive practice is the DEFAULT, not an extra.
+   Each lesson is 5–10 short steps that alternate short explanations (max ~120 words), worked
+   examples revealed step by step, and practice. Every lesson has at least 3 graded steps, and
+   EVERY lesson must include at least one interactive step: output, bug, order, buckets, trace
+   or sim (the app rejects lessons without one). Prefer interactive steps over mcq whenever the
+   idea allows it: sequences → order, classifying → buckets, code state over time → trace,
+   "what does it print" → output, broken code/commands → bug. Use mcq for judgement calls only.
+   Prefer practice that makes the learner APPLY the idea to a new case over repeating a definition.
 3. Every question has an explanation of WHY the answer is right. Add a "hint" for harder ones.
    Wrong mcq choices should be realistic misconceptions, not jokes.
    Avoid "all of the above" / "none of the above" (choices get shuffled in quizzes).
@@ -64,7 +68,25 @@ Output ONLY valid JSON matching this schema:
           "language": "python", "code": "plain code, no fences",
           "error": "the error message or wrong output it produces (optional)",
           "lines": [3], "fixes": ["Change line 3 to `...`", "...", "..."], "answer": 0,
-          "explanation": "text" }
+          "explanation": "text" },
+        { "type": "order", "id": "q-...", "prompt": "Put these in the order they happen:",
+          "items": ["first", "second", "third"], "explanation": "text" },
+        { "type": "buckets", "id": "q-...", "prompt": "Sort each card:",
+          "buckets": ["Category A", "Category B"],
+          "items": [{ "text": "card", "bucket": 0 }, { "text": "card", "bucket": 1 }],
+          "explanation": "text" },
+        { "type": "trace", "id": "q-...", "prompt": "Step through and predict the values.",
+          "language": "python", "code": "plain code, no fences",
+          "frames": [{ "line": 1, "vars": { "x": "1" } },
+                     { "line": 2, "vars": { "x": "2" }, "ask": "x", "note": "optional caption" }],
+          "explanation": "text" },
+        { "type": "sim", "sim": "git", "title": "optional", "body": "task text",
+          "goal": { "text": "Merge feature into main", "merged": [{ "from": "feature", "into": "main" }] } },
+        { "type": "sim", "sim": "dice", "dice": 2, "sides": 6, "target": [7], "goalRolls": 500 },
+        { "type": "sim", "sim": "growth", "curves": ["n", "n^2"], "maxN": 1000000 },
+        { "type": "sim", "sim": "join", "left": { "name": "customers", "columns": ["id", "name"],
+          "rows": [[1, "Ana"]] }, "right": { "name": "orders", "columns": ["id", "customer_id"],
+          "rows": [[10, 1]] }, "on": ["id", "customer_id"] }
       ]
     }
     ] }
@@ -75,15 +97,25 @@ Code blocks may name a language for highlighting: ```python, ```java or ```kotli
 Any asterisk outside backticks becomes emphasis, so keep code like `*args` in backticks.
 For "text" answers, comparison keeps only letters and digits — use mcq for symbol answers like "?:".
 
-Programming topics: add at least one "output" or "bug" question to most lessons — they make the
-learner produce an answer instead of recognizing one.
+Interactive steps (at least one per lesson; they make the learner produce or manipulate an answer
+instead of recognizing one):
 - "output": the learner types what the code prints. Comparison is case-sensitive but ignores extra
   spaces and blank lines at the ends. Keep output short (1–4 lines) and deterministic: no set or
   hash ordering, no timestamps, no memory addresses.
 - "bug": the learner clicks the broken line, then picks the fix. "lines" lists the 1-based line
   numbers that count as finding the bug (usually one; add a second only if it's equally fair).
   Write fixes that refer to line numbers, and make the wrong fixes plausible attempts that would
-  NOT work. "error" shows the real message (or the wrong output) — take it from an actual run.
+  NOT work. "error" shows the real message (or the wrong output) — take it from an actual run,
+  with file/line locations replaced by "  ..." so it doesn't give the line away.
+- "order": 3–8 different items, written in the CORRECT order (the app shuffles them).
+- "buckets": 2–4 bucket labels and 6–10 cards; every bucket gets at least one card.
+- "trace": 5–12 frames. Each frame is the line that just ran plus every variable afterwards, written
+  the way the language prints it ('hi', [1, 2], None). 2–3 frames have "ask" (a variable to predict).
+  Record frames from a real run, never by hand.
+- "sim" (ungraded playground; "goal" or "goalRolls" unlocks Continue): "git" supports commit, branch,
+  switch/checkout (-c/-b), merge, log, status; "dice" rolls 1–3 dice; "growth" races complexity
+  classes ("1", "log n", "n", "n log n", "n^2", "2^n"); "join" shows INNER/LEFT/RIGHT/FULL joins.
+- Non-programming topics use order, buckets and the matching simulators — not output/bug/trace.
 
 Formatting inside text fields: **bold**, *italic*, `code`, lines starting with "- " for
 bullet lists, a blank line ("\n\n") between paragraphs, and ``` fences for code blocks.
