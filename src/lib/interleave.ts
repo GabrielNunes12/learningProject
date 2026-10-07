@@ -13,15 +13,15 @@
 //   5. Courses without a concept graph (or untagged questions) fall back to lessons as the "concept".
 //   6. Questions answered right in the last 10 minutes are left out.
 
-import type { Course, Lesson, QuestionStep } from '../types.ts';
+import type { Course, LessonInfo, QuestionInfo } from '../types.ts';
 import type { Card } from './storage.ts';
 
 /** Structurally the same as QuestionRef in src/content/index.ts. */
 export interface PracticeQuestion {
   key: string;
   course: Course;
-  lesson: Lesson;
-  step: QuestionStep;
+  lesson: LessonInfo;
+  step: QuestionInfo;
 }
 
 export interface MixProgress {
@@ -65,7 +65,7 @@ export interface Topic {
   label: string;
   course: Course;
   /** The lesson that teaches it (where to go back to). */
-  lesson: Lesson;
+  lesson: LessonInfo;
   /** 0..1 from recent results and Leitner boxes; 0.5 when nothing has been answered yet. */
   strength: number;
   status: TopicStatus;

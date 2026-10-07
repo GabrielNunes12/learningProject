@@ -13,6 +13,7 @@ import {
   type PracticeQuestion,
 } from '../src/lib/interleave.ts';
 import type { Card } from '../src/lib/storage.ts';
+import { toCatalog, withLessons } from '../src/content/catalog.ts';
 import type { Course, QuestionStep } from '../src/types.ts';
 
 const NOW = 1_800_000_000_000;
@@ -38,27 +39,26 @@ function makeCourse(id: string, lessons: LessonSpec[], graph?: { links: [string,
       })) as unknown as QuestionStep[],
     ),
   }));
-  return {
+  return withLessons(toCatalog({
     id,
     title: `Course ${id}`,
     icon: id.slice(0, 2).toUpperCase(),
     description: 'D.',
     keyIdeas: ['I.'],
     units: [{ id: 'u', title: 'U', lessons: ls }],
-    lessons: ls,
     ...(graph
       ? {
           concepts: lessons.flatMap((l) => l.concepts.map((c) => ({ id: c, label: c[0].toUpperCase() + c.slice(1), lesson: l.id }))),
           links: graph.links.map(([from, to, label]) => ({ from, to, label })),
         }
       : {}),
-  };
+  }));
 }
 
 const questionsOf = (courses: Course[]): PracticeQuestion[] =>
   courses.flatMap((course) =>
     course.lessons.flatMap((lesson) =>
-      lesson.steps.map((step) => ({ key: `${course.id}/${lesson.id}/${(step as QuestionStep).id}`, course, lesson, step: step as QuestionStep })),
+      lesson.questions.map((step) => ({ key: `${course.id}/${lesson.id}/${step.id}`, course, lesson, step })),
     ),
   );
 

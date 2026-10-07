@@ -3,7 +3,7 @@ import { questionByKey } from '../content';
 import { signOut, useAuth } from '../lib/auth';
 import { useRoute } from '../lib/router';
 import { dueKeys, levelInfo, streak, useProgress, xpToday } from '../lib/storage';
-import { Avatar, Ring } from './ui';
+import { accentStyle, Avatar, Ring, useBodyAccent } from './ui';
 import { BrandMark, Icon, type IconName } from './icons';
 
 export function useDueCount() {
@@ -163,6 +163,31 @@ export function PlayerHeader({ exitHref, done, total, right }: { exitHref: strin
         <div className="player-right">{right}</div>
       </div>
     </header>
+  );
+}
+
+/** The player while a course's lessons download, or after the download failed. */
+export function PlayerLoading({ exitHref, total, color, failed }: { exitHref: string; total: number; color?: string; failed: boolean }) {
+  useBodyAccent(color);
+  return (
+    <div className="player" style={accentStyle(color)}>
+      <PlayerHeader exitHref={exitHref} done={0} total={total} />
+      <main className="player-body">
+        {failed ? (
+          <section className="center empty-state" role="alert">
+            <h1>Couldn't load this lesson</h1>
+            <p className="lead">Check your connection and try again.</p>
+            <button type="button" className="btn primary" onClick={() => window.location.reload()}>
+              Try again
+            </button>
+          </section>
+        ) : (
+          <p className="center muted player-loading" role="status">
+            Loading…
+          </p>
+        )}
+      </main>
+    </div>
   );
 }
 

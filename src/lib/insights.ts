@@ -5,7 +5,7 @@
 // answers (`right`), the Leitner `box`, `due`, and — on newer cards — `hist` (recent results, oldest first) and
 // `last` (time of the latest answer). We never invent data we don't have (e.g. answer speed or per-answer dates).
 
-import type { Course, Lesson, QuestionStep, Step, Unit } from '../types';
+import type { Course, LessonInfo, QuestionStep, UnitInfo } from '../types';
 
 // ---------- inputs ----------
 
@@ -110,11 +110,11 @@ export interface TypeStats {
 }
 
 export interface LessonGroup {
-  lesson: Lesson;
+  lesson: LessonInfo;
   items: ItemStats[];
 }
 export interface UnitGroup {
-  unit: Unit;
+  unit: UnitInfo;
   lessons: LessonGroup[];
 }
 
@@ -127,7 +127,7 @@ export interface CourseReport {
   attempts: number;
   due: number;
   /** Core lessons not done and never practised, that come before the furthest lesson you've done. */
-  skippedCore: Lesson[];
+  skippedCore: LessonInfo[];
 }
 
 export interface Window {
@@ -208,8 +208,6 @@ export const TYPE_ADVICE: Record<QuestionStep['type'], string> = {
   balance: 'Gather the unknowns on one side first, then the plain numbers on the other.',
 };
 
-const QUESTION_TYPES = new Set(Object.keys(TYPE_LABELS));
-const isQuestion = (s: Step): s is QuestionStep => QUESTION_TYPES.has(s.type);
 const qKey = (course: string, lesson: string, id: string) => `${course}/${lesson}/${id}`;
 
 export const pct = (x: number | null) => (x === null ? '–' : `${Math.round(x * 100)}%`);
@@ -230,13 +228,13 @@ export const hasLapse = (hist?: string) => Boolean(hist && /11+0+$/.test(hist));
 interface Q {
   key: string;
   type: QuestionStep['type'];
-  lesson: Lesson;
+  lesson: LessonInfo;
   concepts?: string[];
 }
 
 function courseQuestions(course: Course): Q[] {
   return course.lessons.flatMap((lesson) =>
-    lesson.steps.filter(isQuestion).map((s) => ({ key: qKey(course.id, lesson.id, s.id), type: s.type, lesson, concepts: s.concepts })),
+    lesson.questions.map((s) => ({ key: qKey(course.id, lesson.id, s.id), type: s.type, lesson, concepts: s.concepts })),
   );
 }
 
@@ -246,7 +244,7 @@ interface Base {
   id: string;
   label: string;
   summary?: string;
-  lesson: Lesson;
+  lesson: LessonInfo;
 }
 
 function itemStats(course: Course, base: Base, qs: Q[], p: ProgressLike, now: number): ItemStats {
@@ -337,7 +335,7 @@ export function analyzeCourse(course: Course, p: ProgressLike, now = Date.now())
     }))
     .filter((u) => u.lessons.length);
 
-  const seenLesson = (l: Lesson) =>
+  const seenLesson = (l: LessonInfo) =>
     Boolean(p.completed[`${course.id}/${l.id}`]) || qs.some((q) => q.lesson === l && (p.cards[q.key]?.seen ?? 0) > 0);
   const furthest = course.lessons.reduce((m, l, i) => (seenLesson(l) ? i : m), -1);
   const skippedCore = course.lessons.filter((l, i) => i < furthest && l.pareto === 'core' && !seenLesson(l));
