@@ -15,10 +15,12 @@ import { SimStepView } from './sims/SimStepView';
 import { accentStyle, Ring, useBodyAccent } from './ui';
 import { CourseIcon } from './CourseIcon';
 import { Icon } from './icons';
+import { useT } from '../i18n/react';
 
 type Phase = 'again' | 'wrong' | 'steps' | 'shorter' | 'done';
 
 export function LessonPlayer({ course, lesson }: { course: Course; lesson: Lesson }) {
+  const { t, locale } = useT();
   const sheetKey = lessonSheetKey(course.id, lesson.id);
   // Every lesson is a thinking session: redo an earlier sheet if one is due, guess first, squeeze at the end.
   const [againSheet] = useState(() => dueSheet(getProgress().sheets ?? {}, Date.now(), sheetKey));
@@ -49,6 +51,8 @@ export function LessonPlayer({ course, lesson }: { course: Course; lesson: Lesso
   const total = steps.length + lead + 1;
   const done = phase === 'again' ? 0 : phase === 'wrong' ? lead - 1 : phase === 'steps' ? lead + index : total - 1;
   const step = steps[index];
+  // The current step remounts in the new language on a switch; index, phase, score and XP are kept.
+  const stepKey = `${index}-${locale}`;
 
   return (
     <div className="player" style={accentStyle(course.color)}>
@@ -57,7 +61,7 @@ export function LessonPlayer({ course, lesson }: { course: Course; lesson: Lesso
         done={done}
         total={total}
         right={
-          <span className="xp-pill" aria-label={`${xp} XP earned this lesson`}>
+          <span className="xp-pill" aria-label={t('lesson.xpEarnedAria', { xp })}>
             <Icon name="star" size={15} className="star" /> {xp}
           </span>
         }
@@ -91,12 +95,12 @@ export function LessonPlayer({ course, lesson }: { course: Course; lesson: Lesso
 
         {phase === 'shorter' && (
           <ShorterPhase
-            heading={`Squeeze “${lesson.title}” into anchors`}
-            intro="Two or three anchors, four words at most each: the cues that will bring this lesson back to you. Fragments beat full sentences."
+            heading={t('lesson.shorter.heading', { title: lesson.title })}
+            intro={t('lesson.shorter.intro')}
             concepts={course.concepts ?? []}
             lessonId={lesson.id}
             firstGuesses={firstGuesses}
-            doneLabel="Finish the lesson"
+            doneLabel={t('lesson.shorter.done')}
             onDone={(anchors) => {
               const sheet = getProgress().sheets?.[sheetKey];
               const base = sheet ?? startLessonSheet(undefined, course.id, lesson.id, lesson.title, firstGuesses ?? emptyDraft());
@@ -109,7 +113,7 @@ export function LessonPlayer({ course, lesson }: { course: Course; lesson: Lesso
 
         {phase === 'steps' && step.type === 'explain' && (
           <>
-            <article className="step-card" key={index}>
+            <article className="step-card" key={stepKey}>
               {step.title && <h2>{step.title}</h2>}
               <Markdown text={step.body} />
             </article>
@@ -117,19 +121,20 @@ export function LessonPlayer({ course, lesson }: { course: Course; lesson: Lesso
               <div className="bb-status" />
               <div className="bb-actions">
                 <button className="btn primary big" onClick={next} autoFocus>
-                  Continue
+                  {t('common.continue')}
                 </button>
               </div>
             </BottomBar>
           </>
         )}
 
+        {/* ExampleView keeps its index-only key: it caches no text, and remounting would drop the learner's typed attempt. */}
         {phase === 'steps' && step.type === 'example' && <ExampleView key={index} step={step} onContinue={next} />}
 
         {phase === 'steps' && step.type === 'sim' && <SimStepView key={index} step={step} onContinue={next} />}
 
         {phase === 'steps' && isQuestion(step) && (
-          <article className="step-card" key={index}>
+          <article className="step-card" key={stepKey}>
             <QuestionView
               step={step}
               mode="learn"
@@ -152,31 +157,32 @@ export function LessonPlayer({ course, lesson }: { course: Course; lesson: Lesso
  * solution one step at a time, and finally compare their answer with the worked one.
  */
 function ExampleView({ step, onContinue }: { step: ExampleStep; onContinue: () => void }) {
+  const { t } = useT();
   const [attempt, setAttempt] = useState('');
   const [locked, setLocked] = useState(false);
   const [shown, setShown] = useState(0);
   const total = step.steps.length + (step.answer ? 1 : 0);
   const all = shown >= total;
-  const label = shown === 0 ? 'Show first step' : shown < step.steps.length ? 'Next step' : 'Show answer';
+  const label = t(shown === 0 ? 'lesson.example.showFirstStep' : shown < step.steps.length ? 'lesson.example.nextStep' : 'lesson.example.showAnswer');
   const lock = () => attempt.trim() && setLocked(true);
 
   return (
     <>
       <article className="step-card example">
-        <span className="eyebrow">Worked example</span>
+        <span className="eyebrow">{t('lesson.example.eyebrow')}</span>
         {step.title && <h2>{step.title}</h2>}
         <Markdown text={step.problem} />
         {!locked ? (
           <div className="attempt">
             <label htmlFor="example-attempt" className="attempt-label">
-              <Icon name="pencil" size={16} /> Your answer first. A rough guess counts; the steps unlock after you commit to one.
+              <Icon name="pencil" size={16} /> {t('lesson.example.attemptLabel')}
             </label>
             <textarea
               id="example-attempt"
               rows={2}
               value={attempt}
               maxLength={300}
-              placeholder="Work it out and write your answer"
+              placeholder={t('lesson.example.placeholder')}
               autoFocus
               onChange={(e) => setAttempt(e.target.value)}
               onKeyDown={(e) => {
@@ -189,7 +195,7 @@ function ExampleView({ step, onContinue }: { step: ExampleStep; onContinue: () =
           </div>
         ) : (
           <p className="attempt-locked">
-            <span className="eyebrow">Your answer</span>
+            <span className="eyebrow">{t('lesson.example.yourAnswer')}</span>
             {attempt.trim()}
           </p>
         )}
@@ -207,21 +213,19 @@ function ExampleView({ step, onContinue }: { step: ExampleStep; onContinue: () =
             <Markdown text={step.answer} />
           </div>
         )}
-        {all && <p className="small muted">Compare it with your answer above. Where did your reasoning go a different way?</p>}
+        {all && <p className="small muted">{t('lesson.example.compare')}</p>}
       </article>
       <BottomBar>
         <div className="bb-status">
-          {locked && !all && (
-            <span className="muted small">
-              Step {shown} of {step.steps.length}
-            </span>
+          {locked && !all && <span className="muted small">{t('lesson.example.stepOf', { step: shown, total: step.steps.length })}</span>}
+          {!locked && (
+            <span className="muted small">{t(attempt.trim() ? 'lesson.example.ready' : 'lesson.example.writeToUnlock')}</span>
           )}
-          {!locked && <span className="muted small">{attempt.trim() ? 'Ready when you are.' : 'Write your answer to unlock the steps.'}</span>}
         </div>
         <div className="bb-actions">
           {!locked ? (
             <button className="btn primary big" disabled={!attempt.trim()} onClick={lock}>
-              Lock in my answer
+              {t('lesson.example.lockIn')}
             </button>
           ) : !all ? (
             <button className="btn primary big" onClick={() => setShown(shown + 1)} autoFocus>
@@ -230,10 +234,10 @@ function ExampleView({ step, onContinue }: { step: ExampleStep; onContinue: () =
           ) : (
             <>
               <button className="btn big" onClick={onContinue}>
-                Not quite
+                {t('lesson.example.notQuite')}
               </button>
               <button className="btn primary big" onClick={onContinue} autoFocus>
-                I had it
+                {t('lesson.example.hadIt')}
               </button>
             </>
           )}
@@ -244,6 +248,7 @@ function ExampleView({ step, onContinue }: { step: ExampleStep; onContinue: () =
 }
 
 function LessonComplete({ course, lesson, score, xp }: { course: Course; lesson: Lesson; score: { right: number; total: number }; xp: number }) {
+  const { t, tx, n, pct } = useT();
   const p = useProgress();
   const { user } = useAuth();
   const pos = course.lessons.findIndex((l) => l.id === lesson.id);
@@ -267,29 +272,27 @@ function LessonComplete({ course, lesson, score, xp }: { course: Course; lesson:
         <div className="celebrate" aria-hidden>
           <Icon name="medal" size={72} />
         </div>
-        <h1>Lesson complete!</h1>
+        <h1>{t('lesson.complete.title')}</h1>
         <p className="lead">{lesson.title}</p>
 
         <div className="result-tiles">
           <div className="result-tile xp">
-            <span>Total XP</span>
-            <strong>+{xp}</strong>
+            <span>{t('lesson.complete.totalXp')}</span>
+            <strong>+{n(xp)}</strong>
           </div>
           <div className="result-tile">
-            <span>Accuracy</span>
-            <strong>{score.total ? `${Math.round((score.right / score.total) * 100)}%` : '—'}</strong>
+            <span>{t('lesson.complete.accuracy')}</span>
+            <strong>{score.total ? pct(score.right / score.total) : '—'}</strong>
           </div>
           <div className="result-tile">
-            <span>Streak</span>
+            <span>{t('common.streak')}</span>
             <strong>
               <Icon name="flame" size={18} className="flame" /> {streak(p)}
             </strong>
           </div>
           <div className="result-tile">
-            <Ring value={today / Math.max(p.dailyGoal, 1)} size={44} stroke={5} label="Daily goal" />
-            <span>
-              {today}/{p.dailyGoal} today
-            </span>
+            <Ring value={today / Math.max(p.dailyGoal, 1)} size={44} stroke={5} label={t('common.dailyGoal')} />
+            <span>{t('lesson.complete.today', { today, goal: p.dailyGoal })}</span>
           </div>
         </div>
 
@@ -297,43 +300,43 @@ function LessonComplete({ course, lesson, score, xp }: { course: Course; lesson:
           <a className="cert-callout" href={href('course', course.id, 'certificate')}>
             <Icon name="medal" size={28} />
             <span>
-              <strong>You finished {course.title}!</strong>
-              <span>Get your certificate: download it as a PDF and share it on LinkedIn, X or Facebook.</span>
+              <strong>{t('lesson.complete.certTitle', { course: course.title })}</strong>
+              <span>{t('lesson.complete.certText')}</span>
             </span>
             <span aria-hidden>→</span>
           </a>
         )}
 
         <div className="takeaway">
-          <span className="eyebrow">Key takeaway</span>
+          <span className="eyebrow">{t('lesson.complete.takeaway')}</span>
           <Markdown text={lesson.takeaway} />
         </div>
 
         {checkpoint && (
           <p>
             <a className="btn" href={checkpoint}>
-              <Icon name="target" size={18} /> Unit checkpoint: map what you know
+              <Icon name="target" size={18} /> {t('lesson.complete.checkpoint')}
             </a>
           </p>
         )}
 
         {!user && (
           <p className="small muted">
-            <a href="#/signup">Create a free profile</a> to keep your progress on every device.
+            {tx('lesson.complete.signupNudge', {}, { link: (c) => <a href="#/signup">{c}</a> })}
           </p>
         )}
 
         <div className="actions center">
           <a className="btn ghost" href={href('course', course.id)}>
-            Back to course
+            {t('lesson.complete.backToCourse')}
           </a>
           {nextLesson ? (
             <a className="btn primary big" href={href('course', course.id, 'lesson', nextLesson.id)} autoFocus>
-              Next: {nextLesson.title} →
+              {t('lesson.complete.next', { title: nextLesson.title })}
             </a>
           ) : (
             <a className="btn primary big" href={href('course', course.id, 'quiz')} autoFocus>
-              Take the course quiz →
+              {t('lesson.complete.quiz')}
             </a>
           )}
         </div>

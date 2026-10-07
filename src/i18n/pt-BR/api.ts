@@ -1,0 +1,35 @@
+// Brazilian Portuguese UI strings: api. Mirrors src/i18n/en/api.ts (see docs/TRANSLATING.md).
+import type { Translation } from '../core.ts';
+import type en from '../en/api.ts';
+
+export default {
+  'api.unreachable': 'Não foi possível acessar o servidor. Ele está rodando? (npm run dev)',
+  'api.requestFailed': 'A solicitação falhou ({status})',
+  'api.signIn': 'Entre na sua conta.',
+  'api.passwordShort': 'A senha precisa ter pelo menos 8 caracteres.',
+  'api.passwordLong': 'A senha é longa demais (máx. 128).',
+  'api.passwordIsUsername': 'A senha não pode ser igual ao seu nome de usuário.',
+  'api.rateLimited': 'Tentativas demais. Aguarde alguns minutos e tente de novo.',
+  'api.expectedJson': 'Era esperado JSON.',
+  'api.crossOrigin': 'Solicitação de outra origem bloqueada.',
+  'api.usernameFormat': 'Nome de usuário: de 3 a 20 letras, números ou sublinhados (_).',
+  'api.emailInvalid': 'Digite um endereço de e-mail válido.',
+  'api.emailTaken': 'Já existe uma conta com este e-mail. Tente entrar.',
+  'api.usernameTaken': 'Esse nome de usuário já está em uso.',
+  'api.justTaken': 'Esse nome de usuário ou e-mail acabou de ser registrado por outra pessoa.',
+  'api.emailFailed': 'Não conseguimos enviar o e-mail de confirmação agora. Tente de novo em alguns minutos.',
+  'api.verifyInvalid': 'Este link de confirmação é inválido ou expirou. Peça um novo.',
+  'api.wrongLogin': 'Nome de usuário/e-mail ou senha incorretos.',
+  'api.notVerified': 'Confirme seu e-mail primeiro. Procure o link na sua caixa de entrada.',
+  'api.resetInvalid': 'Este link de redefinição é inválido ou expirou. Peça um novo.',
+  'api.currentPasswordWrong': 'A senha atual está incorreta.',
+  'api.passwordWrong': 'Senha incorreta.',
+  'api.badProgress': 'Dados de progresso inválidos.',
+  'api.badCertificate': 'Solicitação de certificado inválida.',
+  'api.notSynced': 'Suas lições concluídas ainda não chegaram ao servidor. Aguarde um momento e tente de novo.',
+  'api.certFailed': 'Não foi possível emitir o certificado. Tente de novo.',
+  'api.certNotFound': 'Nenhum certificado com esse ID.',
+  'api.notFound': 'Não encontrado.',
+  'api.badJson': 'JSON malformado.',
+  'api.serverError': 'Algo deu errado no servidor.',
+} satisfies Translation<typeof en>;

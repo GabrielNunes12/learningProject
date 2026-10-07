@@ -12,21 +12,25 @@ import { CourseIcon } from './CourseIcon';
 import { Icon } from './icons';
 import { InsightsTeaser } from './Insights';
 import { ThinkingTeaser } from './Notebook';
+import { t, type MessageKey } from '../i18n/core';
+import { useT } from '../i18n/react';
 
-function greeting() {
+function greeting(name?: string) {
   const h = new Date().getHours();
-  return h < 5 ? 'Up late' : h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+  const part = h < 5 ? 'late' : h < 12 ? 'morning' : h < 18 ? 'afternoon' : 'evening';
+  return name ? t(`home.greet.${part}Name` as MessageKey, { name }) : t(`home.greet.${part}` as MessageKey);
 }
 
 function WeekDots({ p }: { p: Progress }) {
+  const { date } = useT();
   const days = new Set(p.days);
   const out = [];
   for (let i = 6; i >= 0; i--) {
     const d = new Date(Date.now() - i * 86_400_000);
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     out.push(
-      <span key={i} className={`week-dot${days.has(key) ? ' on' : ''}${i === 0 ? ' today' : ''}`} title={d.toDateString()}>
-        {d.toLocaleDateString('en-US', { weekday: 'narrow' })}
+      <span key={i} className={`week-dot${days.has(key) ? ' on' : ''}${i === 0 ? ' today' : ''}`} title={date(d, { weekday: 'long', month: 'long', day: 'numeric' })}>
+        {date(d, { weekday: 'narrow' })}
       </span>,
     );
   }
@@ -34,6 +38,7 @@ function WeekDots({ p }: { p: Progress }) {
 }
 
 function ContinueCard({ p }: { p: Progress }) {
+  const { t } = useT();
   // The course you touched last; otherwise the first course you started; otherwise the first course.
   const lastCourse = p.last ? getCourse(p.last.course) : undefined;
   const course = lastCourse ?? courses.find((c) => courseStats(c, p).started) ?? courses[0];
@@ -47,31 +52,31 @@ function ContinueCard({ p }: { p: Progress }) {
         <CourseIcon icon={course.icon} color={course.color} size={76} />
       </div>
       <div className="continue-body">
-        <span className="eyebrow">{s.started ? 'Continue learning' : 'Start here'}</span>
-        <h2>{lesson ? lesson.title : `${course.title} — complete!`}</h2>
+        <span className="eyebrow">{s.started ? t('home.continue.eyebrow') : t('home.continue.startHere')}</span>
+        <h2>{lesson ? lesson.title : t('home.continue.complete', { course: course.title })}</h2>
         <p className="muted">
           {course.title}
           {lesson && ` · ${unitOf(course, lesson).title}`}
           {lesson && (
             <>
               {' · '}
-              <span className={`tag ${lesson.pareto}`}>{lesson.pareto === 'core' ? 'Core' : 'Deep dive'}</span>
+              <span className={`tag ${lesson.pareto}`}>{lesson.pareto === 'core' ? t('common.core') : t('common.deepDive')}</span>
             </>
           )}
         </p>
-        <ProgressBar value={s.total ? s.completed / s.total : 0} label={`${s.completed} of ${s.total} lessons`} />
+        <ProgressBar value={s.total ? s.completed / s.total : 0} label={t('home.continue.progress', { done: s.completed, total: s.total })} />
         <span className="small muted">
-          Core {s.coreDone}/{s.coreTotal} · {s.completed}/{s.total} lessons
+          {t('home.continue.counts', { coreDone: s.coreDone, coreTotal: s.coreTotal, done: s.completed, total: s.total })}
         </span>
       </div>
       <div className="continue-actions">
         {lesson ? (
           <a className="btn primary big" href={href('course', course.id, 'lesson', lesson.id)}>
-            {s.started ? 'Continue' : 'Start'} →
+            {s.started ? t('home.continue.continue') : t('home.continue.start')}
           </a>
         ) : (
           <a className="btn primary big" href={href('course', course.id, 'quiz')}>
-            Take the quiz
+            {t('home.continue.quiz')}
           </a>
         )}
       </div>
@@ -80,6 +85,7 @@ function ContinueCard({ p }: { p: Progress }) {
 }
 
 export function Home() {
+  const { t, tx, pct } = useT();
   const p = useProgress();
   const { user } = useAuth();
   const due = useDueCount();
@@ -93,49 +99,35 @@ export function Home() {
     <Page wide>
       {fresh && !user ? (
         <section className="hero">
-          <span className="eyebrow">Learn smarter, not longer</span>
-          <h1>
-            Master the <span className="hl">20%</span> that gives you <span className="hl">80%</span>.
-          </h1>
-          <p className="lead">
-            Every course starts with its core ideas, teaches them through worked examples and exercises, then keeps them in
-            your memory with quizzes and spaced review.
-          </p>
+          <span className="eyebrow">{t('home.hero.eyebrow')}</span>
+          <h1>{tx('home.hero.title', {}, { hl: (c) => <span className="hl">{c}</span> })}</h1>
+          <p className="lead">{t('home.hero.lead')}</p>
           <div className="hero-actions">
             <a className="btn primary big" href={href('course', courses[0]?.id ?? '', 'lesson', courses[0]?.lessons[0]?.id ?? '')}>
-              Try a lesson — no account needed
+              {t('home.hero.tryLesson')}
             </a>
             <a className="btn big" href="#/signup">
-              Create a free profile
+              {t('common.createProfile')}
             </a>
           </div>
         </section>
       ) : (
         <div className="greeting">
-          <h1>
-            {greeting()}
-            {user ? `, ${user.username}` : ''}!
-          </h1>
+          <h1>{greeting(user?.username)}</h1>
           <p className="lead">
-            {today >= p.dailyGoal
-              ? "Daily goal reached. Anything more is a bonus."
-              : due > 0
-                ? `Start with your ${due} review${due === 1 ? '' : 's'}, then learn something new.`
-                : 'Pick up where you left off.'}
+            {today >= p.dailyGoal ? t('home.goalReached') : due > 0 ? t('home.startWithReviews', { count: due }) : t('home.pickUp')}
           </p>
         </div>
       )}
 
       <div className="stat-grid">
         <a className="stat-card" href="#/profile">
-          <Ring value={today / Math.max(p.dailyGoal, 1)} size={64} label="Daily goal">
-            <strong>{Math.min(100, Math.round((today / Math.max(p.dailyGoal, 1)) * 100))}%</strong>
+          <Ring value={today / Math.max(p.dailyGoal, 1)} size={64} label={t('common.dailyGoal')}>
+            <strong>{pct(Math.min(1, today / Math.max(p.dailyGoal, 1)))}</strong>
           </Ring>
           <div>
-            <span className="stat-label">Daily goal</span>
-            <span className="stat-value">
-              {today} / {p.dailyGoal} XP
-            </span>
+            <span className="stat-label">{t('common.dailyGoal')}</span>
+            <span className="stat-value">{t('home.stat.goalValue', { today, goal: p.dailyGoal })}</span>
           </div>
         </a>
         <a className="stat-card" href="#/profile">
@@ -143,10 +135,8 @@ export function Home() {
             <Icon name="flame" size={30} />
           </div>
           <div>
-            <span className="stat-label">Streak</span>
-            <span className="stat-value">
-              {days} day{days === 1 ? '' : 's'}
-            </span>
+            <span className="stat-label">{t('common.streak')}</span>
+            <span className="stat-value">{t('home.stat.streakValue', { count: days })}</span>
             <WeekDots p={p} />
           </div>
         </a>
@@ -155,10 +145,10 @@ export function Home() {
             {lvl.level}
           </div>
           <div className="grow">
-            <span className="stat-label">Level {lvl.level} · {lvl.title}</span>
-            <span className="stat-value">{p.xp} XP</span>
-            <ProgressBar value={lvl.into / lvl.needed} thin label="Progress to next level" />
-            <span className="small muted">{lvl.end - p.xp} XP to level {lvl.level + 1}</span>
+            <span className="stat-label">{t('home.stat.level', { level: lvl.level, title: lvl.title })}</span>
+            <span className="stat-value">{t('common.xp', { count: p.xp })}</span>
+            <ProgressBar value={lvl.into / lvl.needed} thin label={t('home.stat.levelProgress')} />
+            <span className="small muted">{t('home.stat.toNext', { xp: lvl.end - p.xp, level: lvl.level + 1 })}</span>
           </div>
         </a>
         <a className={`stat-card${due ? ' attention' : ''}`} href="#/review">
@@ -166,9 +156,9 @@ export function Home() {
             <Icon name={due ? 'review' : 'seedling'} size={30} />
           </div>
           <div>
-            <span className="stat-label">Reviews</span>
-            <span className="stat-value">{due ? `${due} due now` : 'All caught up'}</span>
-            <span className="small muted">{due ? 'Before you forget' : 'Nothing due'}</span>
+            <span className="stat-label">{t('common.reviews')}</span>
+            <span className="stat-value">{due ? t('home.stat.dueNow', { count: due }) : t('home.stat.caughtUp')}</span>
+            <span className="small muted">{due ? t('home.stat.beforeForget') : t('home.stat.nothingDue')}</span>
           </div>
         </a>
       </div>
@@ -180,12 +170,9 @@ export function Home() {
 
       {!user && !fresh && (
         <div className="save-banner">
-          <span>
-            <strong>Your progress lives only in this browser.</strong> Create a free profile to keep it safe and use it on any
-            device.
-          </span>
+          <span>{tx('home.save.text', {}, { b: (c) => <strong>{c}</strong> })}</span>
           <a className="btn primary small" href="#/signup">
-            Save my progress
+            {t('home.save.button')}
           </a>
         </div>
       )}
@@ -193,35 +180,38 @@ export function Home() {
       <div className="home-columns">
         <section className="panel">
           <div className="panel-head">
-            <h2>This week</h2>
-            <span className="muted small">{Object.entries(p.xpByDay).filter(([d]) => Date.now() - new Date(d).getTime() < 7 * 86_400_000).reduce((s, [, x]) => s + x, 0)} XP</span>
+            <h2>{t('home.week.title')}</h2>
+            <span className="muted small">
+              {t('common.xp', { count: Object.entries(p.xpByDay).filter(([d]) => Date.now() - new Date(d).getTime() < 7 * 86_400_000).reduce((s, [, x]) => s + x, 0) })}
+            </span>
           </div>
           <WeekXpChart p={p} />
         </section>
         <section className="panel method">
-          <h2>The 80/20 method</h2>
+          <h2>{t('home.method.title')}</h2>
           <ol>
             <li>
-              <strong>Core first.</strong> Finish a course's <span className="tag core">Core</span> lessons before any{' '}
-              <span className="tag extra">Deep dive</span>.
+              {tx(
+                'home.method.core',
+                {},
+                {
+                  b: (c) => <strong>{c}</strong>,
+                  core: (c) => <span className="tag core">{c}</span>,
+                  extra: (c) => <span className="tag extra">{c}</span>,
+                },
+              )}
             </li>
-            <li>
-              <strong>Test out.</strong> Take the quiz first — it tells you which lessons to skip.
-            </li>
-            <li>
-              <strong>Review daily.</strong> 5–10 minutes keeps everything you've learned.
-            </li>
-            <li>
-              <strong>Two courses at a time.</strong> Finish their core, then add the next.
-            </li>
+            <li>{tx('home.method.testOut', {}, { b: (c) => <strong>{c}</strong> })}</li>
+            <li>{tx('home.method.daily', {}, { b: (c) => <strong>{c}</strong> })}</li>
+            <li>{tx('home.method.two', {}, { b: (c) => <strong>{c}</strong> })}</li>
           </ol>
         </section>
       </div>
 
       <section>
         <div className="section-head">
-          <h2>{started.length ? 'Your courses' : 'Recommended courses'}</h2>
-          <a href="#/courses">All courses →</a>
+          <h2>{started.length ? t('home.yourCourses') : t('home.recommended')}</h2>
+          <a href="#/courses">{t('home.allCourses')}</a>
         </div>
         <div className="course-grid">
           {(started.length ? started : courses.slice(0, 3)).map((c) => (

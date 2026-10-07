@@ -3,7 +3,8 @@ import { layoutPath, pathThrough, placePopover } from '../lib/pathLayout';
 import { href } from '../lib/router';
 import type { courseStats } from '../lib/stats';
 import type { Course, Lesson } from '../types';
-import { plural } from './ui';
+import type { MessageKey } from '../i18n/core';
+import { useT } from '../i18n/react';
 import './CoursePath.css';
 
 type Stats = ReturnType<typeof courseStats>;
@@ -22,6 +23,12 @@ interface Entry {
   done: boolean;
   next: boolean;
 }
+
+/** Accessible node labels: [plain, deep dive] × [not done, done, up next]. */
+const NODE_LABEL: Record<'core' | 'extra', Record<'todo' | 'done' | 'next', MessageKey>> = {
+  core: { todo: 'course.path.node', done: 'course.path.nodeDone', next: 'course.path.nodeNext' },
+  extra: { todo: 'course.path.nodeDeep', done: 'course.path.nodeDeepDone', next: 'course.path.nodeDeepNext' },
+};
 
 const reducedMotion = () => {
   try {
@@ -47,6 +54,7 @@ export function CoursePath({
   fast: boolean;
   canAutoScroll?: () => boolean;
 }) {
+  const { t, tx } = useT();
   const uid = useId();
   const wrapRef = useRef<HTMLDivElement>(null);
   const bannerRefs = useRef<(HTMLElement | null)[]>([]);
@@ -153,7 +161,7 @@ export function CoursePath({
     const d = next ? SIZE.next : extra ? SIZE.extra : SIZE.core;
     const isOpen = activeId === lesson.id;
     const popId = `${uid}-pop-${e.index}`;
-    const label = `Lesson ${n}: ${lesson.title}${extra ? ', deep dive' : ''}${done ? ', completed' : next ? ', up next' : ''}`;
+    const label = t(NODE_LABEL[extra ? 'extra' : 'core'][done ? 'done' : next ? 'next' : 'todo'], { number: n, title: lesson.title });
     const pop =
       isOpen && pos
         ? placePopover({
@@ -174,7 +182,7 @@ export function CoursePath({
         >
           {next && (
             <span className="cpath-bubble" aria-hidden>
-              {s.started ? 'Continue' : 'Start'}
+              {s.started ? t('common.continue') : t('common.start')}
             </span>
           )}
           <button
@@ -195,7 +203,7 @@ export function CoursePath({
           </button>
           {extra && (
             <span className="cpath-label" aria-hidden>
-              Deep dive
+              {t('common.deepDive')}
             </span>
           )}
         </div>
@@ -205,19 +213,17 @@ export function CoursePath({
             id={popId}
             className={`cpath-pop${pop.above ? ' above' : ''}`}
             role="dialog"
-            aria-label={`Lesson ${n}: ${lesson.title}`}
+            aria-label={t('course.path.node', { number: n, title: lesson.title })}
             style={{ left: pop.left, top: pop.top, width: pop.width, '--arrow-x': `${pop.arrowX}px` } as CSSProperties}
           >
             <div className="cpath-pop-tags">
-              <span className={`tag ${lesson.pareto}`}>{extra ? 'Deep dive' : 'Core'}</span>
-              {done && <span className="cpath-pop-done">✓ Completed</span>}
+              <span className={`tag ${lesson.pareto}`}>{extra ? t('common.deepDive') : t('common.core')}</span>
+              {done && <span className="cpath-pop-done">{t('course.path.completed')}</span>}
             </div>
             <h3>{lesson.title}</h3>
-            <p className="small muted">
-              {lesson.minutes ?? 5} min · {plural(lesson.steps.length, 'step')}
-            </p>
+            <p className="small muted">{t('course.lessonMeta', { minutes: lesson.minutes ?? 5, count: lesson.steps.length })}</p>
             <a className="btn primary full" href={href('course', course.id, 'lesson', lesson.id)}>
-              {done ? 'Review' : next && s.started ? 'Continue' : 'Start'}
+              {done ? t('course.path.review') : next && s.started ? t('common.continue') : t('common.start')}
             </a>
           </div>
         )}
@@ -245,11 +251,10 @@ export function CoursePath({
               style={{ top: banner?.y ?? 0 }}
             >
               <div className="cpath-banner-top">
-                <span className="cpath-unit-num">Unit {ui + 1}</span>
+                <span className="cpath-unit-num">{t('course.unit', { number: ui + 1 })}</span>
                 <span className={`cpath-count${doneCount === unit.lessons.length ? ' all' : ''}`}>
                   {doneCount === unit.lessons.length ? '✓ ' : ''}
-                  {doneCount}/{unit.lessons.length}
-                  <span className="sr-only"> lessons done</span>
+                  {tx('course.path.unitCount', { done: doneCount, total: unit.lessons.length }, { sr: (c) => <span className="sr-only">{c}</span> })}
                 </span>
               </div>
               <h3 id={headId}>{unit.title}</h3>

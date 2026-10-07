@@ -11,6 +11,7 @@ import type {
 } from '../types';
 // Explicit .ts extension so node:test can load this file directly.
 import { truthTableAnswers } from './logic.ts';
+import { formatNumber, t } from '../i18n/core.ts';
 
 /**
  * Reads what a learner typed into a number. Accepts "0.25", "1/4", "25%", "1,000", "0,5" and "$-3".
@@ -71,15 +72,15 @@ export function answerLabel(step: ClassicQuestionStep): string {
     case 'mcq':
       return step.choices[step.answer];
     case 'numeric': {
-      const n = Number.isInteger(step.answer) ? step.answer.toLocaleString('en-US') : String(+step.answer.toFixed(4));
-      return step.unit ? `${n} ${step.unit}` : n;
+      const n = formatNumber(step.answer, undefined, { maximumFractionDigits: 4 });
+      return step.unit ? t('lesson.answer.withUnit', { value: n, unit: step.unit }) : n;
     }
     case 'text':
       return step.accept[0];
     case 'output':
       return step.output;
     case 'bug':
-      return `Line ${step.lines[0]}: ${step.fixes[step.answer]}`;
+      return t('lesson.answer.bugFix', { line: step.lines[0], fix: step.fixes[step.answer] });
   }
 }
 
@@ -132,7 +133,7 @@ export function gameAnswerLabel(
     case 'truthtable': {
       const answers = truthTableAnswers(step.vars, step.columns.map((c) => c.expr));
       return step.columns
-        .map((c, ci) => (c.given ? null : `\`${c.label ?? c.expr}\`: ${answers.map((row) => (row[ci] ? 'T' : 'F')).join(' ')}`))
+        .map((c, ci) => (c.given ? null : `\`${c.label ?? c.expr}\`: ${answers.map((row) => t(row[ci] ? 'lesson.answer.true' : 'lesson.answer.false')).join(' ')}`))
         .filter(Boolean)
         .join(' · ');
     }
@@ -148,7 +149,7 @@ export function gameAnswerLabel(
         .join(' · ');
     case 'trace':
       return askedFrames(step)
-        .map((f) => `\`${f.ask} = ${expectedValue(f)}\` after line ${f.line}`)
+        .map((f) => t('lesson.answer.traceValue', { expr: `${f.ask} = ${expectedValue(f)}`, line: f.line }))
         .join(', ');
   }
 }

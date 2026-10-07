@@ -15,7 +15,9 @@ import {
   SITE,
   type CertificateInfo,
 } from '../lib/certificate';
-import { certificatePdf, issuedDate, type FontName, type Measure } from '../lib/pdf';
+import { certificatePdf, certificateText, issuedDate, type FontName, type Measure } from '../lib/pdf';
+import { getLocale } from '../i18n/core';
+import { useT } from '../i18n/react';
 import { href } from '../lib/router';
 import { useProgress } from '../lib/storage';
 import type { Course } from '../types';
@@ -28,7 +30,12 @@ import './Certificate.css';
 export interface Certificate extends CertificateInfo {
   courseId: string;
   color: string;
+  /** The language it was issued in (the share card uses it); the certificate itself shows the viewer's language. */
+  locale?: string;
 }
+
+/** The course title in the viewer's language when the course exists here, else the title it was issued with. */
+const localized = (cert: Certificate): Certificate => ({ ...cert, courseTitle: getCourse(cert.courseId)?.title ?? cert.courseTitle });
 
 /** The site the share links point to: this deployment in production, the current origin in development. */
 const site = () => (location.hostname === 'localhost' || location.hostname === '127.0.0.1' ? location.origin : SITE);
@@ -54,14 +61,14 @@ function canvasMeasure(): Measure {
 }
 
 function pdfBlob(cert: Certificate) {
-  return new Blob([certificatePdf({ ...cert, site: site() }, canvasMeasure())], { type: 'application/pdf' });
+  return new Blob([certificatePdf({ ...localized(cert), site: site() }, canvasMeasure(), getLocale())], { type: 'application/pdf' });
 }
 
 function download(cert: Certificate) {
   const url = URL.createObjectURL(pdfBlob(cert));
   const a = document.createElement('a');
   a.href = url;
-  a.download = pdfFileName(cert.courseTitle);
+  a.download = pdfFileName(localized(cert).courseTitle);
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
@@ -77,9 +84,12 @@ function openForPrint(cert: Certificate) {
 // ---------- the certificate itself ----------
 
 /** The certificate drawn in HTML: the same content and layout as the PDF. */
-export function CertificateView({ cert }: { cert: Certificate }) {
+export function CertificateView({ cert: issued }: { cert: Certificate }) {
+  const { t, locale } = useT();
+  const cert = localized(issued);
+  const words = certificateText(cert, locale);
   return (
-    <figure className="cert" style={accentStyle(cert.color)} aria-label={`Certificate of completion: ${cert.name}, ${cert.courseTitle}`}>
+    <figure className="cert" style={accentStyle(cert.color)} aria-label={t('cert.brandLabel', { name: cert.name, course: cert.courseTitle })}>
       <div className="cert-frame">
         <div className="cert-top">
           <span className="cert-brand">
@@ -89,24 +99,22 @@ export function CertificateView({ cert }: { cert: Certificate }) {
             </span>
             {ISSUER.toUpperCase()}
           </span>
-          <span className="cert-id">Certificate ID {cert.id}</span>
+          <span className="cert-id">{words.id}</span>
         </div>
-        <p className="cert-title">Certificate of completion</p>
-        <p className="cert-script">This certifies that</p>
+        <p className="cert-title">{words.title}</p>
+        <p className="cert-script">{words.certifies}</p>
         <p className="cert-name">{cert.name}</p>
-        <p className="cert-script">has successfully completed the course</p>
+        <p className="cert-script">{words.completed}</p>
         <p className="cert-course">{cert.courseTitle}</p>
-        <p className="cert-details">
-          {cert.lessons} lessons · {formatHours(cert.minutes)} of learning
-        </p>
+        <p className="cert-details">{words.details}</p>
         <div className="cert-bottom">
           <span>
-            <strong>{issuedDate(cert.issuedAt)}</strong>
-            <small>Date issued</small>
+            <strong>{words.date}</strong>
+            <small>{words.dateIssued}</small>
           </span>
           <span>
             <em>{ISSUER}</em>
-            <small>Issuer</small>
+            <small>{words.issuer}</small>
           </span>
         </div>
       </div>
@@ -115,7 +123,8 @@ export function CertificateView({ cert }: { cert: Certificate }) {
 }
 
 function CertificateActions({ cert }: { cert: Certificate }) {
-  const links = useMemo(() => shareLinks(cert, site()), [cert]);
+  const { t, tx, locale } = useT();
+  const links = useMemo(() => shareLinks(localized(cert), site(), locale), [cert, locale]);
   const [copied, setCopied] = useState(false);
   const copy = async () => {
     try {
@@ -123,40 +132,40 @@ function CertificateActions({ cert }: { cert: Certificate }) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      window.prompt('Copy the certificate link:', links.url);
+      window.prompt(t('cert.copyPrompt'), links.url);
     }
   };
   return (
     <div className="cert-actions">
       <div className="row wrap">
         <button className="btn primary big" onClick={() => download(cert)}>
-          Download PDF
+          {t('cert.download')}
         </button>
         <button className="btn big" onClick={() => openForPrint(cert)}>
-          Print
+          {t('cert.print')}
         </button>
       </div>
       <div className="cert-share">
-        <span className="small muted">Share it</span>
+        <span className="small muted">{t('cert.shareIt')}</span>
         <div className="row wrap">
           <a className="btn share linkedin" href={links.linkedinProfile} target="_blank" rel="noopener noreferrer">
-            Add to LinkedIn profile
+            {t('cert.addLinkedIn')}
           </a>
           <a className="btn share linkedin" href={links.linkedin} target="_blank" rel="noopener noreferrer">
-            Post on LinkedIn
+            {t('cert.postLinkedIn')}
           </a>
           <a className="btn share x" href={links.x} target="_blank" rel="noopener noreferrer">
-            Post on X
+            {t('cert.postX')}
           </a>
           <a className="btn share facebook" href={links.facebook} target="_blank" rel="noopener noreferrer">
-            Share on Facebook
+            {t('cert.shareFacebook')}
           </a>
           <button className="btn share" onClick={copy}>
-            {copied ? 'Link copied' : 'Copy link'}
+            {copied ? t('cert.linkCopied') : t('cert.copyLink')}
           </button>
         </div>
         <p className="small muted cert-url">
-          Anyone with the link can verify it: <a href={`#/certificate/${cert.id}`}>{links.url.replace(/^https?:\/\//, '')}</a>
+          {tx('cert.anyoneVerify', { link: <a href={`#/certificate/${cert.id}`}>{links.url.replace(/^https?:\/\//, '')}</a> })}
         </p>
       </div>
     </div>
@@ -167,6 +176,7 @@ function CertificateActions({ cert }: { cert: Certificate }) {
 
 /** On the course page: how far from the certificate, or the button to get it. */
 export function CertificatePanel({ course }: { course: Course }) {
+  const { t } = useT();
   const p = useProgress();
   const left = lessonsLeft(course, p);
   const earned = hasEarned(course, p);
@@ -174,19 +184,17 @@ export function CertificatePanel({ course }: { course: Course }) {
     <div className={`panel cert-panel${earned ? ' earned' : ''}`}>
       <div className="cert-panel-head">
         <Icon name="medal" size={22} />
-        <strong>Certificate</strong>
+        <strong>{t('cert.panel.title')}</strong>
       </div>
       {earned ? (
         <>
-          <p className="small">You finished every lesson. Your certificate is ready.</p>
+          <p className="small">{t('cert.panel.ready')}</p>
           <a className="btn primary full" href={href('course', course.id, 'certificate')}>
-            Get your certificate
+            {t('cert.panel.get')}
           </a>
         </>
       ) : (
-        <p className="small muted">
-          Finish all {course.lessons.length} lessons to earn a certificate you can download and share. {left} to go.
-        </p>
+        <p className="small muted">{t('cert.panel.toGo', { total: course.lessons.length, count: left })}</p>
       )}
     </div>
   );
@@ -195,6 +203,7 @@ export function CertificatePanel({ course }: { course: Course }) {
 // ---------- issuing ----------
 
 export function CertificatePage({ course }: { course: Course }) {
+  const { t, tx } = useT();
   const p = useProgress();
   const { user } = useAuth();
   const earned = hasEarned(course, p);
@@ -234,11 +243,12 @@ export function CertificatePage({ course }: { course: Course }) {
         name: check.name,
         minutes,
         lessons: course.lessons.length,
+        locale: getLocale(),
       });
       setCert(certificate);
       setEditing(false);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.');
+      setError(err instanceof ApiError ? err.message : t('common.somethingWrong'));
     } finally {
       setBusy(false);
     }
@@ -256,12 +266,10 @@ export function CertificatePage({ course }: { course: Course }) {
         {back}
         <section className="panel center cert-empty">
           <CourseIcon icon={course.icon} color={course.color} size={56} />
-          <h1>Almost there</h1>
-          <p className="lead">
-            Finish all {course.lessons.length} lessons of {course.title} to earn your certificate. {lessonsLeft(course, p)} to go.
-          </p>
+          <h1>{t('cert.almost')}</h1>
+          <p className="lead">{t('cert.almostLead', { total: course.lessons.length, course: course.title, count: lessonsLeft(course, p) })}</p>
           <a className="btn primary" href={href('course', course.id)}>
-            Continue the course
+            {t('cert.continueCourse')}
           </a>
         </section>
       </Page>
@@ -274,17 +282,14 @@ export function CertificatePage({ course }: { course: Course }) {
         {back}
         <section className="panel center cert-empty">
           <Icon name="medal" size={56} />
-          <h1>You finished {course.title}</h1>
-          <p className="lead">
-            Certificates are issued to profiles, so they can be verified and shared. Create a free profile (your progress comes with
-            you) or sign in, then come back here.
-          </p>
+          <h1>{t('cert.finished', { course: course.title })}</h1>
+          <p className="lead">{t('cert.needProfile')}</p>
           <div className="actions center">
             <a className="btn primary" href="#/signup">
-              Create a free profile
+              {t('common.createProfile')}
             </a>
             <a className="btn" href="#/signin">
-              Sign in
+              {t('common.signIn')}
             </a>
           </div>
         </section>
@@ -298,19 +303,17 @@ export function CertificatePage({ course }: { course: Course }) {
       {back}
       <div className="cert-page" style={accentStyle(course.color)}>
         <header className="cert-head">
-          <span className="eyebrow">Course complete</span>
-          <h1>Your certificate for {course.title}</h1>
-          <p className="lead">
-            {course.lessons.length} lessons · {formatHours(minutes)} of learning
-          </p>
+          <span className="eyebrow">{t('cert.courseComplete')}</span>
+          <h1>{t('cert.yours', { course: course.title })}</h1>
+          <p className="lead">{t('cert.details', { count: course.lessons.length, hours: formatHours(minutes) })}</p>
         </header>
 
-        {cert === undefined && <p className="muted">Loading…</p>}
+        {cert === undefined && <p className="muted">{t('common.loading')}</p>}
 
         {showForm && (
           <form className="panel cert-form" onSubmit={submit}>
             <label htmlFor="cert-name">
-              <strong>Your name, as it should appear on the certificate</strong>
+              <strong>{t('cert.nameLabel')}</strong>
             </label>
             <input
               id="cert-name"
@@ -318,7 +321,7 @@ export function CertificatePage({ course }: { course: Course }) {
               maxLength={60}
               autoComplete="name"
               autoFocus
-              placeholder="e.g. Ada Lovelace"
+              placeholder={t('cert.namePlaceholder')}
               onChange={(e) => {
                 setName(e.target.value);
                 setError('');
@@ -327,17 +330,15 @@ export function CertificatePage({ course }: { course: Course }) {
             {error && <p className="field-error" role="alert">{error}</p>}
             <div className="row wrap">
               <button className="btn primary big" disabled={busy || !name.trim()}>
-                {busy ? 'Issuing…' : cert ? 'Update certificate' : 'Create my certificate'}
+                {busy ? t('cert.issuing') : cert ? t('cert.update') : t('cert.create')}
               </button>
               {cert && (
                 <button type="button" className="btn ghost" onClick={() => setEditing(false)}>
-                  Cancel
+                  {t('common.cancel')}
                 </button>
               )}
             </div>
-            <p className="small muted">
-              Hours are your active study time on this course, and never less than the lessons' estimated time.
-            </p>
+            <p className="small muted">{t('cert.hoursNote')}</p>
           </form>
         )}
 
@@ -346,11 +347,17 @@ export function CertificatePage({ course }: { course: Course }) {
             <CertificateView cert={cert} />
             <CertificateActions cert={cert} />
             <p className="small muted">
-              Wrong name?{' '}
-              <button type="button" className="link-button" onClick={() => setEditing(true)}>
-                Edit it
-              </button>
-              . The link and ID stay the same.
+              {tx(
+                'cert.wrongName',
+                {},
+                {
+                  edit: (c) => (
+                    <button type="button" className="link-button" onClick={() => setEditing(true)}>
+                      {c}
+                    </button>
+                  ),
+                },
+              )}
             </p>
           </>
         )}
@@ -362,6 +369,7 @@ export function CertificatePage({ course }: { course: Course }) {
 // ---------- public verification page ----------
 
 export function PublicCertificate({ id }: { id: string }) {
+  const { t, tx, locale } = useT();
   const [cert, setCert] = useState<Certificate | null | undefined>(undefined);
   useEffect(() => {
     api<{ certificate: Certificate }>(`/certificates/${encodeURIComponent(id)}`)
@@ -372,7 +380,7 @@ export function PublicCertificate({ id }: { id: string }) {
   if (cert === undefined) {
     return (
       <Page>
-        <p className="muted">Loading certificate…</p>
+        <p className="muted">{t('cert.loadingPublic')}</p>
       </Page>
     );
   }
@@ -381,10 +389,10 @@ export function PublicCertificate({ id }: { id: string }) {
       <Page>
         <section className="panel center cert-empty">
           <Icon name="compass" size={56} />
-          <h1>Certificate not found</h1>
-          <p className="lead">There's no {ISSUER} certificate with the ID {id.toUpperCase()}. Check the link and try again.</p>
+          <h1>{t('cert.notFound')}</h1>
+          <p className="lead">{t('cert.notFoundLead', { issuer: ISSUER, id: id.toUpperCase() })}</p>
           <a className="btn primary" href="#/">
-            Go home
+            {t('common.goHome')}
           </a>
         </section>
       </Page>
@@ -395,16 +403,17 @@ export function PublicCertificate({ id }: { id: string }) {
     <Page wide>
       <div className="cert-page" style={accentStyle(cert.color)}>
         <p className="cert-verified">
-          <Icon name="check" size={18} /> Verified: issued by {ISSUER} to <strong>{cert.name}</strong> on {issuedDate(cert.issuedAt)}.
+          <Icon name="check" size={18} />{' '}
+          {tx('cert.verified', { issuer: ISSUER, name: <strong>{cert.name}</strong>, date: issuedDate(cert.issuedAt, locale) })}
         </p>
         <CertificateView cert={cert} />
         <div className="row wrap cert-public-actions">
           <button className="btn" onClick={() => download(cert)}>
-            Download PDF
+            {t('cert.download')}
           </button>
           {course && (
             <a className="btn primary" href={href('course', course.id)}>
-              Take {course.title} yourself
+              {t('cert.takeIt', { course: course.title })}
             </a>
           )}
         </div>

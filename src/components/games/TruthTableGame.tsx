@@ -22,13 +22,17 @@ import type { TruthTableStep } from '../../types';
 import { AnswerLine, QuestionFrame, useCheckFlow, type QuestionProps } from '../QuestionFrame';
 import './TruthTableGame.css';
 import { Icon } from '../icons';
+import { t } from '../../i18n/core';
+import { useT } from '../../i18n/react';
 
 const LIGHT_MS = 130;
 const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
-const tf = (v: boolean) => (v ? 'T' : 'F');
-const spoken = (v: TruthCell) => (v === null ? 'blank' : v ? 'true' : 'false');
+/** The one-letter cell value: T / F in English (V / F in some languages). */
+const tf = (v: boolean) => (v ? t('games.truth.t') : t('games.truth.f'));
+const spoken = (v: TruthCell) => (v === null ? t('games.truth.blank') : v ? t('games.truth.true') : t('games.truth.false'));
 
 export function TruthTableGame({ step, mode, context, onDone }: QuestionProps<TruthTableStep>) {
+  const { t, tx } = useT();
   const flow = useCheckFlow(mode, onDone);
   const { status } = flow;
   const rows = useMemo(() => truthRows(step.vars), [step.vars]);
@@ -70,14 +74,15 @@ export function TruthTableGame({ step, mode, context, onDone }: QuestionProps<Tr
   }, [status, nRows]);
 
   const colSpoken = (c: number) => step.columns[c].label ?? spokenLogic(step.columns[c].expr);
-  const rowSpoken = (r: number) => `Row ${r + 1}: ${step.vars.map((v) => `${v} ${spoken(rows[r][v])}`).join(', ')}`;
+  const rowSpoken = (r: number) =>
+    t('games.truth.row', { n: r + 1, values: step.vars.map((v) => t('games.truth.varValue', { name: v, value: spoken(rows[r][v]) })).join(', ') });
 
   function put(r: number, ci: number, v: TruthCell) {
     if (locked) return;
     const c = editable[ci];
     setCells((prev) => setTruthCell(prev, r, c, v));
     setMarks((prev) => (prev ? prev.map((row, ri) => row.map((m, mc) => (ri === r && mc === c ? null : m))) : prev));
-    setAnnounce(`${colSpoken(c)}, row ${r + 1}: ${spoken(v)}.`);
+    setAnnounce(t('games.truth.announce.set', { col: colSpoken(c), row: r + 1, value: spoken(v) }));
   }
 
   function moveTo(pos: TruthPos) {
@@ -101,19 +106,21 @@ export function TruthTableGame({ step, mode, context, onDone }: QuestionProps<Tr
     const ok = isTruthTableCorrect(step, cells);
     if (ok) {
       setMarks(null);
-      setAnnounce(`All ${nRows} rows are right.`);
+      setAnnounce(t('games.truth.announce.allRight', { count: nRows }));
     } else {
       const m = truthTableMarks(step, cells);
       setMarks(m);
       const wrong = m.reduce((n, row) => n + editable.filter((c) => !row[c]).length, 0);
-      setAnnounce(`${rowsRight(m)} of ${nRows} rows right. ${wrong} ${wrong === 1 ? 'cell needs' : 'cells need'} fixing.`);
+      setAnnounce(
+        `${t('games.truth.announce.rowsRight', { right: rowsRight(m), total: nRows })} ${t('games.truth.announce.cellsToFix', { count: wrong })}`,
+      );
     }
     flow.grade(ok);
   }
 
   function clearAll() {
     setCells(emptyTruthCells(nRows, step.columns.length));
-    setAnnounce('Table cleared.');
+    setAnnounce(t('games.truth.announce.cleared'));
     moveTo({ r: 0, c: 0 });
   }
 
@@ -126,41 +133,56 @@ export function TruthTableGame({ step, mode, context, onDone }: QuestionProps<Tr
       flow={flow}
       mode={mode}
       context={context}
-      kind="Fill in the truth table"
+      kind={t('games.truth.kind')}
       canCheck={complete}
       onCheck={check}
-      checkLabel={complete ? 'Check' : `${filled}/${total} filled`}
+      checkLabel={complete ? t('common.check') : t('games.truth.filledCount', { done: filled, total })}
       answer={<AnswerLine text={gameAnswerLabel(step)} />}
     >
       <div className="tt-hud">
         {status === 'correct' ? (
           <span className={`tt-stat good${lit === nRows ? ' done' : ''}`} aria-hidden>
-            Rows ✓{' '}
-            <strong key={lit} className={lit ? 'bump' : undefined}>
-              {lit}/{nRows}
-            </strong>
+            {tx('games.truth.rowsDone', {
+              n: (
+                <strong key={lit} className={lit ? 'bump' : undefined}>
+                  {lit}/{nRows}
+                </strong>
+              ),
+            })}
           </span>
         ) : status === 'wrong' && marks ? (
           <span className="tt-stat warn" aria-hidden>
-            Rows right <strong>{right}/{nRows}</strong>
+            {tx('games.truth.rowsRightChip', {
+              n: (
+                <strong>
+                  {right}/{nRows}
+                </strong>
+              ),
+            })}
           </span>
         ) : (
           <span className="tt-stat" aria-hidden>
-            Filled <strong>{filled}/{total}</strong>
+            {tx('games.truth.filledChip', {
+              n: (
+                <strong>
+                  {filled}/{total}
+                </strong>
+              ),
+            })}
           </span>
         )}
         {status === 'answering' && filled > 0 && (
           <button type="button" className="btn ghost small tt-clear" onClick={clearAll}>
-            Clear
+            {t('games.common.clear')}
           </button>
         )}
-        {status === 'answering' && <span className="tt-tip muted small">Tap a cell: T → F → blank</span>}
+        {status === 'answering' && <span className="tt-tip muted small">{t('games.truth.tapTip', { t: tf(true), f: tf(false) })}</span>}
       </div>
       <div className={`tt-progress${status === 'correct' ? ' good' : ''}`} aria-hidden>
         <span style={{ width: `${(status === 'correct' ? lit / nRows : filled / total) * 100}%` }} />
       </div>
 
-      <div className="tt-scroll" role="region" aria-label="Truth table">
+      <div className="tt-scroll" role="region" aria-label={t('games.truth.tableLabel')}>
         <table className={`tt-table${status === 'correct' ? ' solved' : ''}${revealed ? ' answer' : ''}`} aria-describedby={howtoId}>
           <thead>
             <tr>
@@ -172,10 +194,10 @@ export function TruthTableGame({ step, mode, context, onDone }: QuestionProps<Tr
               {step.columns.map((col, c) => {
                 const pretty = prettyLogic(col.expr);
                 return (
-                  <th key={c} scope="col" className={`tt-head${col.given ? ' given' : ''}`} aria-label={`${colSpoken(c)}${col.given ? ' (given)' : ''}`}>
+                  <th key={c} scope="col" className={`tt-head${col.given ? ' given' : ''}`} aria-label={col.given ? t('games.truth.givenLabel', { col: colSpoken(c) }) : colSpoken(c)}>
                     <span className="tt-head-main">{col.label ?? pretty}</span>
                     {col.label && col.label !== pretty && <span className="tt-head-expr">{pretty}</span>}
-                    {col.given && <span className="tt-given-tag">given</span>}
+                    {col.given && <span className="tt-given-tag">{t('games.truth.given')}</span>}
                   </th>
                 );
               })}
@@ -207,9 +229,16 @@ export function TruthTableGame({ step, mode, context, onDone }: QuestionProps<Tr
                   if (value !== null) cls += value ? ' t' : ' f';
                   if (mark) cls += ` ${mark}`;
                   if (missed) cls += ' missed';
-                  const label = `${rowSpoken(r)}. ${colSpoken(c)}: ${spoken(value)}${
-                    mark === 'right' ? ', right' : mark === 'wrong' ? ', wrong' : missed ? `, you had ${spoken(mine)}` : ''
-                  }`;
+                  const label = t(
+                    mark === 'right'
+                      ? 'games.truth.cellRight'
+                      : mark === 'wrong'
+                        ? 'games.truth.cellWrong'
+                        : missed
+                          ? 'games.truth.cellMissed'
+                          : 'games.truth.cell',
+                    { row: rowSpoken(r), col: colSpoken(c), value: spoken(value), mine: spoken(mine) },
+                  );
                   return (
                     <td key={c} className="tt-slot">
                       <button
@@ -252,18 +281,17 @@ export function TruthTableGame({ step, mode, context, onDone }: QuestionProps<Tr
 
       {revealed && revealMarks && (
         <p className="tt-legend muted small">
-          <span className="tt-legend-swatch" aria-hidden /> Cells you had wrong (your answer in the corner).
+          <span className="tt-legend-swatch" aria-hidden /> {t('games.truth.legend')}
         </p>
       )}
       {status === 'correct' && lit === nRows && (
         <p className="tt-result" role="status">
-          <Icon name="sparkle" size={16} /> Every row checks out: {total} {total === 1 ? 'cell' : 'cells'}, all right.
+          <Icon name="sparkle" size={16} /> {t('games.truth.result', { count: total })}
         </p>
       )}
 
       <p id={howtoId} className="sr-only">
-        Tab into the table, then use the arrow keys to move between empty cells. Press T or F to fill a cell and move down the
-        column, Space to cycle through true, false and blank, and Backspace to clear.
+        {t('games.truth.howto', { t: tf(true), f: tf(false) })}
       </p>
       <p className="sr-only" aria-live="polite">
         {announce}

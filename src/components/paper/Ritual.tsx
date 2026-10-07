@@ -17,21 +17,28 @@ import {
   wrongReady,
   type Verdict,
 } from '../../lib/thinking';
+import type { MessageKey } from '../../i18n/core';
+import { useT } from '../../i18n/react';
 import type { Concept } from '../../types';
+import { sheetTitle } from '../Notebook';
 import { BottomBar } from '../QuestionFrame';
 import { PaperSheet } from './PaperSheet';
 import './Paper.css';
 
-const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? '' : 's'}`;
+type Principle = 'wrong' | 'shorter' | 'again';
+const PRINCIPLES: { id: Principle; label: MessageKey }[] = [
+  { id: 'wrong', label: 'thinking.phase.wrong' },
+  { id: 'shorter', label: 'thinking.phase.shorter' },
+  { id: 'again', label: 'thinking.phase.again' },
+];
 
-const PRINCIPLES = ['Make it wrong', 'Make it shorter', 'Make it again'] as const;
-
-function PhaseTag({ on }: { on: (typeof PRINCIPLES)[number] }) {
+function PhaseTag({ on }: { on: Principle }) {
+  const { t } = useT();
   return (
     <div className="ritual-steps" aria-hidden>
       {PRINCIPLES.map((p) => (
-        <span key={p} className={p === on ? 'on' : ''}>
-          {p}
+        <span key={p.id} className={p.id === on ? 'on' : ''}>
+          {t(p.label)}
         </span>
       ))}
     </div>
@@ -54,27 +61,25 @@ function useElapsed() {
 
 /** Start of a lesson: dump what you think you know about the topic, sort it, sketch. Nothing is graded. */
 export function WrongPhase({ topic, onDone }: { topic: string; onDone: (draft: SheetDraft) => void }) {
+  const { t } = useT();
   const [draft, setDraft] = useState<SheetDraft>(() => emptyDraft());
   const ready = wrongReady(draft);
   const elapsed = useElapsed();
   return (
     <>
       <article className="step-card ritual-card">
-        <PhaseTag on="Make it wrong" />
-        <h2>What do you already think about “{topic}”?</h2>
-        <p className="lead">
-          Put keywords on the paper before the lesson: guesses, half-memories, even wrong ones. Then sort them into piles that feel
-          related. Nothing here is graded; a messy first try gives the lesson something to hook onto.
-        </p>
-        <PaperSheet draft={draft} onChange={setDraft} label={`Your first guesses about ${topic}`} autoFocus />
+        <PhaseTag on="wrong" />
+        <h2>{t('thinking.wrong.heading', { topic })}</h2>
+        <p className="lead">{t('thinking.wrong.lead')}</p>
+        <PaperSheet draft={draft} onChange={setDraft} label={t('thinking.wrong.sheetLabel', { topic })} autoFocus />
       </article>
       <BottomBar>
         <div className="bb-status">
-          <span className="small muted">{ready.ok ? `Good. ${elapsed} on paper.` : ready.missing}</span>
+          <span className="small muted">{ready.ok ? t('thinking.wrong.ready', { time: elapsed }) : ready.missing}</span>
         </div>
         <div className="bb-actions">
           <button className="btn primary big" disabled={!ready.ok} onClick={() => onDone({ ...draft, at: Date.now() })}>
-            Start the lesson
+            {t('thinking.wrong.start')}
           </button>
         </div>
       </BottomBar>
@@ -101,6 +106,7 @@ interface ShorterProps {
 
 /** End of a session: squeeze it into 2–3 anchors of at most 4 words, then see what they cover. */
 export function ShorterPhase({ heading, intro, concepts, lessonId, focus, firstGuesses, doneLabel, onDone }: ShorterProps) {
+  const { t } = useT();
   const [anchors, setAnchors] = useState<string[]>(() => Array.from({ length: ANCHORS_MAX }, () => ''));
   const [shown, setShown] = useState(false);
   const ready = anchorsReady(anchors);
@@ -110,7 +116,7 @@ export function ShorterPhase({ heading, intro, concepts, lessonId, focus, firstG
   return (
     <>
       <article className="step-card ritual-card">
-        <PhaseTag on="Make it shorter" />
+        <PhaseTag on="shorter" />
         <h2>{heading}</h2>
         <p className="lead">{intro}</p>
         <ol className="anchor-list">
@@ -125,15 +131,15 @@ export function ShorterPhase({ heading, intro, concepts, lessonId, focus, firstG
                   value={a}
                   readOnly={shown}
                   autoFocus={i === 0}
-                  placeholder={i < 2 ? 'a few words' : 'optional third anchor'}
-                  aria-label={`Anchor ${i + 1}, ${ANCHOR_MAX_WORDS} words at most`}
+                  placeholder={i < 2 ? t('thinking.shorter.placeholder') : t('thinking.shorter.placeholderOptional')}
+                  aria-label={t('thinking.shorter.anchorLabel', { n: i + 1, count: ANCHOR_MAX_WORDS })}
                   onChange={(e) => {
                     const text = limitWords(e.target.value);
                     setAnchors((all) => all.map((x, j) => (j === i ? text : x)));
                   }}
                 />
                 <span className={`word-count${n >= ANCHOR_MAX_WORDS ? ' full' : ''}`} aria-live="polite">
-                  {n}/{ANCHOR_MAX_WORDS} words
+                  {t('thinking.shorter.wordCount', { n, count: ANCHOR_MAX_WORDS })}
                 </span>
               </li>
             );
@@ -143,7 +149,7 @@ export function ShorterPhase({ heading, intro, concepts, lessonId, focus, firstG
           <div className="ritual-feedback" aria-live="polite">
             {feedback.hit.length > 0 ? (
               <>
-                <strong>Your anchors name</strong>
+                <strong>{t('thinking.shorter.hitHeading')}</strong>
                 <ul className="cover-list hit">
                   {feedback.hit.map((c) => (
                     <li key={c.id}>{c.label}</li>
@@ -151,24 +157,24 @@ export function ShorterPhase({ heading, intro, concepts, lessonId, focus, firstG
                 </ul>
               </>
             ) : (
-              <p className="small muted">Your anchors are in your own words, which is fine: they only have to bring the idea back for you.</p>
+              <p className="small muted">{t('thinking.shorter.ownWords')}</p>
             )}
             {notYet.length > 0 && (
               <>
-                <strong>{focus ? 'Behind the questions you missed' : 'Also in this lesson'}</strong>
+                <strong>{focus ? t('thinking.shorter.missedHeading') : t('thinking.shorter.alsoHeading')}</strong>
                 <ul className="cover-list miss">
                   {notYet.map((c) => (
                     <li key={c.id}>{c.label}</li>
                   ))}
                 </ul>
-                <p className="small muted">Not a mistake: worth one more look before you move on.</p>
+                <p className="small muted">{t('thinking.shorter.notMistake')}</p>
               </>
             )}
             {firstGuesses && firstGuesses.chips.length > 0 && (
               <>
-                <strong>Before the lesson you wrote</strong>
-                <PaperSheet draft={firstGuesses} label="Your first guesses" readOnly />
-                <p className="small muted">You'll rebuild this sheet from memory at the start of your next session, and fix what's wrong.</p>
+                <strong>{t('thinking.shorter.beforeHeading')}</strong>
+                <PaperSheet draft={firstGuesses} label={t('thinking.shorter.firstGuesses')} readOnly />
+                <p className="small muted">{t('thinking.shorter.rebuildNext')}</p>
               </>
             )}
           </div>
@@ -176,7 +182,7 @@ export function ShorterPhase({ heading, intro, concepts, lessonId, focus, firstG
       </article>
       <BottomBar>
         <div className="bb-status">
-          <span className="small muted">{shown ? '' : ready.ok ? 'Short enough. Messy is fine.' : ready.missing}</span>
+          <span className="small muted">{shown ? '' : ready.ok ? t('thinking.shorter.ready') : ready.missing}</span>
         </div>
         <div className="bb-actions">
           {shown ? (
@@ -185,7 +191,7 @@ export function ShorterPhase({ heading, intro, concepts, lessonId, focus, firstG
             </button>
           ) : (
             <button className="btn primary big" disabled={!ready.ok} onClick={() => setShown(true)}>
-              Squeeze it
+              {t('thinking.shorter.squeeze')}
             </button>
           )}
         </div>
@@ -196,9 +202,13 @@ export function ShorterPhase({ heading, intro, concepts, lessonId, focus, firstG
 
 // ---------- make it again ----------
 
+const VERDICT_LABEL: Record<Verdict, MessageKey> = { keep: 'thinking.again.keep', fix: 'thinking.again.fix', drop: 'thinking.again.drop' };
+
 /** Start of a session: rebuild an earlier sheet from a blank page, then compare, fix and keep a clean version. */
 export function AgainPhase({ sheet, onDone }: { sheet: Sheet; onDone: (xp: number) => void }) {
+  const { t } = useT();
   const old = sheet.clean ?? sheet.wrong;
+  const title = sheetTitle(sheet);
   const [draft, setDraft] = useState<SheetDraft>(() => emptyDraft(old?.piles.length ? old.piles.map(() => '') : ['', '']));
   const [stage, setStage] = useState<'recall' | 'compare' | 'saved'>('recall');
   const [verdicts, setVerdicts] = useState<Record<string, { verdict: Verdict; text?: string }>>({});
@@ -218,31 +228,25 @@ export function AgainPhase({ sheet, onDone }: { sheet: Sheet; onDone: (xp: numbe
   return (
     <>
       <article className="step-card ritual-card">
-        <PhaseTag on="Make it again" />
+        <PhaseTag on="again" />
         {stage === 'recall' && (
           <>
-            <h2>Rebuild “{sheet.title}” from memory</h2>
-            <p className="lead">
-              Blank paper, no peeking. Write the keywords and anchors you remember from that sheet, and arrange them the way they connect
-              now. Pulling it back out is what makes it stick.
-            </p>
-            <PaperSheet draft={draft} onChange={setDraft} label={`Rebuilding ${sheet.title} from memory`} autoFocus />
+            <h2>{t('thinking.again.heading', { title })}</h2>
+            <p className="lead">{t('thinking.again.lead')}</p>
+            <PaperSheet draft={draft} onChange={setDraft} label={t('thinking.again.sheetLabel', { title })} autoFocus />
           </>
         )}
         {stage === 'compare' && (
           <>
-            <h2>Compare and clean it up</h2>
-            <p className="lead">
-              Here's your old sheet. Keep what still holds, fix what was wrong, drop what doesn't matter. Your clean version replaces
-              the old one.
-            </p>
+            <h2>{t('thinking.again.compareHeading')}</h2>
+            <p className="lead">{t('thinking.again.compareLead')}</p>
             <div className="compare">
               <section>
-                <h3>Your old sheet</h3>
-                {old && <PaperSheet draft={old} label="Your old sheet" readOnly />}
+                <h3>{t('thinking.again.oldSheet')}</h3>
+                {old && <PaperSheet draft={old} label={t('thinking.again.oldSheet')} readOnly />}
               </section>
               <section>
-                <h3>Keep, fix or drop</h3>
+                <h3>{t('thinking.again.verdictHeading')}</h3>
                 <ul className="verdicts">
                   {items.map((item) => {
                     const v = verdicts[item]?.verdict ?? 'keep';
@@ -252,13 +256,13 @@ export function AgainPhase({ sheet, onDone }: { sheet: Sheet; onDone: (xp: numbe
                         <div className="top">
                           <span className="text">
                             {item}
-                            {isAnchor && <span className="small muted"> · anchor</span>}
+                            {isAnchor && <span className="small muted"> · {t('thinking.again.anchorTag')}</span>}
                           </span>
-                          {got.has(item) && <span className="got">remembered</span>}
-                          <span className="seg" role="group" aria-label={`What to do with ${item}`}>
+                          {got.has(item) && <span className="got">{t('thinking.again.remembered')}</span>}
+                          <span className="seg" role="group" aria-label={t('thinking.again.verdictGroup', { item })}>
                             {(['keep', 'fix', 'drop'] as const).map((k) => (
                               <button key={k} type="button" className={v === k ? 'on' : ''} aria-pressed={v === k} onClick={() => setVerdict(item, k)}>
-                                {k === 'keep' ? 'Keep' : k === 'fix' ? 'Fix' : 'Drop'}
+                                {t(VERDICT_LABEL[k])}
                               </button>
                             ))}
                           </span>
@@ -267,7 +271,7 @@ export function AgainPhase({ sheet, onDone }: { sheet: Sheet; onDone: (xp: numbe
                           <input
                             value={verdicts[item]?.text ?? ''}
                             maxLength={32}
-                            aria-label={`Corrected version of ${item}`}
+                            aria-label={t('thinking.again.fixLabel', { item })}
                             onChange={(e) => {
                               const text = isAnchor ? limitWords(e.target.value) : e.target.value;
                               setVerdicts((all) => ({ ...all, [item]: { verdict: 'fix', text } }));
@@ -280,35 +284,34 @@ export function AgainPhase({ sheet, onDone }: { sheet: Sheet; onDone: (xp: numbe
                 </ul>
               </section>
               <section>
-                <h3>Your clean sheet</h3>
-                <p className="small muted">What you wrote from memory. Re-sort it, add what you just fixed, draw how it connects.</p>
-                <PaperSheet draft={draft} onChange={setDraft} label="Your clean sheet" />
+                <h3>{t('thinking.again.cleanSheet')}</h3>
+                <p className="small muted">{t('thinking.again.cleanNote')}</p>
+                <PaperSheet draft={draft} onChange={setDraft} label={t('thinking.again.cleanSheet')} />
               </section>
             </div>
           </>
         )}
         {stage === 'saved' && result && (
           <>
-            <h2>Clean sheet saved</h2>
+            <h2>{t('thinking.again.savedHeading')}</h2>
             <div className="result-tiles think-summary">
               <div className="result-tile">
-                <span>Remembered</span>
+                <span>{t('thinking.again.tileRemembered')}</span>
                 <strong>
                   {result.sheet.again.at(-1)!.remembered}/{result.sheet.again.at(-1)!.total}
                 </strong>
               </div>
               <div className="result-tile">
-                <span>Fixed</span>
+                <span>{t('thinking.again.tileFixed')}</span>
                 <strong>{result.sheet.again.at(-1)!.fixed}</strong>
               </div>
               <div className="result-tile xp">
-                <span>XP</span>
+                <span>{t('thinking.again.tileXp')}</span>
                 <strong>+{result.xp}</strong>
               </div>
             </div>
             <p className="small muted">
-              Next redo of this sheet in {plural(Math.max(1, Math.round(((result.sheet.due ?? 0) - Date.now()) / 86_400_000)), 'day')}. Each time,
-              the gap grows.
+              {t('thinking.again.nextRedo', { count: Math.max(1, Math.round(((result.sheet.due ?? 0) - Date.now()) / 86_400_000)) })}
             </p>
           </>
         )}
@@ -316,23 +319,29 @@ export function AgainPhase({ sheet, onDone }: { sheet: Sheet; onDone: (xp: numbe
       <BottomBar>
         <div className="bb-status">
           <span className="small muted">
-            {stage === 'recall' ? (ready.ok ? `${draft.chips.length} keywords from memory.` : ready.missing) : stage === 'compare' ? `You brought back ${got.size} of ${items.length}.` : ''}
+            {stage === 'recall'
+              ? ready.ok
+                ? t('thinking.again.recalled', { count: draft.chips.length })
+                : ready.missing
+              : stage === 'compare'
+                ? t('thinking.again.broughtBack', { got: got.size, total: items.length })
+                : ''}
           </span>
         </div>
         <div className="bb-actions">
           {stage === 'recall' && (
             <button className="btn primary big" disabled={!ready.ok} onClick={() => setStage('compare')}>
-              Compare with my old sheet
+              {t('thinking.again.compare')}
             </button>
           )}
           {stage === 'compare' && (
             <button className="btn primary big" onClick={save}>
-              Save the clean sheet
+              {t('thinking.again.save')}
             </button>
           )}
           {stage === 'saved' && (
             <button className="btn primary big" autoFocus onClick={() => onDone(result?.xp ?? 0)}>
-              Continue
+              {t('common.continue')}
             </button>
           )}
         </div>

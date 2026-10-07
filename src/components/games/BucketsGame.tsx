@@ -7,6 +7,7 @@ import { InlineMarkdown } from '../Markdown';
 import { AnswerLine, QuestionFrame, useCheckFlow, type QuestionProps } from '../QuestionFrame';
 import './BucketsGame.css';
 import { Icon } from '../icons';
+import { useT } from '../../i18n/react';
 
 interface Drag {
   pointerId: number;
@@ -37,6 +38,7 @@ const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce
 const plain = (s: string) => s.replace(/`/g, '');
 
 export function BucketsGame({ step, mode, context, onDone }: QuestionProps<BucketsStep>) {
+  const { t, tx } = useT();
   const flow = useCheckFlow(mode, onDone);
   const { status } = flow;
   const total = step.items.length;
@@ -112,9 +114,10 @@ export function BucketsGame({ step, mode, context, onDone }: QuestionProps<Bucke
     if (locked || busy.current || current === null || bucket < 0 || bucket >= nb) return;
     const item = current;
     const text = plain(step.items[item].text);
-    const nextText = pos + 1 < total ? ` Next: ${plain(step.items[deck[pos + 1]].text)}.` : ' That was the last card.';
+    const nextText =
+      pos + 1 < total ? t('games.buckets.announce.next', { text: plain(step.items[deck[pos + 1]].text) }) : t('games.buckets.announce.last');
     if (isRightBucket(step, item, bucket)) {
-      setAnnounce(`Right: ${text} goes in ${step.buckets[bucket]}.${nextText}`);
+      setAnnounce(`${t('games.buckets.announce.right', { text, bucket: step.buckets[bucket] })} ${nextText}`);
       flyTo(item, bucket, false, from);
       return;
     }
@@ -124,11 +127,11 @@ export function BucketsGame({ step, mode, context, onDone }: QuestionProps<Bucke
     if (mode === 'test') {
       // One attempt per card: it goes where it belongs, marked as a miss, and the deck moves on.
       const right = step.items[item].bucket;
-      setAnnounce(`Miss: ${text} belongs in ${step.buckets[right]}.${nextText}`);
+      setAnnounce(`${t('games.buckets.announce.miss', { text, bucket: step.buckets[right] })} ${nextText}`);
       flyTo(item, right, true, from);
     } else {
       setShake((s) => s + 1);
-      setAnnounce(`Not ${step.buckets[bucket]}. Try another bucket for ${text}.`);
+      setAnnounce(t('games.buckets.announce.tryAnother', { bucket: step.buckets[bucket], text }));
     }
   }
 
@@ -184,12 +187,12 @@ export function BucketsGame({ step, mode, context, onDone }: QuestionProps<Bucke
     setMisses(0);
     missesRef.current = 0;
     graded.current = false;
-    const t = Date.now();
-    setStartedAt(t);
-    setNow(t);
+    const at = Date.now();
+    setStartedAt(at);
+    setNow(at);
     setFinishedAt(null);
     setFlash(null);
-    setAnnounce(`New deck. First card: ${plain(step.items[fresh[0]].text)}.`);
+    setAnnounce(t('games.buckets.announce.newDeck', { text: plain(step.items[fresh[0]].text) }));
   }
 
   // The card's transform: following the pointer, flying into a bucket, or resting.
@@ -211,25 +214,29 @@ export function BucketsGame({ step, mode, context, onDone }: QuestionProps<Bucke
       flow={flow}
       mode={mode}
       context={context}
-      kind="Sort the cards"
+      kind={t('games.buckets.kind')}
       canCheck={done && finishedAt !== null && !graded.current}
       onCheck={finish}
       onRetry={retry}
-      checkLabel={done ? 'Finish' : `${pos}/${total} sorted`}
+      checkLabel={done ? t('games.buckets.finish') : t('games.buckets.sortedCount', { done: pos, total })}
       answer={<AnswerLine text={gameAnswerLabel(step)} />}
     >
       <div className="bg-hud" aria-hidden>
-        <span className="bg-stat">
-          Card <strong>{Math.min(pos + 1, total)}</strong>/{total}
-        </span>
+        <span className="bg-stat">{tx('games.buckets.cardOf', { n: <strong>{Math.min(pos + 1, total)}</strong>, total })}</span>
         <span className={`bg-stat${misses ? ' bad' : ''}`}>
-          Misses <strong key={misses} className={misses ? 'bump' : undefined}>{misses}</strong>
+          {tx('games.buckets.misses', {
+            misses: (
+              <strong key={misses} className={misses ? 'bump' : undefined}>
+                {misses}
+              </strong>
+            ),
+          })}
         </span>
         <span className="bg-stat bg-clock">
           <Icon name="clock" size={14} /> {formatClock(elapsed)}
         </span>
       </div>
-      <div className="bg-progress" role="progressbar" aria-label="Cards sorted" aria-valuemin={0} aria-valuemax={total} aria-valuenow={pos}>
+      <div className="bg-progress" role="progressbar" aria-label={t('games.buckets.cardsSorted')} aria-valuemin={0} aria-valuemax={total} aria-valuenow={pos}>
         <span style={{ width: `${(pos / total) * 100}%` }} />
       </div>
 
@@ -245,24 +252,28 @@ export function BucketsGame({ step, mode, context, onDone }: QuestionProps<Bucke
               onPointerMove={onPointerMove}
               onPointerUp={(e) => onPointerUp(e, false)}
               onPointerCancel={(e) => onPointerUp(e, true)}
-              aria-label={`Card ${pos + 1} of ${total}: ${plain(step.items[current].text)}`}
+              aria-label={t('games.buckets.cardLabel', { n: pos + 1, total, text: plain(step.items[current].text) })}
               role="group"
             >
               <div key={`${current}-${shake}`} className={`bg-face${shake && !fly ? ' shake' : ''}`}>
                 <span className="bg-face-text">
                   <InlineMarkdown text={step.items[current].text} />
                 </span>
-                {!locked && <span className="bg-face-tip">Drag me to a bucket</span>}
+                {!locked && <span className="bg-face-tip">{t('games.buckets.dragMe')}</span>}
               </div>
             </div>
           </div>
         ) : (
           <div className={`bg-done${misses ? ' missed' : ''}`} role="status">
-            <strong>{misses ? 'Deck sorted' : 'Clean sweep!'}</strong>
+            <strong>{misses ? t('games.buckets.deckSorted') : t('games.buckets.cleanSweep')}</strong>
             <span>
-              {total} cards · {misses} {misses === 1 ? 'miss' : 'misses'} · {formatClock(elapsed)}
+              {t('games.buckets.doneStats', {
+                cards: t('games.buckets.cards', { count: total }),
+                misses: t('games.buckets.missCount', { count: misses }),
+                time: formatClock(elapsed),
+              })}
             </span>
-            {misses > 0 && mode === 'learn' && status !== 'revealed' && <span className="small">A perfect run has no misses.</span>}
+            {misses > 0 && mode === 'learn' && status !== 'revealed' && <span className="small">{t('games.buckets.perfectRun')}</span>}
           </div>
         )}
       </div>
@@ -284,7 +295,7 @@ export function BucketsGame({ step, mode, context, onDone }: QuestionProps<Bucke
               className={cls}
               disabled={locked || current === null}
               onClick={() => place(bi)}
-              aria-label={`Bucket ${bi + 1}: ${plain(label)}, ${list.length} ${list.length === 1 ? 'card' : 'cards'}`}
+              aria-label={t('games.buckets.bucketLabel', { n: bi + 1, label: plain(label), count: list.length })}
             >
               <span className="bg-bucket-head">
                 <span className="choice-key" aria-hidden>
@@ -311,7 +322,7 @@ export function BucketsGame({ step, mode, context, onDone }: QuestionProps<Bucke
         })}
       </div>
       {status === 'answering' && !done && (
-        <p className="muted small bg-howto">Drag the card onto a bucket, tap a bucket, or press 1–{nb}.</p>
+        <p className="muted small bg-howto">{t('games.buckets.howto', { max: nb })}</p>
       )}
       <p className="sr-only" aria-live="polite">
         {announce}

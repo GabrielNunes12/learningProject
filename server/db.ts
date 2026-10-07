@@ -61,6 +61,8 @@ const SCHEMA = `
     updated_at   BIGINT NOT NULL,
     UNIQUE (user_id, course_id)
   );
+  -- The language a certificate was issued in (its course title is in it; the share card is written in it).
+  ALTER TABLE certificates ADD COLUMN IF NOT EXISTS locale TEXT NOT NULL DEFAULT 'en';
 
   COMMIT;
 `;

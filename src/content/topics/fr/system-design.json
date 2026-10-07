@@ -1,0 +1,1777 @@
+{
+  "id": "system-design",
+  "title": "Conception de systèmes",
+  "icon": "QPS",
+  "color": "#e03131",
+  "order": 17,
+  "category": "Engineering",
+  "level": "Intermediate",
+  "description": "Conçois des systèmes qui encaissent un vrai trafic : estime la charge, choisis le stockage et le cache, monte en charge sans risque et explique tes compromis en entretien ou en revue de conception.",
+  "keyIdeas": [
+    "Estime d'abord : requêtes par jour ÷ 10⁵ ≈ requêtes par seconde, puis prévois des pics plusieurs fois supérieurs.",
+    "Garde les serveurs d'application **sans état** pour pouvoir monter en charge derrière un répartiteur de charge et perdre n'importe lequel d'entre eux.",
+    "La plupart des systèmes sont dominés par la lecture : un cache avec un bon taux de succès est la plus grosse victoire pour le moins cher, à condition de gérer les données périmées.",
+    "Les réplicas **copient** les données pour absorber plus de lectures (et accusent du retard) ; les shards **découpent** les données pour absorber plus de volume et d'écritures (et demandent une bonne clé).",
+    "Les files livrent au moins une fois : rends donc tes traitements **idempotents**.",
+    "Chaque appel réseau a besoin d'un timeout ; réessaie avec un backoff et du jitter, et utilise des disjoncteurs et des limites de débit pour empêcher les pannes de se propager."
+  ],
+  "concepts": [
+    {
+      "id": "napkin-math",
+      "label": "Calcul de coin de table",
+      "lesson": "napkin-math",
+      "summary": "Des estimations rapides de QPS, de stockage et de bande passante à partir de chiffres ronds : requêtes par jour ÷ 10⁵ ≈ requêtes par seconde, multipliées par un facteur de pic.",
+      "aliases": [
+        "napkin math",
+        "back-of-the-envelope",
+        "calcul au dos d'une enveloppe",
+        "ordre de grandeur",
+        "QPS",
+        "estimation de capacité",
+        "ratio lecture/écriture"
+      ]
+    },
+    {
+      "id": "latency-numbers",
+      "label": "Ordres de grandeur de latence",
+      "lesson": "napkin-math",
+      "summary": "Des ordres de grandeur approximatifs : RAM ~100 ns, lecture SSD ~100 µs, aller-retour dans le même datacenter ~0,5 ms, seek de disque ~10 ms, aller-retour intercontinental ~150 ms.",
+      "aliases": [
+        "latency numbers",
+        "échelle de latence",
+        "chiffres que tout développeur devrait connaître",
+        "latence"
+      ]
+    },
+    {
+      "id": "request-path",
+      "label": "Répartiteur de charge",
+      "lesson": "follow-a-click",
+      "summary": "Le DNS oriente les clients vers un répartiteur de charge, qui répartit les requêtes sur les serveurs d'application en bonne santé placés devant la base de données.",
+      "aliases": [
+        "load balancer",
+        "chemin d'une requête",
+        "DNS",
+        "LB",
+        "health checks",
+        "vérifications de santé"
+      ]
+    },
+    {
+      "id": "horizontal-scaling",
+      "label": "Mise à l'échelle horizontale",
+      "lesson": "follow-a-click",
+      "summary": "Ajoute des machines derrière un répartiteur de charge (scale out) au lieu d'en acheter une plus grosse (scale up) : tu gagnes de la marge et de la redondance.",
+      "aliases": [
+        "scale out",
+        "scaling horizontal",
+        "mise à l'échelle verticale",
+        "scale up",
+        "N+1"
+      ]
+    },
+    {
+      "id": "stateless-servers",
+      "label": "Serveurs sans état",
+      "lesson": "follow-a-click",
+      "summary": "Les serveurs d'application ne gardent aucun état par utilisateur entre deux requêtes ; les sessions et les fichiers vivent dans des stockages partagés, donc n'importe quel serveur peut traiter n'importe quelle requête.",
+      "aliases": [
+        "stateless",
+        "sans état",
+        "stockage de sessions partagé",
+        "sticky sessions",
+        "sessions collantes"
+      ]
+    },
+    {
+      "id": "latency-budget",
+      "label": "Budget de latence",
+      "lesson": "latency-budgets",
+      "summary": "Répartis un objectif de temps de réponse entre les appels : les appels séquentiels s'additionnent, les appels parallèles coûtent le plus lent, et le fan-out fait de la latence de queue (p99) le cas courant.",
+      "aliases": [
+        "latence de queue",
+        "tail latency",
+        "p99",
+        "percentiles",
+        "fan-out"
+      ]
+    },
+    {
+      "id": "cache-aside",
+      "label": "Cache-aside",
+      "lesson": "caching",
+      "summary": "L'appli interroge d'abord un cache rapide et, en cas d'échec (miss), lit la base de données et stocke le résultat pour le prochain lecteur.",
+      "aliases": [
+        "cache",
+        "mise en cache",
+        "chargement paresseux",
+        "lazy loading",
+        "Redis",
+        "CDN"
+      ]
+    },
+    {
+      "id": "hit-ratio",
+      "label": "Taux de succès du cache",
+      "lesson": "caching",
+      "summary": "La part des lectures auxquelles le cache répond ; latence moyenne = h × hit + (1 − h) × miss, et charge de la base = (1 − h) × lectures.",
+      "aliases": [
+        "hit ratio",
+        "hit rate",
+        "taux de succès",
+        "taux d'échec",
+        "miss rate",
+        "cache hits"
+      ]
+    },
+    {
+      "id": "cache-invalidation",
+      "label": "TTL et invalidation",
+      "lesson": "caching",
+      "summary": "Borne la péremption avec une durée de vie (TTL), et supprime les clés en cache après une écriture pour que la lecture suivante recharge des données fraîches.",
+      "aliases": [
+        "TTL",
+        "cache périmé",
+        "invalidation du cache",
+        "expiration",
+        "durée de vie"
+      ]
+    },
+    {
+      "id": "sql-vs-nosql",
+      "label": "SQL ou NoSQL",
+      "lesson": "pick-a-database",
+      "summary": "Les bases relationnelles offrent des jointures et des transactions ; les stockages clé-valeur et à colonnes larges offrent un accès simple par clé réparti sur de nombreuses machines.",
+      "aliases": [
+        "SQL vs NoSQL",
+        "base de données relationnelle",
+        "stockage clé-valeur",
+        "base de données documents",
+        "ACID"
+      ]
+    },
+    {
+      "id": "sharding",
+      "label": "Sharding",
+      "lesson": "pick-a-database",
+      "summary": "Répartis les lignes sur plusieurs machines selon une clé de partition qui étale la charge de façon égale et garde les requêtes courantes sur un seul shard, en évitant les points chauds.",
+      "aliases": [
+        "partitionnement",
+        "shard key",
+        "clé de shard",
+        "clé de partition",
+        "point chaud",
+        "hot spot"
+      ]
+    },
+    {
+      "id": "consistent-hashing",
+      "label": "Hachage cohérent",
+      "lesson": "pick-a-database",
+      "summary": "Les clés et les shards sont placés sur un anneau de hachage : ajouter un shard ne déplace qu'environ 1/N des clés, au lieu de la plupart d'entre elles.",
+      "aliases": [
+        "consistent hashing",
+        "anneau de hachage",
+        "rééquilibrage",
+        "resharding"
+      ]
+    },
+    {
+      "id": "replication",
+      "label": "Réplicas en lecture",
+      "lesson": "copies-that-disagree",
+      "summary": "Un leader prend les écritures et des réplicas copient ses changements pour servir les lectures et prendre le relais en cas de panne.",
+      "aliases": [
+        "read replicas",
+        "réplication",
+        "leader-follower",
+        "primaire-réplica",
+        "basculement",
+        "failover"
+      ]
+    },
+    {
+      "id": "eventual-consistency",
+      "label": "Cohérence à terme",
+      "lesson": "copies-that-disagree",
+      "summary": "Les copies asynchrones accusent du retard : les lectures peuvent être périmées un moment mais finissent par converger ; la lecture de ses propres écritures et la cohérence forte sont des garanties plus fortes.",
+      "aliases": [
+        "eventual consistency",
+        "retard de réplication",
+        "lectures périmées",
+        "read-your-writes",
+        "lecture de ses propres écritures",
+        "cohérence forte"
+      ]
+    },
+    {
+      "id": "cap-pacelc",
+      "label": "CAP et PACELC",
+      "lesson": "copies-that-disagree",
+      "summary": "Pendant une partition réseau, choisis entre cohérence et disponibilité ; sinon, arbitre entre latence et cohérence.",
+      "aliases": [
+        "théorème CAP",
+        "CAP theorem",
+        "partition réseau",
+        "cohérence ou disponibilité",
+        "PACELC"
+      ]
+    },
+    {
+      "id": "message-queue",
+      "label": "File de messages",
+      "lesson": "queues",
+      "summary": "Les producteurs déposent du travail dans une file et des workers le traitent en arrière-plan : les requêtes répondent vite et les pics sont absorbés.",
+      "aliases": [
+        "message queue",
+        "file d'attente",
+        "queue",
+        "travail asynchrone",
+        "tâches d'arrière-plan",
+        "workers"
+      ]
+    },
+    {
+      "id": "at-least-once",
+      "label": "Livraison au moins une fois",
+      "lesson": "queues",
+      "summary": "Un message est relivré tant qu'il n'est pas acquitté : rien n'est perdu, mais le même message peut être traité plusieurs fois.",
+      "aliases": [
+        "at-least-once",
+        "relivraison",
+        "doublons",
+        "ack",
+        "acquittement",
+        "dead-letter queue",
+        "file de lettres mortes"
+      ]
+    },
+    {
+      "id": "idempotency",
+      "label": "Idempotence",
+      "lesson": "queues",
+      "summary": "Faire une opération deux fois a le même effet qu'une fois, généralement grâce à une clé d'idempotence enregistrée avec l'effet.",
+      "aliases": [
+        "idempotency",
+        "idempotent",
+        "idempotente",
+        "clé d'idempotence",
+        "idempotency key",
+        "déduplication"
+      ]
+    },
+    {
+      "id": "timeouts",
+      "label": "Timeouts",
+      "lesson": "when-things-break",
+      "summary": "Chaque appel réseau cesse d'attendre après une limite, pour qu'une dépendance bloquée ne puisse pas épuiser tes threads et provoquer une cascade.",
+      "aliases": [
+        "timeout",
+        "délai d'expiration",
+        "panne en cascade",
+        "cascading failure",
+        "loi de Little",
+        "Little's law",
+        "deadline"
+      ]
+    },
+    {
+      "id": "retry-backoff",
+      "label": "Nouvelles tentatives avec backoff",
+      "lesson": "when-things-break",
+      "summary": "Réessaie les échecs transitoires avec des attentes plafonnées qui croissent de façon exponentielle, plus du jitter, et seulement pour les opérations idempotentes.",
+      "aliases": [
+        "backoff exponentiel",
+        "exponential backoff",
+        "jitter",
+        "retry storm",
+        "tempête de réessais",
+        "retries",
+        "réessais"
+      ]
+    },
+    {
+      "id": "circuit-breaker",
+      "label": "Disjoncteur",
+      "lesson": "when-things-break",
+      "summary": "Après des échecs répétés, arrête d'appeler une dépendance (ouvert), échoue vite avec une solution de repli, puis reteste-la (semi-ouvert).",
+      "aliases": [
+        "circuit breaker",
+        "disjoncteur",
+        "échouer vite",
+        "fail fast",
+        "fallback",
+        "solution de repli",
+        "half-open"
+      ]
+    },
+    {
+      "id": "rate-limiting",
+      "label": "Limitation de débit",
+      "lesson": "when-things-break",
+      "summary": "Plafonne chaque client, souvent avec un token bucket, et rejette l'excédent avec un 429 Too Many Requests.",
+      "aliases": [
+        "rate limiting",
+        "token bucket",
+        "429",
+        "throttling",
+        "limiteur de débit",
+        "rate limiter"
+      ]
+    },
+    {
+      "id": "design-process",
+      "label": "Démarche de conception",
+      "lesson": "design-snipt",
+      "summary": "Besoins, estimations, API, modèle de données, conception générale, puis approfondissements et compromis, dans cet ordre.",
+      "aliases": [
+        "design process",
+        "entretien de system design",
+        "system design interview",
+        "besoins",
+        "exigences",
+        "fonctionnel vs non fonctionnel",
+        "compromis",
+        "trade-offs"
+      ]
+    },
+    {
+      "id": "short-codes",
+      "label": "Génération de codes courts",
+      "lesson": "design-snipt",
+      "summary": "Dimensionne l'espace des codes avec la base 62 (62ⁿ codes), et choisis des codes aléatoires avec un contrôle d'unicité ou des identifiants encodés.",
+      "aliases": [
+        "base62",
+        "base 62",
+        "génération d'identifiants",
+        "raccourcisseur d'URL",
+        "URL shortener",
+        "espace de clés"
+      ]
+    }
+  ],
+  "links": [
+    {
+      "from": "latency-numbers",
+      "to": "napkin-math",
+      "label": "fait partie de"
+    },
+    {
+      "from": "latency-budget",
+      "to": "latency-numbers",
+      "label": "s'appuie sur"
+    },
+    {
+      "from": "horizontal-scaling",
+      "to": "stateless-servers",
+      "label": "nécessite"
+    },
+    {
+      "from": "horizontal-scaling",
+      "to": "request-path",
+      "label": "nécessite"
+    },
+    {
+      "from": "replication",
+      "to": "horizontal-scaling",
+      "label": "est un cas particulier de"
+    },
+    {
+      "from": "sharding",
+      "to": "horizontal-scaling",
+      "label": "est un cas particulier de"
+    },
+    {
+      "from": "sharding",
+      "to": "replication",
+      "label": "s'oppose à"
+    },
+    {
+      "from": "replication",
+      "to": "eventual-consistency",
+      "label": "entraîne"
+    },
+    {
+      "from": "cap-pacelc",
+      "to": "eventual-consistency",
+      "label": "s'appuie sur"
+    },
+    {
+      "from": "cap-pacelc",
+      "to": "latency-budget",
+      "label": "s'appuie sur"
+    },
+    {
+      "from": "hit-ratio",
+      "to": "latency-numbers",
+      "label": "s'appuie sur"
+    },
+    {
+      "from": "cache-aside",
+      "to": "hit-ratio",
+      "label": "se vérifie avec"
+    },
+    {
+      "from": "cache-invalidation",
+      "to": "cache-aside",
+      "label": "fait partie de"
+    },
+    {
+      "from": "cache-aside",
+      "to": "replication",
+      "label": "s'oppose à"
+    },
+    {
+      "from": "cache-aside",
+      "to": "eventual-consistency",
+      "label": "entraîne"
+    },
+    {
+      "from": "consistent-hashing",
+      "to": "sharding",
+      "label": "est utilisé(e) dans"
+    },
+    {
+      "from": "at-least-once",
+      "to": "message-queue",
+      "label": "fait partie de"
+    },
+    {
+      "from": "at-least-once",
+      "to": "idempotency",
+      "label": "nécessite"
+    },
+    {
+      "from": "retry-backoff",
+      "to": "idempotency",
+      "label": "nécessite"
+    },
+    {
+      "from": "retry-backoff",
+      "to": "timeouts",
+      "label": "nécessite"
+    },
+    {
+      "from": "circuit-breaker",
+      "to": "timeouts",
+      "label": "s'appuie sur"
+    },
+    {
+      "from": "circuit-breaker",
+      "to": "retry-backoff",
+      "label": "s'oppose à"
+    },
+    {
+      "from": "rate-limiting",
+      "to": "circuit-breaker",
+      "label": "s'oppose à"
+    },
+    {
+      "from": "rate-limiting",
+      "to": "message-queue",
+      "label": "s'oppose à"
+    },
+    {
+      "from": "timeouts",
+      "to": "latency-budget",
+      "label": "s'appuie sur"
+    },
+    {
+      "from": "napkin-math",
+      "to": "design-process",
+      "label": "fait partie de"
+    },
+    {
+      "from": "short-codes",
+      "to": "design-process",
+      "label": "fait partie de"
+    },
+    {
+      "from": "short-codes",
+      "to": "napkin-math",
+      "label": "s'appuie sur"
+    },
+    {
+      "from": "sql-vs-nosql",
+      "to": "design-process",
+      "label": "est utilisé(e) dans"
+    },
+    {
+      "from": "message-queue",
+      "to": "design-process",
+      "label": "est utilisé(e) dans"
+    },
+    {
+      "from": "cap-pacelc",
+      "to": "design-process",
+      "label": "est utilisé(e) dans"
+    },
+    {
+      "from": "napkin-math",
+      "to": "analytical-thinking/fermi-estimate",
+      "label": "est un cas particulier de"
+    },
+    {
+      "from": "hit-ratio",
+      "to": "probability/expected-value",
+      "label": "s'appuie sur"
+    },
+    {
+      "from": "consistent-hashing",
+      "to": "big-o/hash-map",
+      "label": "s'appuie sur"
+    },
+    {
+      "from": "sql-vs-nosql",
+      "to": "sql/transaction",
+      "label": "s'appuie sur"
+    },
+    {
+      "from": "message-queue",
+      "to": "software-architecture/sync-call",
+      "label": "s'oppose à"
+    },
+    {
+      "from": "design-process",
+      "to": "software-architecture/trade-offs",
+      "label": "s'appuie sur"
+    }
+  ],
+  "units": [
+    {
+      "id": "size-it-up",
+      "title": "Prendre la mesure",
+      "description": "Transforme des utilisateurs en chiffres, suis une requête à travers le système et ajoute des serveurs sans rien casser.",
+      "lessons": [
+        {
+          "id": "napkin-math",
+          "title": "Calcul de coin de table : quelle taille ça fait ?",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "Requêtes par jour ÷ 10⁵ ≈ requêtes par seconde ; multiplie pour les pics et les lectures, et dimensionne le stockage comme éléments × octets × durée.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Voici Snipt",
+              "body": "Lin lance **Snipt**, un raccourcisseur de liens : tu colles une longue URL, tu obtiens `snipt.example/x7Kp2`, et quiconque clique dessus est redirigé. Omar, qui relit ses conceptions, demande d'abord : *quelle taille ça fait ?*\n\nLe calcul de coin de table répond en une minute :\n\n- Un jour compte 86 400 secondes. Arrondis à **100 000 (10⁵)**.\n- **QPS moyen** (queries per second, requêtes par seconde) = requêtes par jour ÷ 10⁵.\n\n50 millions de requêtes par jour ÷ 10⁵ ≈ **500 QPS**. À un facteur 2 près, c'est suffisant : ça te dit s'il te faut un serveur ou cinquante."
+            },
+            {
+              "type": "numeric",
+              "id": "q-write-qps",
+              "prompt": "Snipt attend **2 millions** de nouveaux liens par jour. En moyenne, combien de requêtes de création de lien par seconde cela représente-t-il ?",
+              "answer": 23,
+              "tolerance": 3,
+              "unit": "requêtes/s",
+              "hint": "Divise par le nombre de secondes dans un jour, ou par 10⁵ pour le raccourci.",
+              "explanation": "2 000 000 ÷ 86 400 ≈ **23 par seconde**. Le raccourci des 10⁵ donne 20, ce qui est tout aussi utile : dans les deux cas, la création de liens est une charge légère.",
+              "concepts": [
+                "napkin-math"
+              ]
+            },
+            {
+              "type": "explain",
+              "title": "Pics et lectures",
+              "body": "Le trafic n'est pas plat. Les soirées, les lancements et un lien viral le font tous monter en flèche : une hypothèse de départ courante est donc **pic ≈ 2 à 3 × la moyenne** (mesure le trafic réel dès que tu le peux).\n\nLa plupart des systèmes sont aussi **dominés par la lecture**. Un lien Snipt est créé une fois et cliqué de nombreuses fois : le **ratio lecture/écriture** pourrait être de 100 pour 1. Ce sont les lectures, pas les écritures, qui décideront de la conception de Snipt."
+            },
+            {
+              "type": "numeric",
+              "id": "q-peak-reads",
+              "prompt": "Utilise des chiffres ronds : **20** nouveaux liens par seconde en moyenne, chacun cliqué **100** fois pour une création (100 pour 1), et prévois un pic à **3 ×** la moyenne. Combien de clics par seconde au pic ?",
+              "answer": 6000,
+              "unit": "clics/s",
+              "hint": "Écritures × ratio donne les lectures moyennes ; applique ensuite le facteur de pic.",
+              "explanation": "20 écritures/s × 100 = 2 000 clics/s en moyenne, × 3 pour le pic = **6 000 clics/s**. Ce chiffre va suivre Snipt tout au long du cours.",
+              "concepts": [
+                "napkin-math"
+              ]
+            },
+            {
+              "type": "example",
+              "title": "Dimensionner le stockage",
+              "problem": "De combien de disque une année de liens Snipt a-t-elle besoin ?",
+              "steps": [
+                "Stockage = nouveaux éléments par jour × octets par élément × jours de conservation.",
+                "Une ligne de lien contient le code court, la longue URL, le propriétaire et un horodatage. Les longues URL varient, donc prévois **500 octets**.",
+                "2 000 000 liens/jour × 500 octets × 365 jours = 365 000 000 000 octets."
+              ],
+              "answer": "Environ **365 Go par an**, soit à peu près 1,8 To sur cinq ans. Ça tient sur un gros disque ; tu garderais quand même des copies par sécurité."
+            },
+            {
+              "type": "numeric",
+              "id": "q-click-log",
+              "prompt": "Snipt journalise aussi chaque clic pour les statistiques : **200 millions** de clics par jour, d'environ **100 octets** chacun. Combien de gigaoctets de journaux par jour ? (1 Go = 10⁹ octets)",
+              "answer": 20,
+              "tolerance": 0.5,
+              "unit": "Go",
+              "hint": "Multiplie, puis divise par 10⁹.",
+              "explanation": "200 000 000 × 100 octets = 2 × 10¹⁰ octets = **20 Go par jour**, environ 7 To par an. C'est le journal des clics, pas la table des liens, qui est le gros volume de données de Snipt.",
+              "concepts": [
+                "napkin-math"
+              ]
+            },
+            {
+              "type": "numeric",
+              "id": "q-bandwidth",
+              "prompt": "**Bande passante** = requêtes par seconde × octets par réponse. Au pic de **6 000** clics/s, chaque réponse de redirection fait environ **500 octets**. Combien de mégaoctets par seconde sortent des serveurs de Snipt ? (1 Mo = 10⁶ octets)",
+              "answer": 3,
+              "tolerance": 0.1,
+              "unit": "Mo/s",
+              "explanation": "6 000 × 500 octets = 3 000 000 octets/s = **3 Mo/s**, soit 24 Mbit/s. La carte réseau d'un serveur fait couramment 10 Gbit/s : la bande passante n'est donc pas un problème pour des redirections.",
+              "concepts": [
+                "napkin-math"
+              ]
+            },
+            {
+              "type": "order",
+              "id": "q-latency-ladder",
+              "prompt": "Les ingénieurs gardent en poche quelques **ordres de grandeur de latence**. Classe-les du plus rapide au plus lent.",
+              "items": [
+                "Lire une valeur en mémoire principale (RAM)",
+                "Lecture aléatoire sur un SSD",
+                "Aller-retour vers un autre serveur du même datacenter",
+                "Un seek sur un disque dur à plateaux",
+                "Aller-retour de la Californie vers l'Europe"
+              ],
+              "hint": "Des nanosecondes, puis des microsecondes, puis des millisecondes. La distance est la chose la plus lente de toutes.",
+              "explanation": "Valeurs approximatives, tirées de la liste très diffusée des *latency numbers every programmer should know* (Jeff Dean, Peter Norvig). Le matériel évolue sans cesse, mais les ordres de grandeur tiennent :\n\n- Lecture en RAM : **~100 ns**\n- Lecture aléatoire sur SSD : **~100 µs** (de quelques dizaines à un peu plus de deux cents µs, selon le disque)\n- Aller-retour dans le même datacenter : **~0,5 ms**\n- Seek de disque dur : **~10 ms**\n- Californie vers l'Europe et retour : **~150 ms**\n\nChaque barreau vaut en gros 5 à 100 × le précédent. La mémoire est environ un million de fois plus rapide que la traversée d'un océan.",
+              "concepts": [
+                "latency-numbers"
+              ]
+            },
+            {
+              "type": "mcq",
+              "id": "q-what-matters",
+              "prompt": "Omar lit le calcul de Lin : **6 000** clics/s au pic, **365 Go** de liens par an, **3 Mo/s** de bande passante. Quelle est la conclusion raisonnable ?",
+              "choices": [
+                "Le stockage et la bande passante sont petits ; le vrai travail est de répondre vite à des milliers de lectures par seconde, donc le cache comptera",
+                "Snipt a besoin de dizaines de shards de base de données dès le premier jour pour contenir les données",
+                "La bande passante est le goulot d'étranglement, donc il faut d'abord un plus gros lien réseau",
+                "Des chiffres de coin de table ne peuvent pas guider une conception ; mesure chaque option avant de décider"
+              ],
+              "answer": 0,
+              "explanation": "Les chiffres pointent vers les **lectures** : 6 000/s au pic, contre un stockage et une bande passante minuscules. C'est pourquoi les prochaines leçons parlent de servir vite les lectures (répartiteurs de charge, caches, réplicas). Faire du sharding pour 365 Go serait prématuré. Les benchmarks comptent plus tard, mais le calcul de coin de table te dit *quoi* mesurer.",
+              "concepts": [
+                "napkin-math"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "follow-a-click",
+          "title": "Suivre un clic",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "Le DNS trouve le répartiteur de charge, qui répartit les requêtes sur des serveurs d'application sans état, et l'état vit dans des stockages partagés : tu peux donc ajouter ou perdre des serveurs librement.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Un clic, quatre boîtes",
+              "body": "Voici le chemin que prend un clic sur `snipt.example/x7Kp2` :\n\n```text\nbrowser\n   |  DNS: snipt.example -> 203.0.113.10\n   v\nload balancer        spreads requests, skips unhealthy servers\n   |\n   v\napp server (1 of N)  runs the code, keeps no state\n   |\n   v\ndatabase             the source of truth\n```\n\nLe **DNS** transforme le nom en adresse IP (et il est mis en cache, donc les visites suivantes sautent cette étape). Le **répartiteur de charge** possède cette IP et transmet chaque requête à un serveur d'application en bonne santé."
+            },
+            {
+              "type": "order",
+              "id": "q-click-path",
+              "prompt": "Remets dans l'ordre les étapes d'un **tout premier** clic sur `snipt.example/x7Kp2`.",
+              "items": [
+                "Le navigateur demande au DNS l'adresse IP de snipt.example",
+                "Le navigateur se connecte à l'adresse IP du répartiteur de charge",
+                "Le répartiteur de charge transmet la requête à un serveur d'application en bonne santé",
+                "Le serveur d'application cherche x7Kp2 dans la base de données",
+                "Le serveur d'application répond par une redirection vers la longue URL",
+                "Le navigateur demande la longue URL"
+              ],
+              "hint": "Le navigateur a besoin d'une adresse avant de pouvoir se connecter à quoi que ce soit.",
+              "explanation": "Nom → adresse (DNS), adresse → porte d'entrée (répartiteur de charge), porte d'entrée → un ouvrier (serveur d'application), ouvrier → données (base de données), puis retour sous forme de redirection que le navigateur suit. Au clic suivant, la réponse DNS est généralement en cache, donc la première étape est sautée.",
+              "concepts": [
+                "request-path"
+              ]
+            },
+            {
+              "type": "explain",
+              "title": "Monter en gamme ou monter en nombre",
+              "body": "Le serveur unique de Lin est à 80 % de CPU. Deux façons d'en sortir :\n\n- **Mise à l'échelle verticale** (scale up) : une machine plus grosse. Aucun changement de code, mais il y a un plafond, et c'est toujours une seule boîte qui peut tomber en panne.\n- **Mise à l'échelle horizontale** (scale out) : plus de machines derrière le répartiteur de charge. De la marge pour grandir et on survit à la perte d'une machine, mais **n'importe quel serveur doit pouvoir traiter n'importe quelle requête**.\n\nLes équipes commencent souvent par monter en gamme parce que c'est simple, puis passent à l'horizontal quand elles atteignent le plafond ou ont besoin de redondance."
+            },
+            {
+              "type": "buckets",
+              "id": "q-up-or-out",
+              "prompt": "Classe chaque carte : s'agit-il de monter en gamme (**up**) ou de monter en nombre (**out**) ?",
+              "buckets": [
+                "Vertical : scale up",
+                "Horizontal : scale out"
+              ],
+              "items": [
+                {
+                  "text": "Faire passer l'appli de 8 cœurs de CPU à 64",
+                  "bucket": 0
+                },
+                {
+                  "text": "Donner 512 Go de RAM au serveur de base de données",
+                  "bucket": 0
+                },
+                {
+                  "text": "A un plafond infranchissable : la plus grosse machine qu'on puisse acheter",
+                  "bucket": 0
+                },
+                {
+                  "text": "La panne d'une seule machine met le service à l'arrêt",
+                  "bucket": 0
+                },
+                {
+                  "text": "Ajouter quatre serveurs d'application derrière le répartiteur de charge",
+                  "bucket": 1
+                },
+                {
+                  "text": "Demande un répartiteur de charge en frontal",
+                  "bucket": 1
+                },
+                {
+                  "text": "Demande des serveurs qui ne gardent aucun état utilisateur en mémoire",
+                  "bucket": 1
+                },
+                {
+                  "text": "Faire tourner des copies dans deux datacenters",
+                  "bucket": 1
+                }
+              ],
+              "explanation": "**Up :** une boîte plus grosse. Simple, mais avec un plafond, et ça reste un point de défaillance unique. **Out :** plus de boîtes. Un répartiteur de charge répartit le trafic entre elles, perdre une boîte est supportable, et faire tourner des copies à deux endroits protège contre la perte de tout un datacenter. Le prix à payer : les serveurs doivent être interchangeables, c'est l'idée suivante.",
+              "concepts": [
+                "horizontal-scaling"
+              ]
+            },
+            {
+              "type": "explain",
+              "title": "Des serveurs sans état",
+              "body": "Un serveur est **sans état** (*stateless*) s'il ne garde entre deux requêtes rien dont un autre serveur aurait besoin : pas de sessions de connexion en mémoire, pas de fichiers téléversés sur son disque local.\n\nL'état va dans des **stockages partagés** : la base de données, un cache comme Redis, un stockage d'objets pour les fichiers. Le répartiteur de charge peut alors envoyer n'importe quelle requête n'importe où, et tu peux ajouter ou retirer des serveurs à volonté.\n\nLes *sessions collantes* (*sticky sessions*, qui envoient toujours un utilisateur vers le même serveur) sont une rustine : elles répartissent la charge de façon inégale, et un serveur qui plante déconnecte ses utilisateurs."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-sessions",
+              "prompt": "Snipt tourne maintenant sur **4 serveurs d'application** derrière un répartiteur de charge en round-robin. Les utilisateurs se connectent sans problème, puis sont renvoyés au hasard vers la page de connexion. Clique sur la ligne qui contient le bug.",
+              "language": "python",
+              "code": "sessions = {}  # session id -> user id, in this server's memory\n\ndef login(request):\n    user = check_password(request.form)\n    sid = new_session_id()\n    sessions[sid] = user.id\n    return set_cookie(\"sid\", sid)\n\ndef my_links(request):\n    user_id = sessions.get(request.cookies[\"sid\"])\n    if user_id is None:\n        return redirect(\"/login\")\n    return db.links_owned_by(user_id)",
+              "error": "GET /my-links -> 302 to /login on about 3 of every 4 requests",
+              "lines": [
+                1,
+                6
+              ],
+              "fixes": [
+                "Changer la ligne 1 pour que `sessions` soit un stockage partagé que tous les serveurs utilisent (par exemple Redis), en gardant les lignes 6 et 10 telles quelles",
+                "Changer la ligne 10 en `user_id = sessions[request.cookies[\"sid\"]]`",
+                "Changer la ligne 5 pour générer un identifiant de session plus long et plus aléatoire",
+                "Faire choisir un serveur au hasard au répartiteur de charge au lieu d'un round-robin"
+              ],
+              "answer": 0,
+              "hint": "Quels serveurs peuvent voir les données stockées à la ligne 6 ?",
+              "explanation": "La session vit dans un dict en mémoire d'**un seul** serveur, donc seule 1 requête sur 4 tombe sur le serveur qui connaît l'utilisateur. Déplacer les sessions dans un stockage partagé rend tous les serveurs sans état, et n'importe lequel peut répondre. Accéder avec `[]` fait juste planter au lieu de rediriger, un identifiant plus long n'aide pas un autre serveur à le retrouver, et un routage aléatoire rate encore environ 3 fois sur 4.",
+              "concepts": [
+                "stateless-servers",
+                "horizontal-scaling"
+              ]
+            },
+            {
+              "type": "numeric",
+              "id": "q-how-many-servers",
+              "prompt": "Le trafic de pointe est de **6 000** requêtes/s. Un serveur d'application traite **1 500** requêtes/s avec une marge confortable. Omar veut assez de serveurs pour le pic **plus un de secours** (N+1), pour qu'une panne au pic ne soit pas un événement. Combien de serveurs ?",
+              "answer": 5,
+              "unit": "serveurs",
+              "hint": "D'abord les serveurs qu'il faut pour le pic, puis ajoute celui de secours.",
+              "explanation": "6 000 ÷ 1 500 = 4 serveurs pour le pic, plus 1 de secours = **5**. Avec des serveurs sans état, le serveur de secours ne coûte rien à brancher : le répartiteur de charge a simplement une cible de plus.",
+              "concepts": [
+                "horizontal-scaling"
+              ]
+            },
+            {
+              "type": "mcq",
+              "id": "q-server-dies",
+              "prompt": "Un des 5 serveurs tombe en panne au pic. Les sessions vivent dans Redis, et le répartiteur de charge vérifie la santé de chaque serveur. Que se passe-t-il ?",
+              "choices": [
+                "Le répartiteur de charge le marque comme défaillant en quelques secondes et les 4 autres portent la charge : 4 × 1 500 = 6 000 requêtes/s",
+                "Les utilisateurs dont les requêtes étaient sur ce serveur sont déconnectés",
+                "Chaque requête échoue tant que personne n'a redémarré le serveur",
+                "Il faut mettre le DNS à jour pour retirer l'IP du serveur mort avant que le trafic bascule"
+              ],
+              "answer": 0,
+              "explanation": "Les health checks sortent le serveur mort de la rotation, et comme aucun état ne vivait sur lui, personne ne remarque rien à part quelques requêtes rejouées. Les sessions sont dans Redis, donc personne n'est déconnecté. Le DNS pointe vers le **répartiteur de charge**, pas vers les serveurs individuels, donc il ne change pas du tout.",
+              "concepts": [
+                "request-path",
+                "stateless-servers"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "latency-budgets",
+          "title": "Où passent les millisecondes",
+          "pareto": "extra",
+          "minutes": 6,
+          "takeaway": "Les appels séquentiels s'additionnent, les appels parallèles coûtent le plus lent, et avec le fan-out la rare réponse lente devient le cas courant : surveille le p99, pas la moyenne.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Un budget de latence",
+              "body": "Le tableau de bord de Snipt devrait se charger en environ **100 ms**. Un **budget de latence** répartit cet objectif entre les appels que fait une requête :\n\n```text\nsequential:  [auth 20][links 30][stats 40]       = 90 ms\n\nparallel:    [auth 20]\n             [links 30]\n             [stats 40]                         = 40 ms\n```\n\nLes appels **à la suite s'additionnent**. Les appels indépendants envoyés **en parallèle** ne coûtent que le **plus lent**."
+            },
+            {
+              "type": "numeric",
+              "id": "q-dashboard-budget",
+              "prompt": "Le tableau de bord appelle d'abord le service utilisateur (**25 ms**). Puis il appelle le service des liens (**40 ms**) et le service de statistiques (**60 ms**) **en parallèle**. Enfin, il affiche la page (**15 ms**). Combien de temps prend le tableau de bord ?",
+              "answer": 100,
+              "unit": "ms",
+              "hint": "Pour la partie parallèle, seul l'appel le plus lent compte.",
+              "explanation": "25 ms, puis le plus lent des deux appels parallèles (60 ms), puis 15 ms : 25 + 60 + 15 = **100 ms**. Accélérer l'appel des liens n'aiderait pas du tout ; seul l'appel des statistiques est sur le chemin critique.",
+              "concepts": [
+                "latency-budget"
+              ]
+            },
+            {
+              "type": "order",
+              "id": "q-plans",
+              "prompt": "Suppose qu'un succès de cache (cache hit) coûte environ **1 ms**, une requête de base de données **10 ms**, et un appel à un service sur un autre continent **150 ms**. Classe ces plans du plus rapide au plus lent.",
+              "items": [
+                "Un succès de cache",
+                "10 requêtes de base de données indépendantes, envoyées en parallèle",
+                "3 requêtes de base de données, l'une après l'autre",
+                "10 requêtes de base de données, l'une après l'autre",
+                "Un appel à un service sur un autre continent"
+              ],
+              "hint": "Calcule chaque total : le séquentiel additionne, le parallèle prend le plus lent.",
+              "explanation": "Environ 1 ms, ~10 ms (le parallèle coûte le plus lent), 30 ms, 100 ms et 150 ms. Deux leçons : une boucle qui fait une requête par élément (le problème des *requêtes N+1*) mange discrètement le budget, et la distance bat presque tout, ce qui explique pourquoi les caches et les CDN placent des copies près des utilisateurs.",
+              "concepts": [
+                "latency-budget",
+                "latency-numbers"
+              ]
+            },
+            {
+              "type": "explain",
+              "title": "Les moyennes cachent la douleur",
+              "body": "La latence n'est pas un seul chiffre. Trie une minute de requêtes selon leur durée :\n\n- **p50** (la médiane) : la moitié est plus rapide.\n- **p99** : 99 % sont plus rapides ; 1 sur 100 est plus lente.\n\nLa queue lente s'appelle la **latence de queue** (*tail latency*), et elle compte plus qu'il n'y paraît. Une page qui appelle **de nombreux** serveurs en parallèle attend le **plus lent** d'entre eux : le mauvais moment rare d'un serveur devient le mauvais moment fréquent de la page. Suis le p50, le p95 et le p99, pas la moyenne."
+            },
+            {
+              "type": "numeric",
+              "id": "q-fan-out",
+              "prompt": "Une recherche se disperse (fan-out) sur **100** serveurs en parallèle et les attend tous. Chaque serveur, indépendamment, est lent (plus d'1 s) sur **1 %** des requêtes. Quel pourcentage des recherches est lent ?",
+              "answer": 63,
+              "tolerance": 2,
+              "unit": "%",
+              "hint": "Trouve d'abord la probabilité que les 100 soient rapides : 0,99 multiplié par lui-même 100 fois.",
+              "explanation": "Une recherche n'est rapide que si les 100 serveurs sont rapides : 0,99¹⁰⁰ ≈ 0,366. Donc 1 − 0,366 ≈ **63 %** des recherches sont lentes, à cause de serveurs qui ne sont lents que 1 % du temps. Cet exemple vient de l'article de Google *The Tail at Scale* (Dean et Barroso, 2013).",
+              "concepts": [
+                "latency-budget"
+              ]
+            },
+            {
+              "type": "mcq",
+              "id": "q-tame-tail",
+              "prompt": "Quel changement réduit le plus la queue lente de cette recherche à 100 voies ?",
+              "choices": [
+                "Requêtes « hedged » : si un serveur n'a pas répondu à son p95 habituel, envoyer la même requête à un réplica et garder la première réponse",
+                "Répartir les données sur 200 serveurs, pour que chacun ait moins de travail",
+                "Passer le timeout de 2 s à 10 s pour que moins de recherches échouent",
+                "Afficher la latence moyenne au lieu du p99, puisque la moyenne est bien plus basse"
+              ],
+              "answer": 0,
+              "explanation": "Le hedging s'attaque à la cause : un serveur lent l'est généralement pour une raison passagère, donc une seconde copie de la requête tombe rarement sur la même malchance, et ça ne coûte que quelques pour cent de requêtes en plus. Doubler le fan-out empire les choses (1 − 0,99²⁰⁰ ≈ 87 % de lenteur). Un timeout plus long rend les recherches lentes encore plus lentes. Changer la métrique ne change rien pour les utilisateurs.",
+              "concepts": [
+                "latency-budget",
+                "timeouts"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "data-that-keeps-up",
+      "title": "Des données qui suivent",
+      "description": "Mets en cache les lectures chaudes, choisis et découpe la base de données, et vis avec des copies qui ne sont pas d'accord.",
+      "lessons": [
+        {
+          "id": "caching",
+          "title": "Mets-le en cache si tu peux",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Le cache-aside garde les lectures chaudes en mémoire ; le taux de succès décide de combien la base de données est épargnée, et les TTL plus l'invalidation décident de l'âge que peuvent avoir les réponses.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Garder le chaud à portée de main",
+              "body": "Quelques liens viraux reçoivent la plupart des clics de Snipt : les mêmes recherches se répètent donc toute la journée. Le **cache-aside** (aussi appelé chargement paresseux) garde ces réponses dans un stockage rapide en mémoire comme Redis :\n\n```text\napp --1. GET x7Kp2-------> cache    (hit? done in ~1 ms)\napp --2. on a miss: SELECT --> database (~20 ms)\napp --3. SET x7Kp2, TTL 1h --> cache\n```\n\nL'appli interroge d'abord le cache, et ne lit la base de données qu'en cas d'**échec** (*miss*), puis enregistre la réponse pour la prochaine fois."
+            },
+            {
+              "type": "order",
+              "id": "q-cache-aside-steps",
+              "prompt": "Le premier clic sur un lien qui n'est **pas** encore dans le cache. Remets dans l'ordre les étapes du cache-aside.",
+              "items": [
+                "Chercher x7Kp2 dans le cache",
+                "Échec : la clé n'y est pas",
+                "Lire la longue URL dans la base de données",
+                "L'écrire dans le cache avec un TTL",
+                "Le clic suivant sur x7Kp2 est servi directement par le cache"
+              ],
+              "explanation": "Le cache d'abord, la base de données seulement en cas d'échec, puis on remplit le cache pour que le **prochain** lecteur obtienne un succès. L'appli fait tout ça elle-même, et c'est ce que veut dire *aside* : le cache se trouve à côté de la base de données, et la base n'en sait rien.",
+              "concepts": [
+                "cache-aside"
+              ]
+            },
+            {
+              "type": "explain",
+              "title": "Le calcul du taux de succès",
+              "body": "Le **taux de succès** (*hit ratio*) h est la part des lectures auxquelles le cache répond. Deux formules portent la plupart des décisions sur le cache :\n\n- **Latence moyenne** = h × (temps d'un succès) + (1 − h) × (temps d'un échec), où un échec paie la vérification du cache *et* la base de données.\n- **Lectures en base** = (1 − h) × total des lectures.\n\nLa seconde est la surprise : passer de 90 % à 99 % de succès ne semble pas grand-chose, mais ça divise le trafic vers la base par **10**."
+            },
+            {
+              "type": "numeric",
+              "id": "q-avg-latency",
+              "prompt": "Un succès de cache prend **1 ms**. Un échec prend 1 ms pour la vérification du cache plus **20 ms** pour la base de données : **21 ms**. Avec un taux de succès de **90 %**, quelle est la latence moyenne d'une lecture ?",
+              "answer": 3,
+              "tolerance": 0.05,
+              "unit": "ms",
+              "hint": "Pondère chaque durée par sa fréquence.",
+              "explanation": "0,9 × 1 + 0,1 × 21 = 0,9 + 2,1 = **3 ms**, sept fois plus rapide que d'aller toujours à la base de données. À 99 % de succès, on obtient 0,99 × 1 + 0,01 × 21 = 1,2 ms.",
+              "concepts": [
+                "hit-ratio"
+              ]
+            },
+            {
+              "type": "numeric",
+              "id": "q-db-reads",
+              "prompt": "Au pic de **6 000** lectures/s, le réglage du cache par Lin fait passer le taux de succès de **90 %** à **99 %**. Combien de lectures par seconde atteignent encore la base de données ?",
+              "answer": 60,
+              "unit": "lectures/s",
+              "explanation": "Les échecs représentent 1 % de 6 000 = **60 lectures/s**, contre 10 % = 600 avant. Dix fois moins de charge sur la base grâce à neuf points de taux de succès. C'est souvent le geste de montée en charge le moins cher qui existe.",
+              "concepts": [
+                "hit-ratio"
+              ]
+            },
+            {
+              "type": "output",
+              "id": "q-cache-sim",
+              "prompt": "Une minuscule simulation de cache-aside. Qu'affiche-t-elle ?",
+              "language": "python",
+              "code": "DB = {\"a\": \"https://example.com/1\", \"b\": \"https://example.com/2\"}\ncache = {}\ndb_reads = 0\n\ndef get_url(code):\n    global db_reads\n    if code in cache:\n        return cache[code]\n    db_reads += 1\n    url = DB[code]\n    cache[code] = url\n    return url\n\nfor code in [\"a\", \"b\", \"a\", \"a\", \"b\", \"a\"]:\n    get_url(code)\nprint(db_reads)\nprint(f\"hit ratio: {(6 - db_reads) / 6:.0%}\")",
+              "output": "2\nhit ratio: 67%",
+              "hint": "Compte combien de codes différents apparaissent : chacun est un échec une fois, puis il est en cache.",
+              "explanation": "Seule la **première** lecture de chaque code est un échec : `a` et `b` vont chacun une fois à la base de données, donc `db_reads` vaut 2. Les 4 autres lectures sur 6 sont des succès : 4/6 ≈ **67 %**. Dans un trafic réel, plus les clés populaires se répètent souvent, plus le taux de succès grimpe.",
+              "concepts": [
+                "cache-aside",
+                "hit-ratio"
+              ]
+            },
+            {
+              "type": "explain",
+              "title": "Réponses périmées : TTL et invalidation",
+              "body": "Une copie en cache devient **périmée** quand la base de données change. Deux outils limitent les dégâts :\n\n- **TTL** (time to live, durée de vie) : les entrées expirent après, disons, une heure. La péremption ne peut jamais dépasser le TTL.\n- **Invalidation** : quand tu écris, **supprime** la clé en cache pour que la lecture suivante la recharge.\n\nLes caches existent aussi à d'autres niveaux : le navigateur, et un **CDN**, un réseau de caches dans des villes proches des utilisateurs qui sert les fichiers identiques pour tout le monde."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-stale",
+              "prompt": "Lin change la destination de `x7Kp2`. La base de données a la nouvelle URL, mais les clics continuent d'aller vers l'ancienne page pendant des jours. Clique sur la ligne qui contient le bug.",
+              "language": "python",
+              "code": "def get_url(code):\n    url = cache.get(code)\n    if url is None:\n        url = db.query_one(\"SELECT long_url FROM links WHERE code = %s\", code)\n        cache.set(code, url)  # no TTL: kept until evicted\n    return url\n\ndef update_url(code, new_url):\n    db.execute(\"UPDATE links SET long_url = %s WHERE code = %s\", new_url, code)\n    return \"ok\"",
+              "error": "Database: x7Kp2 -> new page. Clicks: x7Kp2 -> old page (still, three days later).",
+              "lines": [
+                9
+              ],
+              "fixes": [
+                "Après la ligne 9, ajouter `cache.delete(code)` pour que la lecture suivante recharge la nouvelle URL",
+                "Avant la ligne 9, ajouter `cache.delete(code)`",
+                "Changer la ligne 5 en `cache.set(code, url, ttl=timedelta(days=365))`",
+                "Changer la ligne 2 pour lire d'abord la base de données, et n'utiliser le cache que quand la base est en panne"
+              ],
+              "answer": 0,
+              "hint": "Quelle fonction modifie des données, et qu'oublie-t-elle de dire au cache ?",
+              "explanation": "L'écriture de la ligne 9 met à jour la base de données mais laisse l'ancienne réponse dans le cache, et sans TTL elle y reste jusqu'à son éviction. Supprimer la clé **après** l'écriture fait recharger la valeur à la lecture suivante. La supprimer **avant** l'écriture laisse un trou : une lecture entre les deux recharge l'ancienne URL, et elle reste pour toujours. Un TTL d'un an sert encore l'ancienne page pendant un an au plus. Lire d'abord la base de données jette le cache. Les équipes ajoutent d'ailleurs généralement un TTL modeste en filet de sécurité pour les rares concurrences.",
+              "concepts": [
+                "cache-invalidation",
+                "cache-aside"
+              ]
+            },
+            {
+              "type": "buckets",
+              "id": "q-where-to-cache",
+              "prompt": "Où chaque donnée doit-elle être mise en cache, si elle doit l'être ?",
+              "buckets": [
+                "CDN ou navigateur : fichiers statiques, identiques pour tous",
+                "Cache partagé (Redis) : données chaudes qui peuvent être un peu périmées",
+                "Pas de cache : doit être exact et à jour"
+              ],
+              "items": [
+                {
+                  "text": "Le logo, le CSS et les fichiers JavaScript de Snipt",
+                  "bucket": 0
+                },
+                {
+                  "text": "Les photos de produits sur une page de boutique",
+                  "bucket": 0
+                },
+                {
+                  "text": "Code court → longue URL pour les liens populaires",
+                  "bucket": 1
+                },
+                {
+                  "text": "Les totaux de clics d'hier sur le tableau de bord",
+                  "bucket": 1
+                },
+                {
+                  "text": "Le nom d'utilisateur affiché dans l'en-tête de chaque page",
+                  "bucket": 1
+                },
+                {
+                  "text": "Les places restantes au moment du paiement d'un billet de concert",
+                  "bucket": 2
+                },
+                {
+                  "text": "Si un paiement est passé ou non",
+                  "bucket": 2
+                }
+              ],
+              "hint": "Pose deux questions : est-ce identique pour tout le monde, et qu'est-ce qui casse si la donnée a une minute de retard ?",
+              "explanation": "**CDN ou navigateur :** les fichiers statiques ne diffèrent jamais d'un utilisateur à l'autre, donc des copies près de l'utilisateur gagnent, et les nouvelles versions reçoivent de nouveaux noms de fichier. **Cache partagé :** lu en permanence, rarement modifié, et quelques secondes ou minutes de péremption ne gênent personne. **Pas de cache :** un nombre de places périmé vend deux fois la même place, et un statut de paiement périmé débite ou expédie à tort. Lis ces données à la source de vérité.",
+              "concepts": [
+                "cache-invalidation",
+                "cache-aside"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "pick-a-database",
+          "title": "Choisir et découper la base de données",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Choisis le stockage selon le schéma d'accès, et quand une machine ne suffit plus, fais du sharding avec une clé qui répartit la charge de façon égale et garde chaque requête sur un seul shard.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Relationnel ou pas ?",
+              "body": "Les bases de données **relationnelles (SQL)** comme PostgreSQL et MySQL te donnent des tables, des jointures, des requêtes flexibles et des **transactions** multi-lignes. Elles montent bien en gamme ; faire monter les écritures en nombre demande un vrai travail.\n\n**NoSQL** est une famille : **clé-valeur** (DynamoDB, Redis), **documents** (MongoDB), **colonnes larges** (Cassandra). La plupart sont conçues autour de l'accès par clé et répartissent les données sur de nombreuses machines, avec des jointures et des transactions entre éléments limitées ou absentes.\n\nDans les deux cas, les recherches ont besoin d'un **index** : un arbre B trouve une ligne parmi un milliard en environ 4 lectures de pages."
+            },
+            {
+              "type": "buckets",
+              "id": "q-sql-or-nosql",
+              "prompt": "Qu'est-ce qui convient le mieux à chaque charge de travail ?",
+              "buckets": [
+                "Relationnel (SQL) : jointures et transactions comptent",
+                "NoSQL clé-valeur / colonnes larges : accès simple par clé à très grande échelle"
+              ],
+              "items": [
+                {
+                  "text": "Déplacer de l'argent entre deux comptes : les deux changements ou aucun",
+                  "bucket": 0
+                },
+                {
+                  "text": "Rapports ad hoc qui joignent commandes, clients et produits",
+                  "bucket": 0
+                },
+                {
+                  "text": "Passer une commande : réserver le stock et enregistrer le paiement ensemble",
+                  "bucket": 0
+                },
+                {
+                  "text": "Chercher un code court et obtenir une URL : des milliards de lignes, aucune jointure",
+                  "bucket": 1
+                },
+                {
+                  "text": "Stocker les données de session par identifiant de session",
+                  "bucket": 1
+                },
+                {
+                  "text": "Relevés de capteurs : énorme volume d'écritures, relus par appareil et plage de temps",
+                  "bucket": 1
+                }
+              ],
+              "hint": "La charge a-t-elle besoin de jointures ou de changements tout ou rien sur plusieurs lignes ?",
+              "explanation": "**SQL** gagne quand les données sont liées et que les changements doivent être tout ou rien : virements, commandes, et rapports qui joignent des tables de façons que personne n'avait prévues. **NoSQL** brille quand chaque accès est un *get ou put par clé* à grande échelle : les recherches de codes de Snipt, les sessions, les séries temporelles par appareil. Les frontières sont floues (Postgres stocke du JSON, DynamoDB a des transactions), donc pars des schémas d'accès, pas de l'étiquette.",
+              "concepts": [
+                "sql-vs-nosql"
+              ]
+            },
+            {
+              "type": "explain",
+              "title": "Sharding : découper selon une clé",
+              "body": "Quand une machine ne peut pas contenir les données ou absorber les écritures, répartis les lignes sur des **shards** selon une **clé de partition** (clé de shard) :\n\n```text\nhash(code) mod 4\n   0 --> shard A\n   1 --> shard B\n   2 --> shard C\n   3 --> shard D\n```\n\nUne bonne clé **répartit la charge de façon égale** et permet à chaque requête courante d'aller vers **un seul** shard. Une mauvaise clé crée un **point chaud** (*hot spot* : un shard qui fait presque tout le travail) ou oblige les requêtes à interroger tous les shards."
+            },
+            {
+              "type": "mcq",
+              "id": "q-snipt-shard-key",
+              "prompt": "Omar demande à Lin de prévoir le sharding de la table `links` de Snipt. La requête de loin la plus chaude est la redirection : *à partir d'un code, trouver la longue URL*. Quelle clé de shard ?",
+              "choices": [
+                "Le code court, haché",
+                "La date de création",
+                "Le pays du créateur",
+                "L'identifiant du propriétaire"
+              ],
+              "answer": 0,
+              "hint": "Quelle valeur la requête de redirection transporte-t-elle vraiment ?",
+              "explanation": "Hacher le **code** répartit les liens de façon égale, et chaque redirection, qui ne connaît que le code, va droit vers un seul shard. Par **date**, chaque nouveau lien atterrit sur le shard du jour : un point chaud en écriture. Par **pays**, quelques grands pays surchargent leurs shards. Par **propriétaire**, une redirection ne peut pas savoir quel shard interroger sans les interroger tous, et les gros utilisateurs avec des millions de liens rendent leur shard chaud.",
+              "concepts": [
+                "sharding"
+              ]
+            },
+            {
+              "type": "buckets",
+              "id": "q-hot-or-even",
+              "prompt": "Chaque schéma de partitionnement répartira-t-il la charge de façon égale, ou créera-t-il un point chaud ?",
+              "buckets": [
+                "Répartit la charge de façon égale",
+                "Crée un point chaud"
+              ],
+              "items": [
+                {
+                  "text": "Commandes, par hash de l'identifiant de commande",
+                  "bucket": 0
+                },
+                {
+                  "text": "Utilisateurs, par hash de l'identifiant utilisateur",
+                  "bucket": 0
+                },
+                {
+                  "text": "Relevés de capteurs, par hash de l'identifiant d'appareil",
+                  "bucket": 0
+                },
+                {
+                  "text": "Événements de clic, par heure courante : tous les événements de cette heure sur un seul shard",
+                  "bucket": 1
+                },
+                {
+                  "text": "Utilisateurs, par pays",
+                  "bucket": 1
+                },
+                {
+                  "text": "Noms d'utilisateur, par première lettre : A–F, G–L, M–R, S–Z",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Le nouveau trafic va-t-il atterrir sur beaucoup de shards à la fois, ou s'empiler sur un seul ?",
+              "explanation": "Hacher une clé qui a **beaucoup** de valeurs distinctes répartit les lignes comme on bat des cartes. **Par heure**, chaque nouvel événement va vers le même shard pendant que les autres chôment. Le **pays** et la **première lettre** sont inégaux par nature : quelques pays regroupent la plupart des utilisateurs, et beaucoup plus de prénoms commencent par S que par X.",
+              "concepts": [
+                "sharding"
+              ]
+            },
+            {
+              "type": "mcq",
+              "id": "q-celebrity-link",
+              "prompt": "Une célébrité poste un lien Snipt, et maintenant **30 %** de tous les clics visent ce seul code. Son shard est surchargé alors que les autres vont bien. Quelle est la meilleure solution ?",
+              "choices": [
+                "Servir ce code depuis un cache placé devant la base de données, pour que ses clics atteignent rarement le shard",
+                "Passer à une meilleure fonction de hachage pour que le code atterrisse sur un shard plus calme",
+                "Doubler le nombre de shards pour que chacun contienne moins de données",
+                "Re-sharder chaque lien selon sa date de création"
+              ],
+              "answer": 0,
+              "explanation": "Une clé vit toujours sur un seul shard : aucune astuce de hachage ni shard supplémentaire ne peut la découper. Re-hacher ne fait que déplacer le point chaud, et plus de shards laissent cette clé là où elle est. Un **cache** (ou des copies de lecture supplémentaires de cette clé) absorbe une clé chaude à peu de frais. Un sharding par date ajouterait en plus un point chaud en écriture.",
+              "concepts": [
+                "sharding",
+                "cache-aside"
+              ]
+            },
+            {
+              "type": "explain",
+              "title": "Ajouter un shard sans tout déplacer",
+              "body": "Avec `hash mod N`, ajouter un shard change N : **la plupart** des clés se retrouvent d'un coup associées à un autre shard, et leurs données doivent déménager.\n\nLe **hachage cohérent** place les shards et les clés sur un anneau ; chaque clé appartient au shard suivant dans le sens des aiguilles d'une montre :\n\n```text\n     A\n  .     .\n D       B      a new shard E between A and B\n  .     .       takes over only part of B's arc\n     C\n```\n\nAjouter un shard ne déplace qu'environ **1/N** des clés. Les stockages de type Dynamo comme Cassandra l'utilisent."
+            },
+            {
+              "type": "numeric",
+              "id": "q-mod-n-moves",
+              "prompt": "Snipt passe de **4** à **5** shards avec un simple `hash(key) mod N`. Quel pourcentage des clés se retrouve sur un shard **différent** ?",
+              "answer": 80,
+              "tolerance": 3,
+              "unit": "%",
+              "hint": "Essaie les valeurs de hash de 0 à 19 et compte celles où h mod 4 est égal à h mod 5.",
+              "explanation": "Une clé ne bouge pas seulement si `h mod 4` est égal à `h mod 5`. Sur chaque série de 20 valeurs de hash consécutives, c'est vrai pour 4 seulement (0, 1, 2 et 3), donc **80 %** des clés bougent. Vérifié sur un million de clés en Python : exactement 80 %. Avec le hachage cohérent, seulement environ 1/5 = 20 % bougent : la part que prend le nouveau shard.",
+              "concepts": [
+                "consistent-hashing",
+                "sharding"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "copies-that-disagree",
+          "title": "Des copies qui ne sont pas d'accord",
+          "pareto": "extra",
+          "minutes": 7,
+          "takeaway": "Les réplicas multiplient la capacité de lecture mais accusent du retard sur le leader ; choisis fonctionnalité par fonctionnalité entre cohérence à terme, lecture de ses propres écritures et cohérence forte, et n'oublie pas les compromis de CAP et PACELC.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Réplicas en lecture",
+              "body": "Les lectures de Snipt sont 100 fois plus nombreuses que ses écritures, alors Lin ajoute des **réplicas en lecture** :\n\n```text\n         writes\napp ------------> leader\n  \\                  |  change log, copied asynchronously\n   \\  reads          v\n    -----------> replica 1, replica 2, replica 3\n```\n\nLe **leader** prend toutes les écritures ; les **réplicas** rejouent ses changements et servent les lectures. Trois réplicas quadruplent à peu près la capacité de lecture, et l'un d'eux peut être promu si le leader meurt. Le hic : les réplicas ont un retard de quelques millisecondes en temps normal et de quelques secondes sous charge. C'est le **retard de réplication** (*replication lag*)."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-lag",
+              "prompt": "Juste après la création d'un lien, certains utilisateurs voient une erreur **404 Not Found** pour celui-ci. Actualiser une seconde plus tard fonctionne. Clique sur la ligne qui contient le bug.",
+              "language": "python",
+              "code": "def create_link(user, long_url):\n    code = new_code()\n    leader.execute(\"INSERT INTO links (code, long_url, owner) VALUES (%s, %s, %s)\",\n                   code, long_url, user.id)\n    return redirect(f\"/links/{code}\")\n\ndef show_link(code):\n    row = replica.query_one(\"SELECT * FROM links WHERE code = %s\", code)\n    if row is None:\n        return not_found()\n    return render(row)",
+              "error": "POST /links -> 302 /links/k3Zp9 -> 404 Not Found (works after a refresh)",
+              "lines": [
+                8
+              ],
+              "fixes": [
+                "Changer la ligne 8 pour lire depuis `leader` pour les requêtes d'un utilisateur dans les premières secondes après son écriture (read-your-writes)",
+                "Ajouter `time.sleep(1)` après la ligne 4",
+                "Changer la ligne 3 pour insérer aussi bien dans le réplica que dans le leader",
+                "Changer la ligne 9 pour réessayer la requête sur le réplica dans une boucle jusqu'à ce que la ligne apparaisse"
+              ],
+              "answer": 0,
+              "hint": "Où la ligne a-t-elle été écrite, et d'où est-elle relue ?",
+              "explanation": "L'écriture va sur le leader, la redirection arrive aussitôt sur `show_link`, et la ligne 8 interroge un réplica qui n'a pas encore rejoué l'insertion. Lire **ses propres écritures récentes depuis le leader** garantit la *lecture de ses propres écritures* (*read-your-writes*) et garde les réplicas pour tous les autres. Dormir est une estimation du retard et ralentit chaque requête. Les réplicas ne reçoivent leurs changements que du leader. Une boucle de nouvelles tentatives martèle un réplica aussi longtemps que dure le retard.",
+              "concepts": [
+                "eventual-consistency",
+                "replication"
+              ]
+            },
+            {
+              "type": "explain",
+              "title": "Cohérence à terme",
+              "body": "Les réplicas asynchrones sont **cohérents à terme** (*eventually consistent*) : arrête d'écrire et ils rattrapent tous leur retard et s'accordent, mais une lecture faite maintenant peut être périmée. Garanties courantes, de la plus faible à la plus forte :\n\n- **À terme** : tu peux voir de vieilles données pendant un moment.\n- **Lecture de ses propres écritures** : *toi*, tu vois toujours tes propres changements ; les autres peuvent avoir du retard.\n- **Forte** : chaque lecture voit la dernière écriture, comme s'il n'y avait qu'une seule copie.\n\nPlus fort coûte plus cher : plus d'attente, plus de coordination."
+            },
+            {
+              "type": "buckets",
+              "id": "q-how-consistent",
+              "prompt": "Choisis la garantie la plus faible dont chaque fonctionnalité peut se contenter.",
+              "buckets": [
+                "La cohérence à terme suffit",
+                "La lecture de ses propres écritures suffit",
+                "Demande une cohérence forte"
+              ],
+              "items": [
+                {
+                  "text": "Le nombre de likes sur un post",
+                  "bucket": 0
+                },
+                {
+                  "text": "Le nombre d'abonnés sur le profil de quelqu'un d'autre",
+                  "bucket": 0
+                },
+                {
+                  "text": "Des résultats de recherche où manque un post d'il y a 10 secondes",
+                  "bucket": 0
+                },
+                {
+                  "text": "Ta bio modifiée, affichée juste après avoir cliqué sur Enregistrer",
+                  "bucket": 1
+                },
+                {
+                  "text": "Ton nouveau lien qui apparaît sur ton propre tableau de bord",
+                  "bucket": 1
+                },
+                {
+                  "text": "Vendre la dernière place d'un concert",
+                  "bucket": 2
+                },
+                {
+                  "text": "S'assurer que deux utilisateurs n'obtiennent pas le même nom d'utilisateur",
+                  "bucket": 2
+                },
+                {
+                  "text": "Déplacer de l'argent entre deux comptes",
+                  "bucket": 2
+                }
+              ],
+              "hint": "Demande-toi : qui souffre d'une lecture périmée ? Personne, seulement celui qui a écrit, ou tous les intéressés ?",
+              "explanation": "**À terme :** personne ne souffre si un compteur ou un index de recherche a quelques secondes de retard. **Lecture de ses propres écritures :** la personne qui a fait un changement doit le voir, sinon elle croira que ça a échoué et recommencera ; les autres peuvent avoir du retard. **Forte :** deux acheteurs, deux inscriptions ou deux retraits qui se disputent sur des copies périmées vendraient un billet deux fois, créeraient des noms d'utilisateur en double ou mettraient un compte à découvert.",
+              "concepts": [
+                "eventual-consistency"
+              ]
+            },
+            {
+              "type": "explain",
+              "title": "CAP et PACELC en termes simples",
+              "body": "Si le réseau subit une **partition** (les réplicas ne peuvent plus se joindre), chaque côté doit choisir :\n\n- rester **disponible** et répondre, peut-être avec des données périmées, ou\n- rester **cohérent** et refuser tant qu'il ne peut pas vérifier auprès des autres.\n\nC'est **CAP** : pendant une partition, choisis C ou A. Les partitions arriveront, donc ce n'est pas *deux choix sur trois*.\n\n**PACELC** ajoute le cas de tous les jours : **E**lse (sinon), sans partition, tu arbitres quand même entre **L**atence et **C**ohérence, parce qu'attendre la confirmation d'une écriture par les réplicas prend du temps."
+            },
+            {
+              "type": "mcq",
+              "id": "q-partition",
+              "prompt": "Le leader de Snipt est aux États-Unis, avec des réplicas aux États-Unis et dans l'UE. Le lien entre les régions tombe en panne pendant 20 minutes. Les utilisateurs de l'UE continuent de cliquer sur des liens, presque tous créés il y a plusieurs jours. Que doivent faire les redirections de l'UE ?",
+              "choices": [
+                "Continuer à servir depuis le réplica de l'UE : les liens changent rarement, donc une réponse périmée est presque toujours juste, et les redirections restent disponibles",
+                "Renvoyer des erreurs jusqu'à la reconnexion des régions, parce que les données pourraient être périmées",
+                "Rien de spécial : CAP ne s'applique que lorsqu'un réplica plante, pas le réseau",
+                "Promouvoir le réplica de l'UE en second leader pour que les deux côtés acceptent de nouveaux liens, puis fusionner plus tard"
+              ],
+              "answer": 0,
+              "explanation": "Pour les redirections, la **disponibilité** l'emporte : la cible d'un lien ne change presque jamais, donc la réponse du réplica est presque toujours correcte, et une panne est pire qu'une rare redirection périmée. Refuser serait le bon choix pour un solde bancaire, pas ici. Une partition est exactement le cas que décrit CAP. Deux leaders qui acceptent des écritures, c'est du *split brain* : les deux côtés pourraient attribuer le même code à des URL différentes.",
+              "concepts": [
+                "cap-pacelc",
+                "eventual-consistency"
+              ]
+            },
+            {
+              "type": "numeric",
+              "id": "q-sync-write",
+              "prompt": "Le cas *else* de PACELC : pas de partition, et Lin fait attendre chaque écriture jusqu'à ce que **les deux** réplicas confirment. Les requêtes partent en parallèle : le réplica américain répond en environ **1 ms**, le réplica de l'UE en environ **90 ms**. À peu près combien de temps chaque écriture attend-elle les confirmations ?",
+              "answer": 90,
+              "unit": "ms",
+              "hint": "Les deux confirmations sont nécessaires, et elles voyagent en même temps.",
+              "explanation": "Les attentes parallèles coûtent le plus lent : environ **90 ms** par écriture, contre environ 1 ms si Lin n'attendait que le réplica américain. C'est le compromis PACELC en chiffres : des copies synchrones entre régions achètent de la cohérence avec de la latence. Beaucoup de systèmes confirment en local et copient entre les régions de façon asynchrone.",
+              "concepts": [
+                "cap-pacelc",
+                "latency-budget"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "survive-real-traffic",
+      "title": "Survivre au vrai trafic",
+      "description": "Repousse le travail lent dans des files, contiens les pannes, et assemble le tout dans une conception complète.",
+      "lessons": [
+        {
+          "id": "queues",
+          "title": "Plus tard : files d'attente et idempotence",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Mets le travail lent dans une file pour répondre vite et absorber les pics ; la livraison est au moins une fois, donc rends chaque traitement idempotent.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Tout n'a pas à se faire maintenant",
+              "body": "Quand un lien est créé, Snipt veut aussi une image d'aperçu, une analyse antimalware de la cible et un événement de statistiques. Tout faire dans la requête fait attendre les utilisateurs, et un seul échec fait échouer toute la requête.\n\nÀ la place, l'appli dépose un **message** dans une **file** (*queue*) et répond tout de suite. Des **workers** retirent les messages et font le travail en arrière-plan :\n\n```text\napp --\"scan k3Zp9\"--> [ m3 m2 m1 ] --> worker 1\n                                  --> worker 2\n```\n\nUn pic ne fait qu'allonger la file pendant un moment."
+            },
+            {
+              "type": "buckets",
+              "id": "q-now-or-later",
+              "prompt": "Chaque tâche doit-elle s'exécuter dans la requête, ou aller dans une file ?",
+              "buckets": [
+                "Dans la requête : l'utilisateur a besoin du résultat maintenant",
+                "Dans une file : ça peut se terminer un peu plus tard"
+              ],
+              "items": [
+                {
+                  "text": "Vérifier le mot de passe à la connexion",
+                  "bucket": 0
+                },
+                {
+                  "text": "Renvoyer le nouveau code court à la personne qui l'a créé",
+                  "bucket": 0
+                },
+                {
+                  "text": "Rejeter une longue URL qui n'est pas une URL valide",
+                  "bucket": 0
+                },
+                {
+                  "text": "Envoyer l'e-mail de bienvenue",
+                  "bucket": 1
+                },
+                {
+                  "text": "Générer une image d'aperçu de la page cible",
+                  "bucket": 1
+                },
+                {
+                  "text": "Analyser la page cible à la recherche de malware",
+                  "bucket": 1
+                },
+                {
+                  "text": "Ajouter le clic au rapport de statistiques quotidien",
+                  "bucket": 1
+                },
+                {
+                  "text": "Redimensionner une photo de profil téléversée",
+                  "bucket": 1
+                }
+              ],
+              "hint": "L'utilisateur remarquerait-il que ça se termine 30 secondes plus tard ?",
+              "explanation": "**Dans la requête :** la réponse en dépend. La connexion ne peut pas réussir avant la vérification du mot de passe, et l'utilisateur attend le code. **Dans une file :** personne n'attend ces tâches, elles peuvent être lentes ou capricieuses, et les rejouer plus tard ne pose aucun problème. Une analyse antimalware peut tourner quelques secondes après la création et désactiver le lien si elle trouve quelque chose.",
+              "concepts": [
+                "message-queue"
+              ]
+            },
+            {
+              "type": "numeric",
+              "id": "q-backlog",
+              "prompt": "Un lien devient viral : les événements de clic arrivent à **6 000/s** pendant **10 minutes**, mais les workers de statistiques ne traitent que **4 000/s**. Combien de messages attendent dans la file à la fin du pic ?",
+              "answer": 1200000,
+              "unit": "messages",
+              "hint": "Croissance nette par seconde × nombre de secondes dans 10 minutes.",
+              "explanation": "La file grossit de 6 000 − 4 000 = 2 000 messages par seconde pendant 600 secondes : **1 200 000** messages. Rien n'est perdu ; la file a simplement absorbé le pic. Si les arrivées retombent ensuite à 1 000/s, les workers vident 3 000/s net et résorbent le retard en 400 s, soit environ 7 minutes.",
+              "concepts": [
+                "message-queue"
+              ]
+            },
+            {
+              "type": "explain",
+              "title": "Livraison au moins une fois",
+              "body": "Un worker prend un message, fait le travail, puis l'**acquitte** (*ack*) pour que la file le supprime. Si le worker plante avant l'ack, ou si l'ack se perd, la file ne peut pas savoir si le travail a eu lieu, alors elle livre le message **à nouveau**.\n\nBeaucoup de files (les files standard d'Amazon SQS, les consommateurs Kafka classiques, RabbitMQ avec des acks) garantissent donc une livraison **au moins une fois** (*at-least-once*) : rien n'est perdu, mais **des doublons arrivent**. Les messages qui échouent sans cesse sont généralement déplacés dans une *dead-letter queue* (file de lettres mortes) pour qu'un humain les inspecte."
+            },
+            {
+              "type": "order",
+              "id": "q-duplicate",
+              "prompt": "Comment un client est-il débité deux fois ? Remets les événements dans l'ordre.",
+              "items": [
+                "Le worker 1 reçoit « charge order 42 »",
+                "Le worker 1 débite la carte",
+                "Le worker 1 plante avant d'acquitter le message",
+                "La file ne voit aucun ack à temps et rend le message de nouveau visible",
+                "Le worker 2 reçoit le même « charge order 42 »",
+                "Le worker 2 débite la carte une deuxième fois"
+              ],
+              "hint": "Le plantage survient après le débit, pas avant.",
+              "explanation": "Le travail a réussi, mais la file n'en a jamais entendu parler : la relivraison est donc le comportement correct et sûr pour la file. Le bug, c'est un traitement qui ne sait pas qu'il a déjà fait le travail. C'est ce que corrige l'idempotence.",
+              "concepts": [
+                "at-least-once",
+                "idempotency"
+              ]
+            },
+            {
+              "type": "explain",
+              "title": "Clés d'idempotence",
+              "body": "Une opération est **idempotente** si la faire deux fois a le même effet que la faire une fois. *Passer le statut à expédié* l'est ; *ajouter 1 au compteur* ne l'est pas.\n\nPour rendre un traitement idempotent, donne à chaque opération une **clé d'idempotence** unique (l'identifiant du message, ou un en-tête `Idempotency-Key`, comme dans l'API de paiement de Stripe). Enregistre la clé **dans la même transaction** que l'effet, avec une contrainte d'unicité. Un doublon trouve alors sa clé déjà présente et ne fait rien."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-double-count",
+              "prompt": "Le compteur de clics de Snipt est alimenté par une file à livraison au moins une fois. Clique sur la ligne qui contient le bug.",
+              "language": "python",
+              "code": "def handle_click(msg):\n    # msg looks like {\"id\": \"m-981\", \"code\": \"x7Kp2\"}\n    db.execute(\"UPDATE links SET clicks = clicks + 1 WHERE code = %s\",\n               msg[\"code\"])\n    queue.ack(msg)",
+              "error": "Dashboard: x7Kp2 has 1,032 clicks. Click log: 1,000 distinct message ids.",
+              "lines": [
+                3,
+                4
+              ],
+              "fixes": [
+                "Remplacer les lignes 3–4 par une seule transaction qui insère `msg[\"id\"]` dans une table `processed_messages` avec une contrainte UNIQUE, et n'ajoute 1 que si cette insertion réussit",
+                "Déplacer la ligne 5 au-dessus de la ligne 3, pour que le message soit acquitté avant la mise à jour",
+                "Entourer les lignes 3–4 d'une boucle qui réessaie la mise à jour jusqu'à 3 fois",
+                "Avant la ligne 3, ignorer le message si `msg[\"code\"]` figure dans un ensemble en mémoire des codes que ce worker a déjà vus"
+              ],
+              "answer": 0,
+              "hint": "Que se passe-t-il quand le même message arrive deux fois ?",
+              "explanation": "`clicks + 1` s'exécute de nouveau pour chaque message relivré : 32 doublons, 32 clics en trop. Enregistrer l'identifiant du message dans la **même transaction**, sous une contrainte d'unicité, transforme un doublon en opération sans effet. Acquitter d'abord échange les doublons contre des clics **perdus** à chaque plantage d'un worker (at-most-once). Réessayer la mise à jour ajoute encore plus de doublons. Ignorer par **code** supprimerait tous les clics suivants sur ce lien, et la mémoire d'un autre worker n'en sait de toute façon rien.",
+              "concepts": [
+                "idempotency",
+                "at-least-once"
+              ]
+            },
+            {
+              "type": "mcq",
+              "id": "q-naturally-idempotent",
+              "prompt": "Quelle opération est déjà idempotente : sans risque à répéter sans clé supplémentaire ?",
+              "choices": [
+                "`UPDATE orders SET status = 'shipped' WHERE id = 42`",
+                "`UPDATE accounts SET balance = balance - 10 WHERE id = 7`",
+                "`INSERT INTO payments (amount) VALUES (10)` avec un identifiant auto-incrémenté",
+                "Envoyer au client un e-mail « votre commande a été expédiée »"
+              ],
+              "answer": 0,
+              "explanation": "Mettre un champ à une valeur fixe aboutit au même état quel que soit le nombre d'exécutions. Soustraire 10 soustrait de nouveau à chaque répétition, une insertion avec auto-incrément crée un nouveau paiement à chaque fois, et un e-mail ne peut pas être « désenvoyé ». Ceux-là ont besoin d'une clé d'idempotence.",
+              "concepts": [
+                "idempotency"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "when-things-break",
+          "title": "Quand les choses cassent",
+          "pareto": "core",
+          "minutes": 9,
+          "takeaway": "Mets un timeout sur chaque appel, ne réessaie que le travail idempotent avec un backoff exponentiel plafonné et du jitter, ouvre un disjoncteur quand une dépendance est en panne, et limite le débit des clients.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Échouer vite, pas pour toujours",
+              "body": "Les dépendances ralentissent avant de tomber. Un appel **sans timeout** garde un thread jusqu'à ce que la dépendance réponde, et si elle ne répond jamais, les threads s'épuisent, les requêtes s'empilent, et *ton* service tombe aussi. C'est une **panne en cascade**.\n\nChaque appel réseau reçoit donc un **timeout**, dimensionné d'après le p99 habituel de la dépendance et ton budget de latence. Un échec rapide et net vaut mieux qu'un échec lent."
+            },
+            {
+              "type": "numeric",
+              "id": "q-littles-law",
+              "prompt": "Chaque serveur Snipt reçoit **1 000** requêtes/s, et chaque requête appelle le service de statistiques, qui vient de se bloquer. Une règle appelée **loi de Little** dit : *requêtes en cours ≈ taux d'arrivée × temps d'attente de chacune*. Avec un timeout de **0,1 s**, combien de requêtes sont bloquées en attente à tout instant ?",
+              "answer": 100,
+              "unit": "requêtes",
+              "hint": "Multiplie le débit par l'attente.",
+              "explanation": "1 000/s × 0,1 s = **100** requêtes en attente, ce qu'un serveur de 200 threads supporte. Avec un timeout de 30 s, on obtient 1 000 × 30 = 30 000 : les 200 threads sont tous bloqués en environ 0,2 s et le serveur ne répond plus à rien. Le timeout décide si la panne d'une dépendance devient ta panne.",
+              "concepts": [
+                "timeouts"
+              ]
+            },
+            {
+              "type": "explain",
+              "title": "Réessayer, mais en reculant",
+              "body": "Beaucoup d'échecs sont **transitoires** : une connexion coupée, un nœud qui redémarre. Une nouvelle tentative marche souvent. Mais si tous les clients réessaient en même temps, un service en difficulté reçoit 2 à 3 fois sa charge normale juste au moment où il peut le moins la supporter : c'est une **tempête de réessais** (*retry storm*).\n\nRéessaie bien :\n\n- Ne réessaie que des opérations **idempotentes**.\n- Plafonne le nombre de tentatives.\n- Attends **exponentiellement** plus longtemps à chaque fois : 0,1 s, 0,2 s, 0,4 s…\n- Ajoute du **jitter** (de l'aléatoire) pour que les clients ne réessaient pas en rythme."
+            },
+            {
+              "type": "output",
+              "id": "q-backoff",
+              "prompt": "Un backoff exponentiel avec un plafond. Qu'affiche-t-il ? (numéro de tentative, puis secondes d'attente)",
+              "language": "python",
+              "code": "base, cap = 0.1, 2.0\nfor attempt in range(1, 7):\n    delay = min(cap, base * 2 ** (attempt - 1))\n    print(attempt, delay)",
+              "output": "1 0.1\n2 0.2\n3 0.4\n4 0.8\n5 1.6\n6 2.0",
+              "hint": "`base * 2 ** (attempt - 1)` double à chaque fois, et `min` le garde au plus à `cap`.",
+              "explanation": "Chaque attente double : 0.1, 0.2, 0.4, 0.8, 1.6, puis 3.2 est plafonné à **2.0**. Le plafond empêche les attentes de devenir absurdement longues. En production, tu ajouterais aussi du jitter, par exemple en attendant un temps aléatoire entre 0 et ce délai (*full jitter*), pour que mille clients ne réessaient pas tous au même instant.",
+              "concepts": [
+                "retry-backoff"
+              ]
+            },
+            {
+              "type": "explain",
+              "title": "Disjoncteurs",
+              "body": "Si une dépendance est clairement en panne, arrête de l'appeler pendant un moment. Un **disjoncteur** (*circuit breaker*) enveloppe les appels :\n\n```text\nclosed --too many failures--> open --cool-down--> half-open\n  ^                                                  |\n  +-------------- trial call succeeds ---------------+\n           (a failed trial call opens it again)\n```\n\nQuand il est **ouvert**, les appels échouent instantanément, souvent avec une solution de repli (une page sans recommandations, par exemple). Ça épargne tes threads et laisse à la dépendance de la place pour se rétablir."
+            },
+            {
+              "type": "order",
+              "id": "q-breaker",
+              "prompt": "La page d'un lien Snipt affiche des *liens associés* issus d'un service de recommandations. Remets dans l'ordre l'histoire du disjoncteur.",
+              "items": [
+                "Fermé : les appels aux recommandations passent normalement",
+                "Le service de recommandations commence à dépasser le timeout",
+                "Le taux d'échec dépasse le seuil, et le disjoncteur s'ouvre",
+                "Les appels échouent vite et la page s'affiche sans liens associés",
+                "La pause de refroidissement se termine ; le disjoncteur est semi-ouvert et laisse passer un appel d'essai",
+                "L'appel d'essai réussit, et le disjoncteur se ferme"
+              ],
+              "hint": "Le disjoncteur ne s'ouvre qu'après des échecs, et ne se referme qu'après un test réussi.",
+              "explanation": "Fermé → les échecs s'accumulent → **ouvert** (échoue vite, sert la solution de repli) → pause de refroidissement → **semi-ouvert** (un seul essai prudent) → fermé de nouveau. Ce sont les timeouts qui transforment une dépendance bloquée en échecs que l'on peut compter, donc le disjoncteur s'appuie sur eux.",
+              "concepts": [
+                "circuit-breaker",
+                "timeouts"
+              ]
+            },
+            {
+              "type": "explain",
+              "title": "Limitation de débit",
+              "body": "Une partie de la surcharge vient d'un seul client : un script bogué, un scraper. Un **limiteur de débit** (*rate limiter*) plafonne chaque client, souvent avec un **token bucket** (seau à jetons) :\n\n- Le seau contient jusqu'à **B** jetons et se remplit de **r** jetons par seconde.\n- Chaque requête dépense un jeton.\n- Un seau vide signifie **429 Too Many Requests**.\n\nLes clients peuvent faire une rafale allant jusqu'à B requêtes d'un coup, mais, dans la durée, ils plafonnent en moyenne à r par seconde."
+            },
+            {
+              "type": "numeric",
+              "id": "q-token-bucket",
+              "prompt": "L'API de Snipt donne à chaque clé un token bucket de capacité **10**, rempli de **2 jetons/s**, au départ plein. Un script envoie une requête toutes les **0,1 s** (10 par seconde). À peu près combien de ses requêtes réussissent pendant les **5 premières secondes** ?",
+              "answer": 19,
+              "tolerance": 1,
+              "unit": "requêtes",
+              "hint": "La rafale initiale, plus ce qui se recharge en 5 secondes.",
+              "explanation": "Environ **10 + 2 × 5 = 20** : le seau plein couvre une rafale de 10, puis les recharges en autorisent 2 par seconde. En simulant exactement (50 requêtes à t = 0 ; 0,1 ; … 4,9 s), 19 réussissent et 31 reçoivent un 429. Le script fait 10/s en moyenne, mais le limiteur le ramène à environ 2/s.",
+              "concepts": [
+                "rate-limiting"
+              ]
+            },
+            {
+              "type": "buckets",
+              "id": "q-which-tool",
+              "prompt": "Quel outil règle chaque problème ?",
+              "buckets": [
+                "Timeout",
+                "Retry avec backoff",
+                "Disjoncteur",
+                "Limite de débit"
+              ],
+              "items": [
+                {
+                  "text": "Une API de géolocalisation se bloque parfois pendant 60 s, et les requêtes attendent avec elle",
+                  "bucket": 0
+                },
+                {
+                  "text": "Des requêtes s'empilent derrière une requête de base de données bloquée sur un verrou",
+                  "bucket": 0
+                },
+                {
+                  "text": "Environ 1 appel sur 1 000 échoue avec une connexion coupée et marche au deuxième essai",
+                  "bucket": 1
+                },
+                {
+                  "text": "Un déploiement progressif refuse brièvement les connexions sur un nœud",
+                  "bucket": 1
+                },
+                {
+                  "text": "Le fournisseur d'e-mails est en panne depuis 10 minutes, et chaque appel attend encore, puis échoue",
+                  "bucket": 2
+                },
+                {
+                  "text": "Un partenaire de paiement renvoie des erreurs à chaque appel pendant sa panne",
+                  "bucket": 2
+                },
+                {
+                  "text": "Le script d'un client envoie 5 000 requêtes par seconde",
+                  "bucket": 3
+                },
+                {
+                  "text": "Un scraper martèle la page d'inscription",
+                  "bucket": 3
+                }
+              ],
+              "hint": "Le problème est-il une lenteur, un accroc, une panne durable, ou un client trop gourmand ?",
+              "explanation": "**Timeout :** arrêter d'attendre quelque chose qui ne répondra peut-être jamais. **Retry :** les échecs rares et brefs réussissent généralement un instant plus tard. **Disjoncteur :** une dépendance *clairement* en panne ne devrait pas être appelée du tout pendant un moment ; la réessayer ne fait qu'ajouter de la charge. **Limite de débit :** un client bruyant ne doit pas évincer tous les autres.",
+              "concepts": [
+                "timeouts",
+                "retry-backoff",
+                "circuit-breaker"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "design-snipt",
+          "title": "Concevoir Snipt de bout en bout",
+          "pareto": "core",
+          "minutes": 10,
+          "takeaway": "Besoins, estimations, API, modèle de données, schéma, puis approfondissements : un ordre de travail clair transforme un énoncé vague en une conception que tu peux défendre.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "La revue de conception",
+              "body": "Un an plus tard, Snipt crée **100 millions** de liens par mois, les clics dépassent les créations de **100 pour 1**, et les liens sont conservés **10 ans**. Omar veut une conception complète, comme l'attendent un entretien ou une revue de conception :\n\n- Clarifier les **besoins** : ce que ça fait, et à quelle vitesse et avec quelle fiabilité.\n- **Estimer** l'échelle.\n- Définir l'**API** et le **modèle de données**.\n- Dessiner la **conception générale**.\n- **Approfondir** les parties difficiles et dire les compromis à voix haute."
+            },
+            {
+              "type": "order",
+              "id": "q-design-order",
+              "prompt": "Remets les étapes de conception dans l'ordre où tu les parcourrais.",
+              "items": [
+                "Clarifier les besoins : que doit-il faire, à quelle vitesse, avec quelle fiabilité ?",
+                "Estimer l'échelle : QPS, stockage, bande passante",
+                "Définir l'API : POST /links et GET /{code}",
+                "Esquisser le modèle de données : links(code, long_url, owner_id, created_at)",
+                "Dessiner la conception générale : répartiteur de charge, serveurs d'application, cache, base de données",
+                "Approfondir les goulots d'étranglement et énoncer les compromis"
+              ],
+              "hint": "Tu ne peux pas dimensionner un système avant de savoir ce qu'il doit faire.",
+              "explanation": "Chaque étape nourrit la suivante : les besoins décident de ce qu'il faut estimer, les estimations décident de ce qui est difficile, l'API et le modèle de données précisent ce que les boîtes doivent faire, et les approfondissements vont là où les chiffres disent que la pression se trouve. Commencer par le schéma est l'erreur classique : des boîtes sans aucun chiffre derrière.",
+              "concepts": [
+                "design-process"
+              ]
+            },
+            {
+              "type": "buckets",
+              "id": "q-func-nonfunc",
+              "prompt": "Classe les besoins : ce que fait Snipt, ou à quel niveau il doit le faire ?",
+              "buckets": [
+                "Fonctionnel : ce que ça fait",
+                "Non fonctionnel : à quel niveau"
+              ],
+              "items": [
+                {
+                  "text": "Créer un lien court pour une longue URL",
+                  "bucket": 0
+                },
+                {
+                  "text": "Visiter un lien court redirige vers la longue URL",
+                  "bucket": 0
+                },
+                {
+                  "text": "Les propriétaires de liens peuvent voir le nombre de clics",
+                  "bucket": 0
+                },
+                {
+                  "text": "Les liens peuvent éventuellement expirer à une date choisie",
+                  "bucket": 0
+                },
+                {
+                  "text": "99 % des redirections se terminent en moins de 50 ms",
+                  "bucket": 1
+                },
+                {
+                  "text": "Les redirections restent disponibles 99,99 % du temps",
+                  "bucket": 1
+                },
+                {
+                  "text": "Gère 12 000 redirections par seconde au pic",
+                  "bucket": 1
+                },
+                {
+                  "text": "Les codes courts ne peuvent pas être devinés en comptant vers le haut",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Pourrais-tu la présenter en démo comme une fonctionnalité, ou est-ce une propriété que tu mesurerais ?",
+              "explanation": "Les besoins **fonctionnels** sont des fonctionnalités : ce qu'un utilisateur peut faire. Les besoins **non fonctionnels** sont des qualités : latence, disponibilité, échelle, sécurité. La liste non fonctionnelle dicte l'essentiel de l'architecture. Une disponibilité de 99,99 % à elle seule exclut un serveur de base de données unique sans réplica.",
+              "concepts": [
+                "design-process"
+              ]
+            },
+            {
+              "type": "example",
+              "title": "Des estimations en cinq lignes",
+              "problem": "Dimensionne Snipt avec 100 millions de nouveaux liens par mois, 100 lectures pour 1 écriture, et 10 ans de liens d'environ 500 octets chacun.",
+              "steps": [
+                "Écritures : 100 000 000 ÷ (30 × 86 400 s) ≈ **40 par seconde**.",
+                "Lectures : 40 × 100 ≈ **4 000 par seconde** ; prévois un pic à 3 × ≈ **12 000 par seconde**.",
+                "Liens sur 10 ans : 100 millions × 12 × 10 = **12 milliards**.",
+                "Stockage : 12 milliards × 500 octets = **6 To**, plus les réplicas.",
+                "Bande passante au pic : 12 000 × 500 octets = **6 Mo/s**."
+              ],
+              "answer": "Un système dominé par la lecture avec des données modestes : mets en cache les liens chauds, ajoute des réplicas pour les lectures, et garde le sharding en option pour les 6 To."
+            },
+            {
+              "type": "numeric",
+              "id": "q-code-length",
+              "prompt": "Les codes courts utilisent la **base 62** : les chiffres 0–9, les lettres a–z et A–Z, donc chaque caractère a 62 possibilités. Quelle est la **plus courte** longueur de code qui donne à chacun des **12 milliards** de liens son propre code ?",
+              "answer": 6,
+              "unit": "caractères",
+              "hint": "Essaie les puissances de 62 : combien fait 62⁵ ? Et 62⁶ ?",
+              "explanation": "62⁵ ≈ 916 millions : trop peu. 62⁶ ≈ 56,8 milliards : assez, avec environ 4,7 fois de marge. Donc **6** caractères est le minimum ; beaucoup de conceptions en choisissent 7 (62⁷ ≈ 3,5 × 10¹²) pour que les codes restent espacés et difficiles à deviner.",
+              "concepts": [
+                "short-codes",
+                "napkin-math"
+              ]
+            },
+            {
+              "type": "output",
+              "id": "q-base62",
+              "prompt": "Si les codes viennent d'un identifiant numérique, la base 62 transforme le nombre en une courte chaîne. Qu'affiche ce code ?",
+              "language": "python",
+              "code": "ALPHABET = \"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ\"\n\ndef base62(n):\n    s = \"\"\n    while n > 0:\n        n, r = divmod(n, 62)\n        s = ALPHABET[r] + s\n    return s or \"0\"\n\nprint(base62(61))\nprint(base62(62))\nprint(base62(125))",
+              "output": "Z\n10\n21",
+              "hint": "`divmod(n, 62)` découpe n en nombre de 62 et en reste, et le reste choisit le dernier caractère.",
+              "explanation": "La base 62 fonctionne comme la base 10, avec 62 chiffres. 61 est le dernier chiffre simple, `Z`. 62, c'est un 62 et rien d'autre : `10`. 125 = 2 × 62 + 1 : `21`. Un compteur d'identifiants ne provoque jamais de collision, mais des identifiants consécutifs donnent des codes devinables ; les conceptions utilisent donc des codes aléatoires avec un contrôle d'unicité, ou donnent à chaque serveur son propre bloc d'identifiants qu'elles mélangent.",
+              "concepts": [
+                "short-codes"
+              ]
+            },
+            {
+              "type": "explain",
+              "title": "Le tableau d'ensemble",
+              "body": "La conception de Lin :\n\n```text\n   DNS --> load balancer\n              |\n     app   app   app        stateless, N+1\n       \\    |    /\n      Redis cache            hot codes, TTL\n            | miss\n      links DB               leader + replicas,\n                             sharded by code later\n\n   app --click event--> queue --> analytics workers\n```\n\nCodes : **7 caractères base 62 aléatoires**, insérés sous une contrainte d'unicité ; en cas de collision, rare, on génère un nouveau code et on réessaie. Les clics vont dans une file, donc les redirections n'attendent jamais les statistiques."
+            },
+            {
+              "type": "numeric",
+              "id": "q-cache-size",
+              "prompt": "Les clics sont très inégaux, alors Lin met en cache les **10 millions** de liens les plus cliqués, à environ **500 octets** chacun (code, URL et surcoût). Combien de gigaoctets de mémoire de cache cela représente-t-il ? (1 Go = 10⁹ octets)",
+              "answer": 5,
+              "unit": "Go",
+              "explanation": "10 000 000 × 500 octets = 5 × 10⁹ octets = **5 Go**. Ça tient largement dans la mémoire d'un seul serveur Redis, et ça couvre les liens les plus chauds : la plupart des 12 000 lectures/s de pointe ne touchent donc jamais la base de données.",
+              "concepts": [
+                "cache-aside",
+                "napkin-math"
+              ]
+            },
+            {
+              "type": "mcq",
+              "id": "q-301-302",
+              "prompt": "Snipt vend des statistiques de clics aux propriétaires de liens, il doit donc compter les clics. Quel statut de redirection doit-il envoyer ?",
+              "choices": [
+                "302 Found (temporaire) : les navigateurs redemandent à Snipt à chaque clic, donc chaque clic peut être compté",
+                "301 Moved Permanently : les navigateurs le mettent en cache, donc les clics répétés sont plus rapides et Snipt a moins de charge",
+                "200 OK avec la longue URL dans le corps de la page",
+                "301 ou 302 indifféremment ; les navigateurs les traitent de la même façon"
+              ],
+              "answer": 0,
+              "explanation": "Les navigateurs mettent un **301** en cache et sautent Snipt aux clics répétés : moins de charge, mais ces clics sont invisibles. Un **302** n'est pas mis en cache par défaut, donc chaque clic passe par Snipt et est compté. C'est un compromis classique à dire à voix haute : 301 pour la charge, 302 pour les statistiques. Une page 200 n'est pas du tout une redirection.",
+              "concepts": [
+                "design-process",
+                "cache-aside"
+              ]
+            },
+            {
+              "type": "mcq",
+              "id": "q-leader-fails",
+              "prompt": "La dernière question d'Omar : le leader de la base de données meurt à 3 h du matin. Qu'est-ce qui garde les redirections de Snipt en marche ?",
+              "choices": [
+                "Les redirections lisent dans le cache et les réplicas, qui fonctionnent toujours ; un réplica est promu leader, et la création de liens échoue ou réessaie pendant la minute que ça prend",
+                "Rien : chaque requête a besoin du leader, donc le site est en panne jusqu'à sa réparation",
+                "Le répartiteur de charge envoie plutôt le trafic de la base de données à un serveur d'application",
+                "La file prend le relais et sert les redirections à partir de ses messages stockés"
+              ],
+              "answer": 0,
+              "explanation": "Les lectures n'ont jamais dépendu du leader : le cache et les réplicas continuent de servir les redirections, la majorité de 100 pour 1 du trafic. Les écritures s'interrompent jusqu'à la promotion d'un réplica, c'est pourquoi la création devrait réessayer avec un backoff (sans danger, parce que l'insertion est protégée par un code unique). Les répartiteurs de charge dirigent vers des serveurs d'application, pas vers des bases de données, et la file ne transporte que des événements de clic.",
+              "concepts": [
+                "replication",
+                "design-process"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

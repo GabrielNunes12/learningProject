@@ -2,7 +2,8 @@
 //   Make it wrong   (start of a lesson)  dump keywords about the topic, sort them into piles, sketch. Nothing is graded.
 //   Make it shorter (end of any session) squeeze it into 2–3 anchors of at most 4 words.
 //   Make it again   (start of a session) rebuild an earlier sheet from a blank page, then compare and fix it.
-// Pure: no DOM, only type imports plus the matching helpers from knowledgeMap.ts.
+// Pure: no DOM, only type imports plus the matching helpers from knowledgeMap.ts and t() from the i18n core.
+import { t } from '../i18n/core.ts';
 import type { Concept } from '../types.ts';
 import { editDistance, matchConcept, normalize, stem, typoBudget } from './knowledgeMap.ts';
 import type { Sheet, SheetAgain, SheetChip, SheetDraft, SheetStroke } from './storage.ts';
@@ -214,29 +215,27 @@ export interface Readiness {
   missing: string;
 }
 
-const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
-
 /** Make it wrong: at least 3 keywords, sorted into at least 2 piles. */
 export function wrongReady(d: SheetDraft): Readiness {
   const need = WRONG_MIN_CHIPS - d.chips.length;
-  if (need > 0) return { ok: false, missing: `Add ${plural(need, 'more keyword')}. Guesses count.` };
+  if (need > 0) return { ok: false, missing: t('thinking.missing.wrongKeywords', { count: need }) };
   const used = new Set(d.chips.map((c) => c.pile).filter((p) => p !== undefined)).size;
-  if (used < WRONG_MIN_PILES) return { ok: false, missing: `Sort them into ${WRONG_MIN_PILES} piles: drag keywords down into the columns.` };
+  if (used < WRONG_MIN_PILES) return { ok: false, missing: t('thinking.missing.wrongPiles', { count: WRONG_MIN_PILES }) };
   return { ok: true, missing: '' };
 }
 
 /** Make it shorter: 2–3 anchors, none longer than 4 words. */
 export function anchorsReady(anchors: string[]): Readiness {
   const filled = anchors.map((a) => a.trim()).filter(Boolean);
-  if (filled.some((a) => wordCount(a) > ANCHOR_MAX_WORDS)) return { ok: false, missing: `Each anchor is ${ANCHOR_MAX_WORDS} words or fewer.` };
-  if (filled.length < ANCHORS_MIN) return { ok: false, missing: `Write ${plural(ANCHORS_MIN - filled.length, 'more anchor')}.` };
+  if (filled.some((a) => wordCount(a) > ANCHOR_MAX_WORDS)) return { ok: false, missing: t('thinking.missing.anchorTooLong', { count: ANCHOR_MAX_WORDS }) };
+  if (filled.length < ANCHORS_MIN) return { ok: false, missing: t('thinking.missing.moreAnchors', { count: ANCHORS_MIN - filled.length }) };
   return { ok: true, missing: '' };
 }
 
 /** Make it again, step 1: at least 2 keywords from a blank page before the old sheet is shown. */
 export function recallReady(d: SheetDraft): Readiness {
   const need = AGAIN_MIN_RECALL - d.chips.length;
-  return need > 0 ? { ok: false, missing: `Write ${plural(need, 'more keyword')} from memory first.` } : { ok: true, missing: '' };
+  return need > 0 ? { ok: false, missing: t('thinking.missing.recall', { count: need }) } : { ok: true, missing: '' };
 }
 
 // ---------- matching ----------
@@ -367,7 +366,13 @@ export function finishAgain(
 // ---------- building sheets ----------
 
 export const lessonSheetKey = (course: string, lesson: string) => `${course}/${lesson}`;
-export const sessionSheetKey = (kind: 'review' | 'practice' | 'quiz', now = Date.now()) => `session/${kind}/${now}`;
+export type SessionKind = 'review' | 'practice' | 'quiz';
+export const sessionSheetKey = (kind: SessionKind, now = Date.now()) => `session/${kind}/${now}`;
+/** The kind of session a sheet key belongs to ("session/<kind>/<time>"), or undefined for a lesson sheet. */
+export function sessionKind(key: string): SessionKind | undefined {
+  const m = /^session\/(review|practice|quiz)\//.exec(key);
+  return m ? (m[1] as SessionKind) : undefined;
+}
 
 /** A lesson sheet after "make it wrong" (anchors come at the end of the lesson). */
 export function startLessonSheet(prev: Sheet | undefined, course: string, lesson: string, title: string, wrong: SheetDraft, now = Date.now()): Sheet {

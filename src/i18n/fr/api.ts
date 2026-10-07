@@ -1,0 +1,35 @@
+// French UI strings: api. Mirrors src/i18n/en/api.ts (see docs/TRANSLATING.md).
+import type { Translation } from '../core.ts';
+import type en from '../en/api.ts';
+
+export default {
+  'api.unreachable': 'Impossible de joindre le serveur. Est-il lancé ? (npm run dev)',
+  'api.requestFailed': 'La requête a échoué ({status})',
+  'api.signIn': 'Connecte-toi.',
+  'api.passwordShort': 'Le mot de passe doit contenir au moins 8 caractères.',
+  'api.passwordLong': 'Le mot de passe est trop long (128 caractères max.).',
+  'api.passwordIsUsername': "Le mot de passe ne peut pas être ton nom d'utilisateur.",
+  'api.rateLimited': 'Trop de tentatives. Attends quelques minutes et réessaie.',
+  'api.expectedJson': 'JSON attendu.',
+  'api.crossOrigin': 'Requête cross-origin bloquée.',
+  'api.usernameFormat': "Nom d'utilisateur : 3 à 20 lettres, chiffres ou tirets bas.",
+  'api.emailInvalid': 'Saisis une adresse e-mail valide.',
+  'api.emailTaken': 'Un compte existe déjà avec cet e-mail. Essaie de te connecter.',
+  'api.usernameTaken': "Ce nom d'utilisateur est déjà pris.",
+  'api.justTaken': "Ce nom d'utilisateur ou cet e-mail vient d'être pris.",
+  'api.emailFailed': "Impossible d'envoyer l'e-mail de confirmation pour le moment. Réessaie dans quelques minutes.",
+  'api.verifyInvalid': 'Ce lien de confirmation est invalide ou a expiré. Demandes-en un nouveau.',
+  'api.wrongLogin': "Nom d'utilisateur/e-mail ou mot de passe incorrect.",
+  'api.notVerified': "Confirme d'abord ton adresse e-mail. Le lien t'attend dans ta boîte de réception.",
+  'api.resetInvalid': 'Ce lien de réinitialisation est invalide ou a expiré. Demandes-en un nouveau.',
+  'api.currentPasswordWrong': 'Le mot de passe actuel est incorrect.',
+  'api.passwordWrong': 'Mot de passe incorrect.',
+  'api.badProgress': 'Données de progression invalides.',
+  'api.badCertificate': 'Demande de certificat invalide.',
+  'api.notSynced': "Tes leçons terminées ne sont pas encore arrivées sur le serveur. Patiente un instant et réessaie.",
+  'api.certFailed': "Impossible de délivrer le certificat. Réessaie.",
+  'api.certNotFound': 'Aucun certificat avec cet identifiant.',
+  'api.notFound': 'Introuvable.',
+  'api.badJson': 'JSON mal formé.',
+  'api.serverError': 'Un problème est survenu sur le serveur.',
+} satisfies Translation<typeof en>;

@@ -58,37 +58,41 @@ import type { ConceptLink, Course } from '../types';
 import { Icon } from './icons';
 import { Page } from './Layout';
 import { InlineMarkdown } from './Markdown';
-import { accentStyle, plural, ProgressBar, Ring } from './ui';
+import { accentStyle, ProgressBar, Ring } from './ui';
+import type { MessageKey, Params } from '../i18n/core';
+import { useT } from '../i18n/react';
 import './KnowledgeMap.css';
 
 type SetMap = (f: (m: MapState) => MapState) => void;
 
-const LAYERS: { n: Layer; title: string; short: string }[] = [
-  { n: 1, title: 'What do I already know?', short: 'Recall' },
-  { n: 2, title: "What don't I know yet?", short: 'Find gaps' },
-  { n: 3, title: 'Connect the dots', short: 'Connect' },
+const LAYERS: { n: Layer; title: MessageKey; short: MessageKey }[] = [
+  { n: 1, title: 'map.layer.1.title', short: 'map.layer.1.short' },
+  { n: 2, title: 'map.layer.2.title', short: 'map.layer.2.short' },
+  { n: 3, title: 'map.layer.3.title', short: 'map.layer.3.short' },
 ];
 
-const KIND_TEXT: Record<MapNode['kind'], string> = {
-  recalled: 'recalled from memory',
-  island: 'not recalled yet',
-  learned: 'learned since',
-  note: 'your own note',
+const KIND_TEXT: Record<MapNode['kind'], MessageKey> = {
+  recalled: 'map.kind.recalled',
+  island: 'map.kind.island',
+  learned: 'map.kind.learned',
+  note: 'map.kind.note',
 };
 
-const GENERIC_LABELS = ['is a', 'is part of', 'needs', 'causes', 'replaces', 'is the opposite of'];
+/** Suggested link labels when the course has none. Only stored on the learner's link: scoring ignores labels. */
+const GENERIC_LABELS: MessageKey[] = ['map.generic.isA', 'map.generic.isPartOf', 'map.generic.needs', 'map.generic.causes', 'map.generic.replaces', 'map.generic.isOppositeOf'];
 const CHUNK_COLORS = ['var(--accent)', 'var(--tok-type)', 'var(--tok-number)', 'var(--tok-annotation)', 'var(--good)', 'var(--tok-keyword)'];
 const VIEW_KEY = 'projectlearn:mapview';
 const SPRINT_MS = 120_000;
 
 export function KnowledgeMap({ courseId }: { courseId?: string }) {
+  const { t } = useT();
   const route = useRoute();
   const course = courseId ? getCourse(courseId) : undefined;
   if (!course) {
     return (
       <Page>
-        <h1>Course not found</h1>
-        <a href="#/courses">All courses</a>
+        <h1>{t('map.notFound')}</h1>
+        <a href="#/courses">{t('map.allCourses')}</a>
       </Page>
     );
   }
@@ -101,20 +105,18 @@ export function KnowledgeMap({ courseId }: { courseId?: string }) {
 
 /** Courses without a concept graph yet: a friendly placeholder that still gets the learner recalling. */
 function ComingSoon({ course }: { course: Course }) {
+  const { t } = useT();
   return (
     <Page>
       <div style={accentStyle(course.color)} className="km">
         <a className="back" href={href('course', course.id)}>
           ← {course.title}
         </a>
-        <span className="eyebrow">Knowledge map</span>
-        <h1>The map for {course.title} is coming soon</h1>
-        <p className="lead">
-          This course doesn't have its concept map yet. In the meantime, here is the same idea on paper: cover the list below, write down
-          every key idea you remember, then check.
-        </p>
+        <span className="eyebrow">{t('map.eyebrow')}</span>
+        <h1>{t('map.soon.title', { course: course.title })}</h1>
+        <p className="lead">{t('map.soon.lead')}</p>
         <div className="panel key-ideas">
-          <h2>The key ideas</h2>
+          <h2>{t('map.soon.keyIdeas')}</h2>
           <ul>
             {course.keyIdeas.map((idea, i) => (
               <li key={i}>
@@ -125,10 +127,10 @@ function ComingSoon({ course }: { course: Course }) {
         </div>
         <div className="actions km-soon-actions">
           <a className="btn" href={href('course', course.id)}>
-            Back to course
+            {t('map.soon.backToCourse')}
           </a>
           <a className="btn primary" href={href('course', course.id, 'quiz')}>
-            Test yourself with the quiz
+            {t('map.soon.quiz')}
           </a>
         </div>
       </div>
@@ -148,6 +150,7 @@ function useRevealOnOpen(key: string) {
 
 /** Owns the saved map for a course (debounced auto-save) and the scope picker. */
 function MapHost({ course, scopeKey }: { course: Course; scopeKey: string }) {
+  const { t } = useT();
   useStudyTimer(course.id);
   const [map, setMapState] = useState<MapState>(() => normalizeMap(getProgress().maps?.[course.id] as MapState | undefined));
   const dirty = useRef(false);
@@ -168,11 +171,11 @@ function MapHost({ course, scopeKey }: { course: Course; scopeKey: string }) {
   useEffect(() => {
     latest.current = map;
     if (!dirty.current) return;
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       dirty.current = false;
       savedAt.current = saveMap(course.id, map);
     }, 600);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [map, course.id]);
 
   // Flush a pending save when leaving the page or closing the tab.
@@ -202,23 +205,23 @@ function MapHost({ course, scopeKey }: { course: Course; scopeKey: string }) {
         </a>
         <header className="km-head">
           <div>
-            <span className="eyebrow">{unit ? `Unit ${unitIndex + 1} checkpoint` : 'Knowledge map'}</span>
+            <span className="eyebrow">{unit ? t('map.unitCheckpoint', { n: unitIndex + 1 }) : t('map.eyebrow')}</span>
             <h1>{unit ? unit.title : course.title}</h1>
-            <p className="lead">Map it from memory, see what's missing, then connect the dots.</p>
+            <p className="lead">{t('map.lead')}</p>
           </div>
           {course.units.length > 1 && (
             <label className="km-scope">
-              <span>Map</span>
+              <span>{t('map.scope.label')}</span>
               <select
                 value={scope.key}
                 onChange={(e) => {
                   window.location.hash = e.target.value === ALL ? href('course', course.id, 'map') : href('course', course.id, 'map', e.target.value);
                 }}
               >
-                <option value={ALL}>Whole course ({course.concepts?.length ?? 0} ideas)</option>
+                <option value={ALL}>{t('map.scope.wholeCourse', { count: course.concepts?.length ?? 0 })}</option>
                 {course.units.map((u, i) => (
                   <option key={u.id} value={u.id} disabled={!counts.get(u.id)}>
-                    Unit {i + 1}: {u.title} ({counts.get(u.id) ?? 0})
+                    {t('map.scope.unit', { n: i + 1, title: u.title, count: counts.get(u.id) ?? 0 })}
                   </option>
                 ))}
               </select>
@@ -229,9 +232,9 @@ function MapHost({ course, scopeKey }: { course: Course; scopeKey: string }) {
           <ScopeMap key={scope.key} course={course} scope={scope} map={map} setMap={setMap} />
         ) : (
           <div className="panel">
-            <p>This unit has no ideas on the course map yet.</p>
+            <p>{t('map.scope.empty')}</p>
             <a className="btn primary" href={href('course', course.id, 'map')}>
-              Map the whole course instead
+              {t('map.scope.mapWhole')}
             </a>
           </div>
         )}
@@ -242,7 +245,11 @@ function MapHost({ course, scopeKey }: { course: Course; scopeKey: string }) {
 
 type Selection = { type: 'node'; id: string } | { type: 'link'; key: string } | null;
 interface Feedback {
-  text: string;
+  /** The message, rendered at display time so it follows a language switch. */
+  key: MessageKey;
+  params?: Params;
+  /** A concept whose (current-language) label fills {label}. */
+  concept?: string;
   tone: 'good' | 'note' | 'info';
   /** A concept matched from this typed text; offers "keep my words instead". */
   undo?: { id: string; typed: string };
@@ -258,6 +265,7 @@ function readListPref() {
 
 /** One scope's map: the layer stepper, panels, and the canvas or list. */
 function ScopeMap({ course, scope, map, setMap }: { course: Course; scope: Scope; map: MapState; setMap: SetMap }) {
+  const { t, locale } = useT();
   const maxLayer = scopeLayer(map, scope.key);
   const [layer, setLayer] = useState<Layer>(maxLayer);
   const [selected, setSelected] = useState<Selection>(null);
@@ -269,19 +277,20 @@ function ScopeMap({ course, scope, map, setMap }: { course: Course; scope: Scope
   const [popId, setPopId] = useState<string | null>(null);
   const [announce, setAnnounce] = useState('');
 
-  const nodes = useMemo(() => visibleNodes(map, scope, layer), [map, scope, layer]);
+  // Nodes and check results copy concept and link labels: recompute them when the language changes.
+  const nodes = useMemo(() => visibleNodes(map, scope, layer), [map, scope, layer, locale]);
   const nodeById = useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes]);
   const pos = useMemo(() => placeMissing(map.pos, nodes.map((n) => n.id)), [map.pos, nodes]);
   const links = useMemo(() => map.links.filter((l) => nodeById.has(l.from) && nodeById.has(l.to)), [map.links, nodeById]);
-  const result = useMemo(() => checkMap(map, scope), [map, scope]);
+  const result = useMemo(() => checkMap(map, scope), [map, scope, locale]);
   const chunkList = useMemo(
     () => (checked ? findChunks(result.correct, scope.concepts.map((c) => c.id)) : []),
     [checked, result, scope],
   );
   const vocabulary = useMemo(() => {
     const v = linkVocabulary(course);
-    return v.length ? v : GENERIC_LABELS;
-  }, [course]);
+    return v.length ? v : GENERIC_LABELS.map((k) => t(k));
+  }, [course, locale]);
   const labelOf = useCallback((id: string) => nodeById.get(id)?.label ?? course.concepts?.find((c) => c.id === id)?.label ?? id, [nodeById, course]);
 
   // Give newly shown nodes (islands, items recalled elsewhere) a saved place.
@@ -316,8 +325,8 @@ function ScopeMap({ course, scope, map, setMap }: { course: Course; scope: Scope
 
   useEffect(() => {
     if (!popId) return;
-    const t = setTimeout(() => setPopId(null), 900);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setPopId(null), 900);
+    return () => clearTimeout(timer);
   }, [popId]);
 
   const goLayer = (n: Layer) => {
@@ -325,7 +334,7 @@ function ScopeMap({ course, scope, map, setMap }: { course: Course; scope: Scope
     setLayer(n);
     setSelected(null);
     setLinkFrom(null);
-    setAnnounce(`Layer ${n}: ${LAYERS[n - 1].title}`);
+    setAnnounce(t('map.announce.layer', { n, title: t(LAYERS[n - 1].title) }));
   };
 
   const chooseList = (on: boolean) => {
@@ -354,18 +363,18 @@ function ScopeMap({ course, scope, map, setMap }: { course: Course; scope: Scope
       if (linkFrom && linkFrom !== id) {
         setMap((m) => addLink(m, linkFrom, id));
         setSelected({ type: 'link', key: pairKey(linkFrom, id) });
-        setAnnounce(`Linked ${labelOf(linkFrom)} and ${labelOf(id)}. Pick a label below if you like.`);
+        setAnnounce(t('map.announce.linkedPickLabel', { a: labelOf(linkFrom), b: labelOf(id) }));
         setLinkFrom(null);
         return;
       }
       if (linkFrom === id) {
         setLinkFrom(null);
-        setAnnounce('Link cancelled.');
+        setAnnounce(t('map.announce.linkCancelled'));
         return;
       }
       setLinkFrom(id);
       setSelected({ type: 'node', id });
-      setAnnounce(`Linking from ${labelOf(id)}: now pick a second idea.`);
+      setAnnounce(t('map.linkingFrom', { label: labelOf(id) }));
       return;
     }
     setSelected({ type: 'node', id });
@@ -376,7 +385,7 @@ function ScopeMap({ course, scope, map, setMap }: { course: Course; scope: Scope
     setMap((m) => addLink(m, a, b, label));
     setSelected({ type: 'link', key: pairKey(a, b) });
     setLinkFrom(null);
-    setAnnounce(`Linked ${labelOf(a)} and ${labelOf(b)}.`);
+    setAnnounce(t('map.announce.linked', { a: labelOf(a), b: labelOf(b) }));
   };
 
   const arrange = () => {
@@ -386,7 +395,7 @@ function ScopeMap({ course, scope, map, setMap }: { course: Course; scope: Scope
     const lay = arrangeLayout(ids, links, aspect);
     setMap((m) => ({ ...m, pos: { ...m.pos, ...lay } }));
     if (size.w) setView(fitView(Object.values(lay), size.w, size.h));
-    setAnnounce('Map tidied up.');
+    setAnnounce(t('map.announce.tidied'));
   };
 
   const runCheck = () => {
@@ -399,14 +408,13 @@ function ScopeMap({ course, scope, map, setMap }: { course: Course; scope: Scope
   };
 
   const startOver = () => {
-    const what = scope.key === ALL ? 'the whole course' : 'this unit';
-    if (!window.confirm(`Start over for ${what}? Your recalled ideas, notes and links here will be cleared.`)) return;
+    if (!window.confirm(t(scope.key === ALL ? 'map.confirm.startOverCourse' : 'map.confirm.startOverUnit'))) return;
     setMap((m) => resetScope(m, scope));
     setLayer(1);
     setChecked(false);
     setSelected(null);
     setLinkFrom(null);
-    setAnnounce('Cleared. Start recalling from memory.');
+    setAnnounce(t('map.announce.cleared'));
   };
 
   const stage = listMode ? (
@@ -443,7 +451,7 @@ function ScopeMap({ course, scope, map, setMap }: { course: Course; scope: Scope
         setSelected(null);
         if (linkFrom) {
           setLinkFrom(null);
-          setAnnounce('Link cancelled.');
+          setAnnounce(t('map.announce.linkCancelled'));
         }
       }}
       onMove={(id, p) => setMap((m) => moveNode(m, id, p))}
@@ -453,7 +461,7 @@ function ScopeMap({ course, scope, map, setMap }: { course: Course; scope: Scope
 
   return (
     <>
-      <ol className="km-steps" aria-label="Layers">
+      <ol className="km-steps" aria-label={t('map.layers')}>
         {LAYERS.map(({ n, title, short }) => {
           const done = n < maxLayer || (n === 3 && checked);
           return (
@@ -473,10 +481,10 @@ function ScopeMap({ course, scope, map, setMap }: { course: Course; scope: Scope
                   {done ? <Icon name="check" size={14} /> : n}
                 </span>
                 <span className="km-step-text">
-                  <span className="km-step-short">{short}</span>
-                  <span className="km-step-title">{title}</span>
+                  <span className="km-step-short">{t(short)}</span>
+                  <span className="km-step-title">{t(title)}</span>
                 </span>
-                {n > maxLayer && <span className="sr-only">(locked until you finish the layer before)</span>}
+                {n > maxLayer && <span className="sr-only">{t('map.layer.locked')}</span>}
               </button>
             </li>
           );
@@ -528,27 +536,27 @@ function ScopeMap({ course, scope, map, setMap }: { course: Course; scope: Scope
 
         <div className="km-stage">
           <div className="km-toolbar">
-            <div className="km-seg" role="group" aria-label="View">
+            <div className="km-seg" role="group" aria-label={t('map.view.label')}>
               <button type="button" aria-pressed={!listMode} onClick={() => chooseList(false)}>
-                Canvas
+                {t('map.view.canvas')}
               </button>
               <button type="button" aria-pressed={listMode} onClick={() => chooseList(true)}>
-                List
+                {t('map.view.list')}
               </button>
             </div>
             {!listMode && (
               <div className="km-tools">
-                <button type="button" className="btn small" onClick={() => setView((v) => zoomAt(v, 1 / 1.25, size.w / 2, size.h / 2))} aria-label="Zoom out">
+                <button type="button" className="btn small" onClick={() => setView((v) => zoomAt(v, 1 / 1.25, size.w / 2, size.h / 2))} aria-label={t('map.zoomOut')}>
                   −
                 </button>
-                <button type="button" className="btn small" onClick={() => setView((v) => zoomAt(v, 1.25, size.w / 2, size.h / 2))} aria-label="Zoom in">
+                <button type="button" className="btn small" onClick={() => setView((v) => zoomAt(v, 1.25, size.w / 2, size.h / 2))} aria-label={t('map.zoomIn')}>
                   +
                 </button>
                 <button type="button" className="btn small" onClick={fit}>
-                  Fit
+                  {t('map.fit')}
                 </button>
                 <button type="button" className="btn small" onClick={arrange} disabled={nodes.length < 2}>
-                  Tidy up
+                  {t('map.tidy')}
                 </button>
               </div>
             )}
@@ -570,7 +578,7 @@ function ScopeMap({ course, scope, map, setMap }: { course: Course; scope: Scope
               setMap={setMap}
               onLinkFrom={(id) => {
                 setLinkFrom(id);
-                setAnnounce(`Linking from ${labelOf(id)}: now pick a second idea.`);
+                setAnnounce(t('map.linkingFrom', { label: labelOf(id) }));
               }}
               onClose={() => setSelected(null)}
               onAnnounce={setAnnounce}
@@ -599,15 +607,15 @@ function ScopeMap({ course, scope, map, setMap }: { course: Course; scope: Scope
                 const h = nextHint(result, map);
                 if (!h) return;
                 setMap((m) => addHint(m, pairKey(h.from, h.to)));
-                setAnnounce(`Hint: ${labelOf(h.from)} ${h.label} ${labelOf(h.to)}.`);
+                setAnnounce(t('map.announce.hint', { from: labelOf(h.from), label: h.label, to: labelOf(h.to) }));
               }}
               onAddHint={(l) => link(l.from, l.to, l.label)}
             />
           )}
           <div className="km-footer">
-            <span className="muted small">Saved automatically.</span>
+            <span className="muted small">{t('map.saved')}</span>
             <button type="button" className="btn small danger-outline" onClick={startOver}>
-              Start over
+              {t('map.startOver')}
             </button>
           </div>
         </div>
@@ -637,6 +645,7 @@ function RecallPanel({
   onPop: (id: string) => void;
   onDone: () => void;
 }) {
+  const { t, tx } = useT();
   const [text, setText] = useState('');
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [sprintEnd, setSprintEnd] = useState<number | null>(null);
@@ -646,15 +655,15 @@ function RecallPanel({
 
   useEffect(() => {
     if (!sprintEnd) return;
-    const t = setInterval(() => {
+    const timer = setInterval(() => {
       const n = Date.now();
       setNow(n);
       if (n >= sprintEnd) {
         setSprintEnd(null);
-        setFeedback({ text: "Time. That was a good retrieval workout: keep adding if more comes to mind, or see what's left.", tone: 'info' });
+        setFeedback({ key: 'map.recall.timeUp', tone: 'info' });
       }
     }, 500);
-    return () => clearInterval(t);
+    return () => clearInterval(timer);
   }, [sprintEnd]);
 
   const submit = (e: FormEvent) => {
@@ -666,17 +675,16 @@ function RecallPanel({
     const notRecalled = (id: string) => !map.recalled.includes(id);
     const m = matchConcept(typed, scope.concepts, notRecalled);
     if (m) {
-      const label = scope.concepts.find((c) => c.id === m.id)!.label;
       onPop(m.id);
       if (map.recalled.includes(m.id)) {
-        setFeedback({ text: `${label} is already on your map.`, tone: 'info' });
+        setFeedback({ key: 'map.recall.already', concept: m.id, tone: 'info' });
         return;
       }
       const k = score.recalled + 1;
       const at = placeNew();
       setMap((mm) => addRecall(mm, m.id, at));
-      const cheer = k === score.total ? ' That is every idea here.' : k % 5 === 0 ? ` ${k} from memory, nice run.` : '';
-      setFeedback({ text: `Recalled: ${label}.${cheer}`, tone: 'good', undo: m.kind === 'exact' ? undefined : { id: m.id, typed } });
+      const key: MessageKey = k === score.total ? 'map.recall.recalledAll' : k % 5 === 0 ? 'map.recall.recalledRun' : 'map.recall.recalled';
+      setFeedback({ key, params: { count: k }, concept: m.id, tone: 'good', undo: m.kind === 'exact' ? undefined : { id: m.id, typed } });
       return;
     }
     // A concept from another unit still counts on the whole-course map.
@@ -685,62 +693,64 @@ function RecallPanel({
       const c = course.concepts!.find((x) => x.id === elsewhere.id)!;
       const unitIdx = course.units.findIndex((u) => u.lessons.some((l) => l.id === c.lesson));
       if (!map.recalled.includes(c.id)) setMap((mm) => addRecall(mm, c.id));
-      setFeedback({ text: `${c.label} is from unit ${unitIdx + 1}. Good recall: it is saved on your whole-course map.`, tone: 'good' });
+      setFeedback({ key: 'map.recall.otherUnit', params: { unit: unitIdx + 1 }, concept: c.id, tone: 'good' });
       return;
     }
     const dup = map.notes.find((n) => sameText(n.text, typed));
     if (dup) {
       onPop(dup.id);
-      setFeedback({ text: 'You already noted that one.', tone: 'info' });
+      setFeedback({ key: 'map.recall.dupNote', tone: 'info' });
       return;
     }
     const at = placeNew();
     onPop(newNoteId(map, scope.key));
     setMap((mm) => addNote(mm, scope.key, typed, at).map);
-    setFeedback({
-      text: `Kept "${typed}" as your own note. If the course calls it something else, you can merge it in after the reveal.`,
-      tone: 'note',
-    });
+    setFeedback({ key: 'map.recall.keptNote', params: { typed }, tone: 'note' });
   };
 
   const undo = () => {
     if (!feedback?.undo) return;
     const { id, typed } = feedback.undo;
     setMap((mm) => unrecallToNote(mm, id, scope.key, typed));
-    setFeedback({ text: `Kept "${typed}" as your own note instead.`, tone: 'note' });
+    setFeedback({ key: 'map.recall.keptNoteInstead', params: { typed }, tone: 'note' });
   };
 
   const left = sprintEnd ? Math.max(0, Math.ceil((sprintEnd - now) / 1000)) : 0;
+  const conceptLabel = (id: string) => course.concepts?.find((c) => c.id === id)?.label ?? id;
+  const feedbackText = feedback && t(feedback.key, { ...feedback.params, ...(feedback.concept ? { label: conceptLabel(feedback.concept) } : {}) });
 
   return (
     <section className="panel km-panel">
-      <h2>What do I already know?</h2>
-      <p className="small muted">
-        Type the ideas you remember, one at a time, and press Enter. No peeking: trying to recall before you look tends to make what you
-        read next stick better.
-      </p>
-      <div className="km-counter" aria-label={`Recalled ${score.recalled} of ${score.total}`}>
-        <strong key={score.recalled} className="km-count">
-          {score.recalled}
-        </strong>
-        <span>/ {score.total} recalled</span>
+      <h2>{t('map.layer.1.title')}</h2>
+      <p className="small muted">{t('map.recall.intro')}</p>
+      <div className="km-counter" aria-label={t('map.recall.counterLabel', { recalled: score.recalled, total: score.total })}>
+        {tx(
+          'map.recall.counter',
+          {
+            recalled: (
+              <strong key={score.recalled} className="km-count">
+                {score.recalled}
+              </strong>
+            ),
+            total: score.total,
+          },
+          { rest: (c) => <span>{c}</span> },
+        )}
       </div>
-      <ProgressBar value={score.fraction} thin label="Ideas recalled" />
+      <ProgressBar value={score.fraction} thin label={t('map.recall.progress')} />
       {locked ? (
-        <p className="small km-locked">
-          Recall is closed here because the rest of the map has been revealed. Start over to try again from memory, or use layers 2 and 3.
-        </p>
+        <p className="small km-locked">{t('map.recall.locked')}</p>
       ) : (
         <form className="km-recall" onSubmit={submit}>
           <label className="sr-only" htmlFor="km-recall-input">
-            An idea you remember
+            {t('map.recall.inputLabel')}
           </label>
           <input
             id="km-recall-input"
             ref={inputRef}
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="e.g. a term, a rule, a technique"
+            placeholder={t('map.recall.placeholder')}
             autoComplete="off"
             autoCapitalize="off"
             spellCheck={false}
@@ -748,17 +758,17 @@ function RecallPanel({
             autoFocus
           />
           <button className="btn primary" type="submit" disabled={!text.trim()}>
-            Add
+            {t('map.recall.add')}
           </button>
         </form>
       )}
       <div className={`km-feedback ${feedback?.tone ?? ''}`} role="status" aria-live="polite">
         {feedback && (
           <>
-            <span>{feedback.text}</span>
+            <span>{feedbackText}</span>
             {feedback.undo && (
               <button type="button" className="btn ghost small" onClick={undo}>
-                Not what I meant: keep my words
+                {t('map.recall.undo')}
               </button>
             )}
           </>
@@ -768,11 +778,11 @@ function RecallPanel({
         <div className="km-sprint">
           {sprintEnd ? (
             <>
-              <span className="km-timer" aria-label={`${left} seconds left`}>
+              <span className="km-timer" aria-label={t('map.recall.secondsLeft', { count: left })}>
                 <Icon name="clock" size={16} /> {Math.floor(left / 60)}:{String(left % 60).padStart(2, '0')}
               </span>
               <button type="button" className="btn ghost small" onClick={() => setSprintEnd(null)}>
-                Stop timer
+                {t('map.recall.stopTimer')}
               </button>
             </>
           ) : (
@@ -785,13 +795,13 @@ function RecallPanel({
                 inputRef.current?.focus();
               }}
             >
-              <Icon name="clock" size={16} /> Optional: 2-minute sprint
+              <Icon name="clock" size={16} /> {t('map.recall.sprint')}
             </button>
           )}
         </div>
       )}
       <button type="button" className="btn primary full" onClick={onDone}>
-        {locked ? 'Back to the gaps' : "I'm out of ideas: show me what's left"}
+        {locked ? t('map.recall.backToGaps') : t('map.recall.done')}
       </button>
     </section>
   );
@@ -816,24 +826,24 @@ function GapsPanel({
   onNext: () => void;
   maxLayer: Layer;
 }) {
+  const { t, pct } = useT();
   const score = recallScore(map, scope);
   const gaps = nodes.filter((n) => n.kind === 'island' || n.kind === 'learned');
   const learned = gaps.filter((n) => n.kind === 'learned').length;
   const notes = nodes.filter((n) => n.kind === 'note').length;
   return (
     <section className="panel km-panel">
-      <h2>What don't I know yet?</h2>
+      <h2>{t('map.layer.2.title')}</h2>
       <div className="km-score">
-        <Ring value={score.fraction} size={68} stroke={7} label={`Recalled ${Math.round(score.fraction * 100)}%`}>
-          <strong>{Math.round(score.fraction * 100)}%</strong>
+        <Ring value={score.fraction} size={68} stroke={7} label={t('map.gaps.recalledPct', { pct: pct(score.fraction) })}>
+          <strong>{pct(score.fraction)}</strong>
         </Ring>
         <p>{recallMessage(score)}</p>
       </div>
       {gaps.length > 0 ? (
         <>
           <p className="small muted">
-            The dashed islands are the ideas you didn't recall. Open one to read what it is, follow it to its lesson, then mark it when it
-            makes sense. {learned > 0 && `${learned} of ${gaps.length} marked so far.`}
+            {t('map.gaps.intro')} {learned > 0 && t('map.gaps.marked', { learned, total: gaps.length })}
           </p>
           <ul className="km-islands">
             {gaps.map((n) => (
@@ -852,11 +862,11 @@ function GapsPanel({
           </ul>
         </>
       ) : (
-        <p className="small">No islands: you recalled everything in this part of the course.</p>
+        <p className="small">{t('map.gaps.none')}</p>
       )}
-      {notes > 0 && <p className="small muted">Select one of your own notes to merge it into a course idea if they name the same thing.</p>}
+      {notes > 0 && <p className="small muted">{t('map.gaps.notesHint')}</p>}
       <button type="button" className="btn primary full" onClick={onNext}>
-        {maxLayer >= 3 ? 'Back to connecting' : 'Connect the dots'} →
+        {maxLayer >= 3 ? t('map.gaps.backToConnecting') : t('map.gaps.connect')}
       </button>
     </section>
   );
@@ -883,26 +893,24 @@ function ConnectPanel({
   onCheck: () => void;
   checked: boolean;
 }) {
+  const { t, tx } = useT();
   const [a, setA] = useState('');
   const [b, setB] = useState('');
   const [label, setLabel] = useState('');
   return (
     <section className="panel km-panel">
-      <h2>Connect the dots</h2>
-      <p className="small muted">
-        Tap one idea, then another, to link them, or drag from the dot on an idea. Draw the links you could explain in a sentence; ideas
-        tied to other ideas tend to be easier to recall and use.
-      </p>
+      <h2>{t('map.layer.3.title')}</h2>
+      <p className="small muted">{t('map.connect.intro')}</p>
       {linkFrom && (
         <p className="km-linking">
-          Linking from <strong>{labelOf(linkFrom)}</strong>: now pick a second idea.{' '}
+          {tx('map.linkingFrom', { label: <strong>{labelOf(linkFrom)}</strong> })}{' '}
           <button type="button" className="btn ghost small" onClick={onCancelLink}>
-            Cancel
+            {t('common.cancel')}
           </button>
         </p>
       )}
       <details className="km-linkform">
-        <summary>Or pick two ideas from a list</summary>
+        <summary>{t('map.connect.pickFromList')}</summary>
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -913,9 +921,9 @@ function ConnectPanel({
           }}
         >
           <label>
-            <span>From</span>
+            <span>{t('map.connect.from')}</span>
             <select value={a} onChange={(e) => setA(e.target.value)}>
-              <option value="">Choose an idea</option>
+              <option value="">{t('map.connect.chooseIdea')}</option>
               {nodes.map((n) => (
                 <option key={n.id} value={n.id}>
                   {n.label}
@@ -924,9 +932,9 @@ function ConnectPanel({
             </select>
           </label>
           <label>
-            <span>Link</span>
+            <span>{t('map.connect.link')}</span>
             <select value={label} onChange={(e) => setLabel(e.target.value)}>
-              <option value="">(no label)</option>
+              <option value="">{t('map.noLabel')}</option>
               {vocabulary.map((v) => (
                 <option key={v} value={v}>
                   {v}
@@ -935,9 +943,9 @@ function ConnectPanel({
             </select>
           </label>
           <label>
-            <span>To</span>
+            <span>{t('map.connect.to')}</span>
             <select value={b} onChange={(e) => setB(e.target.value)}>
-              <option value="">Choose an idea</option>
+              <option value="">{t('map.connect.chooseIdea')}</option>
               {nodes
                 .filter((n) => n.id !== a)
                 .map((n) => (
@@ -948,12 +956,12 @@ function ConnectPanel({
             </select>
           </label>
           <button type="submit" className="btn small" disabled={!a || !b || a === b}>
-            Add link
+            {t('map.connect.addLink')}
           </button>
         </form>
       </details>
       <button type="button" className="btn primary full" onClick={onCheck}>
-        {checked ? 'Check again' : 'Check my map'}
+        {checked ? t('map.connect.checkAgain') : t('map.connect.check')}
       </button>
     </section>
   );
@@ -974,49 +982,47 @@ function ResultsPanel({
   onHint: () => void;
   onAddHint: (l: ConceptLink) => void;
 }) {
+  const { t } = useT();
   const got = result.found + result.withHint;
   const extra = Object.values(result.status).filter((s) => s === 'extra').length;
   const more = nextHint(result, map);
   return (
-    <section className="panel km-panel km-results" aria-label="Map check">
-      <h2>Your map vs. the course map</h2>
+    <section className="panel km-panel km-results" aria-label={t('map.results.aria')}>
+      <h2>{t('map.results.title')}</h2>
       <div className="km-tiles">
         <div className="km-tile">
           <strong>
             {got}
             <small>/{result.total}</small>
           </strong>
-          <span>links found{result.withHint ? `, ${result.withHint} with a hint` : ''}</span>
+          <span>{result.withHint ? t('map.results.foundWithHint', { count: got, withHint: result.withHint }) : t('map.results.found', { count: got })}</span>
         </div>
         <div className="km-tile">
           <strong>{chunkList.length}</strong>
-          <span>{chunkList.length === 1 ? 'chunk' : 'chunks'} of understanding</span>
+          <span>{t('map.results.chunks', { count: chunkList.length })}</span>
         </div>
         <div className="km-tile">
           <strong>{extra}</strong>
-          <span>links of your own</span>
+          <span>{t('map.results.ownLinks', { count: extra })}</span>
         </div>
       </div>
-      <ProgressBar value={result.total ? got / result.total : 0} label="Course links found" />
+      <ProgressBar value={result.total ? got / result.total : 0} label={t('map.results.progress')} />
       <p>{linkMessage(result)}</p>
       {chunkList.length > 0 && (
         <>
-          <p className="small muted">A chunk is a group of ideas joined by course links, named after its best-connected idea.</p>
+          <p className="small muted">{t('map.results.chunkExplain')}</p>
           <ul className="km-chunks">
             {chunkList.map((c, i) => (
               <li key={c.name} className="km-chunk" style={{ '--chunk': CHUNK_COLORS[i % CHUNK_COLORS.length] } as CSSProperties}>
                 <strong>{labelOf(c.name)}</strong>
-                <span>{plural(c.members.length, 'idea')}</span>
+                <span>{t('map.results.chunkIdeas', { count: c.members.length })}</span>
               </li>
             ))}
           </ul>
         </>
       )}
       {extra > 0 && (
-        <p className="small muted">
-          {plural(extra, 'link')} you drew {extra === 1 ? "isn't" : "aren't"} in the course map. They might still be true: the course map is
-          one expert's view, not the only one.
-        </p>
+        <p className="small muted">{t('map.results.extra', { count: extra })}</p>
       )}
       {result.shownHints.length > 0 && (
         <ul className="km-hints">
@@ -1026,7 +1032,7 @@ function ResultsPanel({
                 <strong>{labelOf(l.from)}</strong> <em>{l.label}</em> <strong>{labelOf(l.to)}</strong>
               </span>
               <button type="button" className="btn small" onClick={() => onAddHint(l)}>
-                Add to my map
+                {t('map.results.addToMap')}
               </button>
             </li>
           ))}
@@ -1034,7 +1040,7 @@ function ResultsPanel({
       )}
       {result.missed.length > 0 && (
         <button type="button" className="btn small" onClick={onHint} disabled={!more}>
-          <Icon name="bulb" size={16} /> {more ? 'Show a link I missed' : 'All missed links are shown'}
+          <Icon name="bulb" size={16} /> {more ? t('map.results.showHint') : t('map.results.allShown')}
         </button>
       )}
     </section>
@@ -1068,16 +1074,17 @@ function NodePanel({
   onClose: () => void;
   onAnnounce: (s: string) => void;
 }) {
+  const { t, tx } = useT();
   const [mergeTo, setMergeTo] = useState('');
   const reveal = useRevealOnOpen(node.id);
   const c = node.concept;
   const lesson = c ? course.lessons.find((l) => l.id === c.lesson) : undefined;
   const mine = links.filter((l) => l.from === node.id || l.to === node.id);
   return (
-    <section ref={reveal} className={`panel km-panel km-detail ${node.kind}`} aria-label={`Selected: ${node.label}`}>
+    <section ref={reveal} className={`panel km-panel km-detail ${node.kind}`} aria-label={t('map.detail.selected', { label: node.label })}>
       <div className="km-detail-head">
-        <span className={`km-kind ${node.kind}`}>{KIND_TEXT[node.kind]}</span>
-        <button type="button" className="btn ghost small" onClick={onClose} aria-label="Close details">
+        <span className={`km-kind ${node.kind}`}>{t(KIND_TEXT[node.kind])}</span>
+        <button type="button" className="btn ghost small" onClick={onClose} aria-label={t('map.detail.close')}>
           ✕
         </button>
       </div>
@@ -1085,16 +1092,19 @@ function NodePanel({
       {c?.summary && <p>{c.summary}</p>}
       {c && lesson && (node.kind !== 'recalled' || layer > 1) && (
         <p className="small">
-          Taught in{' '}
-          <a href={href('course', course.id, 'lesson', lesson.id)}>
-            <strong>{lesson.title}</strong>
-          </a>
+          {tx('map.detail.taughtIn', {
+            lesson: (
+              <a href={href('course', course.id, 'lesson', lesson.id)}>
+                <strong>{lesson.title}</strong>
+              </a>
+            ),
+          })}
         </p>
       )}
       <div className="km-detail-actions">
         {(node.kind === 'island' || node.kind === 'learned') && lesson && (
           <a className="btn small" href={href('course', course.id, 'lesson', lesson.id)}>
-            Learn this
+            {t('map.detail.learnThis')}
           </a>
         )}
         {node.kind === 'island' && (
@@ -1103,25 +1113,25 @@ function NodePanel({
             className="btn primary small"
             onClick={() => {
               setMap((m) => setLearned(m, node.id, true));
-              onAnnounce(`${node.label}: marked as known now.`);
+              onAnnounce(t('map.announce.markedKnown', { label: node.label }));
             }}
           >
-            <Icon name="check" size={16} /> I know this now
+            <Icon name="check" size={16} /> {t('map.detail.knowNow')}
           </button>
         )}
         {node.kind === 'learned' && (
           <button type="button" className="btn ghost small" onClick={() => setMap((m) => setLearned(m, node.id, false))}>
-            Not yet, actually
+            {t('map.detail.notYet')}
           </button>
         )}
         {layer === 3 && (
           <button type="button" className="btn small" onClick={() => onLinkFrom(node.id)}>
-            Link from here
+            {t('map.detail.linkFromHere')}
           </button>
         )}
         {node.kind === 'recalled' && layer === 1 && (
           <button type="button" className="btn ghost small" onClick={() => setMap((m) => removeNode(m, node.id))}>
-            Remove from my map
+            {t('map.detail.removeFromMap')}
           </button>
         )}
         {node.kind === 'note' && (
@@ -1133,7 +1143,7 @@ function NodePanel({
               onClose();
             }}
           >
-            Delete note
+            {t('map.detail.deleteNote')}
           </button>
         )}
       </div>
@@ -1144,14 +1154,14 @@ function NodePanel({
             e.preventDefault();
             if (!mergeTo) return;
             setMap((m) => mergeNote(m, node.id, mergeTo));
-            onAnnounce(`Merged into ${labelOf(mergeTo)}: it counts as recalled.`);
+            onAnnounce(t('map.announce.merged', { label: labelOf(mergeTo) }));
             onClose();
           }}
         >
           <label>
-            <span className="small">Same idea as a course concept? Merge it:</span>
+            <span className="small">{t('map.detail.mergeLabel')}</span>
             <select value={mergeTo} onChange={(e) => setMergeTo(e.target.value)}>
-              <option value="">Choose a concept</option>
+              <option value="">{t('map.detail.chooseConcept')}</option>
               {scope.concepts.map((x) => (
                 <option key={x.id} value={x.id}>
                   {x.label}
@@ -1160,11 +1170,11 @@ function NodePanel({
             </select>
           </label>
           <button type="submit" className="btn small" disabled={!mergeTo}>
-            Merge
+            {t('map.detail.merge')}
           </button>
         </form>
       )}
-      {node.kind === 'note' && layer === 1 && <p className="small muted">After the reveal you can merge a note into a course concept.</p>}
+      {node.kind === 'note' && layer === 1 && <p className="small muted">{t('map.detail.mergeLater')}</p>}
       {mine.length > 0 && (
         <ul className="km-node-links">
           {mine.map((l) => {
@@ -1172,11 +1182,11 @@ function NodePanel({
             return (
               <li key={pairKey(l.from, l.to)}>
                 <span>
-                  {l.label ? <em>{l.label}</em> : 'linked to'} <strong>{labelOf(other)}</strong>
+                  {l.label ? <em>{l.label}</em> : t('map.link.linkedTo')} <strong>{labelOf(other)}</strong>
                 </span>
                 {layer === 3 && (
-                  <button type="button" className="btn ghost small" onClick={() => setMap((m) => removeLink(m, l.from, l.to))} aria-label={`Remove link to ${labelOf(other)}`}>
-                    Remove
+                  <button type="button" className="btn ghost small" onClick={() => setMap((m) => removeLink(m, l.from, l.to))} aria-label={t('map.detail.removeLinkTo', { label: labelOf(other) })}>
+                    {t('map.detail.remove')}
                   </button>
                 )}
               </li>
@@ -1184,7 +1194,7 @@ function NodePanel({
           })}
         </ul>
       )}
-      {map.recalled.includes(node.id) && layer > 1 && <p className="small muted">You recalled this one from memory.</p>}
+      {map.recalled.includes(node.id) && layer > 1 && <p className="small muted">{t('map.detail.recalledFromMemory')}</p>}
     </section>
   );
 }
@@ -1210,26 +1220,27 @@ function LinkPanel({
   setMap: SetMap;
   onClose: () => void;
 }) {
+  const { t, tx } = useT();
   const reveal = useRevealOnOpen(linkKey);
   const l = map.links.find((x) => pairKey(x.from, x.to) === linkKey);
   if (!l) return null;
   const status = result.status[linkKey];
   const expert = scope.links.find((x) => pairKey(x.from, x.to) === linkKey);
   return (
-    <section ref={reveal} className="panel km-panel km-detail" aria-label="Selected link">
+    <section ref={reveal} className="panel km-panel km-detail" aria-label={t('map.detail.selectedLink')}>
       <div className="km-detail-head">
-        <span className="km-kind">Link</span>
-        <button type="button" className="btn ghost small" onClick={onClose} aria-label="Close details">
+        <span className="km-kind">{t('map.detail.linkKind')}</span>
+        <button type="button" className="btn ghost small" onClick={onClose} aria-label={t('map.detail.close')}>
           ✕
         </button>
       </div>
       <p className="km-sentence">
-        <strong>{labelOf(l.from)}</strong> <em>{l.label ?? 'is linked to'}</em> <strong>{labelOf(l.to)}</strong>
+        <strong>{labelOf(l.from)}</strong> <em>{l.label ?? t('map.link.isLinkedTo')}</em> <strong>{labelOf(l.to)}</strong>
       </p>
       <label className="km-field">
-        <span className="small">Label</span>
+        <span className="small">{t('map.detail.label')}</span>
         <select value={l.label ?? ''} onChange={(e) => setMap((m) => addLink(m, l.from, l.to, e.target.value || undefined))}>
-          <option value="">(no label)</option>
+          <option value="">{t('map.noLabel')}</option>
           {[...new Set([...(l.label ? [l.label] : []), ...vocabulary])].map((v) => (
             <option key={v} value={v}>
               {v}
@@ -1239,14 +1250,13 @@ function LinkPanel({
       </label>
       {checked && status && (
         <p className={`small km-status ${status}`}>
-          {expert && status !== 'extra' ? (
-            <>
-              In the course map{status === 'hinted' ? ' (found with a hint)' : ''}: {labelOf(expert.from)} <em>{expert.label}</em>{' '}
-              {labelOf(expert.to)}.
-            </>
-          ) : (
-            "Not in the course map. It might still be true: can you say how they're related?"
-          )}
+          {expert && status !== 'extra'
+            ? tx(status === 'hinted' ? 'map.detail.inCourseMapHinted' : 'map.detail.inCourseMap', {
+                from: labelOf(expert.from),
+                label: <em>{expert.label}</em>,
+                to: labelOf(expert.to),
+              })
+            : t('map.detail.notInCourseMap')}
         </p>
       )}
       <div className="km-detail-actions">
@@ -1254,9 +1264,9 @@ function LinkPanel({
           type="button"
           className="btn small"
           onClick={() => setMap((m) => addLink(removeLink(m, l.from, l.to), l.to, l.from, l.label))}
-          aria-label="Swap direction"
+          aria-label={t('map.detail.swap')}
         >
-          Swap direction
+          {t('map.detail.swap')}
         </button>
         <button
           type="button"
@@ -1266,7 +1276,7 @@ function LinkPanel({
             onClose();
           }}
         >
-          Remove link
+          {t('map.detail.removeLink')}
         </button>
       </div>
     </section>
@@ -1274,34 +1284,35 @@ function LinkPanel({
 }
 
 function Legend({ layer, checked }: { layer: Layer; checked: boolean }) {
+  const { t } = useT();
   return (
-    <ul className="km-legend" aria-label="Legend">
+    <ul className="km-legend" aria-label={t('map.legend')}>
       <li>
-        <span className="km-swatch recalled" /> From memory
+        <span className="km-swatch recalled" /> {t('map.legend.fromMemory')}
       </li>
       <li>
-        <span className="km-swatch note" /> Your note
+        <span className="km-swatch note" /> {t('map.legend.yourNote')}
       </li>
       {layer > 1 && (
         <>
           <li>
-            <span className="km-swatch island" /> Not yet
+            <span className="km-swatch island" /> {t('map.legend.notYet')}
           </li>
           <li>
-            <span className="km-swatch learned" /> Learned since
+            <span className="km-swatch learned" /> {t('map.legend.learnedSince')}
           </li>
         </>
       )}
       {layer === 3 && checked && (
         <>
           <li>
-            <span className="km-line found" /> In the course map
+            <span className="km-line found" /> {t('map.legend.inCourseMap')}
           </li>
           <li>
-            <span className="km-line extra" /> Your own link
+            <span className="km-line extra" /> {t('map.legend.ownLink')}
           </li>
           <li>
-            <span className="km-line hint" /> Hint
+            <span className="km-line hint" /> {t('map.legend.hint')}
           </li>
         </>
       )}
@@ -1334,23 +1345,28 @@ function ListView({
   onSelectNode: (id: string) => void;
   onSelectLink: (key: string) => void;
 }) {
-  const groups: { title: string; kinds: MapNode['kind'][] }[] = [
-    { title: 'From memory', kinds: ['recalled'] },
-    { title: 'Your own notes', kinds: ['note'] },
-    { title: 'Learned since', kinds: ['learned'] },
-    { title: 'Not yet', kinds: ['island'] },
+  const { t } = useT();
+  const groups: { title: MessageKey; kinds: MapNode['kind'][] }[] = [
+    { title: 'map.legend.fromMemory', kinds: ['recalled'] },
+    { title: 'map.list.ownNotes', kinds: ['note'] },
+    { title: 'map.legend.learnedSince', kinds: ['learned'] },
+    { title: 'map.legend.notYet', kinds: ['island'] },
   ];
-  const statusText = { found: 'in the course map', hinted: 'in the course map, with a hint', extra: 'your own link' };
+  const statusText: Record<'found' | 'hinted' | 'extra', MessageKey> = {
+    found: 'map.list.status.found',
+    hinted: 'map.list.status.hinted',
+    extra: 'map.list.status.extra',
+  };
   return (
     <div className="km-list">
-      {!nodes.length && <p className="muted small">Nothing on your map yet. Add the first idea you remember.</p>}
+      {!nodes.length && <p className="muted small">{t('map.list.empty')}</p>}
       {groups.map((g) => {
         const items = nodes.filter((n) => g.kinds.includes(n.kind));
         if (!items.length) return null;
         return (
           <section key={g.title}>
             <h3>
-              {g.title} <span className="muted small">{items.length}</span>
+              {t(g.title)} <span className="muted small">{items.length}</span>
             </h3>
             <ul>
               {items.map((n) => (
@@ -1364,7 +1380,7 @@ function ListView({
                     {n.kind === 'note' && <Icon name="pencil" size={14} />}
                     {n.kind === 'learned' && <Icon name="check" size={14} />}
                     {n.label}
-                    {layer === 3 && <span className="sr-only">{linkFrom && linkFrom !== n.id ? ' (link to this)' : ' (start a link)'}</span>}
+                    {layer === 3 && <span className="sr-only"> {linkFrom && linkFrom !== n.id ? t('map.list.linkToThis') : t('map.list.startLink')}</span>}
                   </button>
                 </li>
               ))}
@@ -1375,7 +1391,7 @@ function ListView({
       {layer === 3 && (
         <section>
           <h3>
-            Links <span className="muted small">{links.length}</span>
+            {t('map.list.links')} <span className="muted small">{links.length}</span>
           </h3>
           {links.length ? (
             <ul>
@@ -1390,15 +1406,15 @@ function ListView({
                       aria-pressed={selected?.type === 'link' && selected.key === key}
                       onClick={() => onSelectLink(key)}
                     >
-                      <strong>{labelOf(l.from)}</strong> <em>{l.label ?? 'linked to'}</em> <strong>{labelOf(l.to)}</strong>
-                      {st && <span className="km-list-status">{statusText[st]}</span>}
+                      <strong>{labelOf(l.from)}</strong> <em>{l.label ?? t('map.link.linkedTo')}</em> <strong>{labelOf(l.to)}</strong>
+                      {st && <span className="km-list-status">{t(statusText[st])}</span>}
                     </button>
                   </li>
                 );
               })}
             </ul>
           ) : (
-            <p className="muted small">No links yet. Select one idea, then another.</p>
+            <p className="muted small">{t('map.list.noLinks')}</p>
           )}
         </section>
       )}
@@ -1461,6 +1477,7 @@ function Canvas({
   onMove: (id: string, p: Pos) => void;
   onLink: (a: string, b: string) => void;
 }) {
+  const { t } = useT();
   const ref = useRef<HTMLDivElement>(null);
   const gesture = useRef<Gesture | null>(null);
   const pointers = useRef(new Map<number, Pos>());
@@ -1511,8 +1528,8 @@ function Canvas({
       return;
     }
     if (pointers.current.size > 2) return;
-    const t = e.target as Element;
-    const handle = t.closest('[data-handle]');
+    const target = e.target as Element;
+    const handle = target.closest('[data-handle]');
     if (handle) {
       const from = handle.getAttribute('data-handle')!;
       gesture.current = { kind: 'link', from };
@@ -1520,13 +1537,13 @@ function Canvas({
       e.preventDefault();
       return;
     }
-    const node = t.closest('[data-node]');
+    const node = target.closest('[data-node]');
     if (node) {
       const id = node.getAttribute('data-node')!;
       gesture.current = { kind: 'node', id, s: p, start: posRef.current[id] ?? { x: 0, y: 0 }, moved: false };
       return;
     }
-    const edge = t.closest('[data-edge]');
+    const edge = target.closest('[data-edge]');
     if (edge) {
       gesture.current = { kind: 'edge', key: edge.getAttribute('data-edge')!, s: p };
       return;
@@ -1629,7 +1646,7 @@ function Canvas({
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
       role="group"
-      aria-label="Knowledge map canvas. Drag to pan, pinch or scroll to zoom. Ideas are buttons; arrow keys move the focused idea. The List view shows the same map as lists."
+      aria-label={t('map.canvas.aria')}
     >
       <div className="km-world" style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.k})` }}>
         <svg className="km-edges" width={2 * OFF} height={2 * OFF} style={{ left: -OFF, top: -OFF }} aria-hidden>
@@ -1695,7 +1712,10 @@ function Canvas({
               className={`km-node ${n.kind}${sel ? ' sel' : ''}${linkFrom === n.id ? ' from' : ''}${popId === n.id ? ' pop' : ''}${ci !== undefined ? ' in-chunk' : ''}`}
               style={{ left: p.x, top: p.y, ...(ci !== undefined ? ({ '--chunk': CHUNK_COLORS[ci % CHUNK_COLORS.length] } as CSSProperties) : {}) }}
               aria-pressed={sel}
-              aria-label={`${n.label}, ${KIND_TEXT[n.kind]}${layer === 3 ? (linkFrom && linkFrom !== n.id ? '. Press to link.' : '. Press to start a link.') : ''}`}
+              aria-label={t(layer !== 3 ? 'map.canvas.node' : linkFrom && linkFrom !== n.id ? 'map.canvas.nodeLinkTo' : 'map.canvas.nodeStartLink', {
+                label: n.label,
+                kind: t(KIND_TEXT[n.kind]),
+              })}
               onClick={(e) => {
                 // Pointer taps are handled by the gesture code; this covers Enter and Space.
                 if (e.detail === 0) onTapNode(n.id);
@@ -1705,13 +1725,13 @@ function Canvas({
               {n.kind === 'note' && <Icon name="pencil" size={13} />}
               {n.kind === 'learned' && <Icon name="check" size={13} />}
               <span className="km-node-label">{n.label}</span>
-              {chunkNames.has(n.id) && <span className="km-chunk-tag">chunk</span>}
+              {chunkNames.has(n.id) && <span className="km-chunk-tag">{t('map.canvas.chunkTag')}</span>}
               {layer === 3 && <span className="km-handle" data-handle={n.id} aria-hidden />}
             </button>
           );
         })}
       </div>
-      {!nodes.length && <p className="km-empty">Your map is empty. Type the first idea you remember.</p>}
+      {!nodes.length && <p className="km-empty">{t('map.canvas.empty')}</p>}
     </div>
   );
 }

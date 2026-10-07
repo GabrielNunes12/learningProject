@@ -2,6 +2,7 @@
 // (the law of large numbers). Logic lives in src/lib/dicesim.ts.
 import { useEffect, useId, useMemo, useRef, useState, type PointerEvent } from 'react';
 import { emptyState, exactLabel, exactProbability, makeRng, pct, rollBatch, totalCounts, totalsRange, type DiceState, type RatePoint } from '../../lib/dicesim';
+import { useT } from '../../i18n/react';
 import type { SimProps } from './SimStepView';
 import { useChartWidth } from './useChartWidth';
 import './DiceSim.css';
@@ -9,24 +10,26 @@ import './DiceSim.css';
 const BATCHES = [1, 10, 100, 1000];
 const PIPS: Record<number, number[]> = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
 
-const fmt = (n: number) => n.toLocaleString('en-US');
-
-function listOr(items: string[]): string {
-  if (items.length <= 1) return items.join('');
-  return `${items.slice(0, -1).join(', ')} or ${items[items.length - 1]}`;
-}
+/** What the status line says after an action; kept as data so it is worded in the current language. */
+type Announce =
+  | { kind: 'one'; faces: number[]; total: number; hit: boolean; hits: number; rolls: number }
+  | { kind: 'batch'; times: number; newHits: number; hits: number; rolls: number }
+  | { kind: 'reset' }
+  | null;
 
 export function DiceSim({ step, onGoal }: SimProps<'dice'>) {
+  // pct() from dicesim keeps one decimal (16.7%) and is formatted for the active language.
+  const { t, n, list } = useT();
   const { dice, sides, target, goalRolls } = step;
   const coin = dice === 1 && sides === 2;
-  const faceName = (f: number) => (coin ? (f === 1 ? 'Heads' : 'Tails') : String(f));
-  const totalName = (t: number) => (coin ? (t === 1 ? 'H' : 'T') : String(t));
+  const faceName = (f: number) => (coin ? (f === 1 ? t('sims.dice.heads') : t('sims.dice.tails')) : String(f));
+  const totalName = (v: number) => (coin ? (v === 1 ? t('sims.dice.headsShort') : t('sims.dice.tailsShort')) : String(v));
 
   const cfg = `${dice}/${sides}/${target.join(',')}`;
   const [state, setState] = useState<DiceState>(() => emptyState(dice, sides));
   const [rollId, setRollId] = useState(0);
   const [lastBatch, setLastBatch] = useState(0);
-  const [announce, setAnnounce] = useState('');
+  const [announce, setAnnounce] = useState<Announce>(null);
   const rng = useRef(makeRng());
 
   const exact = useMemo(() => exactProbability(dice, sides, target), [dice, sides, target]);
@@ -36,7 +39,9 @@ export function DiceSim({ step, onGoal }: SimProps<'dice'>) {
   }, [dice, sides, exact.outcomes]);
   const targets = useMemo(() => new Set(target), [target]);
 
-  const hitWord = coin ? listOr(target.map((t) => faceName(t).toLowerCase())) : dice === 1 ? `a ${listOr(target.map(String))}` : `a total of ${listOr(target.map(String))}`;
+  const hitWord = coin
+    ? list(target.map((f) => (f === 1 ? t('sims.dice.headsLower') : t('sims.dice.tailsLower'))), 'disjunction')
+    : t(dice === 1 ? 'sims.dice.targetFace' : 'sims.dice.targetTotal', { values: list(target.map(String), 'disjunction') });
 
   // a new configuration starts from scratch
   const first = useRef(true);
@@ -47,7 +52,7 @@ export function DiceSim({ step, onGoal }: SimProps<'dice'>) {
     }
     setState(emptyState(dice, sides));
     setLastBatch(0);
-    setAnnounce('');
+    setAnnounce(null);
   }, [cfg, dice, sides]);
 
   useEffect(() => {
@@ -62,22 +67,38 @@ export function DiceSim({ step, onGoal }: SimProps<'dice'>) {
     setLastBatch(times);
     if (times === 1) {
       const total = next.last.reduce((s, f) => s + f, 0);
-      const shown = coin ? faceName(next.last[0]) : dice === 1 ? `a ${total}` : `${next.last.join(' + ')} = ${total}`;
-      setAnnounce(`Rolled ${shown}. ${newHits ? 'Hit!' : 'Miss.'} Observed ${pct(next.hits / next.rolls)} after ${fmt(next.rolls)} roll${next.rolls === 1 ? '' : 's'}.`);
+      setAnnounce({ kind: 'one', faces: next.last, total, hit: newHits > 0, hits: next.hits, rolls: next.rolls });
     } else {
-      setAnnounce(`${fmt(times)} more ${coin ? 'flips' : 'rolls'}: ${fmt(newHits)} hit${newHits === 1 ? '' : 's'}. Observed ${pct(next.hits / next.rolls)} after ${fmt(next.rolls)}.`);
+      setAnnounce({ kind: 'batch', times, newHits, hits: next.hits, rolls: next.rolls });
     }
   }
 
   function reset() {
     setState(emptyState(dice, sides));
     setLastBatch(0);
-    setAnnounce('Reset. No rolls yet.');
+    setAnnounce({ kind: 'reset' });
+  }
+
+  function announceText(a: Announce): string {
+    if (!a) return t(coin ? 'sims.dice.startFlip' : 'sims.dice.startRoll', { target: hitWord });
+    if (a.kind === 'reset') return t('sims.dice.resetDone');
+    const observedNow = pct(a.hits / a.rolls);
+    if (a.kind === 'one') {
+      const rolled =
+        coin ? t('sims.dice.rolledFace', { face: faceName(a.faces[0]) })
+        : dice === 1 ? t('sims.dice.rolledOne', { total: a.total })
+        : t('sims.dice.rolledSum', { sum: a.faces.join(' + '), total: a.total });
+      return [rolled, t(a.hit ? 'sims.dice.hit' : 'sims.dice.miss'), t('sims.dice.observedAfterRolls', { observed: observedNow, count: a.rolls })].join(' ');
+    }
+    const hits = t('sims.dice.hits', { count: a.newHits });
+    return [
+      t(coin ? 'sims.dice.moreFlips' : 'sims.dice.moreRolls', { count: a.times, hits }),
+      t('sims.dice.observedAfter', { observed: observedNow, count: a.rolls }),
+    ].join(' ');
   }
 
   const observed = state.rolls ? state.hits / state.rolls : 0;
   const gap = state.rolls ? Math.abs(observed - exact.p) * 100 : 0;
-  const unit = coin ? 'flip' : 'roll';
 
   return (
     <div className="dice-sim">
@@ -86,7 +107,7 @@ export function DiceSim({ step, onGoal }: SimProps<'dice'>) {
           {(state.last.length ? state.last : new Array(dice).fill(0)).map((f, i) =>
             coin ? (
               <span key={`${rollId}-${i}`} className={`ds-coin${f === 2 ? ' tails' : ''}${f === 0 ? ' blank' : ''}${lastBatch === 1 ? ' anim' : ''}`}>
-                {f === 0 ? '?' : f === 1 ? 'H' : 'T'}
+                {f === 0 ? '?' : totalName(f)}
               </span>
             ) : (
               <span
@@ -101,48 +122,51 @@ export function DiceSim({ step, onGoal }: SimProps<'dice'>) {
           {state.last.length > 0 && (
             <span className={`ds-total${targets.has(state.last.reduce((s, f) => s + f, 0)) ? ' hit' : ''}`}>
               {coin ? faceName(state.last[0]) : dice > 1 ? `= ${state.last.reduce((s, f) => s + f, 0)}` : ''}
-              {targets.has(state.last.reduce((s, f) => s + f, 0)) && <b> hit</b>}
+              {targets.has(state.last.reduce((s, f) => s + f, 0)) && <b> {t('sims.dice.hitBadge')}</b>}
             </span>
           )}
         </div>
-        <div className="ds-buttons" role="group" aria-label={coin ? 'Flip the coin' : 'Roll the dice'}>
+        <div className="ds-buttons" role="group" aria-label={coin ? t('sims.dice.flipGroup') : t('sims.dice.rollGroup')}>
           {BATCHES.map((b) => (
             <button key={b} className={`btn small${b === 1 ? ' primary' : ''}`} onClick={() => roll(b)}>
-              {coin ? 'Flip' : 'Roll'} ×{fmt(b)}
+              {t(coin ? 'sims.dice.flipTimes' : 'sims.dice.rollTimes', { count: b })}
             </button>
           ))}
           <button className="btn small ghost" onClick={reset} disabled={state.rolls === 0}>
-            Reset
+            {t('sims.dice.reset')}
           </button>
         </div>
       </div>
 
       <p className="ds-announce" role="status" aria-live="polite">
-        {announce || `Target: ${hitWord}. ${coin ? 'Flip' : 'Roll'} to start.`}
+        {announceText(announce)}
       </p>
 
       <dl className="ds-stats">
         <div>
-          <dt>{coin ? 'Flips' : 'Rolls'}</dt>
-          <dd>{fmt(state.rolls)}</dd>
+          <dt>{coin ? t('sims.dice.flips') : t('sims.dice.rolls')}</dt>
+          <dd>{n(state.rolls)}</dd>
         </div>
         <div>
-          <dt>Hits ({hitWord})</dt>
-          <dd>{fmt(state.hits)}</dd>
+          <dt>{t('sims.dice.hitsOf', { target: hitWord })}</dt>
+          <dd>{n(state.hits)}</dd>
         </div>
         <div>
-          <dt>Observed</dt>
+          <dt>{t('sims.dice.observed')}</dt>
           <dd>{state.rolls ? pct(observed) : '–'}</dd>
         </div>
         <div className="exact">
-          <dt>Exact</dt>
+          <dt>{t('sims.dice.exact')}</dt>
           <dd>{exactLabel(exact)}</dd>
         </div>
       </dl>
       <p className="ds-gap small muted">
         {state.rolls
-          ? `After ${fmt(state.rolls)} ${unit}${state.rolls === 1 ? '' : 's'}, observed is ${gap.toFixed(1)} percentage points from exact.`
-          : `${exact.outcomes} equally likely ${dice > 1 ? 'ordered outcomes' : 'outcomes'}, ${exact.hits} of them hit${exact.hits === 1 ? 's' : ''}.`}
+          ? t(coin ? 'sims.dice.gapFlips' : 'sims.dice.gapRolls', {
+              count: state.rolls,
+              gap: n(gap, { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
+            })
+          : t(dice > 1 ? 'sims.dice.orderedOutcomes' : 'sims.dice.outcomes', { outcomes: exact.outcomes, count: exact.hits })}
       </p>
 
       <Histogram
@@ -154,7 +178,7 @@ export function DiceSim({ step, onGoal }: SimProps<'dice'>) {
         name={totalName}
         coin={coin}
       />
-      <RateChart series={state.series} p={exact.p} label={pct(exact.p)} hitWord={hitWord} unit={unit} />
+      <RateChart series={state.series} p={exact.p} label={pct(exact.p)} hitWord={hitWord} coin={coin} />
     </div>
   );
 }
@@ -176,20 +200,21 @@ function Histogram({
   name: (t: number) => string;
   coin: boolean;
 }) {
+  const { t: tr, n } = useT();
   const share = (t: number) => (rolls ? counts[t] / rolls : 0);
   const max = Math.max(...totals.map((t) => Math.max(expected[t], share(t)))) * 1.08 || 1;
   const labelEvery = totals.length <= 13 ? 1 : totals.length <= 26 ? 2 : 5;
   return (
-    <figure className="ds-hist" aria-label={coin ? 'How often each side came up, against the exact share' : 'How often each total came up, against the exact share'}>
+    <figure className="ds-hist" aria-label={coin ? tr('sims.dice.histSides') : tr('sims.dice.histTotals')}>
       <figcaption className="ds-legend">
         <span>
-          <i className="sw obs" /> observed
+          <i className="sw obs" /> {tr('sims.dice.legendObserved')}
         </span>
         <span>
-          <i className="sw hit" /> target
+          <i className="sw hit" /> {tr('sims.dice.legendTarget')}
         </span>
         <span>
-          <i className="sw exp" /> exact
+          <i className="sw exp" /> {tr('sims.dice.legendExact')}
         </span>
       </figcaption>
       <div className="ds-bars" style={{ gap: totals.length > 26 ? 1 : 3 }}>
@@ -197,7 +222,11 @@ function Histogram({
           <div
             key={t}
             className="ds-slot tip"
-            data-tip={`${name(t)}: ${rolls ? `${pct(share(t))} seen` : 'not rolled yet'} · exact ${pct(expected[t])}`}
+            data-tip={
+              rolls
+                ? tr('sims.dice.barTipSeen', { name: name(t), observed: pct(share(t)), exact: pct(expected[t]) })
+                : tr('sims.dice.barTipNotRolled', { name: name(t), exact: pct(expected[t]) })
+            }
           >
             <div className={`ds-bar${targets.has(t) ? ' hit' : ''}`} style={{ height: `${(share(t) / max) * 100}%` }} />
             <div className="ds-ghost" style={{ height: `${(expected[t] / max) * 100}%` }} />
@@ -211,36 +240,34 @@ function Histogram({
           </span>
         ))}
       </div>
-      <table className="sr-only">
+      <div className="sr-only"><table>
         <thead>
           <tr>
-            <th>{coin ? 'Side' : 'Total'}</th>
-            <th>Times seen</th>
-            <th>Observed share</th>
-            <th>Exact share</th>
+            <th>{coin ? tr('sims.dice.colSide') : tr('sims.dice.colTotal')}</th>
+            <th>{tr('sims.dice.colSeen')}</th>
+            <th>{tr('sims.dice.colObserved')}</th>
+            <th>{tr('sims.dice.colExact')}</th>
           </tr>
         </thead>
         <tbody>
           {totals.map((t) => (
             <tr key={t}>
-              <th>
-                {name(t)}
-                {targets.has(t) ? ' (target)' : ''}
-              </th>
-              <td>{counts[t]}</td>
+              <th>{targets.has(t) ? tr('sims.dice.targetRow', { name: name(t) }) : name(t)}</th>
+              <td>{n(counts[t])}</td>
               <td>{rolls ? pct(share(t)) : '–'}</td>
               <td>{pct(expected[t])}</td>
             </tr>
           ))}
         </tbody>
-      </table>
+      </table></div>
     </figure>
   );
 }
 
 const NICE = [0.05, 0.1, 0.2, 0.25, 0.5, 1];
 
-function RateChart({ series, p, label, hitWord, unit }: { series: RatePoint[]; p: number; label: string; hitWord: string; unit: string }) {
+function RateChart({ series, p, label, hitWord, coin }: { series: RatePoint[]; p: number; label: string; hitWord: string; coin: boolean }) {
+  const { t, n, pct: pctWhole } = useT();
   const [ref, width] = useChartWidth<HTMLDivElement>();
   const clipId = useId();
   const [hover, setHover] = useState<RatePoint | null>(null);
@@ -256,7 +283,7 @@ function RateChart({ series, p, label, hitWord, unit }: { series: RatePoint[]; p
   const path = series.map((pt, i) => `${i ? 'L' : 'M'}${x(pt.rolls).toFixed(1)},${y(pt.rate).toFixed(1)}`).join('');
   const xTicks = Array.from({ length: xMaxLog + 1 }, (_, i) => 10 ** i);
   const yTicks = [0, yMax / 2, yMax];
-  const tickLabel = (v: number) => (v >= 1000 ? `${v / 1000}k` : String(v));
+  const tickLabel = (v: number) => (v >= 1000 ? t('sims.dice.thousands', { count: v / 1000 }) : n(v));
 
   function onMove(e: PointerEvent<SVGSVGElement>) {
     if (!series.length) return;
@@ -272,7 +299,7 @@ function RateChart({ series, p, label, hitWord, unit }: { series: RatePoint[]; p
   return (
     <figure className="ds-rate" ref={ref}>
       <figcaption className="ds-rate-title">
-        Hit rate so far <span className="muted small">({unit}s on a log scale)</span>
+        {t('sims.dice.rateTitle')} <span className="muted small">{coin ? t('sims.dice.logScaleFlips') : t('sims.dice.logScaleRolls')}</span>
       </figcaption>
       <svg
         width={width}
@@ -280,8 +307,8 @@ function RateChart({ series, p, label, hitWord, unit }: { series: RatePoint[]; p
         role="img"
         aria-label={
           last
-            ? `Running hit rate for ${hitWord}: ${pct(last.rate)} after ${fmt(last.rolls)} ${unit}s; the exact probability is ${label}.`
-            : `Running hit rate: no ${unit}s yet. The exact probability is ${label}.`
+            ? t(coin ? 'sims.dice.rateAriaFlips' : 'sims.dice.rateAriaRolls', { target: hitWord, rate: pct(last.rate), count: last.rolls, exact: label })
+            : t(coin ? 'sims.dice.rateAriaNoFlips' : 'sims.dice.rateAriaNoRolls', { exact: label })
         }
         onPointerMove={onMove}
         onPointerLeave={() => setHover(null)}
@@ -295,7 +322,7 @@ function RateChart({ series, p, label, hitWord, unit }: { series: RatePoint[]; p
           <g key={v}>
             <line className="ds-grid" x1={pad.l} x2={pad.l + plotW} y1={y(v)} y2={y(v)} />
             <text className="ds-axis" x={pad.l - 6} y={y(v) + 4} textAnchor="end">
-              {Math.round(v * 100)}%
+              {pctWhole(v)}
             </text>
           </g>
         ))}
@@ -306,7 +333,7 @@ function RateChart({ series, p, label, hitWord, unit }: { series: RatePoint[]; p
         ))}
         <line className="ds-exact" x1={pad.l} x2={pad.l + plotW} y1={y(p)} y2={y(p)} />
         <text className="ds-exact-label" x={pad.l + plotW} y={y(p) - 6} textAnchor="end">
-          exact {label}
+          {t('sims.dice.exactLine', { exact: label })}
         </text>
         {series.length > 0 && (
           <g clipPath={`url(#${clipId})`}>
@@ -316,7 +343,7 @@ function RateChart({ series, p, label, hitWord, unit }: { series: RatePoint[]; p
         )}
         {!series.length && (
           <text className="ds-axis" x={pad.l + plotW / 2} y={pad.t + plotH / 2 + 18} textAnchor="middle">
-            {unit === 'flip' ? 'Flip' : 'Roll'} to draw the line
+            {coin ? t('sims.dice.flipToDraw') : t('sims.dice.rollToDraw')}
           </text>
         )}
         {hover && (
@@ -324,7 +351,7 @@ function RateChart({ series, p, label, hitWord, unit }: { series: RatePoint[]; p
             <line x1={x(hover.rolls)} x2={x(hover.rolls)} y1={pad.t} y2={pad.t + plotH} />
             <circle cx={x(hover.rolls)} cy={y(Math.min(hover.rate, yMax))} r={4.5} />
             <text x={Math.min(Math.max(x(hover.rolls), pad.l + 70), pad.l + plotW - 70)} y={pad.t + 12} textAnchor="middle">
-              {`${fmt(hover.rolls)} ${unit}${hover.rolls === 1 ? '' : 's'}: ${pct(hover.rate)}`}
+              {t(coin ? 'sims.dice.hoverFlips' : 'sims.dice.hoverRolls', { count: hover.rolls, rate: pct(hover.rate) })}
             </text>
           </g>
         )}

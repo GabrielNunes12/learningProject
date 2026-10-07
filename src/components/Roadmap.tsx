@@ -13,10 +13,12 @@ import { courseStats } from '../lib/stats';
 import { useProgress, type Progress } from '../lib/storage';
 import type { Course } from '../types';
 import { Page, PageHeader } from './Layout';
-import { accentStyle, plural, ProgressBar, Ring } from './ui';
+import { accentStyle, ProgressBar, Ring } from './ui';
 import './Roadmap.css';
 import { CourseIcon } from './CourseIcon';
 import { Icon } from './icons';
+import { categoryLabel, formatList, formatPercent, levelLabel, t, type MessageKey } from '../i18n/core';
+import { useT } from '../i18n/react';
 
 // ---------- data ----------
 
@@ -40,11 +42,18 @@ interface TrackInfo {
   next?: string;
 }
 
-const STATUS_LABEL: Record<NodeStatus, string> = {
-  done: 'Done',
-  'in-progress': 'In progress',
-  'up-next': 'Up next',
-  later: 'Later',
+const STATUS_KEY: Record<NodeStatus, MessageKey> = {
+  done: 'roadmap.status.done',
+  'in-progress': 'roadmap.status.inProgress',
+  'up-next': 'roadmap.status.upNext',
+  later: 'roadmap.status.later',
+};
+const statusLabel = (s: NodeStatus) => t(STATUS_KEY[s]);
+const LEGEND_KEY: Record<NodeStatus, MessageKey> = {
+  done: 'roadmap.legend.done',
+  'in-progress': 'roadmap.legend.inProgress',
+  'up-next': 'roadmap.legend.upNext',
+  later: 'roadmap.legend.later',
 };
 const STATUS_MARK: Record<NodeStatus, string> = { done: '✓', 'in-progress': '◐', 'up-next': '→', later: '○' };
 
@@ -90,22 +99,20 @@ function defaultTrack(infos: TrackInfo[]): TrackInfo | undefined {
 // ---------- page ----------
 
 export function Roadmap({ trackId }: { trackId?: string }) {
+  const { t, tx, pct } = useT();
   const infos = useTracks();
   const current = infos.find((t) => t.track.id === trackId) ?? defaultTrack(infos);
 
   if (!current) {
     return (
       <Page>
-        <PageHeader title="Roadmap" />
+        <PageHeader title={t('roadmap.title')} />
         <div className="panel rm-empty">
           <Icon name="route" size={56} />
           <p>
-            <strong>The roadmap isn't available right now.</strong>
+            <strong>{t('roadmap.unavailable')}</strong>
           </p>
-          <p className="muted">
-            Its tracks couldn't be loaded. In the meantime, every course is still open on the{' '}
-            <a href="#/courses">Courses</a> page.
-          </p>
+          <p className="muted">{tx('roadmap.unavailableHelp', {}, { link: (c) => <a href="#/courses">{c}</a> })}</p>
         </div>
       </Page>
     );
@@ -113,25 +120,22 @@ export function Roadmap({ trackId }: { trackId?: string }) {
 
   return (
     <Page wide>
-      <PageHeader
-        title="Roadmap"
-        subtitle="Tracks chain courses toward a goal. Follow the lines in order — or jump anywhere, nothing is locked."
-      />
+      <PageHeader title={t('roadmap.title')} subtitle={t('roadmap.subtitle')} />
 
-      <nav className="rm-tracks" aria-label="Tracks">
-        {infos.map((t) => {
-          const on = t === current;
-          const pct = Math.round(t.fraction * 100);
+      <nav className="rm-tracks" aria-label={t('roadmap.tracks')}>
+        {infos.map((info) => {
+          const on = info === current;
+          const done = pct(info.fraction);
           return (
-            <a key={t.track.id} className={`rm-track${on ? ' on' : ''}`} href={href('roadmap', t.track.id)} aria-current={on ? 'page' : undefined}>
-              <CourseIcon icon={t.track.icon} size={44} />
+            <a key={info.track.id} className={`rm-track${on ? ' on' : ''}`} href={href('roadmap', info.track.id)} aria-current={on ? 'page' : undefined}>
+              <CourseIcon icon={info.track.icon} size={44} />
               <span className="rm-track-body">
-                <strong>{t.track.title}</strong>
-                <span className="rm-track-desc">{t.track.description}</span>
+                <strong>{info.track.title}</strong>
+                <span className="rm-track-desc">{info.track.description}</span>
                 <span className="rm-track-progress">
-                  <ProgressBar value={t.fraction} thin label={`${t.track.title}: ${pct}% complete`} />
+                  <ProgressBar value={info.fraction} thin label={t('roadmap.trackComplete', { track: info.track.title, pct: done })} />
                   <span className="small muted">
-                    {pct}% · {t.doneCount}/{plural(t.nodes.length, 'course')}
+                    {t('roadmap.trackProgress', { pct: done, done: info.doneCount, total: info.nodes.length, count: info.nodes.length })}
                   </span>
                 </span>
               </span>
@@ -167,6 +171,7 @@ function useWidth<T extends HTMLElement>() {
 }
 
 function TrackMap({ info }: { info: TrackInfo }) {
+  const { t } = useT();
   const [wrapRef, width] = useWidth<HTMLDivElement>();
   const [openId, setOpenId] = useState<string>();
   const nodeRefs = useRef(new Map<string, HTMLButtonElement>());
@@ -193,19 +198,21 @@ function TrackMap({ info }: { info: TrackInfo }) {
           </h2>
           <p className="muted small">
             {info.doneCount === info.nodes.length
-              ? `Track complete — all ${info.nodes.length} courses done.`
-              : `${info.doneCount} of ${plural(info.nodes.length, 'course')} done${next ? ` · Next: ${next.course.title}` : ''}`}
+              ? t('roadmap.allDone', { count: info.nodes.length })
+              : next
+                ? t('roadmap.someDoneNext', { done: info.doneCount, count: info.nodes.length, course: next.course.title })
+                : t('roadmap.someDone', { done: info.doneCount, count: info.nodes.length })}
           </p>
         </div>
         {next?.stats.next && (
           <a className="btn primary small" style={accentStyle(next.course.color)} href={href('course', next.course.id, 'lesson', next.stats.next.id)}>
-            {next.stats.started ? 'Continue' : 'Start'} {next.course.title} →
+            {t(next.stats.started ? 'roadmap.continueCourse' : 'roadmap.startCourse', { course: next.course.title })}
           </a>
         )}
       </div>
 
       <div className={`rm-map-wrap${vertical ? ' vertical' : ''}`} ref={wrapRef}>
-        <div className="rm-canvas" style={{ width: layout.width, height: layout.height }} role="group" aria-label={`${info.track.title} map`}>
+        <div className="rm-canvas" style={{ width: layout.width, height: layout.height }} role="group" aria-label={t('roadmap.mapLabel', { track: info.track.title })}>
           <svg className="rm-edges" width={layout.width} height={layout.height} viewBox={`0 0 ${layout.width} ${layout.height}`} aria-hidden focusable="false">
             {layout.edges.map((e) => {
               const from = info.byId.get(e.from)!;
@@ -241,32 +248,24 @@ function TrackMap({ info }: { info: TrackInfo }) {
         </div>
       </div>
 
-      <ul className="rm-legend" aria-label="Legend">
+      <ul className="rm-legend" aria-label={t('roadmap.legend')}>
         {(['done', 'in-progress', 'up-next', 'later'] as NodeStatus[]).map((s) => (
           <li key={s}>
             <span className={`rm-pill ${s}`}>
-              <span aria-hidden>{STATUS_MARK[s]}</span> {STATUS_LABEL[s]}
+              <span aria-hidden>{STATUS_MARK[s]}</span> {statusLabel(s)}
             </span>
-            <span className="small muted">
-              {s === 'done'
-                ? 'core lessons finished'
-                : s === 'in-progress'
-                  ? 'started'
-                  : s === 'up-next'
-                    ? 'ready to start'
-                    : 'after its prerequisites'}
-            </span>
+            <span className="small muted">{t(LEGEND_KEY[s])}</span>
           </li>
         ))}
         <li className="rm-legend-edges">
           <svg width="34" height="10" aria-hidden>
             <path d="M2 5 H32" className="rm-edge solid" style={{ stroke: 'var(--brand)' }} />
           </svg>
-          <span className="small muted">from a finished course</span>
+          <span className="small muted">{t('roadmap.legend.solid')}</span>
           <svg width="34" height="10" aria-hidden>
             <path d="M2 5 H32" className="rm-edge" />
           </svg>
-          <span className="small muted">still to do</span>
+          <span className="small muted">{t('roadmap.legend.dashed')}</span>
         </li>
       </ul>
 
@@ -299,9 +298,8 @@ function MapNode({
   const { course, stats: s, status } = n;
   const value = s.total ? s.completed / s.total : 0;
   const after = prereqNames(n, info);
-  const label = `${course.title}: ${STATUS_LABEL[status]}, ${s.completed} of ${plural(s.total, 'lesson')} done${
-    after.length ? `. After ${after.join(' and ')}` : ''
-  }`;
+  const params = { course: course.title, status: statusLabel(status), done: s.completed, count: s.total };
+  const label = after.length ? t('roadmap.nodeLabelAfter', { ...params, after: formatList(after) }) : t('roadmap.nodeLabel', params);
   return (
     <button
       ref={buttonRef}
@@ -319,13 +317,9 @@ function MapNode({
       <span className="rm-node-text">
         <strong className="rm-node-title">{course.title}</strong>
         <span className={`rm-pill ${status}`}>
-          <span aria-hidden>{STATUS_MARK[status]}</span> {STATUS_LABEL[status]}
+          <span aria-hidden>{STATUS_MARK[status]}</span> {statusLabel(status)}
         </span>
-        {!compact && (
-          <span className="rm-node-count">
-            {s.completed}/{s.total} lessons
-          </span>
-        )}
+        {!compact && <span className="rm-node-count">{t('roadmap.nodeCount', { done: s.completed, total: s.total })}</span>}
       </span>
     </button>
   );
@@ -336,6 +330,7 @@ function MapNode({
 const FOCUSABLE = 'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
 function DetailPanel({ n, info, onClose }: { n: NodeInfo; info: TrackInfo; onClose: () => void }) {
+  const { t, pct, list } = useT();
   const ref = useRef<HTMLDivElement>(null);
   const { course, stats: s, status } = n;
   const after = (n.node.after ?? []).flatMap((id) => info.byId.get(id) ?? []);
@@ -382,12 +377,12 @@ function DetailPanel({ n, info, onClose }: { n: NodeInfo; info: TrackInfo; onClo
           <CourseIcon icon={course.icon} color={course.color} size={52} />
           <div className="grow">
             <span className="eyebrow">
-              {course.category}
-              {course.level && ` · ${course.level}`}
+              {categoryLabel(course.category ?? 'General')}
+              {course.level && ` · ${levelLabel(course.level)}`}
             </span>
             <h2 id={titleId}>{course.title}</h2>
           </div>
-          <button type="button" className="btn ghost small rm-close" onClick={onClose} aria-label="Close details">
+          <button type="button" className="btn ghost small rm-close" onClick={onClose} aria-label={t('roadmap.closeDetails')}>
             ✕
           </button>
         </header>
@@ -395,18 +390,11 @@ function DetailPanel({ n, info, onClose }: { n: NodeInfo; info: TrackInfo; onClo
         <div className="rm-detail-body">
           <p className="rm-detail-status">
             <span className={`rm-pill ${status}`}>
-              <span aria-hidden>{STATUS_MARK[status]}</span> {STATUS_LABEL[status]}
+              <span aria-hidden>{STATUS_MARK[status]}</span> {statusLabel(status)}
             </span>
             {after.length > 0 && (
               <span className="small muted">
-                After{' '}
-                {after.map((a, i) => (
-                  <span key={a.course.id}>
-                    {i > 0 && (i === after.length - 1 ? ' and ' : ', ')}
-                    {a.course.title}
-                    {a.status === 'done' && ' ✓'}
-                  </span>
-                ))}
+                {t('roadmap.after', { list: list(after.map((a) => (a.status === 'done' ? `${a.course.title} ✓` : a.course.title))) })}
               </span>
             )}
           </p>
@@ -420,32 +408,28 @@ function DetailPanel({ n, info, onClose }: { n: NodeInfo; info: TrackInfo; onClo
 
           <div className="rm-detail-progress">
             <div className="row between small">
-              <strong>
-                Core {s.coreDone}/{s.coreTotal}
-              </strong>
-              <span className="muted">
-                {s.completed}/{plural(s.total, 'lesson')} · {Math.round(s.mastery * 100)}% mastered
-              </span>
+              <strong>{t('roadmap.core', { done: s.coreDone, total: s.coreTotal })}</strong>
+              <span className="muted">{t('roadmap.lessonsMastered', { done: s.completed, count: s.total, pct: pct(s.mastery) })}</span>
             </div>
-            <ProgressBar value={s.coreTotal ? s.coreDone / s.coreTotal : 0} label={`${course.title} core lessons`} />
+            <ProgressBar value={s.coreTotal ? s.coreDone / s.coreTotal : 0} label={t('roadmap.coreLessonsLabel', { course: course.title })} />
           </div>
 
           <div className="rm-detail-actions">
             {s.next ? (
               <a className="btn primary" href={href('course', course.id, 'lesson', s.next.id)}>
-                {s.started ? 'Continue' : 'Start'}: {s.next.title}
+                {t(s.started ? 'roadmap.continueLesson' : 'roadmap.startLesson', { lesson: s.next.title })}
               </a>
             ) : (
               <a className="btn primary" href={href('course', course.id, 'quiz')}>
-                All done — take the quiz
+                {t('roadmap.allDoneQuiz')}
               </a>
             )}
             <a className="btn" href={href('course', course.id)}>
-              Open course
+              {t('roadmap.openCourse')}
             </a>
           </div>
 
-          <h3 className="rm-units-title">What's inside</h3>
+          <h3 className="rm-units-title">{t('roadmap.inside')}</h3>
           {course.units.map((u) => {
             const doneCount = u.lessons.filter(s.done).length;
             return (
@@ -467,11 +451,11 @@ function DetailPanel({ n, info, onClose }: { n: NodeInfo; info: TrackInfo; onClo
                         </span>
                         <a href={href('course', course.id, 'lesson', l.id)}>
                           {l.title}
-                          <span className="sr-only">{done ? ' (done)' : ' (not done)'}</span>
+                          <span className="sr-only"> {done ? t('roadmap.lessonDone') : t('roadmap.lessonNotDone')}</span>
                         </a>
                         {l.pareto === 'core' && (
-                          <span className="rm-core-dot" title="Core lesson">
-                            <span className="sr-only">Core lesson</span>
+                          <span className="rm-core-dot" title={t('roadmap.coreLesson')}>
+                            <span className="sr-only">{t('roadmap.coreLesson')}</span>
                           </span>
                         )}
                       </li>
@@ -491,30 +475,33 @@ function DetailPanel({ n, info, onClose }: { n: NodeInfo; info: TrackInfo; onClo
 
 /** Small Home-page card: "Next on your <track> track: <course>". Renders nothing when there are no tracks. */
 export function RoadmapTeaser() {
+  const { t, tx } = useT();
   const infos = useTracks();
-  const t = defaultTrack(infos);
-  if (!t) return null;
-  const next = t.next ? t.byId.get(t.next) : undefined;
+  const info = defaultTrack(infos);
+  if (!info) return null;
+  const next = info.next ? info.byId.get(info.next) : undefined;
   return (
-    <a className="rm-teaser" href={href('roadmap', t.track.id)} style={accentStyle(next?.course.color)}>
-      <CourseIcon icon={t.track.icon} size={48} />
+    <a className="rm-teaser" href={href('roadmap', info.track.id)} style={accentStyle(next?.course.color)}>
+      <CourseIcon icon={info.track.icon} size={48} />
       <span className="rm-teaser-body">
-        <span className="eyebrow">Roadmap</span>
+        <span className="eyebrow">{t('roadmap.title')}</span>
         {next ? (
           <span className="rm-teaser-text">
-            Next on your {t.track.title} track:{' '}
-            <strong>
-              <CourseIcon icon={next.course.icon} color={next.course.color} size={18} /> {next.course.title}
-            </strong>
+            {tx('roadmap.teaser.next', {
+              track: info.track.title,
+              course: (
+                <strong>
+                  <CourseIcon icon={next.course.icon} color={next.course.color} size={18} /> {next.course.title}
+                </strong>
+              ),
+            })}
           </span>
         ) : (
-          <span className="rm-teaser-text">
-            You've finished the <strong>{t.track.title}</strong> track. Pick another one!
-          </span>
+          <span className="rm-teaser-text">{tx('roadmap.teaser.finished', { track: <strong>{info.track.title}</strong> })}</span>
         )}
-        <ProgressBar value={t.fraction} thin label={`${t.track.title}: ${Math.round(t.fraction * 100)}% complete`} />
+        <ProgressBar value={info.fraction} thin label={t('roadmap.trackComplete', { track: info.track.title, pct: formatPercent(info.fraction) })} />
       </span>
-      <span className="rm-teaser-cta">See the map →</span>
+      <span className="rm-teaser-cta">{t('roadmap.teaser.cta')}</span>
     </a>
   );
 }

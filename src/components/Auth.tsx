@@ -5,6 +5,8 @@ import { href } from '../lib/router';
 import { Field, Notice } from './ui';
 import { BrandMark } from './icons';
 import { Icon } from './icons';
+import { getLocale, tMaybe, type MessageKey } from '../i18n/core';
+import { useT } from '../i18n/react';
 
 function AuthCard({ title, subtitle, children, footer }: { title: string; subtitle?: ReactNode; children?: ReactNode; footer?: ReactNode }) {
   return (
@@ -25,12 +27,10 @@ function AuthCard({ title, subtitle, children, footer }: { title: string; subtit
   );
 }
 
-const DevMailboxHint = () =>
-  import.meta.env.DEV ? (
-    <Notice>
-      Development mode: no email server is configured, so emails go to the <a href="#/dev/mailbox">dev mailbox</a>.
-    </Notice>
-  ) : null;
+function DevMailboxHint() {
+  const { tx } = useT();
+  return import.meta.env.DEV ? <Notice>{tx('auth.devMailboxHint', {}, { link: (c) => <a href="#/dev/mailbox">{c}</a> })}</Notice> : null;
+}
 
 function passwordStrength(pw: string) {
   let score = 0;
@@ -41,7 +41,10 @@ function passwordStrength(pw: string) {
   if (/[^A-Za-z0-9]/.test(pw)) score++;
   return Math.min(4, score);
 }
-const STRENGTH = ['Too short', 'Weak', 'Okay', 'Good', 'Strong'];
+const STRENGTH: MessageKey[] = ['auth.strength.tooShort', 'auth.strength.weak', 'auth.strength.okay', 'auth.strength.good', 'auth.strength.strong'];
+
+/** Errors are kept as message keys (client checks) or as already-translated server text, and shown in the current language. */
+const showError = (e: string | undefined) => (e ? tMaybe(e, e) : e);
 
 function useResend(email: string) {
   const [cooldown, setCooldown] = useState(0);
@@ -52,7 +55,7 @@ function useResend(email: string) {
     return () => clearTimeout(t);
   }, [cooldown]);
   const resend = async () => {
-    await api('/auth/resend', { email }).catch(() => {});
+    await api('/auth/resend', { email, locale: getLocale() }).catch(() => {});
     setSent(true);
     setCooldown(60);
   };
@@ -60,6 +63,7 @@ function useResend(email: string) {
 }
 
 export function SignUp() {
+  const { t, tx } = useT();
   const [form, setForm] = useState({ username: '', email: '', password: '', confirm: '' });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
@@ -72,20 +76,20 @@ export function SignUp() {
   async function submit(e: FormEvent) {
     e.preventDefault();
     const errs: Record<string, string> = {};
-    if (!/^[a-zA-Z0-9_]{3,20}$/.test(form.username)) errs.username = '3–20 letters, numbers or underscores.';
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = 'Please enter a valid email address.';
-    if (form.password.length < 8) errs.password = 'At least 8 characters.';
-    if (form.confirm !== form.password) errs.confirm = "Passwords don't match.";
+    if (!/^[a-zA-Z0-9_]{3,20}$/.test(form.username)) errs.username = 'auth.signUp.usernameInvalid';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = 'auth.signUp.emailInvalid';
+    if (form.password.length < 8) errs.password = 'auth.passwordTooShort';
+    if (form.confirm !== form.password) errs.confirm = 'auth.passwordsDontMatch';
     setErrors(errs);
     if (Object.keys(errs).length) return;
 
     setBusy(true);
     try {
-      await api('/auth/register', { username: form.username, email: form.email, password: form.password });
+      await api('/auth/register', { username: form.username, email: form.email, password: form.password, locale: getLocale() });
       window.location.hash = href('check-email', form.email.trim().toLowerCase());
     } catch (err) {
       if (err instanceof ApiError && err.code && ['username', 'email', 'password'].includes(err.code)) setErrors({ [err.code]: err.message });
-      else setErrors({ form: err instanceof Error ? err.message : 'Something went wrong.' });
+      else setErrors({ form: err instanceof Error ? err.message : 'auth.somethingWrong' });
     } finally {
       setBusy(false);
     }
@@ -93,25 +97,21 @@ export function SignUp() {
 
   return (
     <AuthCard
-      title="Create your profile"
-      subtitle="Save your progress, streak and reviews across devices."
-      footer={
-        <>
-          Already have a profile? <a href="#/signin">Sign in</a>
-        </>
-      }
+      title={t('auth.signUp.title')}
+      subtitle={t('auth.signUp.subtitle')}
+      footer={tx('auth.signUp.footer', {}, { link: (c) => <a href="#/signin">{c}</a> })}
     >
       <form className="stack" onSubmit={submit} noValidate>
-        <Field label="Username" name="username" autoComplete="username" value={form.username} onChange={set('username')} error={errors.username} help="Shown on your profile. Letters, numbers and _." autoFocus />
-        <Field label="Email" name="email" type="email" autoComplete="email" value={form.email} onChange={set('email')} error={errors.email} help="We'll send a link to confirm it." />
+        <Field label={t('auth.username')} name="username" autoComplete="username" value={form.username} onChange={set('username')} error={showError(errors.username)} help={t('auth.signUp.usernameHelp')} autoFocus />
+        <Field label={t('auth.email')} name="email" type="email" autoComplete="email" value={form.email} onChange={set('email')} error={showError(errors.email)} help={t('auth.signUp.emailHelp')} />
         <Field
-          label="Password"
+          label={t('auth.password')}
           name="password"
           type="password"
           autoComplete="new-password"
           value={form.password}
           onChange={set('password')}
-          error={errors.password}
+          error={showError(errors.password)}
           help={
             form.password ? (
               <span className="strength">
@@ -121,17 +121,17 @@ export function SignUp() {
                   <i />
                   <i />
                 </span>
-                {STRENGTH[strength]}
+                {t(STRENGTH[strength])}
               </span>
             ) : (
-              'At least 8 characters. A short phrase is easier to remember.'
+              t('auth.signUp.passwordHelp')
             )
           }
         />
-        <Field label="Confirm password" name="confirm" type="password" autoComplete="new-password" value={form.confirm} onChange={set('confirm')} error={errors.confirm} />
-        {errors.form && <Notice tone="bad">{errors.form}</Notice>}
+        <Field label={t('auth.confirmPassword')} name="confirm" type="password" autoComplete="new-password" value={form.confirm} onChange={set('confirm')} error={showError(errors.confirm)} />
+        {errors.form && <Notice tone="bad">{showError(errors.form)}</Notice>}
         <button className="btn primary big full" disabled={busy}>
-          {busy ? 'Creating…' : 'Create profile'}
+          {busy ? t('auth.signUp.creating') : t('auth.signUp.submit')}
         </button>
       </form>
     </AuthCard>
@@ -139,26 +139,28 @@ export function SignUp() {
 }
 
 export function CheckEmail({ email }: { email: string }) {
+  const { t, tx } = useT();
   const { resend, cooldown, sent } = useResend(email);
   return (
-    <AuthCard title="Check your email" subtitle={<>We sent a confirmation link to <strong>{email}</strong>. Click it to activate your profile.</>}>
+    <AuthCard title={t('auth.checkEmail.title')} subtitle={tx('auth.checkEmail.subtitle', { email: <strong>{email}</strong> })}>
       <div className="mail-art" aria-hidden>
         <Icon name="mail" size={56} />
       </div>
       <DevMailboxHint />
-      <p className="muted small">Can't find it? Check your spam folder. The link expires in 24 hours.</p>
-      {sent && <Notice tone="good">If that address needs confirming, a new link is on its way.</Notice>}
+      <p className="muted small">{t('auth.checkEmail.spam')}</p>
+      {sent && <Notice tone="good">{t('auth.checkEmail.resent')}</Notice>}
       <button className="btn full" onClick={resend} disabled={cooldown > 0}>
-        {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend email'}
+        {cooldown > 0 ? t('auth.checkEmail.resendIn', { seconds: cooldown }) : t('auth.checkEmail.resend')}
       </button>
       <p className="center small">
-        <a href="#/signin">Back to sign in</a>
+        <a href="#/signin">{t('auth.backToSignIn')}</a>
       </p>
     </AuthCard>
   );
 }
 
 export function SignIn() {
+  const { t, tx } = useT();
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -176,7 +178,7 @@ export function SignIn() {
       window.location.hash = '#/';
     } catch (err) {
       if (err instanceof ApiError && err.code === 'EMAIL_NOT_VERIFIED') setUnverified(String(err.data.email ?? ''));
-      else setError(err instanceof Error ? err.message : 'Something went wrong.');
+      else setError(err instanceof Error ? err.message : 'auth.somethingWrong');
     } finally {
       setBusy(false);
     }
@@ -184,25 +186,21 @@ export function SignIn() {
 
   return (
     <AuthCard
-      title="Welcome back"
-      subtitle="Sign in to continue where you left off."
-      footer={
-        <>
-          New here? <a href="#/signup">Create a profile</a>
-        </>
-      }
+      title={t('auth.signIn.title')}
+      subtitle={t('auth.signIn.subtitle')}
+      footer={tx('auth.signIn.footer', {}, { link: (c) => <a href="#/signup">{c}</a> })}
     >
-      {!serverAvailable && <Notice tone="bad">The server isn't reachable. Start it with npm run dev.</Notice>}
+      {!serverAvailable && <Notice tone="bad">{t('auth.signIn.serverDown')}</Notice>}
       <form className="stack" onSubmit={submit}>
-        <Field label="Username or email" name="login" autoComplete="username" value={login} onChange={(e) => setLogin(e.target.value)} required autoFocus />
-        <Field label="Password" name="password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+        <Field label={t('auth.signIn.login')} name="login" autoComplete="username" value={login} onChange={(e) => setLogin(e.target.value)} required autoFocus />
+        <Field label={t('auth.password')} name="password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
         <a className="small forgot" href="#/forgot">
-          Forgot password?
+          {t('auth.signIn.forgot')}
         </a>
-        {error && <Notice tone="bad">{error}</Notice>}
+        {error && <Notice tone="bad">{showError(error)}</Notice>}
         {unverified !== null && <UnverifiedNotice email={unverified} />}
         <button className="btn primary big full" disabled={busy}>
-          {busy ? 'Signing in…' : 'Sign in'}
+          {busy ? t('auth.signIn.signingIn') : t('common.signIn')}
         </button>
       </form>
     </AuthCard>
@@ -210,15 +208,16 @@ export function SignIn() {
 }
 
 function UnverifiedNotice({ email }: { email: string }) {
+  const { t, tx } = useT();
   const { resend, cooldown, sent } = useResend(email);
   return (
     <Notice tone="bad">
-      Please confirm your email first — we sent a link to <strong>{email}</strong>.{' '}
+      {tx('auth.unverified.message', { email: <strong>{email}</strong> })}{' '}
       {sent ? (
-        'A new link is on its way.'
+        t('auth.unverified.resent')
       ) : (
         <button type="button" className="link" onClick={resend} disabled={cooldown > 0}>
-          Resend link
+          {t('auth.unverified.resend')}
         </button>
       )}
     </Notice>
@@ -226,6 +225,7 @@ function UnverifiedNotice({ email }: { email: string }) {
 }
 
 export function Verify({ token }: { token: string }) {
+  const { t } = useT();
   const [state, setState] = useState<'working' | 'done' | 'error'>('working');
   const [error, setError] = useState('');
   const started = useRef(false);
@@ -236,43 +236,44 @@ export function Verify({ token }: { token: string }) {
     completeVerification(token)
       .then(() => setState('done'))
       .catch((err) => {
-        setError(err instanceof Error ? err.message : 'Something went wrong.');
+        setError(err instanceof Error ? err.message : 'auth.somethingWrong');
         setState('error');
       });
   }, [token]);
 
-  if (state === 'working') return <AuthCard title="Confirming your email…" />;
+  if (state === 'working') return <AuthCard title={t('auth.verify.working')} />;
   if (state === 'error')
     return (
-      <AuthCard title="Link didn't work" subtitle={error}>
-        <p className="muted small">Sign in to get a fresh confirmation link.</p>
+      <AuthCard title={t('auth.verify.failedTitle')} subtitle={showError(error)}>
+        <p className="muted small">{t('auth.verify.failedHelp')}</p>
         <a className="btn primary full" href="#/signin">
-          Go to sign in
+          {t('auth.verify.goToSignIn')}
         </a>
       </AuthCard>
     );
   return (
-    <AuthCard title="Email confirmed" subtitle="Your profile is active and you're signed in. Your progress now syncs across devices.">
+    <AuthCard title={t('auth.verify.doneTitle')} subtitle={t('auth.verify.doneSubtitle')}>
       <a className="btn primary big full" href="#/">
-        Start learning
+        {t('auth.verify.startLearning')}
       </a>
     </AuthCard>
   );
 }
 
 export function Forgot() {
+  const { t } = useT();
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
 
   return (
-    <AuthCard title="Reset your password" subtitle="Enter your email and we'll send you a link to choose a new password.">
+    <AuthCard title={t('auth.forgot.title')} subtitle={t('auth.forgot.subtitle')}>
       {sent ? (
         <>
-          <Notice tone="good">If an account exists for {email}, a reset link is on its way. It expires in 60 minutes.</Notice>
+          <Notice tone="good">{t('auth.forgot.sent', { email })}</Notice>
           <DevMailboxHint />
           <a className="btn full" href="#/signin">
-            Back to sign in
+            {t('auth.backToSignIn')}
           </a>
         </>
       ) : (
@@ -282,18 +283,18 @@ export function Forgot() {
             e.preventDefault();
             setError('');
             try {
-              await api('/auth/forgot', { email: email.trim() });
+              await api('/auth/forgot', { email: email.trim(), locale: getLocale() });
               setSent(true);
             } catch (err) {
-              setError(err instanceof Error ? err.message : 'Something went wrong.');
+              setError(err instanceof Error ? err.message : 'auth.somethingWrong');
             }
           }}
         >
-          <Field label="Email" type="email" name="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus />
-          {error && <Notice tone="bad">{error}</Notice>}
-          <button className="btn primary big full">Send reset link</button>
+          <Field label={t('auth.email')} type="email" name="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus />
+          {error && <Notice tone="bad">{showError(error)}</Notice>}
+          <button className="btn primary big full">{t('auth.forgot.submit')}</button>
           <p className="center small">
-            <a href="#/signin">Back to sign in</a>
+            <a href="#/signin">{t('auth.backToSignIn')}</a>
           </p>
         </form>
       )}
@@ -302,6 +303,7 @@ export function Forgot() {
 }
 
 export function Reset({ token }: { token: string }) {
+  const { t } = useT();
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState('');
@@ -309,33 +311,33 @@ export function Reset({ token }: { token: string }) {
 
   if (done)
     return (
-      <AuthCard title="Password updated" subtitle="You can now sign in with your new password.">
+      <AuthCard title={t('auth.reset.doneTitle')} subtitle={t('auth.reset.doneSubtitle')}>
         <a className="btn primary big full" href="#/signin">
-          Sign in
+          {t('common.signIn')}
         </a>
       </AuthCard>
     );
 
   return (
-    <AuthCard title="Choose a new password">
+    <AuthCard title={t('auth.reset.title')}>
       <form
         className="stack"
         onSubmit={async (e) => {
           e.preventDefault();
-          if (password !== confirm) return setError("Passwords don't match.");
+          if (password !== confirm) return setError('auth.passwordsDontMatch');
           setError('');
           try {
             await api('/auth/reset', { token, password });
             setDone(true);
           } catch (err) {
-            setError(err instanceof Error ? err.message : 'Something went wrong.');
+            setError(err instanceof Error ? err.message : 'auth.somethingWrong');
           }
         }}
       >
-        <Field label="New password" type="password" name="new-password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} minLength={8} required autoFocus help="At least 8 characters." />
-        <Field label="Confirm new password" type="password" name="confirm" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required />
-        {error && <Notice tone="bad">{error}</Notice>}
-        <button className="btn primary big full">Update password</button>
+        <Field label={t('auth.newPassword')} type="password" name="new-password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} minLength={8} required autoFocus help={t('auth.passwordTooShort')} />
+        <Field label={t('auth.confirmNewPassword')} type="password" name="confirm" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required />
+        {error && <Notice tone="bad">{showError(error)}</Notice>}
+        <button className="btn primary big full">{t('auth.updatePassword')}</button>
       </form>
     </AuthCard>
   );
@@ -351,38 +353,39 @@ interface Mail {
 
 /** Development-only: shows emails the server would have sent. */
 export function DevMailbox() {
+  const { t, date } = useT();
   const [mails, setMails] = useState<Mail[] | null>(null);
   const [error, setError] = useState('');
   const load = () =>
     api<{ mails: Mail[] }>('/dev/outbox')
       .then((r) => setMails(r.mails))
-      .catch(() => setError('The dev mailbox is only available in development without SMTP configured.'));
+      .catch(() => setError('auth.devMailbox.unavailable'));
   useEffect(() => {
     load();
   }, []);
 
   return (
-    <AuthCard title="Dev mailbox" subtitle="Emails the server would have sent. Configure SMTP in .env to send real emails.">
-      {error && <Notice tone="bad">{error}</Notice>}
-      {mails && mails.length === 0 && <p className="muted">No emails yet.</p>}
+    <AuthCard title={t('auth.devMailbox.title')} subtitle={t('auth.devMailbox.subtitle')}>
+      {error && <Notice tone="bad">{showError(error)}</Notice>}
+      {mails && mails.length === 0 && <p className="muted">{t('auth.devMailbox.empty')}</p>}
       <div className="stack">
         {mails?.map((m, i) => (
           <article key={i} className="mail">
             <div className="mail-meta">
               <strong>{m.subject}</strong>
               <span className="muted small">
-                to {m.to} · {new Date(m.sentAt).toLocaleTimeString('en-US')}
+                {t('auth.devMailbox.meta', { to: m.to, time: date(m.sentAt, { hour: 'numeric', minute: '2-digit', second: '2-digit' }) })}
               </span>
             </div>
             <p className="small">{m.text.split('\n')[0]}</p>
             <a className="btn primary small" href={m.link.slice(m.link.indexOf('#'))}>
-              {m.subject.includes('Reset') ? 'Choose a new password' : 'Confirm email'}
+              {m.link.includes('#/reset/') ? t('auth.reset.title') : t('auth.devMailbox.confirm')}
             </a>
           </article>
         ))}
       </div>
       <button className="btn ghost full" onClick={load}>
-        Refresh
+        {t('auth.devMailbox.refresh')}
       </button>
     </AuthCard>
   );

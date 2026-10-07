@@ -1,0 +1,78 @@
+// French UI strings: auth. Mirrors src/i18n/en/auth.ts (see docs/TRANSLATING.md).
+import type { Translation } from '../core.ts';
+import type en from '../en/auth.ts';
+
+export default {
+  'auth.username': "Nom d'utilisateur",
+  'auth.email': 'E-mail',
+  'auth.password': 'Mot de passe',
+  'auth.confirmPassword': 'Confirme le mot de passe',
+  'auth.newPassword': 'Nouveau mot de passe',
+  'auth.confirmNewPassword': 'Confirme le nouveau mot de passe',
+  'auth.updatePassword': 'Mettre à jour le mot de passe',
+  'auth.passwordTooShort': 'Au moins 8 caractères.',
+  'auth.passwordsDontMatch': 'Les mots de passe ne correspondent pas.',
+  'auth.somethingWrong': 'Un problème est survenu.',
+  'auth.backToSignIn': 'Retour à la connexion',
+  'auth.devMailboxHint': "Mode développement : aucun serveur d'e-mail n'est configuré, les e-mails arrivent donc dans la <link>boîte de dev</link>.",
+
+  'auth.strength.tooShort': 'Trop court',
+  'auth.strength.weak': 'Faible',
+  'auth.strength.okay': 'Correct',
+  'auth.strength.good': 'Bon',
+  'auth.strength.strong': 'Solide',
+
+  'auth.signUp.title': 'Crée ton profil',
+  'auth.signUp.subtitle': 'Retrouve ta progression, ta série et tes révisions sur tous tes appareils.',
+  'auth.signUp.footer': 'Tu as déjà un profil ? <link>Connecte-toi</link>',
+  'auth.signUp.usernameHelp': 'Affiché sur ton profil. Lettres, chiffres et _.',
+  'auth.signUp.usernameInvalid': '3 à 20 lettres, chiffres ou tirets bas.',
+  'auth.signUp.emailHelp': "Nous t'enverrons un lien de confirmation.",
+  'auth.signUp.emailInvalid': 'Saisis une adresse e-mail valide.',
+  'auth.signUp.passwordHelp': 'Au moins 8 caractères. Une courte phrase est plus facile à retenir.',
+  'auth.signUp.creating': 'Création…',
+  'auth.signUp.submit': 'Créer le profil',
+
+  'auth.checkEmail.title': 'Vérifie tes e-mails',
+  'auth.checkEmail.subtitle': 'Nous avons envoyé un lien de confirmation à {email}. Clique dessus pour activer ton profil.',
+  'auth.checkEmail.spam': 'Tu ne le trouves pas ? Regarde dans tes spams. Le lien expire dans 24 heures.',
+  'auth.checkEmail.resent': 'Si cette adresse doit être confirmée, un nouveau lien est en route.',
+  'auth.checkEmail.resend': "Renvoyer l'e-mail",
+  'auth.checkEmail.resendIn': 'Renvoyer dans {seconds} s',
+
+  'auth.signIn.title': 'Bon retour parmi nous',
+  'auth.signIn.subtitle': 'Connecte-toi pour reprendre là où tu en étais.',
+  'auth.signIn.footer': 'Première visite ? <link>Crée un profil</link>',
+  'auth.signIn.serverDown': 'Le serveur est injoignable. Lance-le avec npm run dev.',
+  'auth.signIn.login': "Nom d'utilisateur ou e-mail",
+  'auth.signIn.forgot': 'Mot de passe oublié ?',
+  'auth.signIn.signingIn': 'Connexion…',
+  'auth.unverified.message': "Confirme d'abord ton adresse e-mail : nous avons envoyé un lien à {email}.",
+  'auth.unverified.resent': 'Un nouveau lien est en route.',
+  'auth.unverified.resend': 'Renvoyer le lien',
+
+  'auth.verify.working': 'Confirmation de ton e-mail…',
+  'auth.verify.failedTitle': "Le lien n'a pas fonctionné",
+  'auth.verify.failedHelp': 'Connecte-toi pour recevoir un nouveau lien de confirmation.',
+  'auth.verify.goToSignIn': 'Aller à la connexion',
+  'auth.verify.doneTitle': 'E-mail confirmé',
+  'auth.verify.doneSubtitle': 'Ton profil est actif et ta session est ouverte. Ta progression se synchronise maintenant sur tous tes appareils.',
+  'auth.verify.startLearning': 'Commencer à apprendre',
+
+  'auth.forgot.title': 'Réinitialise ton mot de passe',
+  'auth.forgot.subtitle': "Saisis ton e-mail et nous t'enverrons un lien pour choisir un nouveau mot de passe.",
+  'auth.forgot.sent': 'Si un compte existe pour {email}, un lien de réinitialisation est en route. Il expire dans 60 minutes.',
+  'auth.forgot.submit': 'Envoyer le lien',
+
+  'auth.reset.title': 'Choisis un nouveau mot de passe',
+  'auth.reset.doneTitle': 'Mot de passe mis à jour',
+  'auth.reset.doneSubtitle': 'Tu peux maintenant te connecter avec ton nouveau mot de passe.',
+
+  'auth.devMailbox.title': 'Boîte de dev',
+  'auth.devMailbox.subtitle': "Les e-mails que le serveur aurait envoyés. Configure SMTP dans .env pour envoyer de vrais e-mails.",
+  'auth.devMailbox.unavailable': "La boîte de dev n'est disponible qu'en développement, sans SMTP configuré.",
+  'auth.devMailbox.empty': "Aucun e-mail pour l'instant.",
+  'auth.devMailbox.meta': 'à {to} · {time}',
+  'auth.devMailbox.confirm': "Confirmer l'e-mail",
+  'auth.devMailbox.refresh': 'Actualiser',
+} satisfies Translation<typeof en>;

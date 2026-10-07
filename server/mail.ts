@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { translator, type Locale } from '../src/i18n/core.ts';
 import { appUrl, devOutbox, mailFrom, smtp } from './config.ts';
 
 export interface OutboxMail {
@@ -14,14 +15,16 @@ export const outbox: OutboxMail[] = [];
 
 const transport = smtp ? nodemailer.createTransport(smtp) : null;
 
-async function send(to: string, subject: string, intro: string, buttonLabel: string, link: string, outro: string) {
-  const text = `${intro}\n\n${buttonLabel}: ${link}\n\n${outro}`;
+const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+
+async function send(to: string, locale: Locale, subject: string, intro: string, buttonLabel: string, link: string, outro: string) {
+  const text = `${intro}\n\n${buttonLabel}\n${link}\n\n${outro}`;
   const html = `
-    <div style="font-family:system-ui,sans-serif;max-width:480px;margin:auto;padding:24px;color:#1d1d1f">
+    <div lang="${locale}" style="font-family:system-ui,sans-serif;max-width:480px;margin:auto;padding:24px;color:#1d1d1f">
       <h2 style="margin:0 0 12px">ProjectLearn</h2>
-      <p>${intro}</p>
-      <p style="margin:28px 0"><a href="${link}" style="background:#5b5bd6;color:#fff;padding:12px 22px;border-radius:999px;text-decoration:none;font-weight:600">${buttonLabel}</a></p>
-      <p style="color:#6b6b70;font-size:14px">${outro}</p>
+      <p>${esc(intro)}</p>
+      <p style="margin:28px 0"><a href="${link}" style="background:#5b5bd6;color:#fff;padding:12px 22px;border-radius:999px;text-decoration:none;font-weight:600">${esc(buttonLabel)}</a></p>
+      <p style="color:#6b6b70;font-size:14px">${esc(outro)}</p>
       <p style="color:#6b6b70;font-size:12px;word-break:break-all">${link}</p>
     </div>`;
 
@@ -36,22 +39,29 @@ async function send(to: string, subject: string, intro: string, buttonLabel: str
   }
 }
 
-export const sendVerifyEmail = (to: string, username: string, token: string) =>
-  send(
+/** Emails are written in the language the learner was using when they asked (src/i18n/<locale>/email.ts). */
+export function sendVerifyEmail(to: string, username: string, token: string, locale: Locale = 'en') {
+  const t = translator(locale);
+  return send(
     to,
-    'Confirm your ProjectLearn email',
-    `Hi ${username}! Confirm your email address to activate your profile.`,
-    'Confirm email',
+    locale,
+    t('email.verify.subject'),
+    t('email.verify.intro', { name: username }),
+    t('email.verify.button'),
     `${appUrl}/#/verify/${token}`,
-    "This link expires in 24 hours. If you didn't sign up, you can ignore this email.",
+    t('email.verify.outro'),
   );
+}
 
-export const sendResetEmail = (to: string, username: string, token: string) =>
-  send(
+export function sendResetEmail(to: string, username: string, token: string, locale: Locale = 'en') {
+  const t = translator(locale);
+  return send(
     to,
-    'Reset your ProjectLearn password',
-    `Hi ${username}, someone (hopefully you) asked to reset your password.`,
-    'Choose a new password',
+    locale,
+    t('email.reset.subject'),
+    t('email.reset.intro', { name: username }),
+    t('email.reset.button'),
     `${appUrl}/#/reset/${token}`,
-    "This link expires in 60 minutes. If you didn't ask for this, ignore this email — your password stays the same.",
+    t('email.reset.outro'),
   );
+}

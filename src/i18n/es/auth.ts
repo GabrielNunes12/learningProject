@@ -1,0 +1,78 @@
+// Spanish UI strings: auth. Mirrors src/i18n/en/auth.ts (see docs/TRANSLATING.md).
+import type { Translation } from '../core.ts';
+import type en from '../en/auth.ts';
+
+export default {
+  'auth.username': 'Nombre de usuario',
+  'auth.email': 'Correo electrónico',
+  'auth.password': 'Contraseña',
+  'auth.confirmPassword': 'Confirma la contraseña',
+  'auth.newPassword': 'Nueva contraseña',
+  'auth.confirmNewPassword': 'Confirma la nueva contraseña',
+  'auth.updatePassword': 'Actualizar contraseña',
+  'auth.passwordTooShort': 'Al menos 8 caracteres.',
+  'auth.passwordsDontMatch': 'Las contraseñas no coinciden.',
+  'auth.somethingWrong': 'Algo salió mal.',
+  'auth.backToSignIn': 'Volver a iniciar sesión',
+  'auth.devMailboxHint': 'Modo de desarrollo: no hay servidor de correo configurado, así que los correos van al <link>buzón de desarrollo</link>.',
+
+  'auth.strength.tooShort': 'Muy corta',
+  'auth.strength.weak': 'Débil',
+  'auth.strength.okay': 'Aceptable',
+  'auth.strength.good': 'Buena',
+  'auth.strength.strong': 'Fuerte',
+
+  'auth.signUp.title': 'Crea tu perfil',
+  'auth.signUp.subtitle': 'Guarda tu progreso, tu racha y tus repasos en todos tus dispositivos.',
+  'auth.signUp.footer': '¿Ya tienes un perfil? <link>Inicia sesión</link>',
+  'auth.signUp.usernameHelp': 'Se muestra en tu perfil. Letras, números y _.',
+  'auth.signUp.usernameInvalid': 'De 3 a 20 letras, números o guiones bajos.',
+  'auth.signUp.emailHelp': 'Te enviaremos un enlace para confirmarlo.',
+  'auth.signUp.emailInvalid': 'Introduce un correo electrónico válido.',
+  'auth.signUp.passwordHelp': 'Al menos 8 caracteres. Una frase corta es más fácil de recordar.',
+  'auth.signUp.creating': 'Creando…',
+  'auth.signUp.submit': 'Crear perfil',
+
+  'auth.checkEmail.title': 'Revisa tu correo',
+  'auth.checkEmail.subtitle': 'Enviamos un enlace de confirmación a {email}. Haz clic en él para activar tu perfil.',
+  'auth.checkEmail.spam': '¿No lo encuentras? Revisa la carpeta de spam. El enlace caduca en 24 horas.',
+  'auth.checkEmail.resent': 'Si esa dirección necesita confirmación, ya va en camino un enlace nuevo.',
+  'auth.checkEmail.resend': 'Reenviar correo',
+  'auth.checkEmail.resendIn': 'Reenviar en {seconds} s',
+
+  'auth.signIn.title': 'Hola de nuevo',
+  'auth.signIn.subtitle': 'Inicia sesión para seguir donde lo dejaste.',
+  'auth.signIn.footer': '¿Primera vez aquí?<link>Crea un perfil</link>',
+  'auth.signIn.serverDown': 'No se puede conectar con el servidor. Inícialo con npm run dev.',
+  'auth.signIn.login': 'Usuario o correo electrónico',
+  'auth.signIn.forgot': '¿Olvidaste tu contraseña?',
+  'auth.signIn.signingIn': 'Iniciando sesión…',
+  'auth.unverified.message': 'Primero confirma tu correo: enviamos un enlace a {email}.',
+  'auth.unverified.resent': 'Ya va en camino un enlace nuevo.',
+  'auth.unverified.resend': 'Reenviar enlace',
+
+  'auth.verify.working': 'Confirmando tu correo…',
+  'auth.verify.failedTitle': 'El enlace no funcionó',
+  'auth.verify.failedHelp': 'Inicia sesión para recibir un enlace de confirmación nuevo.',
+  'auth.verify.goToSignIn': 'Ir a iniciar sesión',
+  'auth.verify.doneTitle': 'Correo confirmado',
+  'auth.verify.doneSubtitle': 'Tu perfil está activo y has iniciado sesión. Ahora tu progreso se sincroniza entre dispositivos.',
+  'auth.verify.startLearning': 'Empezar a aprender',
+
+  'auth.forgot.title': 'Restablece tu contraseña',
+  'auth.forgot.subtitle': 'Escribe tu correo y te enviaremos un enlace para elegir una contraseña nueva.',
+  'auth.forgot.sent': 'Si existe una cuenta para {email}, ya va en camino un enlace para restablecerla. Caduca en 60 minutos.',
+  'auth.forgot.submit': 'Enviar enlace',
+
+  'auth.reset.title': 'Elige una contraseña nueva',
+  'auth.reset.doneTitle': 'Contraseña actualizada',
+  'auth.reset.doneSubtitle': 'Ya puedes iniciar sesión con tu nueva contraseña.',
+
+  'auth.devMailbox.title': 'Buzón de desarrollo',
+  'auth.devMailbox.subtitle': 'Correos que el servidor habría enviado. Configura SMTP en .env para enviar correos reales.',
+  'auth.devMailbox.unavailable': 'El buzón de desarrollo solo está disponible en desarrollo y sin SMTP configurado.',
+  'auth.devMailbox.empty': 'Todavía no hay correos.',
+  'auth.devMailbox.meta': 'para {to} · {time}',
+  'auth.devMailbox.confirm': 'Confirmar correo',
+  'auth.devMailbox.refresh': 'Actualizar',
+} satisfies Translation<typeof en>;

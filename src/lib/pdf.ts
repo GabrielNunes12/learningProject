@@ -2,6 +2,7 @@
 // vector shapes and a link. Pure: text widths come from a `measure` function (the browser measures with
 // Arial / Times New Roman, which are metric-compatible with the PDF's Helvetica / Times).
 import { ISSUER, formatHours, certificateUrl, type CertificateInfo } from './certificate.ts';
+import { formatDate, getLocale, translator, type Locale } from '../i18n/core.ts';
 
 export type FontName = 'sans' | 'sans-bold' | 'serif-italic' | 'serif-bold';
 export type Measure = (text: string, font: FontName, size: number) => number;
@@ -29,7 +30,9 @@ const WIN_ANSI: Record<string, number> = {
 /** A PDF string literal in WinAnsi: ASCII as-is (with \ ( ) escaped), other bytes as octal escapes, unknowns as "?". */
 export function pdfString(text: string): string {
   let out = '(';
-  for (const ch of text.normalize('NFC')) {
+  for (const raw of text.normalize('NFC')) {
+    // Narrow / thin no-break spaces (French numbers and dates) become a plain no-break space.
+    const ch = raw === '\u202f' || raw === '\u2009' ? '\u00a0' : raw;
     const c = ch.codePointAt(0)!;
     const byte = c >= 0x20 && c <= 0x7e ? c : c >= 0xa0 && c <= 0xff ? c : (WIN_ANSI[ch] ?? 0x3f);
     if (byte === 0x5c || byte === 0x28 || byte === 0x29) out += `\\${String.fromCharCode(byte)}`;
@@ -146,7 +149,8 @@ const pdfDate = (t: number) => {
   return `D:${d.getUTCFullYear()}${p(d.getUTCMonth() + 1)}${p(d.getUTCDate())}${p(d.getUTCHours())}${p(d.getUTCMinutes())}${p(d.getUTCSeconds())}Z`;
 };
 
-export const issuedDate = (t: number) => new Date(t).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+/** "October 7, 2026" / "7 de outubro de 2026" / "7 de octubre de 2026" / "7 octobre 2026". */
+export const issuedDate = (t: number, locale: Locale = getLocale()) => formatDate(t, { year: 'numeric', month: 'long', day: 'numeric' }, locale);
 
 // ---------- the certificate ----------
 
@@ -156,8 +160,25 @@ export interface CertificateDesign extends CertificateInfo {
   site?: string;
 }
 
+/** The certificate's own words in one language (shared by the PDF and the HTML view). */
+export function certificateText(cert: CertificateInfo, locale: Locale = getLocale()) {
+  const t = translator(locale);
+  return {
+    id: t('cert.id', { id: cert.id }),
+    title: t('cert.title'),
+    certifies: t('cert.certifies'),
+    completed: t('cert.completed'),
+    details: t('cert.details', { count: cert.lessons, hours: formatHours(cert.minutes, locale) }),
+    date: issuedDate(cert.issuedAt, locale),
+    dateIssued: t('cert.dateIssued'),
+    issuer: t('cert.issuer'),
+  };
+}
+
 /** Builds the certificate as a landscape A4 PDF and returns the file's text (ASCII). */
-export function certificatePdf(cert: CertificateDesign, measure: Measure = approxMeasure): string {
+export function certificatePdf(cert: CertificateDesign, measure: Measure = approxMeasure, locale: Locale = getLocale()): string {
+  const t = translator(locale);
+  const words = certificateText(cert, locale);
   const W = 842;
   const H = 595;
   const page = new Page(W, H, measure);
@@ -180,40 +201,41 @@ export function certificatePdf(cert: CertificateDesign, measure: Measure = appro
   page.rect(64, H - 78, 22, 20, { fill: accent });
   page.rect(89, H - 78, 6, 20, { fill: [accent[0] * 0.55 + 0.45, accent[1] * 0.55 + 0.45, accent[2] * 0.55 + 0.45] });
   page.text(ISSUER.toUpperCase(), 104, H - 73, 'sans-bold', 11, ink, { spacing: 2 });
-  page.text(`Certificate ID ${cert.id}`, W - 64, H - 73, 'sans', 8.5, grey, { align: 'right' });
+  page.text(words.id, W - 64, H - 73, 'sans', 8.5, grey, { align: 'right' });
 
   // Title.
-  page.text('CERTIFICATE OF COMPLETION', cx, H - 150, 'sans-bold', 16, ink, { align: 'center', spacing: 3.2 });
+  const title = words.title.toLocaleUpperCase(locale);
+  page.text(title, cx, H - 150, 'sans-bold', page.fit(title, 'sans-bold', 16, 700, 11), ink, { align: 'center', spacing: 3.2 });
   page.line(cx - 34, H - 166, cx + 34, H - 166, accent, 2);
 
   // Who and what.
-  page.text('This certifies that', cx, H - 210, 'serif-italic', 16, grey, { align: 'center' });
+  page.text(words.certifies, cx, H - 210, 'serif-italic', 16, grey, { align: 'center' });
   const nameSize = page.fit(cert.name, 'serif-bold', 42, 620, 22);
   page.text(cert.name, cx, H - 262, 'serif-bold', nameSize, ink, { align: 'center' });
   page.line(cx - 230, H - 278, cx + 230, H - 278, rule, 0.75);
-  page.text('has successfully completed the course', cx, H - 312, 'serif-italic', 16, grey, { align: 'center' });
+  page.text(words.completed, cx, H - 312, 'serif-italic', 16, grey, { align: 'center' });
   const courseSize = page.fit(cert.courseTitle, 'sans-bold', 28, 660, 14);
   page.text(cert.courseTitle, cx, H - 356, 'sans-bold', courseSize, accent, { align: 'center' });
-  page.text(`${cert.lessons} lessons  ·  ${formatHours(cert.minutes)} of learning`, cx, H - 388, 'sans', 13, grey, { align: 'center' });
+  page.text(words.details, cx, H - 388, 'sans', 13, grey, { align: 'center' });
 
   // Date and issuer.
-  const date = issuedDate(cert.issuedAt);
+  const date = words.date;
   page.line(110, 132, 300, 132, rule, 0.75);
   page.text(date, 205, 142, 'sans-bold', 12, ink, { align: 'center' });
-  page.text('Date issued', 205, 118, 'sans', 9, grey, { align: 'center' });
+  page.text(words.dateIssued, 205, 118, 'sans', 9, grey, { align: 'center' });
   page.line(W - 300, 132, W - 110, 132, rule, 0.75);
   page.text(ISSUER, W - 205, 140, 'serif-italic', 20, accent, { align: 'center' });
-  page.text('Issuer', W - 205, 118, 'sans', 9, grey, { align: 'center' });
+  page.text(words.issuer, W - 205, 118, 'sans', 9, grey, { align: 'center' });
 
   // Verification link (clickable).
-  const verify = `Verify at ${url.replace(/^https?:\/\//, '')}`;
+  const verify = t('cert.verifyAt', { url: url.replace(/^https?:\/\//, '') });
   const v = page.text(verify, cx, 56, 'sans', 9, grey, { align: 'center' });
   page.link(v.left, 52, v.width, 13, url);
 
   return writePdf(page, {
-    Title: `${cert.courseTitle}: certificate of completion`,
+    Title: t('cert.pdfTitle', { course: cert.courseTitle }),
     Author: ISSUER,
-    Subject: `${cert.name} completed ${cert.courseTitle}`,
+    Subject: t('cert.pdfSubject', { name: cert.name, course: cert.courseTitle }),
     Creator: `${ISSUER} (${url})`,
     CreationDate: pdfDate(cert.issuedAt),
   });

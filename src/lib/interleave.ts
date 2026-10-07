@@ -1,6 +1,6 @@
 // Mixed (interleaved) practice: picks a short session of questions the learner has already met, mixing related
-// concepts so they practise telling similar ideas apart. Pure and deterministic for a given seed. No runtime imports
-// (type-only), so node:test can load it.
+// concepts so they practise telling similar ideas apart. Pure and deterministic for a given seed. The only runtime
+// import is the translation core (explicit .ts), so node:test can load it.
 //
 // Rules, in order of how the session is built:
 //   1. Only questions the learner has met: in a completed lesson, or already answered (a card exists). Never questions
@@ -15,6 +15,7 @@
 
 import type { Course, Lesson, QuestionStep } from '../types.ts';
 import type { Card } from './storage.ts';
+import { t } from '../i18n/core.ts';
 
 /** Structurally the same as QuestionRef in src/content/index.ts. */
 export interface PracticeQuestion {
@@ -200,7 +201,7 @@ function linkGraph(courses: Course[]): Map<string, TopicLink[]> {
     for (const l of c.links ?? []) {
       const from = `${c.id}/${l.from}`;
       const to = l.to.includes('/') ? l.to : `${c.id}/${l.to}`;
-      const sentence = `${label.get(from) ?? l.from} ${l.label} ${label.get(to) ?? l.to}`;
+      const sentence = t('practice.linkSentence', { from: label.get(from) ?? l.from, link: l.label, to: label.get(to) ?? l.to });
       add(from, to, sentence);
       add(to, from, sentence);
     }
@@ -509,23 +510,21 @@ export function interleave<T extends { q: PracticeQuestion; topic: string }>(ite
 export function describeReason(r: Reason): string {
   switch (r.kind) {
     case 'due':
-      return 'Due for review';
+      return t('practice.reason.due');
     case 'missed':
-      return 'You missed it last time';
+      return t('practice.reason.missed');
     case 'new':
-      return "From a lesson you've done, not practised since";
+      return t('practice.reason.new');
     case 'weak':
-      if (!r.seen) return 'Weak spot';
+      if (!r.seen) return t('practice.reason.weakSpot');
       // Mostly right but the latest try was wrong: say that, rather than call 4 of 5 a weak spot.
-      return r.right / r.seen >= 0.5
-        ? `Slipping: you missed your latest try (${r.right} of ${r.seen} recent answers right)`
-        : `Weak spot: ${r.right} of ${r.seen} recent answers right`;
+      return t(r.right / r.seen >= 0.5 ? 'practice.reason.slipping' : 'practice.reason.weak', { right: r.right, seen: r.seen });
     case 'strong':
-      return 'You know this well: mixed in for contrast and confidence';
+      return t('practice.reason.strong');
     case 'focus':
-      return 'The concept you chose to practise';
+      return t('practice.reason.focus');
     case 'related':
-      return `Linked to ${r.link.otherLabel}${r.link.cross ? ' in another course' : ''}: "${r.link.sentence}"`;
+      return t(r.link.cross ? 'practice.reason.relatedCross' : 'practice.reason.related', { label: r.link.otherLabel, sentence: r.link.sentence });
   }
 }
 

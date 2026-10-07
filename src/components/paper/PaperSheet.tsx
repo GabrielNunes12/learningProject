@@ -24,6 +24,7 @@ import {
   undoStroke,
   type ChipSize,
 } from '../../lib/thinking';
+import { useT } from '../../i18n/react';
 import './Paper.css';
 
 type Tool = 'words' | 'pen';
@@ -41,7 +42,8 @@ interface Props {
   autoFocus?: boolean;
 }
 
-export function PaperSheet({ draft, onChange, label, placeholder = 'Type a keyword, press Enter', noPiles, readOnly, autoFocus }: Props) {
+export function PaperSheet({ draft, onChange, label, placeholder, noPiles, readOnly, autoFocus }: Props) {
+  const { t, tx } = useT();
   const [tool, setTool] = useState<Tool>('words');
   const [text, setText] = useState('');
   const [selected, setSelected] = useState<string | null>(null);
@@ -119,27 +121,27 @@ export function PaperSheet({ draft, onChange, label, placeholder = 'Type a keywo
   return (
     <div className={`paper-wrap${readOnly ? ' read-only' : ''}`}>
       {!readOnly && (
-        <div className="paper-tools" role="toolbar" aria-label="Sheet tools">
-          <div className="seg" role="group" aria-label="Tool">
+        <div className="paper-tools" role="toolbar" aria-label={t('thinking.paper.tools')}>
+          <div className="seg" role="group" aria-label={t('thinking.paper.tool')}>
             <button type="button" className={tool === 'words' ? 'on' : ''} aria-pressed={tool === 'words'} onClick={() => setTool('words')}>
-              Keywords
+              {t('thinking.paper.keywords')}
             </button>
             <button type="button" className={tool === 'pen' ? 'on' : ''} aria-pressed={tool === 'pen'} onClick={() => setTool('pen')}>
-              Pen
+              {t('thinking.paper.pen')}
             </button>
           </div>
           {draft.strokes.length > 0 && (
             <button type="button" className="btn small ghost" onClick={() => edit(undoStroke(draft))}>
-              Undo ink
+              {t('thinking.paper.undoInk')}
             </button>
           )}
           {!noPiles && piles < MAX_PILES && (
             <button type="button" className="btn small ghost" onClick={() => edit(addPile(draft, size))}>
-              + Pile
+              {t('thinking.paper.addPile')}
             </button>
           )}
           <span className="paper-count small muted">
-            {draft.chips.length}/{MAX_CHIPS} keywords
+            {t('thinking.paper.count', { n: draft.chips.length, count: MAX_CHIPS })}
           </span>
         </div>
       )}
@@ -149,7 +151,7 @@ export function PaperSheet({ draft, onChange, label, placeholder = 'Type a keywo
           {draft.piles.map((name, i) =>
             readOnly ? (
               <span key={i} className="pile-name">
-                {name || `Pile ${i + 1}`}
+                {name || t('thinking.paper.pile', { n: i + 1 })}
               </span>
             ) : (
               <input
@@ -157,8 +159,8 @@ export function PaperSheet({ draft, onChange, label, placeholder = 'Type a keywo
                 className="pile-name"
                 value={name}
                 maxLength={24}
-                placeholder={`Pile ${i + 1}: name it`}
-                aria-label={`Name of pile ${i + 1}`}
+                placeholder={t('thinking.paper.pilePlaceholder', { n: i + 1 })}
+                aria-label={t('thinking.paper.pileNameLabel', { n: i + 1 })}
                 onChange={(e) => edit(renamePile(draft, i, e.target.value))}
               />
             ),
@@ -178,12 +180,20 @@ export function PaperSheet({ draft, onChange, label, placeholder = 'Type a keywo
             </>
           )}
         </svg>
-        {piles > 0 && <span className="paper-tray-label">{readOnly ? '' : 'new keywords land here, drag them down into a pile'}</span>}
+        {piles > 0 && <span className="paper-tray-label">{readOnly ? '' : t('thinking.paper.trayLabel')}</span>}
 
         {draft.chips.map((c) => {
           const dragging = drag?.id === c.id && drag.moved;
           const x = dragging ? drag.x : c.x;
           const y = dragging ? drag.y : c.y;
+          const pile = c.pile !== undefined ? draft.piles[c.pile] || t('thinking.paper.pileInline', { n: c.pile + 1 }) : undefined;
+          const chipLabel = c.fixedFrom
+            ? pile !== undefined
+              ? t('thinking.paper.chipInPileFixed', { text: c.text, pile, old: c.fixedFrom })
+              : t('thinking.paper.chipInTrayFixed', { text: c.text, old: c.fixedFrom })
+            : pile !== undefined
+              ? t('thinking.paper.chipInPile', { text: c.text, pile })
+              : t('thinking.paper.chipInTray', { text: c.text });
           return (
             <button
               key={c.id}
@@ -191,9 +201,9 @@ export function PaperSheet({ draft, onChange, label, placeholder = 'Type a keywo
               className={`chip-k${selected === c.id ? ' selected' : ''}${dragging ? ' dragging' : ''}${c.fixedFrom ? ' fixed' : ''}`}
               style={{ left: `${(x / SHEET_W) * 100}%`, top: `${(y / SHEET_H) * 100}%`, rotate: `${tilt(c.id)}deg` }}
               tabIndex={readOnly ? -1 : 0}
-              aria-label={`${c.text}${c.pile !== undefined ? `, in ${draft.piles[c.pile] || `pile ${c.pile + 1}`}` : ', not sorted yet'}${c.fixedFrom ? `, corrected from ${c.fixedFrom}` : ''}`}
+              aria-label={chipLabel}
               aria-pressed={readOnly ? undefined : selected === c.id}
-              title={c.fixedFrom ? `Was: ${c.fixedFrom}` : undefined}
+              title={c.fixedFrom ? t('thinking.paper.was', { old: c.fixedFrom }) : undefined}
               onPointerDown={(e) => chipDown(e, c.id)}
               onPointerMove={chipMove}
               onPointerUp={chipUp}
@@ -221,26 +231,24 @@ export function PaperSheet({ draft, onChange, label, placeholder = 'Type a keywo
           {ink && ink.length > 1 && <path d={`M${ink.map((p) => `${p.x} ${p.y}`).join(' L')}`} />}
         </svg>
 
-        {draft.chips.length === 0 && !readOnly && <p className="paper-empty">Empty paper. Start with any word that comes to mind.</p>}
+        {draft.chips.length === 0 && !readOnly && <p className="paper-empty">{t('thinking.paper.empty')}</p>}
       </div>
 
       {!readOnly && sel && (
-        <div className="paper-chip-bar" role="group" aria-label={`Move "${sel.text}"`}>
-          <span className="small muted">
-            Move <strong>{sel.text}</strong> to
-          </span>
+        <div className="paper-chip-bar" role="group" aria-label={t('thinking.paper.moveGroup', { text: sel.text })}>
+          <span className="small muted">{tx('thinking.paper.moveTo', { text: <strong>{sel.text}</strong> })}</span>
           {draft.piles.slice(0, piles).map((name, i) => (
             <button key={i} type="button" className="btn small" onClick={() => (edit(sendToPile(draft, sel.id, i, size)), setSelected(null))}>
-              {name || `Pile ${i + 1}`}
+              {name || t('thinking.paper.pile', { n: i + 1 })}
             </button>
           ))}
           {sel.pile !== undefined && (
             <button type="button" className="btn small ghost" onClick={() => (edit(sendToPile(draft, sel.id, undefined, size)), setSelected(null))}>
-              Tray
+              {t('thinking.paper.tray')}
             </button>
           )}
           <button type="button" className="btn small ghost danger-text" onClick={() => (edit(removeChip(draft, sel.id)), setSelected(null))}>
-            Remove
+            {t('thinking.paper.remove')}
           </button>
         </div>
       )}
@@ -250,19 +258,19 @@ export function PaperSheet({ draft, onChange, label, placeholder = 'Type a keywo
           <input
             value={text}
             maxLength={MAX_CHIP_CHARS}
-            placeholder={placeholder}
-            aria-label="New keyword"
+            placeholder={placeholder ?? t('thinking.paper.placeholder')}
+            aria-label={t('thinking.paper.newKeyword')}
             autoFocus={autoFocus}
             enterKeyHint="done"
             onChange={(e) => setText(e.target.value)}
           />
           <button type="submit" className="btn" disabled={!text.trim() || draft.chips.length >= MAX_CHIPS}>
-            Add
+            {t('thinking.paper.add')}
           </button>
         </form>
       )}
       {!readOnly && piles > 0 && (
-        <p className="paper-hint small muted">Drag a keyword into a pile, or tap it and choose. With a keyboard: focus a keyword, press 1–{piles} to sort it, Delete to remove.</p>
+        <p className="paper-hint small muted">{t('thinking.paper.hint', { max: piles })}</p>
       )}
     </div>
   );

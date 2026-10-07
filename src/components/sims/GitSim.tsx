@@ -15,6 +15,7 @@ import {
   type OutLine,
   type Orientation,
 } from '../../lib/gitsim';
+import { useT } from '../../i18n/react';
 import type { SimProps } from './SimStepView';
 import './GitSim.css';
 
@@ -25,7 +26,6 @@ interface Entry {
   lines: OutLine[];
 }
 
-const COMMIT_PLACEHOLDER = 'Describe your change';
 const NARROW = 520;
 
 export function GitSim(props: SimProps<'git'>) {
@@ -44,6 +44,9 @@ function startState(setup: string[] | undefined): GitState {
 }
 
 function GitPlayground({ step, onGoal }: SimProps<'git'>) {
+  const { t } = useT();
+  // The suggested commit message; it is selected after a suggestion fills the input, so the learner types over it.
+  const placeholder = t('sims.git.commitPlaceholder');
   const start = useMemo(() => startState(step.setup), [step.setup]);
   const [state, setState] = useState(start);
   const [entries, setEntries] = useState<Entry[]>([]);
@@ -103,8 +106,8 @@ function GitPlayground({ step, onGoal }: SimProps<'git'>) {
       const el = inputRef.current;
       if (!el) return;
       el.focus();
-      const i = cmd.indexOf(COMMIT_PLACEHOLDER);
-      if (i >= 0) el.setSelectionRange(i, i + COMMIT_PLACEHOLDER.length);
+      const i = cmd.indexOf(placeholder);
+      if (i >= 0) el.setSelectionRange(i, i + placeholder.length);
       else el.setSelectionRange(cmd.length, cmd.length);
     });
   };
@@ -116,7 +119,7 @@ function GitPlayground({ step, onGoal }: SimProps<'git'>) {
     histPos.current = null;
   };
 
-  const chips = suggestions(state, step.goal);
+  const chips = suggestions(state, step.goal, placeholder);
 
   return (
     <div className="gitsim" ref={wrapRef}>
@@ -124,15 +127,13 @@ function GitPlayground({ step, onGoal }: SimProps<'git'>) {
 
       <div className="gs-term">
         <div className="gs-term-bar">
-          <span className="gs-term-title">Terminal</span>
+          <span className="gs-term-title">{t('sims.git.terminal')}</span>
           <button type="button" className="btn ghost small" onClick={reset} disabled={entries.length === 0 && state === start}>
-            Start over
+            {t('sims.git.startOver')}
           </button>
         </div>
-        <div className="gs-screen" ref={screenRef} role="log" aria-label="Terminal output" tabIndex={0}>
-          {entries.length === 0 && (
-            <div className="gs-line hint">Type a Git command and press Enter. Tap a suggestion to fill it in, or type help.</div>
-          )}
+        <div className="gs-screen" ref={screenRef} role="log" aria-label={t('sims.git.terminalOutput')} tabIndex={0}>
+          {entries.length === 0 && <div className="gs-line hint">{t('sims.git.emptyHint')}</div>}
           {entries.map((e) => (
             <div className="gs-entry" key={e.id}>
               <div className="gs-cmd">
@@ -160,7 +161,7 @@ function GitPlayground({ step, onGoal }: SimProps<'git'>) {
             <span className="gs-prompt" aria-hidden="true">
               ({state.head}) $
             </span>
-            <span className="sr-only">Git command (on branch {state.head})</span>
+            <span className="sr-only">{t('sims.git.inputLabel', { branch: state.head })}</span>
             <input
               ref={inputRef}
               className="gs-input"
@@ -179,12 +180,12 @@ function GitPlayground({ step, onGoal }: SimProps<'git'>) {
             />
           </label>
           <button type="submit" className="btn primary small">
-            Run
+            {t('sims.git.run')}
           </button>
         </form>
       </div>
 
-      <div className="gs-chips" role="group" aria-label="Command suggestions (fill the input)">
+      <div className="gs-chips" role="group" aria-label={t('sims.git.suggestions')}>
         {chips.map((c) => (
           <button type="button" key={c} className="gs-chip" onClick={() => fill(c)}>
             {c}
@@ -196,14 +197,14 @@ function GitPlayground({ step, onGoal }: SimProps<'git'>) {
 }
 
 /** Context-aware command suggestions: they only fill the input, the learner still presses Enter. */
-function suggestions(s: GitState, goal: GitGoal | undefined): string[] {
+function suggestions(s: GitState, goal: GitGoal | undefined, placeholder: string): string[] {
   const out: string[] = [];
   const add = (c: string) => !out.includes(c) && out.push(c);
   const wanted = new Set<string>(goal?.branches ?? []);
   for (const m of goal?.merged ?? []) wanted.add(m.from).add(m.into);
   for (const b of Object.keys(goal?.minCommits ?? {})) wanted.add(b);
   for (const b of wanted) if (!(b in s.branches)) add(`git switch -c ${b}`);
-  add(`git commit -m "${COMMIT_PLACEHOLDER}"`);
+  add(`git commit -m "${placeholder}"`);
   for (const m of goal?.merged ?? []) {
     if (!(m.from in s.branches) || !(m.into in s.branches)) continue;
     if (s.head === m.into) add(`git merge ${m.from}`);
@@ -233,6 +234,7 @@ function useWidth(ref: RefObject<HTMLElement | null>): number {
 const laneColor = (lane: number) => `var(--gs-lane-${lane % 6})`;
 
 function GitGraph({ state, orientation }: { state: GitState; orientation: Orientation }) {
+  const { t } = useT();
   const g = useMemo(() => layoutGraph(state, orientation), [state, orientation]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const r = 9;
@@ -246,7 +248,7 @@ function GitGraph({ state, orientation }: { state: GitState; orientation: Orient
 
   return (
     <div className={`gs-graph ${orientation}`} ref={scrollRef}>
-      <svg width={g.width} height={g.height} viewBox={`0 0 ${g.width} ${g.height}`} role="img" aria-label={`Commit graph: ${describeGraph(state)}`}>
+      <svg width={g.width} height={g.height} viewBox={`0 0 ${g.width} ${g.height}`} role="img" aria-label={t('sims.git.graphLabel', { summary: describeGraph(state) })}>
         <g className="gs-edges">
           {g.edges.map((e) => (
             <path key={e.key} d={e.d} className="gs-edge" style={{ stroke: laneColor(e.lane) }} />

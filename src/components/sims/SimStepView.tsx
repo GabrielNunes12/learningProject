@@ -1,6 +1,8 @@
 // The lesson card around every simulator: title, task text, the playground itself and Continue.
 // A simulator reports progress toward its goal through onGoal; with no goal, Continue is always available.
 import { useState } from 'react';
+import { t } from '../../i18n/core';
+import { useT } from '../../i18n/react';
 import type { SimConfig, SimStep } from '../../types';
 import { Markdown } from '../Markdown';
 import { BottomBar } from '../QuestionFrame';
@@ -18,11 +20,12 @@ export interface SimProps<K extends SimConfig['sim']> {
 
 export function goalText(step: SimStep): string | null {
   if (step.sim === 'git') return step.goal?.text ?? null;
-  if (step.sim === 'dice' && step.goalRolls) return `Roll at least ${step.goalRolls.toLocaleString('en-US')} times.`;
+  if (step.sim === 'dice' && step.goalRolls) return t('sims.goal.rollAtLeast', { count: step.goalRolls });
   return null;
 }
 
 export function SimStepView({ step, onContinue }: { step: SimStep; onContinue: () => void }) {
+  useT(); // re-render on a language switch (goalText uses the active language)
   const goal = goalText(step);
   const [met, setMet] = useState(false);
   const ready = !goal || met;
@@ -30,7 +33,7 @@ export function SimStepView({ step, onContinue }: { step: SimStep; onContinue: (
   return (
     <>
       <article className="step-card sim-card">
-        <span className="eyebrow">Playground</span>
+        <span className="eyebrow">{t('sims.playground')}</span>
         {step.title && <h2>{step.title}</h2>}
         {step.body && <Markdown text={step.body} />}
         <div className="sim-stage">
@@ -46,14 +49,14 @@ export function SimStepView({ step, onContinue }: { step: SimStep; onContinue: (
             <>
               <span className="bb-icon">✓</span>
               <div>
-                <strong>Goal reached!</strong>
-                <span>Keep playing, or continue when you're ready.</span>
+                <strong>{t('sims.goal.reached')}</strong>
+                <span>{t('sims.goal.keepPlaying')}</span>
               </div>
             </>
           )}
           {goal && !met && (
             <div>
-              <strong>Goal</strong>
+              <strong>{t('sims.goal.label')}</strong>
               <span>{goal}</span>
             </div>
           )}
@@ -61,11 +64,11 @@ export function SimStepView({ step, onContinue }: { step: SimStep; onContinue: (
         <div className="bb-actions">
           {!ready && (
             <button className="btn ghost" onClick={onContinue}>
-              Skip
+              {t('common.skip')}
             </button>
           )}
           <button className="btn primary big" onClick={onContinue} disabled={!ready}>
-            Continue
+            {t('common.continue')}
           </button>
         </div>
       </BottomBar>

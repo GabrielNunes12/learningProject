@@ -1,3 +1,5 @@
+import { t, tMaybe, type Params } from '../i18n/core.ts';
+
 export class ApiError extends Error {
   status: number;
   code?: string;
@@ -10,7 +12,18 @@ export class ApiError extends Error {
   }
 }
 
-/** JSON request to our own API. Throws ApiError with the server's message on failure. */
+/**
+ * The server's error in the learner's language: errors carry a message key ("api.wrongLogin") next to the
+ * English text, so the text is looked up here; unknown keys fall back to the server's English.
+ */
+function errorText(data: Record<string, unknown>, status: number): string {
+  const english = typeof data.error === 'string' ? data.error : t('api.requestFailed', { status });
+  if (typeof data.key !== 'string') return english;
+  const params = data.params && typeof data.params === 'object' ? (data.params as Params) : undefined;
+  return tMaybe(data.key, english, params);
+}
+
+/** JSON request to our own API. Throws ApiError with the server's message (translated) on failure. */
 export async function api<T = Record<string, unknown>>(path: string, body?: unknown, method?: string): Promise<T> {
   let res: Response;
   try {
@@ -21,9 +34,9 @@ export async function api<T = Record<string, unknown>>(path: string, body?: unkn
       credentials: 'same-origin',
     });
   } catch {
-    throw new ApiError(0, "Can't reach the server. Is it running? (npm run dev)", {});
+    throw new ApiError(0, t('api.unreachable'), {});
   }
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new ApiError(res.status, data.error ?? `Request failed (${res.status})`, data);
+  if (!res.ok) throw new ApiError(res.status, errorText(data, res.status), data);
   return data as T;
 }

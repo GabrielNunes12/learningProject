@@ -1,0 +1,2126 @@
+{
+  "id": "spring-boot",
+  "title": "Spring Boot",
+  "icon": "logo:spring",
+  "color": "#6db33f",
+  "order": 16,
+  "category": "Programming",
+  "level": "Intermediate",
+  "description": "Crie e teste uma API REST no estilo de produção com Spring Boot e entenda a “mágica” (injeção de dependência, autoconfiguração) o bastante para depurá-la. Java 17+, Spring Boot 3 e 4.",
+  "keyIdeas": [
+    "Spring Boot = Spring + **starters** + **autoconfiguração** + um **servidor embutido**: o `@SpringBootApplication` varre o seu pacote, configura o que o seu classpath pede e o `java -jar` executa tudo.",
+    "Suas classes viram **beans** por meio de anotações como `@Service`; peça dependências por um único construtor e lembre que todo bean é um singleton compartilhado.",
+    "A autoconfiguração são definições de `@Bean` condicionais: ajuste-a com propriedades, sobrescreva-a definindo o seu próprio bean e depure-a com `debug=true`.",
+    "Um endpoint REST é um método de `@RestController`: a entrada vem por `@PathVariable`, `@RequestParam` e `@Valid @RequestBody`, a saída sai como records ou um `ResponseEntity`, e os erros são mapeados uma única vez em um `@RestControllerAdvice` que devolve `ProblemDetail`.",
+    "O Spring Data JPA transforma `interface CustomerRepository extends JpaRepository<Customer, Long>` e nomes como `findByEmail` em consultas que funcionam.",
+    "Um só jar para todos os ambientes: profiles e variáveis de ambiente mudam a configuração, e os test slices (`@WebMvcTest`, `@DataJpaTest`) mantêm os testes rápidos."
+  ],
+  "concepts": [
+    {
+      "id": "starters",
+      "label": "Starter",
+      "lesson": "what-is-spring-boot",
+      "summary": "Uma única dependência starter traz um conjunto testado de bibliotecas, e o gerenciamento de dependências do Boot fixa as versões delas para você.",
+      "aliases": [
+        "spring-boot-starter",
+        "gerenciamento de dependências",
+        "dependency management",
+        "start.spring.io"
+      ]
+    },
+    {
+      "id": "embedded-server",
+      "label": "Servidor embutido",
+      "lesson": "what-is-spring-boot",
+      "summary": "O servidor web (Tomcat por padrão, porta 8080) vem dentro de um jar executável, então o java -jar é tudo de que a produção precisa.",
+      "aliases": [
+        "embedded server",
+        "Tomcat",
+        "jar executável",
+        "executable jar",
+        "java -jar",
+        "porta 8080"
+      ]
+    },
+    {
+      "id": "component-scan",
+      "label": "Varredura de componentes",
+      "lesson": "what-is-spring-boot",
+      "summary": "O @SpringBootApplication varre o próprio pacote e os subpacotes atrás de classes anotadas e as registra como beans; pacotes irmãos ficam de fora.",
+      "aliases": [
+        "component scanning",
+        "component scan",
+        "@SpringBootApplication",
+        "@ComponentScan",
+        "pacote base",
+        "base package"
+      ]
+    },
+    {
+      "id": "dependency-injection",
+      "label": "Injeção de dependência",
+      "lesson": "dependency-injection",
+      "summary": "Uma classe declara do que precisa e o contexto da aplicação (o container de IoC) fornece, em vez de a classe construir as próprias dependências.",
+      "aliases": [
+        "dependency injection",
+        "DI",
+        "IoC",
+        "contexto da aplicação",
+        "application context",
+        "inversão de controle",
+        "inversion of control"
+      ]
+    },
+    {
+      "id": "bean",
+      "label": "Bean",
+      "lesson": "dependency-injection",
+      "summary": "Um objeto criado e gerenciado pelo container do Spring, com uma instância compartilhada por padrão, declarado com @Component/@Service/... ou com um método @Bean.",
+      "aliases": [
+        "@Component",
+        "@Service",
+        "@Bean",
+        "singleton"
+      ]
+    },
+    {
+      "id": "constructor-injection",
+      "label": "Injeção por construtor",
+      "lesson": "dependency-injection",
+      "summary": "Receber as dependências pelo construtor as torna final e visíveis e deixa os testes simplesmente chamarem new, ao contrário do @Autowired em campo.",
+      "aliases": [
+        "constructor injection",
+        "@Autowired",
+        "injeção em campo",
+        "field injection"
+      ]
+    },
+    {
+      "id": "auto-configuration",
+      "label": "Autoconfiguração",
+      "lesson": "auto-configuration",
+      "summary": "O Boot registra beans a partir de classes de configuração condicionais, conforme o que está no classpath, e recua (@ConditionalOnMissingBean) quando você define o seu.",
+      "aliases": [
+        "auto-configuration",
+        "auto-configuração",
+        "@EnableAutoConfiguration",
+        "@ConditionalOnMissingBean",
+        "@ConditionalOnClass",
+        "condition report",
+        "relatório de condições"
+      ]
+    },
+    {
+      "id": "properties",
+      "label": "Propriedades",
+      "lesson": "auto-configuration",
+      "summary": "Chaves no application.properties ou .yml ajustam a autoconfiguração (server.port, spring.*) e ligam as suas próprias configurações via @ConfigurationProperties; chaves desconhecidas são ignoradas em silêncio.",
+      "aliases": [
+        "properties",
+        "application.properties",
+        "application.yml",
+        "@ConfigurationProperties",
+        "server.port"
+      ]
+    },
+    {
+      "id": "ambiguous-beans",
+      "label": "Beans ambíguos",
+      "lesson": "bean-conflicts",
+      "summary": "O Spring injeta por tipo, então dois beans compatíveis fazem a inicialização falhar até que @Primary, @Qualifier ou uma List com todos eles resolva a escolha.",
+      "aliases": [
+        "ambiguous beans",
+        "beans duplicados",
+        "@Primary",
+        "@Qualifier",
+        "NoUniqueBeanDefinitionException",
+        "dois beans",
+        "two beans"
+      ]
+    },
+    {
+      "id": "circular-dependency",
+      "label": "Dependência circular",
+      "lesson": "bean-conflicts",
+      "summary": "Beans que precisam um do outro pelos construtores nunca podem ser construídos, então a inicialização falha; separe a lógica compartilhada.",
+      "aliases": [
+        "circular dependency",
+        "ciclo de dependências",
+        "dependency cycle",
+        "referência circular",
+        "circular reference"
+      ]
+    },
+    {
+      "id": "rest-controller",
+      "label": "@RestController",
+      "lesson": "rest-controllers",
+      "summary": "Um controller cujos métodos mapeiam rotas HTTP e devolvem objetos que o Jackson escreve como corpo JSON da resposta.",
+      "aliases": [
+        "@GetMapping",
+        "@RequestMapping",
+        "controller",
+        "Jackson",
+        "controlador"
+      ]
+    },
+    {
+      "id": "request-binding",
+      "label": "Binding de requisição",
+      "lesson": "rest-controllers",
+      "summary": "@PathVariable, @RequestParam e @RequestBody transformam segmentos do caminho, parâmetros de consulta e corpos JSON em argumentos de método (em geral records, ou seja, DTOs).",
+      "aliases": [
+        "request binding",
+        "@RequestBody",
+        "@PathVariable",
+        "@RequestParam",
+        "DTO"
+      ]
+    },
+    {
+      "id": "http-status",
+      "label": "Códigos de status HTTP",
+      "lesson": "rest-controllers",
+      "summary": "Devolver um objeto significa 200, o ResponseEntity define outros, como 201 ou 404, e o Spring responde 400 para entrada inválida e 500 para exceções não tratadas.",
+      "aliases": [
+        "HTTP status codes",
+        "status HTTP",
+        "ResponseEntity",
+        "status code",
+        "código de status",
+        "201 Created",
+        "404"
+      ]
+    },
+    {
+      "id": "bean-validation",
+      "label": "Bean Validation",
+      "lesson": "validation",
+      "summary": "Anotações de restrição como @NotBlank e @Min em um DTO só são verificadas quando o parâmetro (e qualquer objeto aninhado) está marcado com @Valid; as falhas devolvem 400.",
+      "aliases": [
+        "@Valid",
+        "@NotBlank",
+        "jakarta.validation",
+        "validation",
+        "validação"
+      ]
+    },
+    {
+      "id": "exception-handler",
+      "label": "Tratador de exceções",
+      "lesson": "error-handling",
+      "summary": "Métodos @ExceptionHandler em um @RestControllerAdvice transformam exceções em respostas, como um ProblemDetail; vence o tratador mais específico.",
+      "aliases": [
+        "exception handler",
+        "@RestControllerAdvice",
+        "@ExceptionHandler",
+        "ProblemDetail",
+        "tratamento de erros",
+        "error handling"
+      ]
+    },
+    {
+      "id": "entity",
+      "label": "Entidade JPA",
+      "lesson": "spring-data-jpa",
+      "summary": "Uma classe @Entity com um @Id é mapeada para uma tabela, e o Hibernate só cria ou altera o esquema se o ddl-auto mandar.",
+      "aliases": [
+        "JPA entity",
+        "entidade",
+        "@Entity",
+        "@Id",
+        "ddl-auto",
+        "Hibernate"
+      ]
+    },
+    {
+      "id": "repository",
+      "label": "Repositório Spring Data",
+      "lesson": "spring-data-jpa",
+      "summary": "Uma interface que estende JpaRepository ganha save/findById e consultas derivadas dos nomes dos métodos, ou escritas com @Query, geradas na inicialização.",
+      "aliases": [
+        "Spring Data repository",
+        "repositório",
+        "JpaRepository",
+        "consulta derivada",
+        "derived query",
+        "findBy",
+        "@Query"
+      ]
+    },
+    {
+      "id": "profiles",
+      "label": "Profiles",
+      "lesson": "configuration",
+      "summary": "Um profile como dev ou prod é um arquivo nomeado de sobrescritas (application-{profile}.properties) que só vale quando aquele profile está ativo.",
+      "aliases": [
+        "profile",
+        "perfis",
+        "perfil",
+        "spring.profiles.active",
+        "application-dev.properties"
+      ]
+    },
+    {
+      "id": "property-precedence",
+      "label": "Precedência de propriedades",
+      "lesson": "configuration",
+      "summary": "Argumentos de linha de comando vencem variáveis de ambiente, que vencem arquivos de profile, que vencem o application.properties; variáveis de ambiente usam relaxed binding (SPRING_DATASOURCE_URL).",
+      "aliases": [
+        "property precedence",
+        "relaxed binding",
+        "variáveis de ambiente",
+        "environment variables",
+        "argumentos de linha de comando",
+        "command-line arguments",
+        "ordem de sobrescrita",
+        "override order"
+      ]
+    },
+    {
+      "id": "transactional",
+      "label": "@Transactional",
+      "lesson": "transactions-n-plus-one",
+      "summary": "Um proxy em volta do bean abre uma transação e faz rollback só em exceções não verificadas; chamadas internas via this pulam o proxy.",
+      "aliases": [
+        "transação",
+        "transaction",
+        "proxy",
+        "rollback",
+        "autochamada",
+        "self-invocation"
+      ]
+    },
+    {
+      "id": "n-plus-one",
+      "label": "Problema N+1",
+      "lesson": "transactions-n-plus-one",
+      "summary": "Carregar uma lista e depois acessar uma associação lazy em cada item dispara uma consulta mais uma por linha; um fetch join ou um entity graph carrega tudo em uma só.",
+      "aliases": [
+        "N+1 problem",
+        "N+1 queries",
+        "consultas N+1",
+        "lazy loading",
+        "carregamento lazy",
+        "join fetch",
+        "@EntityGraph"
+      ]
+    },
+    {
+      "id": "slice-test",
+      "label": "Teste de slice",
+      "lesson": "testing-slices",
+      "summary": "@WebMvcTest ou @DataJpaTest sobe só uma camada, então os colaboradores de fora dela são substituídos por mocks @MockitoBean.",
+      "aliases": [
+        "slice test",
+        "test slice",
+        "@WebMvcTest",
+        "@DataJpaTest",
+        "@MockitoBean",
+        "MockMvc"
+      ]
+    },
+    {
+      "id": "security-filter-chain",
+      "label": "Cadeia de filtros de segurança",
+      "lesson": "security-basics",
+      "summary": "Adicionar o Spring Security tranca todos os endpoints; um bean SecurityFilterChain lista regras de requisição verificadas em ordem, e a primeira que casar vence.",
+      "aliases": [
+        "security filter chain",
+        "SecurityFilterChain",
+        "permitAll",
+        "requestMatchers",
+        "Spring Security"
+      ]
+    },
+    {
+      "id": "actuator",
+      "label": "Actuator",
+      "lesson": "actuator-and-shipping",
+      "summary": "Endpoints de produção em /actuator, em que o health responde 200 UP ou 503 DOWN e só o health é exposto por HTTP por padrão.",
+      "aliases": [
+        "/actuator/health",
+        "health check",
+        "verificação de saúde",
+        "métricas",
+        "metrics",
+        "exposure.include"
+      ]
+    }
+  ],
+  "links": [
+    {
+      "from": "starters",
+      "to": "auto-configuration",
+      "label": "aciona"
+    },
+    {
+      "from": "starters",
+      "to": "embedded-server",
+      "label": "traz"
+    },
+    {
+      "from": "component-scan",
+      "to": "bean",
+      "label": "registra"
+    },
+    {
+      "from": "auto-configuration",
+      "to": "bean",
+      "label": "cria"
+    },
+    {
+      "from": "bean",
+      "to": "dependency-injection",
+      "label": "é usado(a) em"
+    },
+    {
+      "from": "constructor-injection",
+      "to": "dependency-injection",
+      "label": "é uma forma de"
+    },
+    {
+      "from": "properties",
+      "to": "auto-configuration",
+      "label": "ajustam"
+    },
+    {
+      "from": "dependency-injection",
+      "to": "ambiguous-beans",
+      "label": "falha com"
+    },
+    {
+      "from": "constructor-injection",
+      "to": "circular-dependency",
+      "label": "falha com"
+    },
+    {
+      "from": "rest-controller",
+      "to": "bean",
+      "label": "é um tipo de"
+    },
+    {
+      "from": "request-binding",
+      "to": "rest-controller",
+      "label": "faz parte de"
+    },
+    {
+      "from": "rest-controller",
+      "to": "http-status",
+      "label": "define"
+    },
+    {
+      "from": "exception-handler",
+      "to": "http-status",
+      "label": "é mapeado para"
+    },
+    {
+      "from": "bean-validation",
+      "to": "request-binding",
+      "label": "valida"
+    },
+    {
+      "from": "exception-handler",
+      "to": "bean-validation",
+      "label": "trata falhas de"
+    },
+    {
+      "from": "entity",
+      "to": "repository",
+      "label": "é usado(a) em"
+    },
+    {
+      "from": "repository",
+      "to": "bean",
+      "label": "é um tipo de"
+    },
+    {
+      "from": "transactional",
+      "to": "bean",
+      "label": "envolve"
+    },
+    {
+      "from": "repository",
+      "to": "transactional",
+      "label": "usa"
+    },
+    {
+      "from": "entity",
+      "to": "n-plus-one",
+      "label": "pode causar"
+    },
+    {
+      "from": "n-plus-one",
+      "to": "repository",
+      "label": "é resolvido(a) por"
+    },
+    {
+      "from": "profiles",
+      "to": "properties",
+      "label": "sobrescrevem"
+    },
+    {
+      "from": "profiles",
+      "to": "property-precedence",
+      "label": "fazem parte de"
+    },
+    {
+      "from": "slice-test",
+      "to": "rest-controller",
+      "label": "testa"
+    },
+    {
+      "from": "slice-test",
+      "to": "repository",
+      "label": "testa"
+    },
+    {
+      "from": "security-filter-chain",
+      "to": "http-status",
+      "label": "responde com"
+    },
+    {
+      "from": "security-filter-chain",
+      "to": "auto-configuration",
+      "label": "substitui"
+    },
+    {
+      "from": "actuator",
+      "to": "properties",
+      "label": "é configurado(a) por"
+    },
+    {
+      "from": "security-filter-chain",
+      "to": "actuator",
+      "label": "protege"
+    },
+    {
+      "from": "embedded-server",
+      "to": "properties",
+      "label": "é configurado(a) por"
+    },
+    {
+      "from": "component-scan",
+      "to": "auto-configuration",
+      "label": "contrasta com"
+    },
+    {
+      "from": "dependency-injection",
+      "to": "unit-testing/dependency-injection",
+      "label": "se apoia em"
+    },
+    {
+      "from": "slice-test",
+      "to": "unit-testing/test-pyramid",
+      "label": "faz parte de"
+    },
+    {
+      "from": "transactional",
+      "to": "sql/transaction",
+      "label": "se apoia em"
+    },
+    {
+      "from": "n-plus-one",
+      "to": "sql/inner-join",
+      "label": "contrasta com"
+    },
+    {
+      "from": "repository",
+      "to": "sql/where-filter",
+      "label": "usa"
+    }
+  ],
+  "units": [
+    {
+      "id": "how-it-works",
+      "title": "Como o Spring Boot funciona",
+      "description": "O que o Spring Boot acrescenta ao Spring, como a injeção de dependência liga a sua aplicação e o que a autoconfiguração realmente faz.",
+      "lessons": [
+        {
+          "id": "what-is-spring-boot",
+          "title": "Spring vs Spring Boot: o que você realmente ganha",
+          "pareto": "core",
+          "minutes": 6,
+          "takeaway": "O Spring é o framework; o Spring Boot acrescenta starters, autoconfiguração e um servidor embutido, então rodar o `main()` (ou o `java -jar`) já sobe uma aplicação web completa.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "O Spring e depois o Spring Boot",
+              "body": "O **Spring Framework** é um kit de ferramentas para back ends em Java: um container de injeção de dependência mais módulos para web (Spring MVC), acesso a dados, transações, segurança e mais. Antes do Boot, você configurava boa parte disso à mão e publicava um arquivo WAR em um servidor instalado à parte.\n\nO **Spring Boot** fica por cima do Spring e faz as escolhas chatas por você:\n\n- **Starters**: uma dependência como `spring-boot-starter-web` traz um conjunto testado de bibliotecas (Spring MVC, Jackson para JSON, Tomcat embutido).\n- **Autoconfiguração**: olha o seu classpath e as suas propriedades e cria beans sensatos para você.\n- **Servidor embutido**: o servidor web roda *dentro* da sua aplicação.\n\nO Spring Boot 3 exige Java 17+ e usa pacotes `jakarta.*` no lugar de `javax.*`. O Spring Boot 4 mantém o mesmo modelo de programação, então este curso vale para os dois."
+            },
+            {
+              "type": "explain",
+              "title": "A menor aplicação possível",
+              "body": "```java\npackage com.example.shop;\n\nimport org.springframework.boot.SpringApplication;\nimport org.springframework.boot.autoconfigure.SpringBootApplication;\n\n@SpringBootApplication\npublic class ShopApplication {\n    public static void main(String[] args) {\n        SpringApplication.run(ShopApplication.class, args);\n    }\n}\n```\n\n`@SpringBootApplication` são três anotações em uma:\n\n- `@Configuration` (via `@SpringBootConfiguration`): esta classe pode definir beans.\n- `@EnableAutoConfiguration`: liga a configuração automática do Boot.\n- `@ComponentScan`: encontra as suas classes `@Service`, `@RestController` etc. **neste pacote e nos subpacotes dele**.\n\n`SpringApplication.run` constrói o container do Spring, aplica a autoconfiguração e, com o starter web, sobe o Tomcat na porta **8080**."
+            },
+            {
+              "type": "mcq",
+              "id": "q-sba-parts",
+              "concepts": [
+                "component-scan",
+                "auto-configuration"
+              ],
+              "prompt": "`@SpringBootApplication` é um atalho. Qual combinação ele representa?",
+              "choices": [
+                "`@RestController` + `@EnableAutoConfiguration` + `@ComponentScan`",
+                "`@Configuration` + `@EnableWebMvc` + `@EntityScan`",
+                "`@Configuration` + `@EnableAutoConfiguration` + `@ComponentScan`",
+                "`@Component` + `@EnableAutoConfiguration` + `@Import`"
+              ],
+              "answer": 2,
+              "explanation": "Ele marca a classe como uma classe de configuração (via `@SpringBootConfiguration`), liga a autoconfiguração e varre componentes a partir do próprio pacote. Não é um controller, e o Boot configura o Spring MVC para você, então raramente você escreve `@EnableWebMvc` por conta própria."
+            },
+            {
+              "type": "explain",
+              "title": "Estrutura do projeto",
+              "body": "Gere projetos em **start.spring.io** (ou na sua IDE): escolha Maven ou Gradle, uma versão do Java e starters como *Spring Web* e *Spring Data JPA*. Você recebe:\n\n```text\nshop/\n  mvnw, pom.xml                 (or gradlew, build.gradle.kts)\n  src/main/java/com/example/shop/\n    ShopApplication.java\n    order/OrderController.java\n    order/OrderService.java\n  src/main/resources/application.properties\n  src/test/java/com/example/shop/ShopApplicationTests.java\n```\n\n- Mantenha a classe principal no **pacote raiz** e todo o resto em subpacotes: a varredura de componentes começa ali.\n- `./mvnw` (ou `./gradlew`) é um script wrapper, então ninguém precisa instalar a ferramenta de build.\n- O Boot gerencia as versões das bibliotecas para você: você adiciona `spring-boot-starter-data-jpa` sem versão do Hibernate e recebe uma que sabidamente funciona com a sua versão do Boot."
+            },
+            {
+              "type": "example",
+              "title": "O controller que ninguém achava",
+              "problem": "A aplicação sobe sem erros, mas `GET /hello` devolve **404**. Por quê?\n\n```java\npackage com.example.shop;\n\n@SpringBootApplication\npublic class ShopApplication { /* main... */ }\n```\n\n```java\npackage com.example.web;\n\n@RestController\npublic class HelloController {\n    @GetMapping(\"/hello\")\n    public String hello() { return \"hi\"; }\n}\n```",
+              "steps": [
+                "O `@ComponentScan` dentro de `@SpringBootApplication` varre `com.example.shop` e tudo que está abaixo dele.",
+                "`com.example.web` é um pacote *irmão*, não um subpacote, então o `HelloController` nunca é registrado como bean.",
+                "Sem bean, não há mapeamento para `/hello`, então o Spring responde 404. Nada falha na inicialização, e é isso que torna o problema confuso.",
+                "Correção: mova a classe para `com.example.shop.web` (o preferido) ou amplie a varredura com `@SpringBootApplication(scanBasePackages = \"com.example\")`."
+              ],
+              "answer": "O controller está fora da árvore de pacotes varrida. Mova-o para dentro de `com.example.shop`."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-sibling-package",
+              "concepts": [
+                "component-scan",
+                "dependency-injection"
+              ],
+              "prompt": "O `OrderController` deveria receber um `PriceService` por injeção, mas a aplicação falha na inicialização. Clique na linha com o bug.",
+              "language": "java",
+              "code": "// ShopApplication.java\npackage com.example.shop;\n\n@SpringBootApplication\npublic class ShopApplication { /* main... */ }\n\n// PriceService.java\npackage com.example.pricing;\n\n@Service\npublic class PriceService { /* ... */ }\n\n// OrderController.java\npackage com.example.shop.order;\n\n@RestController\npublic class OrderController {\n    public OrderController(PriceService prices) { /* ... */ }\n}",
+              "error": "***************************\nAPPLICATION FAILED TO START\n***************************\n\nDescription:\n\nParameter 0 of constructor in OrderController required a bean of type 'PriceService' that could not be found.\n\nAction:\n\nConsider defining a bean of type 'PriceService' in your configuration.",
+              "lines": [
+                8
+              ],
+              "fixes": [
+                "Mudar a linha 8 para `package com.example.shop.pricing;`",
+                "Adicionar `@Autowired` acima da linha 18",
+                "Adicionar `@ComponentScan(\"com.example.shop\")` acima da linha 4",
+                "Mudar a linha 14 para `package com.example.pricing;`"
+              ],
+              "answer": 0,
+              "hint": "Quais pacotes o `@SpringBootApplication` varre, a partir da linha 2?",
+              "explanation": "A varredura de componentes começa no pacote da classe principal, `com.example.shop`, e cobre só os subpacotes dele. `com.example.pricing` é um pacote irmão, então o `PriceService` nunca é registrado e o construtor do controller não tem o que receber. Movê-lo para `com.example.shop.pricing` o coloca dentro da árvore varrida. O `@Autowired` não cria beans, e `@ComponentScan(\"com.example.shop\")` varre a mesma árvore de antes. Mover o controller para `com.example.pricing` só esconde o erro: a aplicação sobe porque o `OrderController` também deixa de ser varrido, então os endpoints dele respondem 404."
+            },
+            {
+              "type": "mcq",
+              "id": "q-run-how",
+              "concepts": [
+                "embedded-server"
+              ],
+              "prompt": "Você gerou o `shop.jar` de um projeto com o starter web. O que precisa estar instalado na máquina de produção para executá-lo?",
+              "choices": [
+                "Um servidor Tomcat para publicar o jar",
+                "O Maven, para poder rodar `mvn spring-boot:run`",
+                "Um runtime do Spring Boot, instalado separadamente do Java",
+                "Só um runtime Java: `java -jar shop.jar` sobe o servidor embutido"
+              ],
+              "answer": 3,
+              "explanation": "O Boot gera um jar *executável* com as suas classes, todas as dependências e o servidor embutido (Tomcat por padrão). Um runtime Java 17+ é tudo de que ele precisa. O Maven é uma ferramenta de build, não uma dependência de runtime."
+            },
+            {
+              "type": "mcq",
+              "id": "q-versions",
+              "concepts": [
+                "starters"
+              ],
+              "prompt": "O seu build lista `spring-boot-starter-data-jpa` sem versão, e mesmo assim o Hibernate aparece no classpath. De onde vem a versão dele?",
+              "choices": [
+                "O gerenciamento de dependências do Spring Boot, que fixa versões testadas juntas para a sua versão do Boot",
+                "A versão mais recente do Hibernate, baixada na hora do build",
+                "Qualquer versão do Hibernate que a sua IDE tenha em cache",
+                "O JDK, que já vem com uma implementação de JPA"
+              ],
+              "answer": 0,
+              "explanation": "O POM pai (ou plugin do Gradle) do Boot importa um bill of materials (BOM) com versões compatíveis de centenas de bibliotecas. Atualizar o Boot as atualiza juntas, o que evita a maioria das dores de cabeça com conflito de versões. O JDK não tem implementação de JPA."
+            },
+            {
+              "type": "numeric",
+              "id": "q-port",
+              "concepts": [
+                "embedded-server"
+              ],
+              "prompt": "Sem nenhuma configuração, em qual porta o servidor web embutido escuta?",
+              "answer": 8080,
+              "explanation": "O padrão é **8080**. Mude com `server.port=9090` no `application.properties`, ou por ambiente com a variável de ambiente `SERVER_PORT` (veja a lição sobre configuração)."
+            }
+          ]
+        },
+        {
+          "id": "dependency-injection",
+          "title": "Beans e injeção de dependência",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "Anote as suas classes como beans, peça dependências por um único construtor com campos `final` e lembre que todo bean é uma instância compartilhada.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Não use new, peça",
+              "body": "Sem o Spring, as classes constroem as próprias dependências:\n\n```java\npublic class OrderService {\n    private final PaymentClient payments = new StripePaymentClient(); // hard-wired\n}\n```\n\nIsso é difícil de testar e de trocar. Com a **injeção de dependência**, a classe só declara o que precisa e outra parte fornece.\n\nNo Spring, essa outra parte é o **contexto da aplicação** (o container de IoC). Ele cria os seus objetos, descobre do que cada um precisa e entrega as peças. Os objetos que ele gerencia se chamam **beans**."
+            },
+            {
+              "type": "explain",
+              "title": "Transformando classes em beans",
+              "body": "A varredura de componentes registra qualquer classe com uma anotação de estereótipo:\n\n- `@Component`: um bean genérico.\n- `@Service`: lógica de negócio. Comporta-se exatamente como o `@Component`; o nome só documenta a intenção.\n- `@Repository`: acesso a dados. Também traduz exceções de persistência para a família `DataAccessException` do Spring.\n- `@Controller` / `@RestController`: a camada web.\n\n```java\n@Service\npublic class OrderService {\n    private final PaymentClient payments;\n    private final OrderRepository orders;\n\n    public OrderService(PaymentClient payments, OrderRepository orders) {\n        this.payments = payments;\n        this.orders = orders;\n    }\n}\n```\n\nCom um **único construtor**, o Spring o usa automaticamente: não precisa de `@Autowired`. Ele injeta por **tipo**, então pedir a interface `PaymentClient` é normal."
+            },
+            {
+              "type": "bug",
+              "id": "q-missing-bean",
+              "concepts": [
+                "bean",
+                "dependency-injection"
+              ],
+              "prompt": "O `OrderService` deveria receber o cliente do Stripe por injeção, mas a aplicação não sobe. Clique na linha com o bug.",
+              "language": "java",
+              "code": "public interface PaymentClient {\n    void charge(long cents);\n}\n\npublic class StripePaymentClient implements PaymentClient {\n    public void charge(long cents) { /* call Stripe */ }\n}\n\n@Service\npublic class OrderService {\n    private final PaymentClient payments;\n\n    public OrderService(PaymentClient payments) {\n        this.payments = payments;\n    }\n}",
+              "error": "***************************\nAPPLICATION FAILED TO START\n***************************\n\nDescription:\n\nParameter 0 of constructor in OrderService required a bean of type 'PaymentClient' that could not be found.\n\nAction:\n\nConsider defining a bean of type 'PaymentClient' in your configuration.",
+              "lines": [
+                5
+              ],
+              "fixes": [
+                "Adicionar `@Component` acima da linha 5",
+                "Adicionar `@Autowired` acima da linha 13",
+                "Mudar a linha 13 para `public OrderService(StripePaymentClient payments) {`",
+                "Trocar as linhas 11–15 por injeção em campo: `@Autowired private PaymentClient payments;`"
+              ],
+              "answer": 0,
+              "hint": "Estar no classpath não é o mesmo que ser um bean.",
+              "explanation": "O Spring procurou um bean atribuível a `PaymentClient` e não achou nenhum, porque uma classe comum é invisível para o container. Adicione `@Component` (ou `@Service`) ao `StripePaymentClient` ou crie-o em um método `@Bean`. Injetar pela interface é o estilo normal e preferido, e um único construtor não precisa de `@Autowired`."
+            },
+            {
+              "type": "explain",
+              "title": "Por que injeção por construtor",
+              "body": "Código mais antigo costuma usar **injeção em campo**:\n\n```java\n@Service\npublic class OrderService {\n    @Autowired private PaymentClient payments; // discouraged\n}\n```\n\nPrefira a injeção por construtor:\n\n- Os campos podem ser `final`: o objeto nunca fica pela metade.\n- As dependências ficam visíveis em um só lugar. Um construtor com oito parâmetros é um sinal honesto de que a classe faz coisa demais.\n- Testes unitários só chamam `new OrderService(fakePayments, fakeRepo)`: sem Spring, sem reflexão (veja o curso Testes de unidade).\n- Dependências circulares falham logo na inicialização, em vez de se esconderem."
+            },
+            {
+              "type": "explain",
+              "title": "@Bean para classes que não são suas",
+              "body": "Você não pode adicionar `@Service` a uma classe de biblioteca como `java.time.Clock`. Em vez disso, escreva um método de fábrica em uma classe `@Configuration`:\n\n```java\n@Configuration\npublic class TimeConfig {\n\n    @Bean\n    public Clock clock() {\n        return Clock.systemUTC();\n    }\n}\n```\n\nO valor de retorno vira um bean (com o nome do método: `clock`) que qualquer classe pode pedir no construtor. Um teste pode então fornecer um relógio fixo em vez do real."
+            },
+            {
+              "type": "example",
+              "title": "Uma instância para todos",
+              "problem": "Beans são **singletons** por padrão: uma instância por contexto da aplicação, compartilhada por todas as classes e por todas as threads de requisição. O que dá errado aqui?\n\n```java\n@Service\npublic class CheckoutService {\n    private BigDecimal runningTotal = BigDecimal.ZERO;\n\n    public BigDecimal total(List<Item> items) {\n        runningTotal = BigDecimal.ZERO;\n        for (var item : items) runningTotal = runningTotal.add(item.price());\n        return runningTotal;\n    }\n}\n```",
+              "steps": [
+                "Existe exatamente um `CheckoutService`, e o servidor trata muitas requisições ao mesmo tempo, em threads diferentes.",
+                "Dois checkouts simultâneos leem e escrevem o mesmo campo `runningTotal`, então um cliente pode ver o total do outro.",
+                "Correção: mantenha os dados de cada requisição em variáveis locais (`var total = BigDecimal.ZERO;`) ou em parâmetros. Campos em um singleton devem guardar só dependências e configurações imutáveis."
+              ],
+              "answer": "Uma condição de corrida. Beans singleton devem ser stateless (ou thread-safe com muito cuidado)."
+            },
+            {
+              "type": "numeric",
+              "id": "q-singleton-count",
+              "concepts": [
+                "bean"
+              ],
+              "prompt": "```java\n@Service\npublic class VisitCounter {\n    private int count;\n    public int next() { return ++count; }\n}\n\n@Service\npublic class A { public A(VisitCounter c) { c.next(); } }\n\n@Service\npublic class B { public B(VisitCounter c) { c.next(); } }\n```\n\nDepois que a aplicação subiu, um controller (que também injeta o `VisitCounter`) chama `counter.next()` uma vez. O que ele devolve?",
+              "answer": 3,
+              "explanation": "As três classes recebem o **mesmo** singleton `VisitCounter`. Criar o `A` e o `B` o levou a 2, então a chamada do controller devolve 3. Esse comportamento de instância compartilhada é exatamente o motivo de campos mutáveis em beans serem perigosos.",
+              "hint": "Quantos objetos `VisitCounter` o Spring cria?"
+            },
+            {
+              "type": "text",
+              "id": "q-fill-service",
+              "concepts": [
+                "bean",
+                "component-scan"
+              ],
+              "prompt": "Preencha a anotação para que a varredura de componentes registre esta classe de lógica de negócio como bean:\n\n```java\n@___\npublic class InvoiceService {\n    private final InvoiceRepository invoices;\n    public InvoiceService(InvoiceRepository invoices) { this.invoices = invoices; }\n}\n```",
+              "accept": [
+                "Service",
+                "@Service",
+                "Component",
+                "@Component"
+              ],
+              "explanation": "`@Service` é a escolha idiomática para lógica de negócio. `@Component` funciona de forma idêntica; o `@Service` só diz a quem lê para que a classe serve."
+            }
+          ]
+        },
+        {
+          "id": "auto-configuration",
+          "title": "Autoconfiguração: a mágica explicada",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "A autoconfiguração são só definições de `@Bean` condicionais: elas reagem ao seu classpath e às suas propriedades, recuam quando você define o seu próprio bean, e o `debug=true` mostra cada decisão.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "De onde vêm os beans?",
+              "body": "Adicione o `spring-boot-starter-data-jpa` e um driver do Postgres, defina uma URL e, de repente, você tem um `DataSource`, um pool de conexões, uma `EntityManagerFactory` e gerenciamento de transações, sem escrever nenhuma configuração. Quem os criou?\n\nO Spring Boot traz muitas **classes de autoconfiguração**: classes de configuração comuns, cheias de métodos `@Bean`, listadas em `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports` dentro dos jars do Boot. O `@EnableAutoConfiguration` carrega todas elas, mas cada uma é protegida por **condições**, então só as relevantes criam beans."
+            },
+            {
+              "type": "explain",
+              "title": "Condições",
+              "body": "```java\n// Simplified sketch of what Boot does for you\n@AutoConfiguration\n@ConditionalOnClass(DataSource.class)\npublic class DataSourceAutoConfiguration {\n\n    @Bean\n    @ConditionalOnMissingBean\n    public DataSource dataSource(DataSourceProperties props) {\n        // build a HikariCP pool from the spring.datasource.* properties\n    }\n}\n```\n\nAs condições que você mais vai encontrar:\n\n- `@ConditionalOnClass`: só se uma biblioteca está no classpath. Adicionar um starter liga essas condições.\n- `@ConditionalOnMissingBean`: só se **você** não definiu um bean daquele tipo. É assim que você sobrescreve o Boot.\n- `@ConditionalOnProperty`: só se uma propriedade tem um determinado valor.\n- `@ConditionalOnBean`: só se algum outro bean existe."
+            },
+            {
+              "type": "mcq",
+              "id": "q-override",
+              "concepts": [
+                "auto-configuration",
+                "bean"
+              ],
+              "prompt": "Você declara o seu próprio bean `DataSource` em uma classe `@Configuration`. O que acontece com o que o Boot autoconfiguraria?",
+              "choices": [
+                "A inicialização falha porque agora existem dois beans `DataSource`",
+                "O bean do Boot substitui o seu, porque a autoconfiguração roda por último",
+                "Ele recua: o `@ConditionalOnMissingBean` vê o seu bean e deixa de criar o do Boot",
+                "Os dois existem, e o Spring escolhe um ao acaso em cada ponto de injeção"
+              ],
+              "answer": 2,
+              "explanation": "As autoconfigurações são processadas *depois* da sua própria configuração, justamente para que condições como `@ConditionalOnMissingBean` enxerguem os seus beans. O seu bean sempre vence e o padrão do Boot sai de cena. Esse é o principal mecanismo de sobrescrita."
+            },
+            {
+              "type": "explain",
+              "title": "Ajuste com propriedades primeiro",
+              "body": "Em geral você não substitui beans autoconfigurados, você os **ajusta**. Cada autoconfiguração lê uma família de propriedades:\n\n```properties\nspring.datasource.url=jdbc:postgresql://localhost:5432/shop\nspring.datasource.username=shop\nserver.port=9090\n```\n\nQuando você quiser um comportamento diferente, tente nesta ordem:\n\n- Defina uma propriedade (a sua IDE completa os nomes; a documentação de referência lista todas).\n- Defina o seu próprio bean daquele tipo para substituir o do Boot.\n- Exclua uma autoconfiguração por completo: `@SpringBootApplication(exclude = SomeAutoConfiguration.class)` ou a propriedade `spring.autoconfigure.exclude`."
+            },
+            {
+              "type": "example",
+              "title": "Lendo o relatório de condições",
+              "problem": "A sua aplicação não tem um bean `DataSource` e você não sabe por quê. Você adiciona `debug=true` ao `application.properties` (ou inicia com `--debug`) e o log mostra um relatório como este (resumido):\n\n```text\nCONDITIONS EVALUATION REPORT\n\nPositive matches:\n   WebMvcAutoConfiguration matched ...\n\nNegative matches:\n   DataSourceAutoConfiguration:\n      Did not match:\n         - @ConditionalOnClass did not find required class '...EmbeddedDatabaseType'\n```\n\nO que está acontecendo?",
+              "steps": [
+                "**Positive matches** são as autoconfigurações cujas condições passaram (elas criaram beans). **Negative matches** foram puladas, cada uma com o motivo.",
+                "A `DataSourceAutoConfiguration` foi pulada porque uma classe do Spring JDBC não está no classpath.",
+                "Ou seja, nenhum starter de JDBC ou JPA entrou no build: a dependência está faltando, escrita errada ou no escopo errado.",
+                "Correção: adicione o `spring-boot-starter-data-jpa` (ou o `spring-boot-starter-jdbc`) mais um driver de banco de dados. A condição vira um positive match e o `DataSource` aparece."
+              ],
+              "answer": "As classes de JDBC não estão no classpath, então o Boot nem tentou criar um `DataSource`. Adicione o starter de dados."
+            },
+            {
+              "type": "text",
+              "id": "q-debug-property",
+              "concepts": [
+                "auto-configuration",
+                "properties"
+              ],
+              "prompt": "Qual propriedade, definida como `true` no `application.properties`, imprime o relatório de avaliação de condições na inicialização?",
+              "accept": [
+                "debug",
+                "debug=true",
+                "debug: true"
+              ],
+              "explanation": "`debug=true` (ou a opção de linha de comando `--debug`) faz o Boot registrar no log quais autoconfigurações casaram e por que as outras não casaram. Com o Actuator, o endpoint `/actuator/conditions` mostra o mesmo relatório em uma aplicação em execução."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-port-property",
+              "concepts": [
+                "properties"
+              ],
+              "prompt": "A aplicação deveria escutar na porta 9090. Este é o `application.properties` dela. Clique na linha com o bug.",
+              "language": "properties",
+              "code": "spring.datasource.url=jdbc:h2:mem:shop\nspring.datasource.username=sa\nspring.server.port=9090\nspring.jpa.show-sql=true",
+              "error": "Tomcat started on port 8080 (http) with context path '/'",
+              "lines": [
+                3
+              ],
+              "fixes": [
+                "Mudar a linha 3 para `server.port=9090`",
+                "Mudar a linha 3 para `spring.server.port: 9090`",
+                "Adicionar `debug=true` abaixo da linha 3"
+              ],
+              "answer": 0,
+              "hint": "`spring.server.port` é uma chave que o Boot realmente lê?",
+              "explanation": "A porta do servidor web é `server.port`, não `spring.server.port`. O Boot não reclama de chaves que não conhece: ele simplesmente nunca as lê, então o servidor volta ao padrão 8080. Trocar o separador por `:` mantém a mesma chave desconhecida, e o `debug=true` só imprime o relatório de condições. Quando uma configuração parecer não fazer nada, confira a chave exata com o autocompletar da sua IDE ou na documentação de referência."
+            },
+            {
+              "type": "mcq",
+              "id": "q-datasource-fail",
+              "concepts": [
+                "auto-configuration"
+              ],
+              "prompt": "Você adiciona o `spring-boot-starter-data-jpa` a um projeto novo, mas sem driver de banco de dados e sem `spring.datasource.url`. O que acontece na inicialização?",
+              "choices": [
+                "A inicialização falha: o Boot tenta configurar um `DataSource`, mas não tem URL nem banco embutido para usar como alternativa",
+                "Ela sobe, e o JPA fica desativado sem avisar",
+                "O Boot baixa um driver do H2 automaticamente",
+                "Ela sobe com um banco em memória criado pelo Hibernate"
+              ],
+              "answer": 0,
+              "explanation": "O starter de JPA coloca as classes de `DataSource` no classpath, então a condição casa e o Boot tenta construir um. Com um banco embutido como o H2 no classpath, ele criaria um banco em memória; sem driver nem URL, ele falha com a mensagem “Failed to configure a DataSource”. Adicione um driver e uma URL (ou o H2 para trabalho local).",
+              "hint": "Qual condição o starter satisfaz?"
+            },
+            {
+              "type": "mcq",
+              "id": "q-why-json",
+              "concepts": [
+                "auto-configuration",
+                "rest-controller"
+              ],
+              "prompt": "A sua aplicação usa o starter web e você nunca declarou nada sobre JSON, mas os controllers devolvem JSON. Qual explicação está certa?",
+              "choices": [
+                "O JDK tem um serializador JSON embutido que o Spring MVC usa",
+                "O `@RestController` contém o próprio serializador JSON",
+                "O `@SpringBootApplication` varre o jar do Jackson atrás de classes `@Component`",
+                "Uma autoconfiguração condicionada à presença do Jackson no classpath criou um mapper de JSON e o plugou no Spring MVC"
+              ],
+              "answer": 3,
+              "explanation": "O starter web traz o Jackson, e o Jackson no classpath satisfaz as checagens de `@ConditionalOnClass` na autoconfiguração do Boot, que registra um mapper e o liga aos conversores de mensagem do Spring MVC. A varredura de componentes cobre só os seus próprios pacotes, nunca jars de bibliotecas."
+            }
+          ]
+        },
+        {
+          "id": "bean-conflicts",
+          "title": "Quando a ligação falha: beans duplicados e ciclos",
+          "pareto": "extra",
+          "minutes": 6,
+          "takeaway": "Dois beans do mesmo tipo pedem `@Primary` ou `@Qualifier` (ou injetar todos em uma `List`); um ciclo de dependências pede um redesenho, não uma gambiarra.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Dois candidatos, uma vaga",
+              "body": "O Spring injeta por **tipo**. Um bean compatível: pronto. Dois beans compatíveis: ele se recusa a adivinhar.\n\n```java\n@Component\npublic class StripeClient implements PaymentClient { ... }\n\n@Component\npublic class PaypalClient implements PaymentClient { ... }\n\n@Service\npublic class OrderService {\n    public OrderService(PaymentClient payments) { ... }\n}\n```\n\nA inicialização falha com: *Parameter 0 of constructor in OrderService required a single bean, but 2 were found*."
+            },
+            {
+              "type": "explain",
+              "title": "Três jeitos de escolher",
+              "body": "- `@Primary` em uma das implementações: ela vence sempre que houver ambiguidade.\n- `@Qualifier` no ponto de injeção: escolha um bean pelo nome. O nome padrão de uma classe varrida é o nome simples dela com a primeira letra minúscula (`paypalClient`); o de um método `@Bean` é o nome do método.\n- Injetar todos: `List<PaymentClient>`, ou `Map<String, PaymentClient>` indexado pelo nome do bean. Útil em código no estilo strategy.\n\n```java\n@Service\npublic class RefundService {\n    public RefundService(@Qualifier(\"paypalClient\") PaymentClient payments) { ... }\n}\n```"
+            },
+            {
+              "type": "bug",
+              "id": "q-two-beans",
+              "concepts": [
+                "ambiguous-beans"
+              ],
+              "prompt": "Os pedidos devem ser cobrados pelo Stripe. O PayPal é usado em outro lugar, então os dois clientes precisam continuar sendo beans. A aplicação falha na inicialização. Clique na linha com o bug.",
+              "language": "java",
+              "code": "@Component\npublic class StripeClient implements PaymentClient { /* ... */ }\n\n@Component\npublic class PaypalClient implements PaymentClient { /* ... */ }\n\n@Service\npublic class OrderService {\n    private final PaymentClient payments;\n\n    public OrderService(PaymentClient payments) {\n        this.payments = payments;\n    }\n}",
+              "error": "***************************\nAPPLICATION FAILED TO START\n***************************\n\nDescription:\n\nParameter 0 of constructor in com.example.shop.OrderService required a single bean, but 2 were found:\n\t- paypalClient: defined in file [  ...]\n\t- stripeClient: defined in file [  ...]\n  ...\n\nAction:\n\nConsider marking one of the beans as @Primary, updating the consumer to accept multiple beans, or using @Qualifier to identify the bean that should be consumed",
+              "lines": [
+                11
+              ],
+              "fixes": [
+                "Mudar a linha 11 para `public OrderService(@Qualifier(\"stripeClient\") PaymentClient payments) {`",
+                "Adicionar `@Autowired` acima da linha 11",
+                "Mudar a linha 11 para `public OrderService(@Qualifier(\"StripeClient\") PaymentClient payments) {`",
+                "Adicionar `@Primary` acima da linha 1 e acima da linha 4"
+              ],
+              "answer": 0,
+              "hint": "O erro lista os dois candidatos pelo nome do bean. Qual linha precisa dizer qual deles ela quer?",
+              "explanation": "O construtor pede *um* `PaymentClient` e dois beans casam, então o Spring se recusa a adivinhar. `@Qualifier(\"stripeClient\")` nomeia o que ele quer, usando o nome de bean padrão: o nome da classe com a primeira letra minúscula, exatamente como o erro lista. O `@Autowired` só diz “injete isto”, o que o construtor único já faz, então o mesmo erro volta. `\"StripeClient\"` com S maiúsculo não casa com nenhum bean, então a inicialização falha com *No qualifying bean*. E `@Primary` em **ambos** falha com *more than one 'primary' bean found*; só no `StripeClient` também funcionaria."
+            },
+            {
+              "type": "explain",
+              "title": "Dependências circulares",
+              "body": "```java\n@Service\npublic class OrderService {\n    public OrderService(InvoiceService invoices) { ... }\n}\n\n@Service\npublic class InvoiceService {\n    public InvoiceService(OrderService orders) { ... }\n}\n```\n\nPara construir o `OrderService`, o Spring precisa do `InvoiceService`, que precisa do `OrderService`... Com injeção por construtor não existe ordem válida, então a inicialização falha com *The dependencies of some of the beans in the application context form a cycle*, mais um diagramazinho do ciclo.\n\nDesde o Spring Boot 2.6, ciclos por injeção em campo ou por setter também são rejeitados por padrão. A solução é de design, não de configuração: mova a lógica compartilhada para um terceiro bean ou desacople uma das direções com um evento da aplicação."
+            },
+            {
+              "type": "example",
+              "title": "Quebrando um ciclo",
+              "problem": "O `OrderService` chama `invoices.createFor(order)`, e o `InvoiceService` chama `orders.totalOf(orderId)` para calcular o valor da fatura. Como quebrar o ciclo?",
+              "steps": [
+                "Pergunte do que cada lado realmente precisa. O `InvoiceService` não precisa do `OrderService` inteiro, só do total de um pedido.",
+                "Extraia isso para um bean próprio, por exemplo `OrderPricing` com `totalOf(orderId)`, que depende só do `OrderRepository`.",
+                "Agora as setas vão em uma só direção: `OrderService` → `InvoiceService` → `OrderPricing` → `OrderRepository`. Sem ciclo.",
+                "Bônus: cada classe ficou menor e mais fácil de testar unitariamente."
+              ],
+              "answer": "Extraia a parte compartilhada para um terceiro bean, para que as dependências formem uma linha reta."
+            },
+            {
+              "type": "mcq",
+              "id": "q-qualifier-vs-primary",
+              "concepts": [
+                "ambiguous-beans"
+              ],
+              "prompt": "O `StripeClient` está marcado com `@Primary`. O parâmetro do construtor do `RefundService` é `@Qualifier(\"paypalClient\") PaymentClient payments`. O que é injetado no `RefundService`?",
+              "choices": [
+                "`StripeClient`, porque o `@Primary` sempre vence",
+                "A inicialização falha: `@Primary` e `@Qualifier` entram em conflito",
+                "`PaypalClient`, porque o qualifier explícito restringe a escolha primeiro",
+                "Uma lista contendo os dois clientes"
+              ],
+              "answer": 2,
+              "explanation": "O `@Primary` é só um desempate para pontos de injeção que não dizem qual bean querem. Um `@Qualifier` explícito escolhe o bean pelo nome, então o `PaypalClient` é injetado. Em todos os outros lugares, o `StripeClient` continua sendo o padrão."
+            },
+            {
+              "type": "mcq",
+              "id": "q-cycle",
+              "concepts": [
+                "circular-dependency",
+                "constructor-injection"
+              ],
+              "prompt": "Todos os beans abaixo usam injeção por construtor. Qual configuração faz a aplicação falhar na inicialização?",
+              "choices": [
+                "`A` precisa de `B`, e `B` precisa de `C`",
+                "`A` e `B` precisam de `C`",
+                "`A` precisa de uma `List<Handler>` e existem três beans `Handler`",
+                "`A` precisa de `B`, `B` precisa de `C` e `C` precisa de `A`"
+              ],
+              "answer": 3,
+              "hint": "Desenhe as setas e procure um ciclo.",
+              "explanation": "`A → B → C → A` é um ciclo: nenhum bean pode ser construído primeiro. Cadeias e dependências compartilhadas não têm problema (o Spring constrói o `C` uma vez e o compartilha), e uma `List<Handler>` simplesmente recebe todos os beans compatíveis."
+            },
+            {
+              "type": "text",
+              "id": "q-primary",
+              "concepts": [
+                "ambiguous-beans"
+              ],
+              "prompt": "Qual anotação, colocada em uma de várias implementações, a torna a escolha padrão sempre que um ponto de injeção for ambíguo?",
+              "accept": [
+                "Primary",
+                "@Primary"
+              ],
+              "explanation": "`@Primary` marca o candidato preferido. Pontos de injeção que precisem de outro ainda podem pedi-lo explicitamente com `@Qualifier`."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rest-api",
+      "title": "Criando uma API REST",
+      "description": "Controllers, JSON, códigos de status, validação e respostas de erro limpas: o trabalho do dia a dia de um back end Spring Boot.",
+      "lessons": [
+        {
+          "id": "rest-controllers",
+          "title": "Controllers REST: requisição entra, JSON sai",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Os métodos de um `@RestController` mapeiam requisições com `@GetMapping`/`@PostMapping`, leem a entrada por `@PathVariable`, `@RequestParam` e `@RequestBody` e devolvem records como JSON, ou um `ResponseEntity` quando o código de status importa.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Um endpoint JSON",
+              "body": "```java\nimport org.springframework.web.bind.annotation.*;\n\n@RestController\n@RequestMapping(\"/api/books\")\npublic class BookController {\n\n    private final BookService books;\n\n    public BookController(BookService books) {\n        this.books = books;\n    }\n\n    @GetMapping(\"/{id}\")\n    public BookResponse get(@PathVariable Long id) {\n        return books.find(id);\n    }\n}\n```\n\n- `@RestController` = `@Controller` + `@ResponseBody`: os valores de retorno são escritos no corpo da resposta (como JSON, via Jackson) em vez de serem tratados como nomes de views.\n- `@RequestMapping` na classe define um prefixo de caminho compartilhado.\n- `@GetMapping`, `@PostMapping`, `@PutMapping`, `@PatchMapping` e `@DeleteMapping` mapeiam um método HTTP mais um caminho."
+            },
+            {
+              "type": "explain",
+              "title": "Três jeitos de ler a entrada",
+              "body": "```java\n// GET /api/books/42\n@GetMapping(\"/{id}\")\npublic BookResponse get(@PathVariable Long id) { ... }\n\n// GET /api/books?author=Herbert&page=2\n@GetMapping\npublic List<BookResponse> search(@RequestParam String author,\n                                 @RequestParam(defaultValue = \"0\") int page) { ... }\n\n// POST /api/books with a JSON body\n@PostMapping\npublic BookResponse create(@RequestBody CreateBookRequest request) { ... }\n```\n\n- `@PathVariable`: um segmento do caminho que identifica o recurso.\n- `@RequestParam`: um parâmetro da query string. **Obrigatório por padrão**, a menos que você dê um `defaultValue` ou `required = false`.\n- `@RequestBody`: o corpo JSON, desserializado pelo Jackson."
+            },
+            {
+              "type": "explain",
+              "title": "Records como DTOs",
+              "body": "Use **records** para os corpos de requisição e de resposta. O Jackson os lê e escreve sem configuração extra:\n\n```java\npublic record CreateBookRequest(String title, String author, int year) {}\npublic record BookResponse(Long id, String title, String author) {}\n```\n\nUm `BookResponse` é enviado como `{\"id\":42,\"title\":\"Dune\",\"author\":\"Herbert\"}`.\n\nMantenha esses DTOs separados das suas entidades de banco de dados: você controla exatamente o que trafega pela rede (sem vazar um campo `passwordHash`) e pode mudar o banco sem quebrar os clientes."
+            },
+            {
+              "type": "mcq",
+              "id": "q-missing-param",
+              "concepts": [
+                "request-binding",
+                "http-status"
+              ],
+              "prompt": "```java\n@GetMapping(\"/api/books\")\npublic List<BookResponse> search(@RequestParam String author) { ... }\n```\n\nO que `GET /api/books` (sem query string nenhuma) devolve?",
+              "choices": [
+                "200 com uma lista vazia",
+                "200, com `author` igual a `null`",
+                "404 Not Found",
+                "400 Bad Request: falta o parâmetro obrigatório"
+              ],
+              "answer": 3,
+              "explanation": "O `@RequestParam` é obrigatório por padrão, então o Spring rejeita a requisição antes de o seu método rodar (uma `MissingServletRequestParameterException`, mapeada para 400). Torne-o opcional com `required = false`, um `defaultValue` ou um parâmetro `Optional<String>`. O caminho em si casou, então não é um 404."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-request-body",
+              "concepts": [
+                "request-binding"
+              ],
+              "prompt": "`POST /api/books` com o corpo `{\"title\":\"Dune\",\"author\":\"Herbert\"}` deveria responder com esse livro em JSON (`BookResponse` é o record de antes). Clique na linha com o bug.",
+              "language": "java",
+              "code": "public record CreateBookRequest(String title, String author) {}\n\n@RestController\n@RequestMapping(\"/api/books\")\npublic class BookController {\n\n    @PostMapping\n    public BookResponse create(CreateBookRequest req) {\n        return new BookResponse(1L, req.title(), req.author());\n    }\n}",
+              "error": "200 OK\n{\"id\":1,\"title\":null,\"author\":null}",
+              "lines": [
+                8
+              ],
+              "fixes": [
+                "Mudar a linha 8 para `public BookResponse create(@RequestBody CreateBookRequest req) {`",
+                "Adicionar `@ResponseBody` acima da linha 8",
+                "Mudar a linha 7 para `@PostMapping(consumes = \"application/json\")`",
+                "Mudar a linha 8 para `public BookResponse create(@RequestParam CreateBookRequest req) {`"
+              ],
+              "answer": 0,
+              "hint": "Qual anotação diz ao Spring para ler o corpo JSON em um parâmetro?",
+              "explanation": "Sem o `@RequestBody`, o Spring nunca lê o corpo: ele tenta preencher o record com parâmetros de consulta e campos de formulário, não acha nenhum e passa uma requisição com todos os campos `null`. O seu método devolve 200 numa boa. O `@RequestBody` entrega o JSON ao Jackson. O `@ResponseBody` diz respeito ao valor de *retorno* (e o `@RestController` já o inclui), o `consumes` só restringe quais requisições casam, e o `@RequestParam` procura um parâmetro de consulta `?req=`, então a requisição falha com 400."
+            },
+            {
+              "type": "order",
+              "id": "q-order-request-flow",
+              "concepts": [
+                "request-binding",
+                "rest-controller"
+              ],
+              "prompt": "Um cliente envia `POST /api/books` com o corpo `{\"title\":\"Dune\",\"author\":\"Herbert\"}`. Coloque em ordem o que acontece.\n\n```java\n@RestController\n@RequestMapping(\"/api/books\")\npublic class BookController {\n\n    @PostMapping\n    public BookResponse create(@RequestBody CreateBookRequest req) {\n        return new BookResponse(1L, req.title(), req.author());\n    }\n}\n```",
+              "items": [
+                "O Spring casa `POST /api/books` com o método do `@PostMapping`",
+                "O Jackson lê o corpo JSON em um `CreateBookRequest`",
+                "`create(req)` roda e devolve um `BookResponse`",
+                "O Jackson escreve o `BookResponse` no corpo da resposta como JSON",
+                "O cliente recebe `200 OK` e o livro em JSON"
+              ],
+              "hint": "Um método não roda até que os argumentos existam, e não há nada para devolver até ele retornar.",
+              "explanation": "Primeiro o Spring encontra o handler: o prefixo `/api/books` da classe mais o `@PostMapping` casam com o caminho e com o método HTTP. O seu método não roda até o argumento existir, então o `@RequestBody` entrega o JSON ao Jackson para construir o record antes (se o JSON não puder ser lido, o cliente recebe 400 e o seu método nem roda). Depois o seu código roda como qualquer método Java. O `@RestController` inclui `@ResponseBody`, então o record devolvido é escrito como JSON, e como você devolveu um objeto comum, o status é 200."
+            },
+            {
+              "type": "explain",
+              "title": "Códigos de status com ResponseEntity",
+              "body": "Um método que devolve um objeto responde **200 OK**. Quando o status importa, devolva um `ResponseEntity`:\n\n```java\n@PostMapping\npublic ResponseEntity<BookResponse> create(@RequestBody CreateBookRequest req) {\n    BookResponse saved = books.create(req);\n    URI location = URI.create(\"/api/books/\" + saved.id());\n    return ResponseEntity.created(location).body(saved);   // 201 + Location header\n}\n\n@DeleteMapping(\"/{id}\")\npublic ResponseEntity<Void> delete(@PathVariable Long id) {\n    books.delete(id);\n    return ResponseEntity.noContent().build();             // 204\n}\n```\n\nPara um status fixo, você também pode anotar o método, por exemplo `@ResponseStatus(HttpStatus.CREATED)`."
+            },
+            {
+              "type": "example",
+              "title": "Not found, do jeito limpo",
+              "problem": "`GET /api/books/99` pede um livro que não existe. `books.findById(id)` devolve `Optional<BookResponse>`. Responda 200 com o livro, ou 404.",
+              "steps": [
+                "Devolver `books.findById(id).orElse(null)` dá **200 com corpo vazio**: ele declara sucesso, o que engana os clientes.",
+                "Mapeie o `Optional` para um `ResponseEntity`:\n\n```java\n@GetMapping(\"/{id}\")\npublic ResponseEntity<BookResponse> get(@PathVariable Long id) {\n    return books.findById(id)\n            .map(ResponseEntity::ok)\n            .orElse(ResponseEntity.notFound().build());\n}\n```",
+                "Presente → `ResponseEntity.ok(book)` → 200 com JSON. Vazio → 404 sem corpo. (`ResponseEntity.of(optional)` é um atalho pronto para exatamente isso.)",
+                "Em uma aplicação maior, você preferiria lançar uma `BookNotFoundException` no service e mapeá-la para 404 em um único lugar. Essa é a lição de tratamento de erros."
+              ],
+              "answer": "`.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build())`"
+            },
+            {
+              "type": "mcq",
+              "id": "q-post-status",
+              "concepts": [
+                "http-status"
+              ],
+              "prompt": "Este endpoint salva um livro com sucesso. Qual status o cliente recebe?\n\n```java\n@PostMapping\npublic BookResponse create(@RequestBody CreateBookRequest req) {\n    return books.create(req);\n}\n```",
+              "choices": [
+                "201 Created",
+                "200 OK",
+                "202 Accepted",
+                "204 No Content"
+              ],
+              "answer": 1,
+              "explanation": "O Spring não deduz 201 a partir do `@PostMapping`: devolver um objeto significa 200. Para um create REST de verdade, devolva `ResponseEntity.created(location).body(saved)` ou adicione `@ResponseStatus(HttpStatus.CREATED)`."
+            },
+            {
+              "type": "text",
+              "id": "q-restcontroller",
+              "concepts": [
+                "rest-controller"
+              ],
+              "prompt": "Estes métodos devolvem records `BookResponse`, mas o Spring tenta resolver os valores de retorno como templates de view em vez de escrever JSON. Preencha a anotação da classe que resolve isso:\n\n```java\n@___\n@RequestMapping(\"/api/books\")\npublic class BookController { ... }\n```",
+              "accept": [
+                "RestController",
+                "@RestController"
+              ],
+              "explanation": "Um `@Controller` simples trata os valores de retorno como nomes de views. O `@RestController` adiciona `@ResponseBody` a todos os métodos, então os valores de retorno são serializados (para JSON) no corpo da resposta."
+            }
+          ]
+        },
+        {
+          "id": "validation",
+          "title": "Validando a entrada",
+          "pareto": "core",
+          "minutes": 6,
+          "takeaway": "Coloque restrições do Jakarta Bean Validation nos seus records de requisição e `@Valid` no `@RequestBody`; entrada ruim vira um 400 antes de o seu código rodar.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Nunca confie no corpo da requisição",
+              "body": "Adicione o `spring-boot-starter-validation` (ele traz o Hibernate Validator) e declare as regras no seu DTO:\n\n```java\nimport jakarta.validation.constraints.*;\n\npublic record CreateUserRequest(\n        @NotBlank @Size(max = 50) String name,\n        @NotBlank @Email String email,\n        @Min(18) int age) {}\n```\n\nDepois peça ao Spring que verifique com `@Valid` (`jakarta.validation.Valid`):\n\n```java\n@PostMapping(\"/api/users\")\npublic ResponseEntity<UserResponse> create(@Valid @RequestBody CreateUserRequest req) { ... }\n```\n\nSe qualquer restrição falhar, o Spring lança `MethodArgumentNotValidException` e responde **400 Bad Request**. O seu método nunca roda."
+            },
+            {
+              "type": "explain",
+              "title": "As restrições que você realmente vai usar",
+              "body": "- `@NotNull`: não nulo (mas `\"\"` passa).\n- `@NotEmpty`: não nulo e com tamanho > 0 (mas `\"   \"` passa).\n- `@NotBlank`: contém pelo menos um caractere que não seja espaço em branco. A escolha de sempre para strings.\n- `@Size(min = .., max = ..)`: tamanho de string ou de coleção.\n- `@Min`, `@Max`, `@Positive`: números.\n- `@Email`, `@Pattern(regexp = \"...\")`: formatos.\n- `@Past`, `@Future`: datas.\n\nA maioria das restrições trata `null` como válido, então adicione `@NotNull` quando um valor for obrigatório: `@NotNull @Positive Integer quantity`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-not-empty",
+              "concepts": [
+                "bean-validation"
+              ],
+              "prompt": "Um campo está anotado com `@NotEmpty String name`, e o controller usa `@Valid`. Um cliente envia `{\"name\": \"   \"}`. O que acontece?",
+              "choices": [
+                "A requisição passa na validação",
+                "400: espaço em branco conta como vazio",
+                "500: o Jackson não consegue interpretar espaços em branco",
+                "400, mas só se o record também estiver anotado com `@Valid`"
+              ],
+              "answer": 0,
+              "explanation": "`@NotEmpty` só verifica que a string não é nula e tem tamanho > 0, e `\"   \"` tem tamanho 3. Para rejeitar strings só com espaços, use `@NotBlank`."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-null-quantity",
+              "concepts": [
+                "bean-validation"
+              ],
+              "prompt": "Toda linha de pedido precisa de uma quantidade de pelo menos 1, então enviar `{\"product\": \"pen\"}` (sem quantidade) deveria dar 400. Clique na linha com o bug.",
+              "language": "java",
+              "code": "public record OrderLineRequest(\n        @NotBlank String product,\n        @Positive Integer quantity) {}\n\n@PostMapping(\"/api/order-lines\")\npublic OrderLineRequest add(@Valid @RequestBody OrderLineRequest req) {\n    return req;\n}",
+              "error": "200 OK\n{\"product\":\"pen\",\"quantity\":null}",
+              "lines": [
+                3
+              ],
+              "fixes": [
+                "Mudar a linha 3 para `@NotNull @Positive Integer quantity) {}`",
+                "Mudar a linha 3 para `@Min(1) Integer quantity) {}`",
+                "Mudar a linha 3 para `@NotEmpty @Positive Integer quantity) {}`",
+                "Mudar a linha 3 para `@Valid @Positive Integer quantity) {}`"
+              ],
+              "answer": 0,
+              "hint": "O que o `@Positive` diz sobre `null`?",
+              "explanation": "Como a maioria das restrições, o `@Positive` trata `null` como válido: ele só verifica valores presentes. Uma quantidade ausente é `null`, então a validação passa. Adicionar `@NotNull` torna o campo obrigatório, e o `@Positive` continua rejeitando 0 e negativos. O `@Min(1)` tem o mesmo ponto cego para `null`. O `@NotEmpty` serve para strings e coleções: em um `Integer` ele lança `UnexpectedTypeException`, um 500 em toda requisição. O `@Valid` desce para objetos aninhados e não faz nada por um número."
+            },
+            {
+              "type": "example",
+              "title": "O @Valid esquecido",
+              "problem": "Um testador envia `{\"name\": \"\", \"email\": \"nope\", \"age\": 12}` e recebe **201 Created**, embora o `CreateUserRequest` tenha todas as restrições. Ache o bug:\n\n```java\n@PostMapping(\"/api/users\")\npublic ResponseEntity<UserResponse> create(@RequestBody CreateUserRequest req) { ... }\n```",
+              "steps": [
+                "Anotações de restrição são só metadados. Alguma coisa precisa *disparar* a validação.",
+                "Para um corpo de requisição, o gatilho é o `@Valid` (ou o `@Validated` do Spring) no parâmetro. Sem ele, o Spring desserializa o JSON e chama o seu método do jeito que veio.",
+                "Segundo suspeito, para quando o `@Valid` *está* presente mas nada acontece: falta o starter de validação, então não há um validador para rodar as regras.",
+                "Correção: `create(@Valid @RequestBody CreateUserRequest req)`. A mesma requisição agora recebe 400 listando três erros de campo."
+              ],
+              "answer": "Adicione `@Valid` ao parâmetro `@RequestBody`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-invalid-status",
+              "concepts": [
+                "bean-validation",
+                "http-status"
+              ],
+              "prompt": "Com o `@Valid` no lugar, um cliente envia `{\"name\": \"Ann\", \"email\": \"ann@example.com\", \"age\": 12}`, em que `age` tem `@Min(18)`. O que o cliente recebe por padrão?",
+              "choices": [
+                "201 Created: o `@Min` só se aplica a strings",
+                "422 Unprocessable Entity",
+                "400 Bad Request",
+                "500 Internal Server Error"
+              ],
+              "answer": 2,
+              "explanation": "A restrição que falhou levanta `MethodArgumentNotValidException`, que o Spring MVC mapeia para **400**. Algumas equipes preferem 422; você mesmo pode escolher isso em um tratador de exceções (próxima lição). O `@Min` é para números."
+            },
+            {
+              "type": "explain",
+              "title": "Objetos aninhados e regras de negócio",
+              "body": "A validação não desce sozinha para objetos aninhados. Marque-os também com `@Valid`:\n\n```java\npublic record OrderRequest(\n        @NotNull @Valid Address shipping,\n        @NotEmpty List<@Valid OrderLine> lines) {}\n```\n\nAs anotações servem para o **formato** da entrada. Regras que precisam de dados, como “este e-mail já está cadastrado”, pertencem ao seu service, que lança uma exceção que você mapeia para um código de status."
+            },
+            {
+              "type": "mcq",
+              "id": "q-nested",
+              "concepts": [
+                "bean-validation"
+              ],
+              "prompt": "O `OrderRequest` tem `@NotNull Address shipping` (sem `@Valid` nesse campo), e o `Address` tem `@NotBlank String city`. O controller usa `@Valid @RequestBody`. Chega uma requisição com `\"shipping\": {\"city\": \"\"}`. O que acontece?",
+              "choices": [
+                "400: `city` está em branco",
+                "400: `shipping` é nulo",
+                "500: a validação não sabe lidar com records aninhados",
+                "A validação passa: as restrições do `Address` não são verificadas sem `@Valid` no campo"
+              ],
+              "answer": 3,
+              "hint": "Qual objeto o `@Valid` no parâmetro realmente valida?",
+              "explanation": "O `@Valid` no parâmetro valida o próprio `OrderRequest`: o `shipping` não é nulo, então isso passa. Sem `@Valid` no campo `shipping`, a validação não desce para o `Address`, e a cidade em branco passa batido."
+            },
+            {
+              "type": "text",
+              "id": "q-notblank",
+              "concepts": [
+                "bean-validation"
+              ],
+              "prompt": "Preencha a restrição que rejeita `null`, `\"\"` e `\"   \"`:\n\n```java\npublic record Tag(@___ String label) {}\n```",
+              "accept": [
+                "NotBlank",
+                "@NotBlank"
+              ],
+              "explanation": "`@NotBlank` (de `jakarta.validation.constraints`) exige pelo menos um caractere que não seja espaço em branco, o que também descarta null e a string vazia."
+            }
+          ]
+        },
+        {
+          "id": "error-handling",
+          "title": "Tratamento de erros com ProblemDetail",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "Lance exceções com significado nos seus services e traduza-as para códigos de status em um único `@RestControllerAdvice` que devolve corpos `ProblemDetail`.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "O que acontece por padrão",
+              "body": "Se um método de controller lança uma exceção e nada a trata, o tratamento de erros do Spring Boot responde **500 Internal Server Error** com um pequeno corpo JSON (timestamp, status, error, path).\n\nO Spring MVC já mapeia as próprias exceções de forma sensata:\n\n- `@Valid` do corpo falhou, JSON malformado, `@RequestParam` ausente, tipo errado em uma variável de caminho → **400**\n- nenhum caminho casou → **404**; método HTTP errado → **405**; `Content-Type` não suportado → **415**\n\nMas a sua `BookNotFoundException` é só mais uma `RuntimeException` para o Spring: **500**. Isso está errado, porque o cliente pediu algo que não existe; o servidor não quebrou."
+            },
+            {
+              "type": "explain",
+              "title": "Um só lugar para todos os mapeamentos",
+              "body": "```java\nimport org.springframework.http.HttpStatus;\nimport org.springframework.http.ProblemDetail;\nimport org.springframework.web.bind.annotation.*;\n\n@RestControllerAdvice\npublic class ApiExceptionHandler {\n\n    @ExceptionHandler(BookNotFoundException.class)\n    public ProblemDetail notFound(BookNotFoundException ex) {\n        return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());\n    }\n}\n```\n\n- `@RestControllerAdvice` vale para todos os controllers; os valores de retorno viram o corpo da resposta.\n- `@ExceptionHandler` nomeia o(s) tipo(s) de exceção que um método trata.\n- `ProblemDetail` modela o formato de erro padrão da RFC 9457 (que substituiu a RFC 7807). O Spring usa o `status` dele como código da resposta e envia `Content-Type: application/problem+json`."
+            },
+            {
+              "type": "example",
+              "title": "O que o cliente vê",
+              "problem": "`BookService.find(99)` lança `new BookNotFoundException(\"Book 99 not found\")`. Com o advice acima no lugar, o que `GET /api/books/99` devolve?",
+              "steps": [
+                "A exceção escapa do controller, e o Spring procura um `@ExceptionHandler` compatível. Ele encontra o `notFound` no advice.",
+                "O tratador monta um `ProblemDetail` com status 404 e a mensagem como `detail`.",
+                "O Spring envia o status **404** com `Content-Type: application/problem+json` e um corpo assim:\n\n```json\n{\n  \"type\": \"about:blank\",\n  \"title\": \"Not Found\",\n  \"status\": 404,\n  \"detail\": \"Book 99 not found\",\n  \"instance\": \"/api/books/99\"\n}\n```",
+                "Todo erro da sua API agora tem o mesmo formato, legível por máquina, que os clientes podem interpretar em um só lugar."
+              ],
+              "answer": "404 com um corpo `problem+json` que descreve o erro."
+            },
+            {
+              "type": "mcq",
+              "id": "q-default-500",
+              "concepts": [
+                "exception-handler",
+                "http-status"
+              ],
+              "prompt": "**Não** existe `@RestControllerAdvice`. O `BookService` lança `BookNotFoundException extends RuntimeException`. Qual status o cliente recebe?",
+              "choices": [
+                "404 Not Found",
+                "400 Bad Request",
+                "500 Internal Server Error",
+                "200 com corpo vazio"
+              ],
+              "answer": 2,
+              "explanation": "O Spring não sabe nada da sua exceção, então uma não tratada vira 500. Para obter 404: mapeie-a em um `@ExceptionHandler`, anote a classe da exceção com `@ResponseStatus(HttpStatus.NOT_FOUND)` ou lance `ResponseStatusException(HttpStatus.NOT_FOUND, ...)`."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-orelsethrow",
+              "concepts": [
+                "exception-handler"
+              ],
+              "prompt": "`books.findById(id)` devolve um `Optional<BookResponse>`. Com este advice no lugar, `GET /api/books/99` (livro inexistente) deveria devolver 404 com um `ProblemDetail`. Clique na linha com o bug.",
+              "language": "java",
+              "code": "// BookController\n@GetMapping(\"/{id}\")\npublic BookResponse get(@PathVariable Long id) {\n    return books.findById(id).orElseThrow();\n}\n\n// ApiExceptionHandler (@RestControllerAdvice)\n@ExceptionHandler(BookNotFoundException.class)\npublic ProblemDetail notFound(BookNotFoundException ex) {\n    return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());\n}",
+              "error": "500 Internal Server Error\n{\"timestamp\":\"…\",\"status\":500,\"error\":\"Internal Server Error\",\"path\":\"/api/books/99\"}\n\nServer log:\njava.util.NoSuchElementException: No value present\n  ...",
+              "lines": [
+                4
+              ],
+              "fixes": [
+                "Mudar a linha 4 para `return books.findById(id).orElseThrow(() -> new BookNotFoundException(\"Book \" + id + \" not found\"));`",
+                "Mudar a linha 4 para `return books.findById(id).orElse(null);`",
+                "Mudar a linha 4 para `return books.findById(id).orElseThrow(() -> new RuntimeException(\"Book \" + id + \" not found\"));`",
+                "Adicionar `@ResponseStatus(HttpStatus.NOT_FOUND)` acima da linha 2"
+              ],
+              "answer": 0,
+              "hint": "Qual exceção o `orElseThrow()` sem argumentos lança? Qual delas o tratador captura?",
+              "explanation": "`orElseThrow()` sem argumentos lança `NoSuchElementException`. O advice só trata `BookNotFoundException`, então nenhum tratador casa e o Spring responde 500. Lançar a exceção que o tratador espera a encaminha para o `notFound`, que monta o `ProblemDetail` 404. `orElse(null)` dá 200 com corpo vazio, uma `RuntimeException` simples continua sem casar com nenhum tratador, e o `@ResponseStatus` no método do controller define o status das respostas *bem-sucedidas* (o livro 42 voltaria como 404) enquanto o livro ausente ainda dá 500."
+            },
+            {
+              "type": "explain",
+              "title": "Outras opções e boas práticas",
+              "body": "- `throw new ResponseStatusException(HttpStatus.NOT_FOUND, \"Book not found\")`: rápido e sem precisar de uma classe própria, mas detalhes de HTTP vazam para a sua camada de service.\n- `@ResponseStatus(HttpStatus.NOT_FOUND)` na classe da sua exceção: um status fixo, muito pouco código.\n- Quer corpos `ProblemDetail` também para os erros embutidos do Spring MVC (validação, JSON malformado)? Defina `spring.mvc.problemdetails.enabled=true` ou faça o seu advice estender `ResponseEntityExceptionHandler`.\n\nSeja qual for a escolha: nunca envie stack traces nem mensagens de SQL aos clientes, e registre no log do servidor os 500 inesperados."
+            },
+            {
+              "type": "mcq",
+              "id": "q-most-specific",
+              "concepts": [
+                "exception-handler"
+              ],
+              "prompt": "Um advice tem dois tratadores: `@ExceptionHandler(RuntimeException.class)` devolvendo 500 e `@ExceptionHandler(BookNotFoundException.class)` devolvendo 404. Uma `BookNotFoundException` (subclasse de `RuntimeException`) é lançada. Qual tratador roda?",
+              "choices": [
+                "O tratador de `BookNotFoundException`: a correspondência mais próxima na hierarquia de exceções vence",
+                "O tratador de `RuntimeException`, se for declarado primeiro na classe",
+                "Nenhum: a inicialização falha porque os dois tratadores casam",
+                "Os dois, na ordem de declaração"
+              ],
+              "answer": 0,
+              "explanation": "O Spring escolhe o tratador cujo tipo de exceção declarado está mais próximo da classe da exceção lançada, então o específico vence e o genérico vira o pega-tudo para o resto. A ordem de declaração não importa."
+            },
+            {
+              "type": "mcq",
+              "id": "q-422",
+              "concepts": [
+                "exception-handler",
+                "bean-validation"
+              ],
+              "prompt": "O guia de estilo da sua API diz que corpos de requisição inválidos devem devolver **422** em vez de 400. O que você adiciona?",
+              "choices": [
+                "`@ResponseStatus(422)` no record da requisição",
+                "Um `@ExceptionHandler(MethodArgumentNotValidException.class)` no seu advice que devolve um `ProblemDetail` com status 422",
+                "A propriedade `server.error.status=422`",
+                "`@Valid(status = 422)` no parâmetro"
+              ],
+              "answer": 1,
+              "hint": "Qual exceção um `@Valid` que falhou levanta?",
+              "explanation": "Falhas de validação aparecem como `MethodArgumentNotValidException`. Tratá-la você mesmo permite escolher o status e incluir os erros de campo (de `ex.getBindingResult()`) no corpo. As outras opções não existem ou não se aplicam a DTOs."
+            },
+            {
+              "type": "text",
+              "id": "q-advice",
+              "concepts": [
+                "exception-handler"
+              ],
+              "prompt": "Preencha a anotação da classe que faz estes métodos `@ExceptionHandler` valerem para **todos** os controllers e escreverem os valores de retorno como corpo da resposta:\n\n```java\n@___\npublic class ApiExceptionHandler { ... }\n```",
+              "accept": [
+                "RestControllerAdvice",
+                "@RestControllerAdvice"
+              ],
+              "explanation": "`@RestControllerAdvice` = `@ControllerAdvice` + `@ResponseBody`. É o lugar padrão para mapeamentos de exceção que valem para a API toda."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "data-config",
+      "title": "Dados e configuração",
+      "description": "Persista entidades com o Spring Data JPA e configure um único build para todos os ambientes.",
+      "lessons": [
+        {
+          "id": "spring-data-jpa",
+          "title": "Spring Data JPA: entidades e repositórios",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Mapeie uma classe com `@Entity`, estenda `JpaRepository<Entity, Id>`, deixe nomes de método como `findByEmail` virarem consultas e passe para `@Query` quando os nomes ficarem longos.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Uma entidade",
+              "body": "```java\nimport jakarta.persistence.*;\n\n@Entity\n@Table(name = \"customers\")\npublic class Customer {\n\n    @Id\n    @GeneratedValue(strategy = GenerationType.IDENTITY)\n    private Long id;\n\n    @Column(nullable = false, unique = true)\n    private String email;\n\n    private String name;\n\n    protected Customer() {}        // required by JPA\n\n    public Customer(String email, String name) {\n        this.email = email;\n        this.name = name;\n    }\n    // getters, and setters for what may change\n}\n```\n\nO JPA (implementado pelo Hibernate) mapeia cada instância para uma linha de tabela. Entidades precisam de um `@Id`, de um construtor sem argumentos e não podem ser `final`, então são classes, **não records**. Deixe os records para os seus DTOs."
+            },
+            {
+              "type": "explain",
+              "title": "Um repositório sem código",
+              "body": "```java\npublic interface CustomerRepository extends JpaRepository<Customer, Long> {\n    Optional<Customer> findByEmail(String email);\n    List<Customer> findByNameContainingIgnoreCase(String fragment);\n    boolean existsByEmail(String email);\n}\n```\n\nO Spring Data gera a implementação na inicialização (não precisa da anotação `@Repository` na interface). Você ganha de graça `save`, `findById` (que devolve um `Optional`), `findAll`, `deleteById`, `count` e paginação.\n\nAlém disso, **consultas derivadas**: o nome do método é interpretado como uma consulta. `findBy` + nome da propriedade + palavras-chave opcionais como `And`, `Or`, `GreaterThan`, `After`, `Containing`, `IgnoreCase` ou `OrderBy`."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-no-id",
+              "concepts": [
+                "entity"
+              ],
+              "prompt": "O `CustomerRepository extends JpaRepository<Customer, Long>` deveria salvar clientes com id gerado, mas a aplicação falha na inicialização. Clique na linha com o bug.",
+              "language": "java",
+              "code": "@Entity\n@Table(name = \"customers\")\npublic class Customer {\n\n    @GeneratedValue(strategy = GenerationType.IDENTITY)\n    private Long id;\n\n    @Column(nullable = false, unique = true)\n    private String email;\n\n    protected Customer() {}\n}",
+              "error": "org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'entityManagerFactory' ...\n  ...\nCaused by: org.hibernate.AnnotationException: Entity 'com.example.shop.Customer' has no identifier (every '@Entity' class must declare or inherit at least one '@Id' or '@EmbeddedId' property)",
+              "lines": [
+                5,
+                6
+              ],
+              "fixes": [
+                "Mudar a linha 5 para `@Id @GeneratedValue(strategy = GenerationType.IDENTITY)`",
+                "Mudar a linha 5 para `@GeneratedValue(strategy = GenerationType.AUTO)`",
+                "Mudar a linha 6 para `private Long customerId;`",
+                "Adicionar `@Id` acima da linha 9"
+              ],
+              "answer": 0,
+              "hint": "O `@GeneratedValue` diz como preencher a chave. Qual anotação diz qual campo *é* a chave?",
+              "explanation": "Toda entidade precisa de uma chave primária marcada com `@Id`. O `@GeneratedValue` só descreve como o id é gerado; ele não faz do campo o identificador, então o Hibernate rejeita a classe ao construir a `EntityManagerFactory`. Mudar a estratégia ou renomear o campo ainda deixa a classe sem `@Id`. Colocar `@Id` em `email` também falha: o Hibernate reclama então que o `id` tem `@GeneratedValue` mas não faz parte de um identificador."
+            },
+            {
+              "type": "mcq",
+              "id": "q-typo",
+              "concepts": [
+                "repository"
+              ],
+              "prompt": "Você adiciona `Optional<Customer> findByEmial(String email);` ao repositório (repare no erro de digitação). O que acontece?",
+              "choices": [
+                "A aplicação não sobe: o Spring Data não encontra a propriedade `emial` em `Customer`",
+                "Compila, e o método sempre devolve um `Optional` vazio",
+                "Lança uma `NullPointerException` na primeira vez que é chamado",
+                "O Spring Data recorre ao `findAll()`"
+              ],
+              "answer": 0,
+              "explanation": "Os nomes de consultas derivadas são interpretados quando o bean do repositório é criado, na inicialização, então uma propriedade escrita errada falha logo, com um erro como *No property 'emial' found for type 'Customer'*. Melhor uma falha na inicialização do que um bug silencioso."
+            },
+            {
+              "type": "text",
+              "id": "q-derived-name",
+              "concepts": [
+                "repository"
+              ],
+              "prompt": "O `Customer` tem um campo `LocalDate signupDate`. Escreva o nome do método derivado que devolve os clientes que se cadastraram **depois** de uma data:\n\n```java\nList<Customer> ___(LocalDate date);\n```",
+              "accept": [
+                "findBySignupDateAfter",
+                "findAllBySignupDateAfter",
+                "findBySignupDateGreaterThan",
+                "findAllBySignupDateGreaterThan"
+              ],
+              "hint": "`findBy` + nome da propriedade (com inicial maiúscula) + uma palavra-chave de comparação.",
+              "explanation": "`findBySignupDateAfter` vira `... where c.signupDate > ?1`. `GreaterThan` também funciona; `After`/`Before` simplesmente leem melhor para datas."
+            },
+            {
+              "type": "explain",
+              "title": "@Query quando os nomes ficam ridículos",
+              "body": "`findByStatusAndCreatedAtBetweenAndTotalGreaterThanOrderByCreatedAtDesc` funciona, mas ninguém consegue ler. Escreva a consulta você mesmo, em JPQL (nomes de entidades e campos, não de tabelas):\n\n```java\n@Query(\"select i from Invoice i where i.customer.email = :email and i.total > :min\")\nList<Invoice> bigInvoicesFor(@Param(\"email\") String email, @Param(\"min\") BigDecimal min);\n```\n\nAdicione `nativeQuery = true` para escrever SQL puro quando precisar de recursos específicos do banco."
+            },
+            {
+              "type": "explain",
+              "title": "Esquema e transações: o básico",
+              "body": "- **Esquema**: `spring.jpa.hibernate.ddl-auto` tem como padrão `create-drop` em bancos embutidos como o H2 (quando não há ferramenta de migração) e `none` nos demais. Em produção, gerencie o esquema com Flyway ou Liquibase e deixe o `ddl-auto` em `validate` ou `none`.\n- **Transações**: métodos prontos do repositório, como `save`, já rodam na própria transação. Quando um método de service faz **várias** mudanças que precisam dar certo ou falhar juntas, anote-o com `@Transactional`; uma `RuntimeException` desfaz todas elas.\n- Em desenvolvimento, `spring.jpa.show-sql=true` imprime o SQL que o Hibernate executa."
+            },
+            {
+              "type": "example",
+              "title": "Cadastrando um cliente",
+              "problem": "Escreva um método de service que cadastra um cliente e rejeita e-mails duplicados com uma `DuplicateEmailException` (uma `RuntimeException` que você mapeia para 409 Conflict).",
+              "steps": [
+                "Injete o repositório pelo construtor: `public CustomerService(CustomerRepository customers)`.",
+                "Verifique primeiro a regra de negócio com a consulta derivada: `if (customers.existsByEmail(req.email())) throw new DuplicateEmailException(req.email());`.",
+                "Crie e salve a entidade: `Customer saved = customers.save(new Customer(req.email(), req.name()));`. O `save` devolve a entidade com o `id` gerado.",
+                "Mapeie a entidade para um DTO antes de devolvê-la: `return new CustomerResponse(saved.getId(), saved.getEmail(), saved.getName());`.",
+                "Mantenha também a restrição `unique = true` na coluna: duas requisições simultâneas podem passar pela verificação `exists`, e o banco de dados é a proteção final."
+              ],
+              "answer": "Verifique o `existsByEmail`, depois `save`, depois mapeie para um record de resposta; deixe a restrição de unicidade pegar as corridas."
+            },
+            {
+              "type": "mcq",
+              "id": "q-ddl-auto",
+              "concepts": [
+                "entity"
+              ],
+              "prompt": "Uma aplicação usa PostgreSQL, não tem nenhuma configuração de `ddl-auto` e não tem Flyway nem Liquibase. Você adiciona uma nova `@Entity` e sobe a aplicação. O que o Hibernate faz com o esquema?",
+              "choices": [
+                "Cria a tabela que falta automaticamente",
+                "Apaga e recria todas as tabelas",
+                "Nada: para um banco que não é embutido o padrão é `none`, então a tabela já precisa existir",
+                "Faz a inicialização falhar, porque o `ddl-auto` sempre precisa estar definido"
+              ],
+              "answer": 2,
+              "explanation": "O Boot só usa `create-drop` como padrão para bancos embutidos como o H2. Para um banco de verdade, o padrão é `none`, então as consultas na nova entidade falham até que uma migração crie a tabela. Isso é de propósito: mudanças de esquema em produção devem ser migrações explícitas e revisadas."
+            }
+          ]
+        },
+        {
+          "id": "configuration",
+          "title": "Configuração, profiles e sobrescritas por ambiente",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "Coloque os padrões no `application.properties`, ligue grupos de configurações a um record `@ConfigurationProperties` e sobrescreva por ambiente com profiles e variáveis de ambiente, nunca recompilando.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "application.properties (ou .yml)",
+              "body": "```properties\nserver.port=8081\nspring.datasource.url=jdbc:postgresql://localhost:5432/shop\napp.mail.host=smtp.example.com\napp.mail.port=587\napp.mail.timeout=5s\n```\n\nO mesmo em `application.yml`:\n\n```yaml\napp:\n  mail:\n    host: smtp.example.com\n    port: 587\n    timeout: 5s\n```\n\nAs chaves do próprio Boot (`server.*`, `spring.*`, `management.*`) ajustam a autoconfiguração. As suas chaves (aqui `app.*`) são para o seu código. Escolha um formato por projeto."
+            },
+            {
+              "type": "explain",
+              "title": "Configurações tipadas com @ConfigurationProperties",
+              "body": "```java\n@ConfigurationProperties(prefix = \"app.mail\")\npublic record MailProperties(String host, int port, Duration timeout) {}\n```\n\n```java\n@SpringBootApplication\n@ConfigurationPropertiesScan          // registers MailProperties as a bean\npublic class ShopApplication { ... }\n```\n\nAgora injete o `MailProperties` como qualquer outro bean. O Boot converte os tipos para você: `\"5s\"` vira uma `Duration` e `\"587\"` um `int`.\n\nEm comparação com espalhar `@Value(\"${app.mail.host}\")` por aí, você ganha um objeto tipado e testável. Adicione `@Validated` e restrições para fazer a aplicação se recusar a subir com uma configuração ruim."
+            },
+            {
+              "type": "explain",
+              "title": "Profiles",
+              "body": "Um **profile** é um conjunto nomeado de sobrescritas. O Boot carrega o `application.properties` e depois o `application-{profile}.properties` de cada profile ativo, cujos valores vencem:\n\n```properties\n# application-dev.properties\nspring.datasource.url=jdbc:h2:mem:shop\nlogging.level.com.example=DEBUG\n```\n\n```properties\n# application-prod.properties\nspring.datasource.url=jdbc:postgresql://db.internal:5432/shop\n```\n\nAtive um com `spring.profiles.active=prod`, por exemplo pela variável de ambiente `SPRING_PROFILES_ACTIVE=prod`. Os beans também podem ser específicos de um profile: `@Profile(\"dev\")` em uma classe ou método `@Bean`."
+            },
+            {
+              "type": "explain",
+              "title": "Quem vence? Variáveis de ambiente e relaxed binding",
+              "body": "Precedência simplificada, da maior para a menor:\n\n- Argumentos de linha de comando: `java -jar app.jar --server.port=9000`\n- Variáveis de ambiente do sistema operacional\n- `application-{profile}.properties`\n- `application.properties`\n\nAs variáveis de ambiente usam **relaxed binding**: maiúsculas, pontos viram sublinhados e hifens somem. `SPRING_DATASOURCE_URL` define `spring.datasource.url`; `APP_MAIL_HOST` define `app.mail.host`.\n\nÉ assim que contêineres e plataformas de nuvem injetam configurações e segredos: o jar é idêntico em todo lugar, só o ambiente muda."
+            },
+            {
+              "type": "example",
+              "title": "Rastreando uma configuração",
+              "problem": "O `application.properties` tem `app.mail.port=25`, o `application-prod.properties` tem `app.mail.port=587` e o contêiner define `APP_MAIL_PORT=2525`. A aplicação roda com `SPRING_PROFILES_ACTIVE=prod`. O que `MailProperties.port()` devolve?",
+              "steps": [
+                "Comece por baixo: o `application.properties` diz 25.",
+                "O profile `prod` está ativo, então o `application-prod.properties` o sobrescreve: 587.",
+                "`APP_MAIL_PORT` é mapeada para `app.mail.port` por relaxed binding, e variáveis de ambiente vencem arquivos de configuração: 2525."
+              ],
+              "answer": "2525"
+            },
+            {
+              "type": "numeric",
+              "id": "q-cmdline-wins",
+              "concepts": [
+                "property-precedence"
+              ],
+              "prompt": "Mesmos arquivos e `APP_MAIL_PORT=2525` de antes, mas agora a aplicação é iniciada com `java -jar shop.jar --app.mail.port=465`. Qual porta o `MailProperties.port()` devolve?",
+              "answer": 465,
+              "explanation": "Argumentos de linha de comando ficam acima das variáveis de ambiente, que ficam acima de todos os arquivos de configuração. A 465 vence. Isso torna o `--key=value` prático para sobrescritas pontuais."
+            },
+            {
+              "type": "text",
+              "id": "q-env-name",
+              "concepts": [
+                "property-precedence"
+              ],
+              "prompt": "Em produção, você quer definir `spring.datasource.password` por uma variável de ambiente. Como a variável se chama?",
+              "accept": [
+                "SPRING_DATASOURCE_PASSWORD"
+              ],
+              "explanation": "Coloque em maiúsculas e troque os pontos por sublinhados: `SPRING_DATASOURCE_PASSWORD`. Segredos pertencem ao ambiente (ou a um cofre de segredos), nunca a um arquivo de propriedades commitado."
+            },
+            {
+              "type": "mcq",
+              "id": "q-no-profile",
+              "concepts": [
+                "profiles"
+              ],
+              "prompt": "Você roda a aplicação localmente sem ativar nenhum profile. O projeto tem `application.properties` e `application-dev.properties`. Quais valores valem?",
+              "choices": [
+                "Os dois arquivos: `dev` é o profile padrão",
+                "Só o `application.properties`; os valores de dev só valem quando o `dev` está ativo",
+                "Só o `application-dev.properties`",
+                "Nenhum: a inicialização falha sem um profile ativo"
+              ],
+              "answer": 1,
+              "explanation": "Sem nenhum profile definido, o Spring ativa um profile chamado literalmente `default`, então carregaria o `application-default.properties` se ele existisse, mas nunca o arquivo `dev`. Ative o `dev` explicitamente, por exemplo com `SPRING_PROFILES_ACTIVE=dev` ou na configuração de execução da sua IDE."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-yaml-indent",
+              "concepts": [
+                "properties"
+              ],
+              "prompt": "Este `application.yml` alimenta o `MailProperties` de antes (`prefix = \"app.mail\"`). Na inicialização, a aplicação imprime o record, que deveria mostrar `timeout=PT5S` (5 segundos). Clique na linha com o bug.",
+              "language": "yaml",
+              "code": "server:\n  port: 8081\napp:\n  mail:\n    host: smtp.example.com\n    port: 587\n  timeout: 5s",
+              "error": "MailProperties[host=smtp.example.com, port=587, timeout=null]",
+              "lines": [
+                7
+              ],
+              "fixes": [
+                "Indentar a linha 7 com mais dois espaços, para o `timeout` ficar sob `mail:`",
+                "Mudar a linha 7 para `  timeout: PT5S`",
+                "Mudar a linha 7 para `  timeout: \"5s\"`",
+                "Mudar a linha 7 para `  mail-timeout: 5s`"
+              ],
+              "answer": 0,
+              "hint": "No YAML, a indentação decide a chave completa. Qual é a chave completa da linha 7?",
+              "explanation": "O YAML monta as chaves a partir da indentação. A linha 7 está indentada como `mail:`, então é irmã de `mail` e vira `app.timeout`, que o `MailProperties` (ligado a `app.mail`) nunca lê: o campo fica `null` e nada reclama. Indentada sob `mail:`, vira `app.mail.timeout` e é ligada como 5 segundos. Mudar o formato do valor não muda a chave, e `mail-timeout` vira `app.mail-timeout`, ainda fora de `app.mail`."
+            }
+          ]
+        },
+        {
+          "id": "transactions-n-plus-one",
+          "title": "Transações e o problema N+1",
+          "pareto": "extra",
+          "minutes": 7,
+          "takeaway": "O `@Transactional` funciona por um proxy, então chamadas internas e exceções verificadas pegam muita gente de surpresa; e associações lazy acessadas em um loop transformam 1 consulta em N+1 sem aviso.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Como o @Transactional realmente funciona",
+              "body": "O Spring envolve o seu bean em um **proxy**. Uma chamada vinda de *outro* bean passa pelo proxy, que inicia uma transação, chama o seu método e depois faz commit, ou rollback se ele lançou uma exceção. Consequências:\n\n- **Autochamada**: chamar `this.rebuild()` de dentro da mesma classe pula o proxy, então o `@Transactional` do `rebuild` é ignorado nessa chamada.\n- **Regras de rollback**: por padrão, só exceções não verificadas (`RuntimeException`, `Error`) fazem rollback. Uma exceção verificada faz **commit**. Use `@Transactional(rollbackFor = Exception.class)` para mudar isso.\n- **Dirty checking**: dentro de uma transação, as mudanças em entidades que você carregou são gravadas no commit, mesmo sem chamar `save()`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-checked-commit",
+              "concepts": [
+                "transactional"
+              ],
+              "prompt": "`InsufficientFundsException` é uma exceção **verificada**. Ela é lançada aqui. O que acontece com o débito?\n\n```java\n@Transactional\npublic void transfer(long from, long to, BigDecimal amount) throws InsufficientFundsException {\n    accounts.debit(from, amount);\n    if (accounts.balanceOf(from).signum() < 0) throw new InsufficientFundsException();\n    accounts.credit(to, amount);\n}\n```",
+              "choices": [
+                "Sofre rollback: qualquer exceção desfaz a transação",
+                "Sofre rollback, mas só se `accounts` for um `@Repository`",
+                "A transação continua aberta até a próxima requisição",
+                "É commitado: exceções verificadas não disparam rollback por padrão"
+              ],
+              "answer": 3,
+              "explanation": "A regra padrão do Spring é “fazer rollback só em exceções não verificadas”. O débito é commitado enquanto o crédito nunca acontece: o dinheiro some. Use `@Transactional(rollbackFor = InsufficientFundsException.class)` ou torne a exceção não verificada.",
+              "hint": "A regra de rollback padrão depende do *tipo* da exceção."
+            },
+            {
+              "type": "mcq",
+              "id": "q-self-invocation",
+              "concepts": [
+                "transactional"
+              ],
+              "prompt": "Um agendador chama `reportService.nightly()`. O `rebuild()` roda em uma transação?\n\n```java\n@Service\npublic class ReportService {\n    public void nightly() {\n        rebuild();\n    }\n\n    @Transactional\n    public void rebuild() { ... }\n}\n```",
+              "choices": [
+                "Não: a chamada interna não passa pelo proxy, então a anotação não tem efeito",
+                "Sim: a anotação está no método que está sendo executado",
+                "Sim, mas somente leitura",
+                "Só se a classe também estiver anotada com `@Repository`"
+              ],
+              "answer": 0,
+              "explanation": "O `rebuild()` é chamado em `this`, o objeto cru, e não no proxy que os outros beans enxergam. Correções: coloque `@Transactional` no `nightly()` ou mova o `rebuild()` para outro bean."
+            },
+            {
+              "type": "buckets",
+              "id": "q-buckets-rollback",
+              "concepts": [
+                "transactional"
+              ],
+              "prompt": "Cada método abaixo salva um pedido e depois termina como descrito. A chamada vem de outro bean, pelo proxy. Quando a chamada termina, o pedido salvo é desfeito ou mantido?\n\n(`InsufficientFundsException extends Exception`; `PaymentDeclinedException extends RuntimeException`.)",
+              "buckets": [
+                "Rollback: pedido desfeito",
+                "Mantido: pedido commitado"
+              ],
+              "items": [
+                {
+                  "text": "`@Transactional`, lança `IllegalStateException`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`@Transactional`, lança `PaymentDeclinedException`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`@Transactional(rollbackFor = Exception.class)`, lança `IOException`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`@Transactional`, lança `AssertionError`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`@Transactional`, lança `IOException`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`@Transactional`, lança `InsufficientFundsException`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`@Transactional`, captura a própria `IllegalStateException` e retorna normalmente",
+                  "bucket": 1
+                },
+                {
+                  "text": "Sem anotação: chama `this.rebuild()`, um método `@Transactional` que salva, e depois lança `IllegalStateException`",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Faça duas perguntas: uma exceção realmente saiu do proxy, e ela é não verificada (`RuntimeException` ou `Error`) ou está listada em `rollbackFor`?",
+              "explanation": "Por padrão, o proxy só faz rollback quando uma exceção **não verificada** (`RuntimeException` ou `Error`, incluindo subclasses suas) escapa do método; o `rollbackFor` inclui outras. Exceções verificadas como `IOException` ou uma sua com `extends Exception` fazem **commit** do trabalho pela metade. Se o próprio método captura a exceção, o proxy vê um retorno normal e faz commit. E o `this.rebuild()` contorna o proxy, então não há transação nenhuma: o save é commitado sozinho antes de a exceção ser lançada."
+            },
+            {
+              "type": "explain",
+              "title": "O problema N+1",
+              "body": "```java\n@Entity\npublic class Author {\n    @Id @GeneratedValue private Long id;\n    private String name;\n\n    @OneToMany(mappedBy = \"author\")     // LAZY by default\n    private List<Book> books;\n}\n```\n\n```java\nList<Author> authors = authorRepository.findAll();          // 1 query\nfor (var a : authors) {\n    System.out.println(a.getName() + \": \" + a.getBooks().size()); // +1 query each\n}\n```\n\nCada `getBooks()` dispara o próprio `select` na primeira vez que é acessado. 100 autores → 101 consultas. Parece tudo bem com dez linhas de dados de teste e se arrasta em produção."
+            },
+            {
+              "type": "numeric",
+              "id": "q-n-plus-one",
+              "concepts": [
+                "n-plus-one"
+              ],
+              "prompt": "Com o loop acima e **40** autores no banco de dados, quantas consultas SQL rodam no total?",
+              "answer": 41,
+              "explanation": "Uma consulta carrega os 40 autores e depois a coleção lazy `books` de cada autor custa mais uma: 1 + 40 = **41**. Daí o nome N+1."
+            },
+            {
+              "type": "explain",
+              "title": "Corrigindo",
+              "body": "Carregue o que você precisa em uma única consulta:\n\n```java\n@Query(\"select distinct a from Author a left join fetch a.books\")\nList<Author> findAllWithBooks();\n\n// or declaratively, on a repository method:\n@EntityGraph(attributePaths = \"books\")\nList<Author> findAll();\n```\n\n- Com `spring.jpa.show-sql=true` em desenvolvimento, *conte* as consultas por trás dos seus endpoints de listagem.\n- Para telas somente de leitura, consulte direto em DTOs que selecionem só as colunas necessárias.\n- O Boot habilita `spring.jpa.open-in-view` por padrão (e registra um aviso sobre isso). Ele mantém o carregamento lazy funcionando durante a geração do JSON, o que esconde problemas N+1; muitas equipes o definem como `false`."
+            },
+            {
+              "type": "example",
+              "title": "Salvo sem save()",
+              "problem": "Não há nenhuma chamada a `save()`. O novo nome é gravado?\n\n```java\n@Transactional\npublic void rename(Long id, String newName) {\n    Customer c = customers.findById(id).orElseThrow();\n    c.setName(newName);\n}\n```",
+              "steps": [
+                "O `findById` carrega o `c` no contexto de persistência, que agora o acompanha como uma entidade *gerenciada*.",
+                "O `setName` o altera na memória; o Hibernate ainda conhece o estado original.",
+                "No commit, o Hibernate compara os dois (dirty checking) e emite um `UPDATE` para a coluna alterada.",
+                "Sem a transação em volta, nada gravaria essa mudança, então você precisaria de um `customers.save(c)` explícito."
+              ],
+              "answer": "Sim: o dirty checking grava a mudança quando a transação faz commit."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "testing-production",
+      "title": "Testes e produção",
+      "description": "Testes rápidos e focados com os test slices do Spring e depois os extras que levam um app para produção com segurança.",
+      "lessons": [
+        {
+          "id": "testing-slices",
+          "title": "Testes: slices, MockMvc e @MockitoBean",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Teste services unitariamente com JUnit e Mockito simples, use `@WebMvcTest` ou `@DataJpaTest` para testar uma camada em um contexto pequeno e reserve o `@SpringBootTest` para poucas verificações de ponta a ponta.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Escolha o menor teste que funciona",
+              "body": "O `spring-boot-starter-test` traz JUnit 5, Mockito, AssertJ e o suporte a testes do Spring. Três níveis:\n\n- **Teste unitário simples**: `new OrderService(mockRepo)`, sem Spring nenhum. Milissegundos, e possível graças à injeção por construtor (veja o curso Testes de unidade).\n- **Teste de slice**: sobe só uma camada. `@WebMvcTest` (controllers, JSON, validação, advice) ou `@DataJpaTest` (entidades, repositórios, um banco de testes).\n- **`@SpringBootTest`**: o contexto inteiro da aplicação. O mais realista e o mais lento.\n\nOs slices são mais rápidos porque carregam uma fração dos beans e das autoconfigurações. O Spring guarda os contextos em cache entre classes de teste, mas cada configuração diferente (um conjunto diferente de mocks, por exemplo) significa mais um contexto para subir."
+            },
+            {
+              "type": "explain",
+              "title": "@WebMvcTest + MockMvc",
+              "body": "```java\n@WebMvcTest(BookController.class)\nclass BookControllerTest {\n\n    @Autowired MockMvc mvc;\n    @MockitoBean BookService books;\n\n    @Test\n    void returnsBook() throws Exception {\n        when(books.find(42L)).thenReturn(new BookResponse(42L, \"Dune\", \"Herbert\"));\n\n        mvc.perform(get(\"/api/books/42\"))\n           .andExpect(status().isOk())\n           .andExpect(jsonPath(\"$.title\").value(\"Dune\"));\n    }\n}\n```\n\nO **MockMvc** passa requisições HTTP falsas pela maquinaria real do Spring MVC, sem servidor. O `@MockitoBean` (Spring Framework 6.2+) coloca um mock do Mockito no contexto no lugar do bean real; ele substitui o `@MockBean`, obsoleto desde o Spring Boot 3.4. Injeção em campo é aceitável em testes."
+            },
+            {
+              "type": "mcq",
+              "id": "q-no-service-bean",
+              "concepts": [
+                "slice-test"
+              ],
+              "prompt": "Um teste com `@WebMvcTest(BookController.class)` falha ao carregar o contexto: *No qualifying bean of type 'BookService' available*. Por quê?",
+              "choices": [
+                "O `BookService` está sem `@Autowired`",
+                "O MockMvc só consegue testar controllers sem dependências",
+                "O `@WebMvcTest` não cria beans `@Service`, então a dependência do controller precisa ser fornecida, tipicamente com `@MockitoBean`",
+                "A classe de teste também precisa estar anotada com `@SpringBootApplication`"
+              ],
+              "answer": 2,
+              "explanation": "O slice web inclui só componentes da camada web (controllers, advice, conversores, filtros). Services e repositórios ficam de fora de propósito, então você os fornece: em geral `@MockitoBean BookService books;`, ou um `@Import` da classe real se você realmente a quiser."
+            },
+            {
+              "type": "example",
+              "title": "Testando validação e erros",
+              "problem": "Escreva um teste que prove que enviar um livro com título em branco devolve 400 **e** nunca chega ao service.",
+              "steps": [
+                "Envie um corpo que quebre o `@NotBlank title`:\n\n```java\nmvc.perform(post(\"/api/books\")\n        .contentType(MediaType.APPLICATION_JSON)\n        .content(\"\"\"\n            {\"title\": \"\", \"author\": \"Herbert\", \"year\": 1965}\n            \"\"\"))\n   .andExpect(status().isBadRequest());\n```",
+                "O `@WebMvcTest` inclui a validação e o seu `@RestControllerAdvice`, então isso exercita o caminho real do 400, incluindo o seu corpo de erro.",
+                "Depois confira que o mock nunca foi tocado: `verify(books, never()).create(any());`.",
+                "Esse é o ponto ideal para testes de slice: roteamento, JSON, validação e mapeamento de erros, tudo sem banco de dados."
+              ],
+              "answer": "Espere `status().isBadRequest()` e `verify(books, never()).create(any())`."
+            },
+            {
+              "type": "explain",
+              "title": "@DataJpaTest e @SpringBootTest",
+              "body": "```java\n@DataJpaTest\nclass CustomerRepositoryTest {\n\n    @Autowired CustomerRepository customers;\n\n    @Test\n    void findsByEmail() {\n        customers.save(new Customer(\"ann@example.com\", \"Ann\"));\n        assertThat(customers.findByEmail(\"ann@example.com\")).isPresent();\n    }\n}\n```\n\nO `@DataJpaTest` configura só o JPA e os seus repositórios, usa por padrão um banco embutido em memória (se houver um no classpath) e faz rollback da transação de cada teste. Para testar contra o seu mecanismo de banco real, combine-o com o Testcontainers.\n\nO `@SpringBootTest` sobe tudo; adicione `webEnvironment = RANDOM_PORT` para rodar um servidor de verdade e fazer chamadas de ponta a ponta. Mantenha poucos desses: são os mais lentos."
+            },
+            {
+              "type": "mcq",
+              "id": "q-slice-query",
+              "concepts": [
+                "slice-test",
+                "repository"
+              ],
+              "prompt": "Você quer verificar se uma consulta personalizada do repositório, `findTop5ByOrderByCreatedAtDesc`, devolve as linhas certas. Qual configuração se encaixa melhor?",
+              "choices": [
+                "`@DataJpaTest`",
+                "`@WebMvcTest` com um repositório `@MockitoBean`",
+                "`@SpringBootTest(webEnvironment = RANDOM_PORT)`",
+                "Um teste simples com Mockito que mocka o repositório"
+              ],
+              "answer": 0,
+              "explanation": "Só uma execução em um banco de verdade diz se a consulta está certa, e o `@DataJpaTest` dá isso com o menor contexto. Mockar o repositório não testa nada sobre a consulta, e um `@SpringBootTest` completo é mais lento do que precisa ser."
+            },
+            {
+              "type": "mcq",
+              "id": "q-slice-web",
+              "concepts": [
+                "slice-test",
+                "rest-controller"
+              ],
+              "prompt": "Você quer verificar que `DELETE /api/books/7` responde 204 e chama `books.delete(7L)`. Qual configuração se encaixa melhor?",
+              "choices": [
+                "`@DataJpaTest`",
+                "`@SpringBootTest` contra um banco de dados real",
+                "Um teste unitário simples que chama `controller.delete(7L)` direto",
+                "`@WebMvcTest(BookController.class)` com `@MockitoBean BookService`"
+              ],
+              "answer": 3,
+              "hint": "A pergunta é sobre comportamento HTTP, não sobre o banco de dados.",
+              "explanation": "O slice web exercita o roteamento real e o mapeamento de status pelo MockMvc, enquanto o service mockado deixa você fazer `verify(books).delete(7L)`. Chamar o método direto pula o roteamento; um contexto completo com banco de dados aumenta o custo sem testar nada a mais."
+            },
+            {
+              "type": "text",
+              "id": "q-mock-annotation",
+              "concepts": [
+                "slice-test"
+              ],
+              "prompt": "Preencha a anotação (Spring Framework 6.2+) que substitui o bean `BookService` por um mock do Mockito em um teste de slice:\n\n```java\n@___ BookService books;\n```",
+              "accept": [
+                "MockitoBean",
+                "@MockitoBean"
+              ],
+              "explanation": "`@MockitoBean` é a anotação atual. Você ainda vai ver `@MockBean` em código mais antigo; ele foi marcado como obsoleto no Spring Boot 3.4 em favor do `@MockitoBean`."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-mock-annotation",
+              "concepts": [
+                "slice-test"
+              ],
+              "prompt": "Este teste de slice web deveria passar, com um `BookService` falso atrás do controller. Em vez disso, o contexto não carrega. Clique na linha com o bug.",
+              "language": "java",
+              "code": "@WebMvcTest(BookController.class)\nclass BookControllerTest {\n\n    @Autowired MockMvc mvc;\n    @Mock BookService books;\n\n    @Test\n    void returnsBook() throws Exception {\n        when(books.find(42L)).thenReturn(new BookResponse(42L, \"Dune\", \"Herbert\"));\n        mvc.perform(get(\"/api/books/42\"))\n           .andExpect(status().isOk());\n    }\n}",
+              "error": "***************************\nAPPLICATION FAILED TO START\n***************************\n\nDescription:\n\nParameter 0 of constructor in BookController required a bean of type 'BookService' that could not be found.\n  ...\nBookControllerTest.returnsBook » IllegalState Failed to load ApplicationContext",
+              "lines": [
+                5
+              ],
+              "fixes": [
+                "Mudar a linha 5 para `@MockitoBean BookService books;`",
+                "Mudar a linha 5 para `@Autowired BookService books;`",
+                "Mudar a linha 5 para `@Spy BookService books;`",
+                "Mudar a linha 1 para `@WebMvcTest`"
+              ],
+              "answer": 0,
+              "hint": "O `@Mock` cria um mock dentro da classe de teste. O contexto do Spring chega a enxergá-lo?",
+              "explanation": "O `@Mock` é Mockito puro: cria um mock para o objeto de teste (e só com a extensão JUnit do Mockito), mas nunca o registra no contexto do Spring. O `@WebMvcTest` deixa os beans `@Service` de fora, então o `BookController` continua sem um `BookService` para receber. O `@MockitoBean` coloca o mock no contexto como o bean `BookService` e também o injeta no seu campo para o `when(...)`. O `@Autowired` pede um bean que não existe, o `@Spy` tem o mesmo problema do `@Mock`, e o `@WebMvcTest` sem uma classe carrega todos os controllers mas ainda assim nenhum service."
+            }
+          ]
+        },
+        {
+          "id": "security-basics",
+          "title": "Spring Security: o básico",
+          "pareto": "extra",
+          "minutes": 7,
+          "takeaway": "Adicionar o Spring Security tranca todos os endpoints por padrão; abra o que for preciso de propósito em um bean `SecurityFilterChain`, com as regras específicas primeiro e o `anyRequest()` por último.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Seguro por padrão",
+              "body": "Adicione o `spring-boot-starter-security` e reinicie. Sem escrever nenhum código:\n\n- **Todos** os endpoints agora exigem autenticação.\n- O Boot cria um único usuário chamado `user`, com uma senha aleatória impressa no log de inicialização. Isso é só para desenvolvimento.\n- Chamadas de API não autenticadas recebem **401 Unauthorized**; navegadores são redirecionados para uma página de login gerada.\n- A proteção contra CSRF está ligada, então requisições que alteram estado (`POST`, `PUT`, `DELETE`) sem um token CSRF são rejeitadas com **403**."
+            },
+            {
+              "type": "mcq",
+              "id": "q-after-starter",
+              "concepts": [
+                "security-filter-chain",
+                "http-status"
+              ],
+              "prompt": "Você adiciona o `spring-boot-starter-security` à API de livros e não muda mais nada. O que um `GET /api/books` anônimo, feito com curl, devolve agora?",
+              "choices": [
+                "200: requisições GET continuam públicas por padrão",
+                "401 Unauthorized",
+                "403 Forbidden",
+                "404: os controllers ficam desativados até você configurar a segurança"
+              ],
+              "answer": 1,
+              "explanation": "Quando o Spring Security está no classpath, a configuração padrão do Boot exige autenticação em toda requisição. Sem credenciais, é 401. Nada é público até você dizer que é."
+            },
+            {
+              "type": "explain",
+              "title": "Suas próprias regras: SecurityFilterChain",
+              "body": "```java\n@Configuration\npublic class SecurityConfig {\n\n    @Bean\n    public SecurityFilterChain api(HttpSecurity http) throws Exception {\n        http\n            .authorizeHttpRequests(auth -> auth\n                .requestMatchers(\"/actuator/health\", \"/api/public/**\").permitAll()\n                .requestMatchers(HttpMethod.DELETE, \"/api/**\").hasRole(\"ADMIN\")\n                .anyRequest().authenticated())\n            .httpBasic(Customizer.withDefaults());\n        return http.build();\n    }\n}\n```\n\nAs regras são verificadas **de cima para baixo, e a primeira que casar vence**, então as específicas vêm primeiro e o `anyRequest()` por último. Definir este bean substitui a configuração de segurança padrão do Boot (a autoconfiguração recuando de novo). Para APIs baseadas em token, o `oauth2ResourceServer(...)` valida JWTs em vez de senhas."
+            },
+            {
+              "type": "mcq",
+              "id": "q-rule-order",
+              "concepts": [
+                "security-filter-chain"
+              ],
+              "prompt": "O que acontece com esta configuração?\n\n```java\n.authorizeHttpRequests(auth -> auth\n    .anyRequest().authenticated()\n    .requestMatchers(\"/api/public/**\").permitAll())\n```",
+              "choices": [
+                "Os caminhos públicos funcionam: o `permitAll()` sempre sobrepõe o `authenticated()`",
+                "Os caminhos públicos ainda exigem login, porque a primeira regra casa com tudo",
+                "Só requisições GET para os caminhos públicos são permitidas anonimamente",
+                "A aplicação não sobe: nenhuma regra pode ser adicionada depois do `anyRequest()`"
+              ],
+              "answer": 3,
+              "hint": "O Spring Security confere a lista de regras enquanto ela está sendo montada.",
+              "explanation": "O `anyRequest()` precisa ser a última regra; o Spring Security rejeita, com um erro na inicialização, qualquer `requestMatchers` adicionado depois dele. Coloque as regras específicas de `permitAll()` primeiro e o `anyRequest().authenticated()` por último."
+            },
+            {
+              "type": "explain",
+              "title": "401 vs 403 e CSRF",
+              "body": "- **401 Unauthorized** na verdade significa *não autenticado*: não sabemos quem você é (credenciais ausentes ou erradas).\n- **403 Forbidden** significa que sabemos quem você é, mas você não tem permissão: falta um papel (role) ou uma verificação, como a de CSRF, falhou.\n\nA proteção contra CSRF defende sessões de navegador que dependem de cookies. Uma API stateless que autentica cada requisição com um cabeçalho (`Authorization: Bearer ...`) não fica exposta do mesmo jeito, e é por isso que essas APIs costumam desligá-la com `http.csrf(csrf -> csrf.disable())`. Mantenha-a ligada em logins baseados em cookie."
+            },
+            {
+              "type": "mcq",
+              "id": "q-403",
+              "concepts": [
+                "http-status",
+                "security-filter-chain"
+              ],
+              "prompt": "Usando o `SecurityConfig` acima (com o CSRF desligado), o usuário `ann`, que tem só o papel `USER`, envia `DELETE /api/books/3` com credenciais válidas. Qual é a resposta?",
+              "choices": [
+                "401 Unauthorized",
+                "204 No Content",
+                "403 Forbidden",
+                "405 Method Not Allowed"
+              ],
+              "answer": 2,
+              "explanation": "A Ann está autenticada, então não é 401, mas a regra que casa exige o papel `ADMIN`. Autenticado mas sem permissão é **403**."
+            },
+            {
+              "type": "buckets",
+              "id": "q-buckets-401-403",
+              "concepts": [
+                "security-filter-chain",
+                "http-status"
+              ],
+              "prompt": "Usando o `SecurityConfig` acima com o CSRF desligado, os usuários `ann` (papel `USER`) e `max` (papel `ADMIN`) e o endpoint de health do actuator no classpath, o que cada requisição recebe?",
+              "buckets": [
+                "Permitido (2xx)",
+                "401 Unauthorized",
+                "403 Forbidden"
+              ],
+              "items": [
+                {
+                  "text": "Sem credenciais, `GET /api/public/opening-hours`",
+                  "bucket": 0
+                },
+                {
+                  "text": "Sem credenciais, `GET /actuator/health`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`ann`, `GET /api/books`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`max`, `DELETE /api/books/3`",
+                  "bucket": 0
+                },
+                {
+                  "text": "Sem credenciais, `GET /api/books`",
+                  "bucket": 1
+                },
+                {
+                  "text": "Sem credenciais, `DELETE /api/books/3`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`ann` com senha errada, `GET /api/books`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`ann`, `DELETE /api/books/3`",
+                  "bucket": 2
+                }
+              ],
+              "hint": "Primeiro pergunte: sabemos quem é? Só depois pergunte: essa pessoa tem permissão?",
+              "explanation": "A primeira regra que casa decide. Os caminhos públicos e o health são `permitAll()`, então qualquer um passa. Todo o resto exige um usuário conhecido: sem credenciais ou com senha errada, não sabemos quem você é, então **401**, mesmo para o `DELETE`, que de qualquer forma exigiria `ADMIN`. Depois de autenticada, a Ann pode fazer `GET` (`authenticated()`), mas a regra do `DELETE` quer o papel `ADMIN`: conhecida mas sem permissão é **403**. O Max tem `ADMIN`, então o `DELETE` dele funciona."
+            },
+            {
+              "type": "example",
+              "title": "O health check que quebrou",
+              "problem": "Depois de adicionar o Spring Security, a sonda de saúde da plataforma (`GET /actuator/health`) começa a falhar e os seus contêineres ficam reiniciando. Corrija.",
+              "steps": [
+                "A sonda não envia credenciais, então agora recebe 401, e a plataforma conclui que a aplicação não está saudável.",
+                "Declare um bean `SecurityFilterChain` com `.requestMatchers(\"/actuator/health\").permitAll()` colocado **antes** de `.anyRequest().authenticated()`.",
+                "Abra só o endpoint de health. Nunca deixe `/actuator/env` ou heap dumps públicos: eles podem revelar segredos.",
+                "Reinicie: a sonda recebe 200 com `{\"status\":\"UP\"}` de novo, e todo o resto continua exigindo login."
+              ],
+              "answer": "Libere o endpoint de health explicitamente no seu `SecurityFilterChain`, antes do `anyRequest()`."
+            },
+            {
+              "type": "text",
+              "id": "q-permit-all",
+              "concepts": [
+                "security-filter-chain"
+              ],
+              "prompt": "Preencha o método que deixa qualquer pessoa, logada ou não, acessar os caminhos casados:\n\n```java\n.requestMatchers(\"/api/public/**\").___()\n```",
+              "accept": [
+                "permitAll",
+                "permitAll()"
+              ],
+              "explanation": "`permitAll()` dispensa a exigência de autenticação para as requisições que casam. Os opostos dele são `authenticated()`, `hasRole(\"...\")` e `denyAll()`."
+            }
+          ]
+        },
+        {
+          "id": "actuator-and-shipping",
+          "title": "Actuator e levando seu app para produção",
+          "pareto": "extra",
+          "minutes": 6,
+          "takeaway": "O Actuator dá health checks e métricas de graça, e uma aplicação Boot é entregue como um único jar executável (ou uma imagem criada com buildpacks), configurada pelo ambiente em que roda.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Actuator",
+              "body": "Adicione o `spring-boot-starter-actuator` para ter endpoints de produção em `/actuator`:\n\n- `/actuator/health`: `{\"status\":\"UP\"}` com HTTP 200, ou `DOWN` com **503** quando um componente verificado (banco de dados, espaço em disco...) não está saudável. Balanceadores de carga e sondas do Kubernetes consultam esse endpoint.\n- `/actuator/metrics`: métricas do Micrometer como `http.server.requests`, memória da JVM e uso do pool de conexões. Adicione um registry como o Prometheus para exportá-las.\n- `info`, `loggers`, `conditions`, `env` e mais.\n\nPor HTTP, só o `health` é exposto por padrão. Ative os outros explicitamente:\n\n```properties\nmanagement.endpoints.web.exposure.include=health,info,metrics\n```"
+            },
+            {
+              "type": "mcq",
+              "id": "q-health-down",
+              "concepts": [
+                "actuator",
+                "http-status"
+              ],
+              "prompt": "A aplicação está rodando, mas o banco de dados está fora do ar. Um balanceador de carga consulta `/actuator/health`. O que ele recebe?",
+              "choices": [
+                "503 com status `DOWN`",
+                "200 com `{\"status\":\"UP\"}`: o servidor web em si está bem",
+                "500 Internal Server Error",
+                "404: o endpoint de health some quando um componente falha"
+              ],
+              "answer": 0,
+              "explanation": "Com um `DataSource` presente, um indicador de saúde do banco entra no status geral. Se ele falha, o agregado vira `DOWN`, que é mapeado para HTTP **503**, então o balanceador pode parar de rotear tráfego para esta instância."
+            },
+            {
+              "type": "mcq",
+              "id": "q-metrics-404",
+              "concepts": [
+                "actuator",
+                "properties"
+              ],
+              "prompt": "Depois de adicionar o Actuator, o `/actuator/health` funciona, mas o `/actuator/metrics` devolve 404. Por quê?",
+              "choices": [
+                "As métricas exigem que um servidor Prometheus esteja rodando antes",
+                "Só o `health` é exposto por HTTP por padrão; adicione `metrics` a `management.endpoints.web.exposure.include`",
+                "As métricas só estão disponíveis no profile `prod`",
+                "O Spring Security está bloqueando"
+              ],
+              "answer": 1,
+              "explanation": "A exposição web dos endpoints é opcional porque vários revelam detalhes internos. Se a segurança o bloqueasse, seria 401/403, não 404. Trate `env`, `heapdump` e endpoints parecidos como sensíveis e nunca os exponha publicamente."
+            },
+            {
+              "type": "buckets",
+              "id": "q-buckets-exposure",
+              "concepts": [
+                "actuator"
+              ],
+              "prompt": "O Actuator está no classpath e o Spring Security não. Com a configuração mostrada, o que um `GET` simples em cada endpoint devolve?",
+              "buckets": [
+                "Responde (200)",
+                "404 Not Found"
+              ],
+              "items": [
+                {
+                  "text": "`/actuator/health`, configurações padrão",
+                  "bucket": 0
+                },
+                {
+                  "text": "`/actuator/metrics`, com `include=health,info,metrics`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`/actuator/info`, com `include=health,info,metrics`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`/actuator/loggers`, com `include=*`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`/actuator/info`, configurações padrão",
+                  "bucket": 1
+                },
+                {
+                  "text": "`/actuator/metrics`, configurações padrão",
+                  "bucket": 1
+                },
+                {
+                  "text": "`/actuator/env`, configurações padrão",
+                  "bucket": 1
+                },
+                {
+                  "text": "`/actuator/env`, com `include=health,info,metrics`",
+                  "bucket": 1
+                }
+              ],
+              "hint": "`include=...` é abreviação de `management.endpoints.web.exposure.include`. De fábrica, qual único endpoint é exposto por HTTP?",
+              "explanation": "Por HTTP, só o `health` é exposto por padrão; todos os outros endpoints respondem 404 até você listá-los em `management.endpoints.web.exposure.include`. Listar `health,info,metrics` expõe exatamente esses três, então o `env` continua oculto, e `*` expõe tudo o que está habilitado, `loggers` incluído. Cuidado com o `*` em produção: ele também expõe endpoints sensíveis como o `env`, então mantenha esses fora de redes públicas."
+            },
+            {
+              "type": "explain",
+              "title": "Build e execução",
+              "body": "```bash\n./mvnw spring-boot:run                    # run from source while developing\n./mvnw clean package                      # build target/shop-0.0.1-SNAPSHOT.jar\njava -jar target/shop-0.0.1-SNAPSHOT.jar --spring.profiles.active=prod\n\n./gradlew bootRun                         # Gradle equivalents\n./gradlew bootJar                         # build/libs/shop-0.0.1-SNAPSHOT.jar\n```\n\nO jar é **executável**: contém as suas classes, todas as dependências e o servidor embutido. O mesmo artefato roda em todos os ambientes; só mudam os profiles, as variáveis de ambiente e os argumentos de linha de comando."
+            },
+            {
+              "type": "explain",
+              "title": "Imagens de contêiner sem Dockerfile",
+              "body": "```bash\n./mvnw spring-boot:build-image            # or: ./gradlew bootBuildImage\ndocker run -p 8080:8080 -e SPRING_PROFILES_ACTIVE=prod shop:0.0.1-SNAPSHOT\n```\n\nO `build-image` usa **Cloud Native Buildpacks** para produzir uma imagem OCI com uma JRE adequada, configurações de memória sensatas e dependências em camadas separadas, de modo que reconstruir depois de uma mudança no código só substitui uma camada pequena. Ele precisa de um daemon do Docker local. Você ainda pode escrever o seu próprio Dockerfile; os buildpacks só dão um bom padrão sem arquivos extras."
+            },
+            {
+              "type": "example",
+              "title": "Um jar, três ambientes",
+              "problem": "Você tem um `shop.jar`. Localmente quer H2 e logs de debug; o staging e a produção usam PostgreSQL, com URLs e senhas diferentes. Como configurar isso sem recompilar?",
+              "steps": [
+                "`application.properties`: padrões compartilhados, por exemplo `management.endpoints.web.exposure.include=health,info`.",
+                "`application-dev.properties`: a URL do H2 e `logging.level.com.example=DEBUG`. Rode localmente com `./mvnw spring-boot:run -Dspring-boot.run.profiles=dev`.",
+                "`application-prod.properties`: configurações de produção como níveis de log e tamanhos de pool, mas **sem segredos**.",
+                "O staging e a produção rodam com `SPRING_PROFILES_ACTIVE=prod` e recebem a própria `SPRING_DATASOURCE_URL` e `SPRING_DATASOURCE_PASSWORD` do cofre de segredos da plataforma."
+              ],
+              "answer": "Profiles para diferenças de comportamento, variáveis de ambiente para valores e segredos de cada ambiente: um artefato em todo lugar."
+            },
+            {
+              "type": "mcq",
+              "id": "q-run-port",
+              "concepts": [
+                "property-precedence",
+                "embedded-server"
+              ],
+              "prompt": "Qual comando inicia a aplicação empacotada na porta 9000 sem mudar nenhum arquivo?",
+              "choices": [
+                "`java -jar shop.jar server.port=9000`",
+                "`java -jar shop.jar -port 9000`",
+                "`java -jar shop.jar --server.port=9000`",
+                "`./mvnw package -Dport=9000`"
+              ],
+              "answer": 2,
+              "explanation": "O Boot transforma argumentos `--key=value` em propriedades com a maior precedência. Sem o `--` no começo, é só um argumento comum do programa, `-port` não significa nada para o Boot, e o goal `package` constrói o jar em vez de executá-lo."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

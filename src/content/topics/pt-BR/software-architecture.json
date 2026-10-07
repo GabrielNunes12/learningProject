@@ -1,0 +1,1761 @@
+{
+  "id": "software-architecture",
+  "title": "Arquitetura de software",
+  "icon": "SOLID",
+  "color": "#1864ab",
+  "order": 18,
+  "category": "Engineering",
+  "level": "Intermediate",
+  "description": "Estruture código e sistemas para que continuem fáceis de mudar: identifique acoplamento, trace boas fronteiras, escolha um estilo de arquitetura que combine com a situação e registre o porquê.",
+  "keyIdeas": [
+    "Arquitetura é o conjunto de decisões **caras de mudar**: concentre seu cuidado nelas e diga os trade-offs em voz alta.",
+    "Escolha os poucos **atributos de qualidade** que mais importam para este sistema agora e aceite custos conhecidos no resto.",
+    "Busque **baixo acoplamento e alta coesão**: mantenha junto o que muda junto e deixe as partes conversarem por interfaces pequenas.",
+    "Aponte as **dependências para dentro**: as regras de negócio são donas das interfaces, enquanto bancos de dados, frameworks e fornecedores se encaixam como adaptadores.",
+    "Comece com um **monólito modular**; extraia serviços quando uma necessidade concreta, como independência entre times ou escalar partes separadamente, pagar o custo da rede.",
+    "Trate mensagens e APIs como **contratos**, registre as grandes decisões em **ADRs** e proteja-as com fitness functions automatizadas."
+  ],
+  "concepts": [
+    {
+      "id": "architecture",
+      "label": "Arquitetura",
+      "lesson": "hard-to-change",
+      "summary": "O conjunto de decisões de design que são caras de mudar depois: como o sistema é dividido, como as partes conversam, onde os dados ficam.",
+      "aliases": [
+        "arquitetura de software",
+        "decisões arquiteturais",
+        "decisões caras",
+        "software architecture"
+      ]
+    },
+    {
+      "id": "quality-attributes",
+      "label": "Atributos de qualidade",
+      "lesson": "hard-to-change",
+      "summary": "Propriedades mensuráveis, como desempenho, disponibilidade, segurança e modificabilidade, que descrevem quão bem um sistema funciona e que guiam sua arquitetura.",
+      "aliases": [
+        "-idades",
+        "requisitos não funcionais",
+        "RNFs",
+        "NFRs",
+        "requisitos de qualidade"
+      ]
+    },
+    {
+      "id": "trade-offs",
+      "label": "Trade-offs",
+      "lesson": "hard-to-change",
+      "summary": "Melhorar um atributo de qualidade geralmente custa outro, então fazer arquitetura é escolher os poucos que importam e aceitar os custos.",
+      "aliases": [
+        "depende",
+        "trade-off",
+        "compensação",
+        "meio-termo"
+      ]
+    },
+    {
+      "id": "coupling",
+      "label": "Acoplamento",
+      "lesson": "coupling-cohesion",
+      "summary": "O quanto uma parte depende dos detalhes de outra e, por isso, com que frequência as duas precisam mudar juntas.",
+      "aliases": [
+        "dependência",
+        "acoplamento forte",
+        "efeito cascata",
+        "Lei de Deméter",
+        "coupling"
+      ]
+    },
+    {
+      "id": "cohesion",
+      "label": "Coesão",
+      "lesson": "coupling-cohesion",
+      "summary": "O quanto as coisas dentro de um módulo pertencem umas às outras: o que muda pelo mesmo motivo deve ficar junto.",
+      "aliases": [
+        "alta coesão",
+        "mudam juntas",
+        "cohesion"
+      ]
+    },
+    {
+      "id": "single-responsibility",
+      "label": "Responsabilidade única",
+      "lesson": "solid-honestly",
+      "summary": "Um módulo deve ter um único motivo para mudar: um grupo de pessoas cujos pedidos o fariam mudar.",
+      "aliases": [
+        "SRP",
+        "um motivo para mudar",
+        "S do SOLID",
+        "princípio da responsabilidade única"
+      ]
+    },
+    {
+      "id": "dependency-inversion",
+      "label": "Inversão de dependência",
+      "lesson": "solid-honestly",
+      "summary": "A política de alto nível depende de abstrações que ela mesma define, e os detalhes de baixo nível as implementam, então os detalhes podem ser trocados ou simulados.",
+      "aliases": [
+        "DIP",
+        "injeção de dependência",
+        "D do SOLID",
+        "programe para uma interface",
+        "inversão de dependências"
+      ]
+    },
+    {
+      "id": "over-engineering",
+      "label": "Excesso de engenharia",
+      "lesson": "solid-honestly",
+      "summary": "Adicionar abstrações, camadas ou serviços antes de existir uma necessidade real, o que custa indireção e tempo de leitura sem nenhum benefício por enquanto.",
+      "aliases": [
+        "YAGNI",
+        "overengineering",
+        "generalidade especulativa",
+        "superengenharia"
+      ]
+    },
+    {
+      "id": "layered-architecture",
+      "label": "Arquitetura em camadas",
+      "lesson": "layers-and-ports",
+      "summary": "Código empilhado em camadas (UI, aplicação, domínio, acesso a dados) em que cada camada chama só a de baixo, o que deixa o domínio dependendo do acesso a dados.",
+      "aliases": [
+        "camadas",
+        "n camadas",
+        "três camadas",
+        "n-tier"
+      ]
+    },
+    {
+      "id": "ports-and-adapters",
+      "label": "Portas e adaptadores",
+      "lesson": "layers-and-ports",
+      "summary": "O domínio fica no centro e define portas (as interfaces de que precisa); adaptadores para HTTP, bancos de dados, fornecedores e testes se encaixam nelas.",
+      "aliases": [
+        "arquitetura hexagonal",
+        "ports and adapters",
+        "clean architecture",
+        "arquitetura limpa",
+        "arquitetura cebola",
+        "hexágono"
+      ]
+    },
+    {
+      "id": "dependency-rule",
+      "label": "Regra de dependência",
+      "lesson": "layers-and-ports",
+      "summary": "As dependências do código-fonte apontam para dentro: as regras de negócio nunca importam frameworks, drivers ou adaptadores.",
+      "aliases": [
+        "dependências apontam para dentro",
+        "direção das dependências",
+        "dependências para dentro"
+      ]
+    },
+    {
+      "id": "modular-monolith",
+      "label": "Monólito modular",
+      "lesson": "modules-or-services",
+      "summary": "Uma única aplicação implantável dividida em módulos com interfaces públicas claras, que nunca mexem nos detalhes internos ou nas tabelas uns dos outros.",
+      "aliases": [
+        "monólito",
+        "modulito",
+        "um único deploy",
+        "modular monolith"
+      ]
+    },
+    {
+      "id": "microservices",
+      "label": "Microsserviços",
+      "lesson": "modules-or-services",
+      "summary": "Serviços implantáveis de forma independente, cada um dono dos seus dados e conversando pela rede, que compram independência pelo preço da complexidade de um sistema distribuído.",
+      "aliases": [
+        "serviços",
+        "arquitetura de microsserviços",
+        "microservices",
+        "orientado a serviços"
+      ]
+    },
+    {
+      "id": "distributed-monolith",
+      "label": "Monólito distribuído",
+      "lesson": "modules-or-services",
+      "summary": "Serviços que ainda precisam mudar, ser implantados ou falhar juntos, muitas vezes por causa de um banco de dados compartilhado ou de cadeias de chamadas tagarelas: os custos da rede sem a independência.",
+      "aliases": [
+        "banco de dados compartilhado",
+        "deploys em conjunto",
+        "microsserviços mal feitos",
+        "distributed monolith"
+      ]
+    },
+    {
+      "id": "bounded-context",
+      "label": "Contexto delimitado",
+      "lesson": "domain-language",
+      "summary": "Uma fronteira dentro da qual uma palavra tem um único significado preciso e um único modelo; muitas vezes é uma boa fronteira de módulo ou de serviço.",
+      "aliases": [
+        "bounded context",
+        "contexto",
+        "linguagem ubíqua",
+        "contexto do DDD"
+      ]
+    },
+    {
+      "id": "aggregate",
+      "label": "Agregado",
+      "lesson": "domain-language",
+      "summary": "Um grupo de objetos alterado como uma unidade por meio de uma única raiz que garante suas regras (invariantes).",
+      "aliases": [
+        "raiz do agregado",
+        "aggregate",
+        "fronteira de consistência",
+        "invariante"
+      ]
+    },
+    {
+      "id": "sync-call",
+      "label": "Chamada síncrona",
+      "lesson": "talking-between-parts",
+      "summary": "Requisição e resposta, como HTTP ou gRPC: quem chama espera uma resposta e falha se o outro lado estiver fora do ar.",
+      "aliases": [
+        "requisição-resposta",
+        "chamada REST",
+        "RPC",
+        "chamada de API"
+      ]
+    },
+    {
+      "id": "domain-event",
+      "label": "Evento de domínio",
+      "lesson": "talking-between-parts",
+      "summary": "Uma mensagem anunciando que algo aconteceu; os assinantes reagem no seu próprio tempo sem que quem publica os conheça.",
+      "aliases": [
+        "evento",
+        "publish-subscribe",
+        "pub/sub",
+        "fila de mensagens",
+        "domain event"
+      ]
+    },
+    {
+      "id": "api-contract",
+      "label": "Contrato de API",
+      "lesson": "talking-between-parts",
+      "summary": "O formato e o significado combinados das mensagens entre as partes; as mudanças precisam ser retrocompatíveis ou feitas com expandir e contrair.",
+      "aliases": [
+        "contrato",
+        "versionamento",
+        "retrocompatibilidade",
+        "compatibilidade com versões anteriores",
+        "expandir e contrair",
+        "expand and contract"
+      ]
+    },
+    {
+      "id": "adr",
+      "label": "Registro de decisão",
+      "lesson": "decision-records",
+      "summary": "Um arquivo curto e numerado que registra uma decisão arquitetural com seu contexto e suas consequências; é substituído, nunca reescrito.",
+      "aliases": [
+        "ADR",
+        "registro de decisão arquitetural",
+        "architecture decision record"
+      ]
+    },
+    {
+      "id": "fitness-function",
+      "label": "Fitness function",
+      "lesson": "decision-records",
+      "summary": "Uma verificação automatizada, executada a cada build, de que uma propriedade arquitetural, como uma regra de dependência ou um limite de latência, continua valendo.",
+      "aliases": [
+        "função de aptidão",
+        "teste de arquitetura",
+        "ArchUnit",
+        "import-linter"
+      ]
+    },
+    {
+      "id": "big-ball-of-mud",
+      "label": "Grande bola de lama",
+      "lesson": "rescue-the-mud",
+      "summary": "Um sistema sem estrutura visível em que tudo depende de tudo, muitas vezes com god classes e um banco de dados compartilhado.",
+      "aliases": [
+        "big ball of mud",
+        "código espaguete",
+        "god class",
+        "classe deus",
+        "legado bagunçado"
+      ]
+    },
+    {
+      "id": "strangler-fig",
+      "label": "Strangler fig",
+      "lesson": "rescue-the-mud",
+      "summary": "Substitua um sistema legado peça por peça atrás de um roteador, movendo uma capacidade de cada vez em vez de uma grande reescrita.",
+      "aliases": [
+        "figueira estranguladora",
+        "padrão strangler",
+        "migração incremental",
+        "costura"
+      ]
+    }
+  ],
+  "links": [
+    {
+      "from": "architecture",
+      "to": "quality-attributes",
+      "label": "precisa de"
+    },
+    {
+      "from": "quality-attributes",
+      "to": "trade-offs",
+      "label": "causa"
+    },
+    {
+      "from": "trade-offs",
+      "to": "architecture",
+      "label": "faz parte de"
+    },
+    {
+      "from": "coupling",
+      "to": "cohesion",
+      "label": "contrasta com"
+    },
+    {
+      "from": "coupling",
+      "to": "big-ball-of-mud",
+      "label": "causa"
+    },
+    {
+      "from": "single-responsibility",
+      "to": "cohesion",
+      "label": "se apoia em"
+    },
+    {
+      "from": "dependency-inversion",
+      "to": "coupling",
+      "label": "reduz"
+    },
+    {
+      "from": "dependency-inversion",
+      "to": "over-engineering",
+      "label": "pode levar a"
+    },
+    {
+      "from": "ports-and-adapters",
+      "to": "dependency-inversion",
+      "label": "se apoia em"
+    },
+    {
+      "from": "dependency-rule",
+      "to": "ports-and-adapters",
+      "label": "faz parte de"
+    },
+    {
+      "from": "layered-architecture",
+      "to": "ports-and-adapters",
+      "label": "contrasta com"
+    },
+    {
+      "from": "dependency-rule",
+      "to": "fitness-function",
+      "label": "é verificado(a) por"
+    },
+    {
+      "from": "modular-monolith",
+      "to": "microservices",
+      "label": "contrasta com"
+    },
+    {
+      "from": "microservices",
+      "to": "distributed-monolith",
+      "label": "pode levar a"
+    },
+    {
+      "from": "coupling",
+      "to": "distributed-monolith",
+      "label": "causa"
+    },
+    {
+      "from": "microservices",
+      "to": "over-engineering",
+      "label": "pode levar a"
+    },
+    {
+      "from": "bounded-context",
+      "to": "modular-monolith",
+      "label": "é usado(a) em"
+    },
+    {
+      "from": "bounded-context",
+      "to": "microservices",
+      "label": "é usado(a) em"
+    },
+    {
+      "from": "aggregate",
+      "to": "bounded-context",
+      "label": "faz parte de"
+    },
+    {
+      "from": "aggregate",
+      "to": "cohesion",
+      "label": "se apoia em"
+    },
+    {
+      "from": "sync-call",
+      "to": "domain-event",
+      "label": "contrasta com"
+    },
+    {
+      "from": "domain-event",
+      "to": "coupling",
+      "label": "reduz"
+    },
+    {
+      "from": "sync-call",
+      "to": "distributed-monolith",
+      "label": "pode levar a"
+    },
+    {
+      "from": "domain-event",
+      "to": "api-contract",
+      "label": "precisa de"
+    },
+    {
+      "from": "sync-call",
+      "to": "api-contract",
+      "label": "precisa de"
+    },
+    {
+      "from": "api-contract",
+      "to": "architecture",
+      "label": "faz parte de"
+    },
+    {
+      "from": "adr",
+      "to": "architecture",
+      "label": "é usado(a) em"
+    },
+    {
+      "from": "adr",
+      "to": "fitness-function",
+      "label": "é verificado(a) por"
+    },
+    {
+      "from": "quality-attributes",
+      "to": "fitness-function",
+      "label": "é verificado(a) por"
+    },
+    {
+      "from": "strangler-fig",
+      "to": "big-ball-of-mud",
+      "label": "substitui"
+    },
+    {
+      "from": "big-ball-of-mud",
+      "to": "modular-monolith",
+      "label": "é o oposto de"
+    },
+    {
+      "from": "strangler-fig",
+      "to": "dependency-inversion",
+      "label": "precisa de"
+    },
+    {
+      "from": "layered-architecture",
+      "to": "dependency-rule",
+      "label": "contrasta com"
+    },
+    {
+      "from": "single-responsibility",
+      "to": "over-engineering",
+      "label": "pode levar a"
+    },
+    {
+      "from": "dependency-inversion",
+      "to": "spring-boot/constructor-injection",
+      "label": "é usado(a) em"
+    },
+    {
+      "from": "dependency-inversion",
+      "to": "unit-testing/test-double",
+      "label": "é usado(a) em"
+    },
+    {
+      "from": "ports-and-adapters",
+      "to": "spring-boot/repository",
+      "label": "é usado(a) em"
+    },
+    {
+      "from": "fitness-function",
+      "to": "unit-testing/unit-test",
+      "label": "se apoia em"
+    },
+    {
+      "from": "aggregate",
+      "to": "sql/transaction",
+      "label": "precisa de"
+    }
+  ],
+  "units": [
+    {
+      "id": "why-it-gets-hard",
+      "title": "Por que o código fica difícil de mudar",
+      "description": "Para que serve a arquitetura e as duas forças (acoplamento e coesão) que decidem quão dolorosa uma mudança vai ser.",
+      "lessons": [
+        {
+          "id": "hard-to-change",
+          "title": "As decisões que você não desfaz fácil",
+          "pareto": "core",
+          "minutes": 6,
+          "takeaway": "Arquitetura é o punhado de decisões caras de mudar, tomadas para servir aos poucos atributos de qualidade que mais importam, a um custo conhecido para os outros.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Conheça a Crumb",
+              "body": "A **Crumb** é uma padaria de bairro que está criando um app de pedidos. A **Ines** é a dona da padaria e muda de ideia com frequência. A **Maya** é a tech lead. O **Theo** acabou de chegar e já leu todos os blogs de arquitetura que existem.\n\nArquitetura não é um monte de caixinhas no quadro branco. É o conjunto de decisões que são **caras de mudar depois**: como as partes são divididas, como conversam, onde os dados ficam, do que quem está de fora depende.\n\nUma pergunta separa essas decisões: *se errarmos aqui, quanto custaria desfazer?*"
+            },
+            {
+              "type": "order",
+              "id": "q-undo-cost",
+              "concepts": [
+                "architecture"
+              ],
+              "prompt": "Coloque estas mudanças da Crumb em ordem, da **mais barata** à **mais cara** de desfazer.",
+              "items": [
+                "Renomear uma variável local dentro de uma função",
+                "Mudar uma função chamada em três lugares do mesmo módulo",
+                "Renomear uma coluna da tabela `orders` em produção",
+                "Mudar o formato JSON da API pública que os parceiros de entrega chamam"
+              ],
+              "hint": "Pergunte quem mais precisa mudar junto com você: ninguém, o seu próprio módulo, tudo o que lê os dados ou outras empresas.",
+              "explanation": "O custo cresce com **o quanto depende da decisão e o quanto disso você controla**. Uma variável local afeta uma função. Uma função com três chamadores significa três edições, todas suas. Uma coluna em produção afeta cada consulta, relatório e migração que a lê. Uma API pública é o pior caso: os parceiros de entrega construíram o código deles em cima dela, e você não pode editar o código *deles*.\n\nPor isso a arquitetura cuida da parte de baixo desta lista."
+            },
+            {
+              "type": "explain",
+              "title": "Quão bem, não só o quê",
+              "body": "As funcionalidades dizem **o que** o app faz: pedir um croissant, pagar, acompanhar o entregador. Os **atributos de qualidade** (as *-idades*) dizem **quão bem**: desempenho, disponibilidade, escalabilidade, segurança, modificabilidade, testabilidade, custo.\n\nEles moldam a arquitetura mais do que as funcionalidades. Um app de tarefas para 10 usuários e outro para 10 milhões têm as mesmas funcionalidades e designs muito diferentes.\n\nTorne-os concretos e mensuráveis: *“o cardápio carrega em menos de 1 segundo no celular”* é melhor que *“tem que ser rápido”*."
+            },
+            {
+              "type": "buckets",
+              "id": "q-ilities",
+              "concepts": [
+                "quality-attributes"
+              ],
+              "prompt": "A Ines escreveu a lista de desejos da Crumb. Coloque cada requisito no atributo de qualidade que ele descreve.",
+              "buckets": [
+                "Desempenho",
+                "Disponibilidade",
+                "Modificabilidade",
+                "Segurança"
+              ],
+              "items": [
+                {
+                  "text": "A página do cardápio carrega em menos de 1 segundo no celular",
+                  "bucket": 0
+                },
+                {
+                  "text": "O checkout responde em até 300 ms no pico de sábado de manhã",
+                  "bucket": 0
+                },
+                {
+                  "text": "Se um servidor cair, os clientes ainda conseguem fazer pedidos",
+                  "bucket": 1
+                },
+                {
+                  "text": "O app fica no ar 99,9% de todo mês",
+                  "bucket": 1
+                },
+                {
+                  "text": "Adicionar uma nova forma de pagamento leva menos de dois dias para um desenvolvedor",
+                  "bucket": 2
+                },
+                {
+                  "text": "Dá para adicionar uma segunda unidade da padaria sem reescrever o código de pedidos",
+                  "bucket": 2
+                },
+                {
+                  "text": "Só os funcionários podem ver o telefone dos clientes",
+                  "bucket": 3
+                },
+                {
+                  "text": "Números de cartão nunca passam pelos servidores da própria Crumb",
+                  "bucket": 3
+                }
+              ],
+              "hint": "Velocidade sob carga é desempenho; continuar no ar é disponibilidade; facilidade de mudar é modificabilidade; quem pode ver ou fazer o quê é segurança.",
+              "explanation": "**Desempenho** é sobre velocidade sob uma certa carga. **Disponibilidade** é sobre continuar funcionando quando algo falha. **Modificabilidade** é quão barato o sistema absorve mudanças, o atributo de que trata este curso inteiro. **Segurança** é sobre quem pode ver ou fazer o quê.\n\nCada um está escrito como um cenário que dá para testar, e é isso que o torna útil para decisões de design."
+            },
+            {
+              "type": "numeric",
+              "id": "q-nines",
+              "concepts": [
+                "quality-attributes",
+                "trade-offs"
+              ],
+              "prompt": "A Ines pede “99,9% de uptime”. Em um mês de 30 dias, quantos **minutos** fora do ar isso permite?",
+              "answer": 43.2,
+              "tolerance": 0.1,
+              "unit": "minutos",
+              "hint": "Um mês de 30 dias tem 30 × 24 × 60 minutos. Você pode ficar fora do ar 0,1% deles.",
+              "explanation": "30 × 24 × 60 = 43.200 minutos, e 0,1% disso são **43,2 minutos**. Um nove a mais (99,99%) deixa só uns 4,3 minutos por mês, o que normalmente exige servidores redundantes, failover automático e alguém de plantão. Cada nove extra custa muito mais que o anterior, então *“o mais disponível possível”* nunca é um requisito de graça."
+            },
+            {
+              "type": "explain",
+              "title": "Toda -idade custa outra",
+              "body": "Não dá para maximizar tudo. Um cache deixa o cardápio rápido, mas pode mostrar o preço de ontem. Dividir em serviços deixa as partes escalarem sozinhas, mas traz falhas de rede e trabalho operacional. Criptografar mais adiciona latência.\n\nEntão o trabalho de quem faz a arquitetura é escolher os **dois ou três atributos que mais importam para este sistema agora**, projetar para eles e aceitar custos conhecidos no resto. *“Depende”* é a resposta honesta, desde que você diga **do quê**."
+            },
+            {
+              "type": "mcq",
+              "id": "q-everything",
+              "concepts": [
+                "trade-offs",
+                "quality-attributes"
+              ],
+              "prompt": "O Theo, no primeiro dia: *“Vamos deixar a Crumb infinitamente escalável, com cinco noves de disponibilidade e totalmente plugável, e entregar até sexta.”* Qual é a melhor resposta da Maya?",
+              "choices": [
+                "Perguntar quais duas ou três qualidades mais importam para a Crumb agora e projetar para elas",
+                "Concordar: uma boa arquitetura maximiza todos os atributos de qualidade ao mesmo tempo",
+                "Escolher as tecnologias mais novas, já que elas resolvem tudo isso automaticamente",
+                "Ignorar os atributos de qualidade até o lançamento: arquitetura só importa em escala"
+              ],
+              "answer": 0,
+              "hint": "Cada um desses desejos tem um preço. Quais deles uma padaria pequena está realmente disposta a pagar?",
+              "explanation": "Todo atributo de qualidade tem um custo, e os custos competem entre si: cinco noves e *entregar até sexta* puxam para lados opostos. Escolher os poucos que importam (talvez modificabilidade e um cardápio rápido, para uma padaria que ainda está encontrando seu produto) é a decisão de verdade. Ferramentas novas não eliminam trade-offs, e ignorar as qualidades até mais tarde significa tomar decisões caras por acidente."
+            }
+          ]
+        },
+        {
+          "id": "coupling-cohesion",
+          "title": "Emaranhado e espalhado",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "Busque baixo acoplamento entre os módulos e alta coesão dentro deles: mantenha junto o que muda junto e converse por interfaces pequenas.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Duas palavras que preveem dor",
+              "body": "**Acoplamento** é o quanto uma parte precisa saber sobre outra e, por isso, com que frequência elas precisam mudar juntas. **Coesão** é o quanto as coisas *dentro* de uma parte pertencem umas às outras.\n\nO objetivo é **baixo acoplamento, alta coesão**: cada módulo trata de uma coisa só, e os outros o usam por uma superfície pequena e estável.\n\n- Sinal de acoplamento: o código de Cozinha lê um campo privado dentro de Cobrança.\n- Sinal de baixa coesão: `helpers.py` guarda formatação de datas, cálculo de fidelidade e um envio de SMS."
+            },
+            {
+              "type": "buckets",
+              "id": "q-which-smell",
+              "concepts": [
+                "coupling",
+                "cohesion"
+              ],
+              "prompt": "Classifique cada coisa que a Maya encontrou no código da Crumb.",
+              "buckets": [
+                "Acoplamento forte (entre partes)",
+                "Baixa coesão (dentro de uma parte)"
+              ],
+              "items": [
+                {
+                  "text": "O código de Cozinha lê o dicionário privado `_discount_cache` de Cobrança",
+                  "bucket": 0
+                },
+                {
+                  "text": "Não dá para testar Entrega sem iniciar o cliente de pagamento real",
+                  "bucket": 0
+                },
+                {
+                  "text": "Cobrança quebra sempre que Cozinha renomeia uma coluna na própria tabela",
+                  "bucket": 0
+                },
+                {
+                  "text": "`helpers.py` guarda formatação de datas, cálculo de pontos de fidelidade e um envio de SMS",
+                  "bucket": 1
+                },
+                {
+                  "text": "A classe `Order` também renderiza o HTML da página de administração",
+                  "bucket": 1
+                },
+                {
+                  "text": "Um módulo chamado `misc` ao qual todo time adiciona “só mais uma função”",
+                  "bucket": 1
+                }
+              ],
+              "hint": "O problema é uma parte se apoiando nas entranhas de outra, ou uma parte guardando coisas que não têm nada a ver umas com as outras?",
+              "explanation": "**Acoplamento** é sobre as linhas *entre* as partes: ler os dados privados de outro módulo, precisar de outra parte rodando para testar a sua, quebrar quando outra pessoa muda os detalhes internos dela. **Coesão** é sobre o que está *dentro* de uma parte: um arquivo saco de gatos, uma classe fazendo um segundo trabalho sem relação, um módulo depósito. Os dois costumam andar juntos: sacos de gatos com baixa coesão são importados por todo mundo, o que acopla tudo a tudo."
+            },
+            {
+              "type": "bug",
+              "id": "q-reach-through",
+              "concepts": [
+                "coupling"
+              ],
+              "prompt": "Funciona hoje. Mas a Crumb vai trocar a `Wallet` por vales-presente e crédito na loja, e a Maya quer que essa mudança fique dentro de `Customer`. Clique na linha que acopla `place_order` a detalhes que ela não deveria conhecer.",
+              "language": "python",
+              "code": "class Wallet:\n    def __init__(self, balance):\n        self.balance = balance\n\nclass Customer:\n    def __init__(self, name, wallet):\n        self.name = name\n        self.wallet = wallet\n\n    def can_afford(self, amount):\n        return self.wallet.balance >= amount\n\ndef place_order(customer, total):\n    if customer.wallet.balance >= total:\n        return f\"Order placed for {customer.name}\"\n    return \"Not enough funds\"\n\nana = Customer(\"Ana\", Wallet(12))\nprint(place_order(ana, 9))",
+              "lines": [
+                14
+              ],
+              "fixes": [
+                "Mudar a linha 14 para `if customer.can_afford(total):`, para que só `Customer` saiba como o dinheiro é guardado",
+                "Renomear `wallet` para `_wallet` na linha 8 e ler `customer._wallet.balance` na linha 14",
+                "Envolver a linha 14 em `try/except AttributeError` para o caso de a carteira mudar",
+                "Copiar o saldo para uma variável global que `place_order` lê"
+              ],
+              "answer": 0,
+              "hint": "Conte os pontos. Por quantos objetos `place_order` passa para chegar à resposta?",
+              "explanation": "`customer.wallet.balance` atravessa `Customer` **até** a carteira dele, então agora `place_order` depende de como os clientes guardam dinheiro. Quando os vales-presente chegarem, ela quebra. Perguntar `customer.can_afford(total)` mantém esse conhecimento em um só lugar (*“tell, don't ask”*, ou “mande, não pergunte”, às vezes chamado de Lei de Deméter). Renomear para `_wallet` não esconde nada se você continua lendo o campo, o `try/except` esconde a quebra em vez de evitá-la, e uma global adiciona acoplamento."
+            },
+            {
+              "type": "explain",
+              "title": "Siga o efeito cascata",
+              "body": "Um jeito rápido de *enxergar* acoplamento: quando você muda um módulo, tudo o que o usa, **direta ou indiretamente**, pode quebrar e precisa ser testado de novo.\n\nCada linha abaixo diz quais módulos um módulo usa:\n\n```text\nweb      uses  checkout, admin\ncheckout uses  pricing, loyalty\nadmin    uses  reports\nreports  uses  pricing\nloyalty  uses  pricing\nemail    uses  templates\n```"
+            },
+            {
+              "type": "numeric",
+              "id": "q-ripple",
+              "concepts": [
+                "coupling"
+              ],
+              "prompt": "A Ines muda o jeito como `pricing` arredonda os preços. Usando a lista acima, quantos **outros** módulos podem ser afetados, direta ou indiretamente?",
+              "answer": 5,
+              "hint": "Comece pelos módulos que usam `pricing` diretamente e depois some os que usam *esses*.",
+              "explanation": "Diretamente: `checkout`, `reports` e `loyalty` usam `pricing`. Indiretamente: `web` usa `checkout`, e `admin` usa `reports`. São **5** dos outros 7 módulos. Só `email` e `templates` estão a salvo. Um módulo do qual muitos outros dependem deve ter uma interface pequena e muito estável, senão cada mudança nele vira um evento que mexe na release inteira."
+            },
+            {
+              "type": "explain",
+              "title": "Mantenha junto o que muda junto",
+              "body": "Um teste prático de coesão: **o que muda pelo mesmo motivo fica no mesmo módulo; o que muda por motivos diferentes fica separado.**\n\nTaxas de entrega e zonas de entrega mudam quando as regras de entrega mudam, então ficam juntas. O envio de SMS muda quando você troca de fornecedor de SMS, o que não tem nada a ver com entrega."
+            },
+            {
+              "type": "buckets",
+              "id": "q-split-helpers",
+              "concepts": [
+                "cohesion"
+              ],
+              "prompt": "A Maya está desmontando o `helpers.py`. Mova cada função para o módulo que muda pelo mesmo motivo.",
+              "buckets": [
+                "pricing",
+                "notifications",
+                "delivery"
+              ],
+              "items": [
+                {
+                  "text": "`apply_loyalty_discount(total, points)`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`round_to_cents(amount)`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`send_sms(phone, text)`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`render_order_email(order)`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`delivery_fee_for_zone(zone)`",
+                  "bucket": 2
+                },
+                {
+                  "text": "`is_address_in_zone(address, zone)`",
+                  "bucket": 2
+                },
+                {
+                  "text": "`estimate_arrival(distance_km)`",
+                  "bucket": 2
+                }
+              ],
+              "hint": "Para cada função, pergunte: quem pediria para ela mudar? Quem define os preços, quem escolhe como falamos com os clientes ou quem cuida das entregas?",
+              "explanation": "Agrupar por **motivo para mudar** dá a cada módulo uma única função. Uma nova regra de desconto mexe só em `pricing`; trocar SMS por notificações no app mexe só em `notifications`; uma nova zona de entrega mexe só em `delivery`. No antigo `helpers.py`, todas essas mudanças caíam no mesmo arquivo que todo mundo importa."
+            }
+          ]
+        },
+        {
+          "id": "solid-honestly",
+          "title": "SOLID, sem o sermão",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Dê a cada módulo um único motivo para mudar, faça a política depender de abstrações que ela mesma define, e não de fornecedores e bancos de dados, e só adicione uma abstração quando algo real precisar dela.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Duas letras fazem quase todo o trabalho",
+              "body": "**SOLID** reúne cinco princípios de design: **S**ingle responsibility (responsabilidade única), **O**pen/closed (aberto/fechado), **L**iskov substitution (substituição de Liskov), **I**nterface segregation (segregação de interfaces), **D**ependency inversion (inversão de dependência). No dia a dia, o **S** e o **D** entregam a maior parte do valor.\n\n**Responsabilidade única** não quer dizer *“um método só”*. Quer dizer **um único motivo para mudar**: um grupo de pessoas cujos pedidos mudariam esse código. Uma classe que o contador, o designer *e* o DBA precisam mudar está fazendo três trabalhos. Levado ao extremo, isso é uma **god class**."
+            },
+            {
+              "type": "bug",
+              "id": "q-two-reasons",
+              "concepts": [
+                "single-responsibility",
+                "cohesion"
+              ],
+              "prompt": "O contador pede mudanças nos impostos. O web designer pede mudanças no layout da tabela. As duas caem nesta classe. Clique na linha que começa a segunda responsabilidade.",
+              "language": "python",
+              "code": "class Invoice:\n    def __init__(self, lines):\n        self.lines = lines\n\n    def total(self):\n        return sum(qty * price for qty, price in self.lines)\n\n    def to_html(self):\n        rows = \"\".join(f\"<tr><td>{q}</td><td>{p:.2f}</td></tr>\" for q, p in self.lines)\n        return f\"<table>{rows}</table>\"\n\n    def total_with_tax(self, rate):\n        return round(self.total() * (1 + rate), 2)\n\ninv = Invoice([(2, 3.50), (1, 4.25)])\nprint(inv.total_with_tax(0.1))",
+              "lines": [
+                8,
+                9,
+                10
+              ],
+              "fixes": [
+                "Mover `to_html` (linhas 8–10) para uma `InvoiceHtmlView` separada que recebe uma `Invoice` e a renderiza",
+                "Mover `total_with_tax` para uma classe `TaxCalculator` própria e deixar `to_html` onde está",
+                "Renomear `to_html` na linha 8 para `render`, para parecer parte da fatura",
+                "Transformar `to_html` em um `@staticmethod` na linha 8"
+              ],
+              "answer": 0,
+              "hint": "Qual método mudaria se o site fosse redesenhado, enquanto as contas da fatura continuassem iguais?",
+              "explanation": "`total` e `total_with_tax` mudam quando as **regras de dinheiro** mudam. `to_html` muda quando o **design da página** muda. Mover o HTML para uma view própria dá a cada peça um único motivo para mudar, e as contas da fatura nem sabem mais que o HTML existe. Separar o método de imposto corta na costura errada: imposto continua sendo conta da fatura. Renomear ou tornar estático deixa os dois trabalhos na mesma classe."
+            },
+            {
+              "type": "explain",
+              "title": "Inversão de dependência",
+              "body": "A **política** da Crumb (*fazer um pedido, avisar o cliente*) não deveria depender de **detalhes** como um fornecedor de SMS ou um banco de dados específico. Em vez disso, a política define a pequena abstração de que precisa, e os detalhes se encaixam nela.\n\n```text\nBefore:  OrderService ---> TwilioSms\nAfter:   OrderService ---> Notifier <--- SmsNotifier\n                                    <--- FakeNotifier (tests)\n```\n\nEm Python, a abstração pode ser tão leve quanto *“qualquer coisa com um método `send(to, text)`”*, passada de fora."
+            },
+            {
+              "type": "output",
+              "id": "q-inject",
+              "concepts": [
+                "dependency-inversion"
+              ],
+              "prompt": "O `OrderService` recebe o notificador de fora. O que isto imprime?",
+              "language": "python",
+              "code": "class SmsNotifier:\n    def send(self, to, text):\n        print(f\"SMS to {to}: {text}\")\n\nclass FakeNotifier:\n    def __init__(self):\n        self.sent = []\n\n    def send(self, to, text):\n        self.sent.append((to, text))\n\nclass OrderService:\n    def __init__(self, notifier):\n        self.notifier = notifier\n\n    def place(self, customer, item):\n        self.notifier.send(customer, f\"{item} is in the oven\")\n        return \"ok\"\n\nfake = FakeNotifier()\nprint(OrderService(fake).place(\"Ana\", \"Croissant\"))\nprint(len(fake.sent), fake.sent[0][1])\nOrderService(SmsNotifier()).place(\"Ben\", \"Bagel\")",
+              "output": "ok\n1 Croissant is in the oven\nSMS to Ben: Bagel is in the oven",
+              "hint": "O `FakeNotifier` registra as mensagens em vez de imprimi-las. Só a última linha usa o de SMS de verdade.",
+              "explanation": "O mesmo `OrderService` roda com dois notificadores diferentes. Com o falso, o notificador não imprime nada: a mensagem fica guardada para um teste poder conferi-la (`1` mensagem, texto `Croissant is in the oven`). Com o `SmsNotifier`, a mensagem é impressa. O `OrderService` nunca mudou, porque depende só de *algo que sabe fazer `send`*."
+            },
+            {
+              "type": "bug",
+              "id": "q-hardwired",
+              "concepts": [
+                "dependency-inversion",
+                "coupling"
+              ],
+              "prompt": "Este `OrderService` em Kotlin não pode ter testes unitários sem mandar SMS para um celular de verdade. Clique na linha que amarra a dependência.",
+              "language": "kotlin",
+              "code": "class SmsGateway {\n    fun send(to: String, text: String) = println(\"REAL SMS to $to: $text\")\n}\n\nclass OrderService {\n    private val sms = SmsGateway()\n\n    fun place(customer: String, item: String): String {\n        sms.send(customer, \"$item is in the oven\")\n        return \"ok\"\n    }\n}\n\nfun main() {\n    // A unit test wants to check place() without texting anyone\n    println(OrderService().place(\"test-user\", \"Croissant\"))\n}",
+              "error": "REAL SMS to test-user: Croissant is in the oven\nok",
+              "lines": [
+                6
+              ],
+              "fixes": [
+                "Trocar a linha 6 por um parâmetro do construtor, `class OrderService(private val notifier: Notifier)`, e fazer `SmsGateway` implementar uma interface `Notifier`",
+                "Transformar `SmsGateway` em um `object` do Kotlin (um singleton) para existir um único gateway",
+                "Envolver a linha 9 em `try/catch` para que um SMS que falhou não quebre o teste",
+                "Adicionar `if (customer.startsWith(\"test\")) return \"ok\"` antes da linha 9"
+              ],
+              "answer": 0,
+              "hint": "De onde o `OrderService` tira o gateway, e um teste conseguiria entregar outro para ele?",
+              "explanation": "A linha 6 cria um `SmsGateway` **concreto** dentro da classe, então todo chamador, inclusive os testes, recebe o real. Receber um `Notifier` no construtor inverte isso: a produção passa o gateway de SMS, os testes passam um falso. Um singleton continua amarrado, o `try/catch` continua mandando o SMS, e uma checagem de `test` coloca lógica de teste no código de produção."
+            },
+            {
+              "type": "explain",
+              "title": "Quando o SOLID atrapalha",
+              "body": "Aplicado demais, o SOLID produz outro tipo de bagunça: uma interface para cada classe que só tem uma implementação, doze classes minúsculas para uma funcionalidade de 30 linhas, fábricas que constroem fábricas. Toda abstração custa arquivos, indireção e tempo de leitura.\n\nUma regra útil: adicione uma abstração quando houver **uma segunda implementação real, um teste que precisa de um falso ou uma fronteira com o mundo externo** (banco de dados, rede, fornecedor). Fora isso, mantenha concreto e refatore quando a necessidade aparecer. Isso é o *YAGNI*: you aren't gonna need it, “você não vai precisar disso”."
+            },
+            {
+              "type": "buckets",
+              "id": "q-abstract-now",
+              "concepts": [
+                "over-engineering",
+                "dependency-inversion"
+              ],
+              "prompt": "O Theo quer uma interface na frente de tudo. Classifique cada caso.",
+              "buckets": [
+                "Vale uma abstração agora",
+                "Manter concreto por enquanto"
+              ],
+              "items": [
+                {
+                  "text": "O cliente de pagamento, agora que a Crumb vai ter um segundo provedor de pagamento",
+                  "bucket": 0
+                },
+                {
+                  "text": "O cliente do fornecedor de SMS, que os testes unitários nunca podem chamar",
+                  "bucket": 0
+                },
+                {
+                  "text": "Salvar pedidos no banco de dados a partir da lógica de pedidos",
+                  "bucket": 0
+                },
+                {
+                  "text": "Um helper `format_price` com exatamente um chamador",
+                  "bucket": 1
+                },
+                {
+                  "text": "Uma interface `IMenuItem` para a única classe `MenuItem`",
+                  "bucket": 1
+                },
+                {
+                  "text": "Um sistema de plugins para tipos de doce que ninguém pediu",
+                  "bucket": 1
+                },
+                {
+                  "text": "Uma interface de estratégia para a única regra de imposto que a Crumb tem",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Procure um dos três gatilhos: uma segunda implementação real, um teste que precisa de um falso ou uma fronteira com o mundo externo.",
+              "explanation": "Os três primeiros acertam um gatilho cada: uma **segunda implementação** (dois provedores de pagamento), um **teste que precisa de um falso** (SMS), uma **fronteira com o mundo externo** (o banco de dados). O resto é especulação: uma implementação, um chamador ou um futuro que ninguém pediu. Eles podem ganhar uma abstração depois, quando aparecer um segundo caso real, e aí você vai saber que formato ela precisa ter."
+            },
+            {
+              "type": "mcq",
+              "id": "q-srp-meaning",
+              "concepts": [
+                "single-responsibility"
+              ],
+              "prompt": "O que “responsabilidade única” significa na prática?",
+              "choices": [
+                "Um módulo tem um único motivo para mudar: um grupo cujos pedidos o mudariam",
+                "Toda classe tem exatamente um método",
+                "Nenhuma função passa de dez linhas",
+                "Cada módulo é de um único desenvolvedor, o único que o edita"
+              ],
+              "answer": 0,
+              "explanation": "O que importa são os **motivos para mudar**, que normalmente correspondem a pessoas ou papéis: o contador, o designer, o time de operações. Uma classe pode ter muitos métodos e ainda ter uma única responsabilidade (uma `Invoice` com vários cálculos de dinheiro), e uma classe minúscula pode misturar duas. Tamanho de função e posse do código são outras questões."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "drawing-boundaries",
+      "title": "Traçando fronteiras",
+      "description": "Aponte as dependências para o lado certo, escolha entre módulos e serviços e corte seguindo a linguagem do negócio.",
+      "lessons": [
+        {
+          "id": "layers-and-ports",
+          "title": "Para onde apontam as setas?",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Mantenha as regras de negócio no centro e aponte toda dependência do código-fonte para dentro: o núcleo define as portas, e bancos de dados, frameworks e fornecedores se encaixam como adaptadores.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Camadas, e a armadilha delas",
+              "body": "A clássica **arquitetura em camadas** empilha o código, e cada camada só chama a de baixo:\n\n```text\n[ Web / UI        ]   routes, pages, JSON\n        |\n[ Application     ]   use cases: place order\n        |\n[ Domain          ]   rules: free delivery over $50\n        |\n[ Data access     ]   SQL, database driver\n```\n\nÉ simples e familiar. A armadilha está embaixo: o **domínio depende da camada de dados**, então as regras de negócio da Crumb importam código de banco de dados sem ninguém perceber."
+            },
+            {
+              "type": "bug",
+              "id": "q-wrong-way",
+              "concepts": [
+                "dependency-rule",
+                "layered-architecture"
+              ],
+              "prompt": "O Theo roda os testes de domínio em um notebook sem o driver do banco de dados, e eles nem chegam a iniciar. Clique na linha que aponta uma dependência para o lado errado.",
+              "language": "python",
+              "code": "# domain/order.py\nfrom adapters.postgres import PostgresOrderRepository\n\nclass Order:\n    def __init__(self, items):\n        self.items = items\n\n    def total(self):\n        return sum(price for _, price in self.items)\n\n    def free_delivery(self):\n        return self.total() >= 50\n\n    def save(self):\n        PostgresOrderRepository().save(self)",
+              "error": "Traceback (most recent call last):\n  ...\nModuleNotFoundError: No module named 'psycopg'",
+              "lines": [
+                2,
+                15
+              ],
+              "fixes": [
+                "Apagar a linha 2 e o `save` (linhas 14–15). O domínio define uma interface `OrderRepository`; o código do Postgres a implementa, e a camada de aplicação a chama",
+                "Instalar o driver do Postgres em todo notebook e máquina de CI para que o import da linha 2 sempre funcione",
+                "Mover o import da linha 2 para dentro de `save()`, para ele só rodar ao salvar",
+                "Mover `adapters/postgres.py` para a pasta `domain`, para o import ficar dentro do domínio"
+              ],
+              "answer": 0,
+              "hint": "A regra de entrega grátis deveria precisar de um driver de banco de dados para ser testada?",
+              "explanation": "A regra *“entrega grátis acima de $50”* não tem nada a ver com Postgres, mas importar `Order` arrasta o driver junto. A correção **inverte** a dependência: o domínio é dono de uma interface `OrderRepository`, e o adaptador do Postgres depende do domínio, e não o contrário. Instalar o driver, mover o import ou mover o arquivo só escondem o sintoma, enquanto o domínio continua dependendo do banco de dados."
+            },
+            {
+              "type": "explain",
+              "title": "Portas e adaptadores",
+              "body": "A **arquitetura hexagonal** (portas e adaptadores, ou ports and adapters) inverte a base da pilha. O domínio fica no meio e define **portas**: as interfaces de que precisa, como `OrderRepository` ou `Notifier`. **Adaptadores** do lado de fora as implementam (Postgres, SMS) ou acionam o app (HTTP, uma CLI, testes).\n\n```text\n HTTP adapter --->+---------------------+<--- Postgres adapter\n                  |  ports    DOMAIN    |\n test driver  --->+---------------------+<--- fake repository\n```\n\nA arquitetura *limpa* (clean) e a arquitetura *cebola* (onion) são a mesma ideia com mais anéis. A única regra: **as dependências do código-fonte apontam para dentro.**"
+            },
+            {
+              "type": "buckets",
+              "id": "q-inside-outside",
+              "concepts": [
+                "ports-and-adapters",
+                "dependency-rule"
+              ],
+              "prompt": "Classifique o código da Crumb: ele pertence ao núcleo ou é um adaptador do lado de fora?",
+              "buckets": [
+                "Núcleo (domínio e portas)",
+                "Adaptador (lado de fora)"
+              ],
+              "items": [
+                {
+                  "text": "Regra: pedidos acima de $50 têm entrega grátis",
+                  "bucket": 0
+                },
+                {
+                  "text": "Calcular os pontos de fidelidade de um pedido",
+                  "bucket": 0
+                },
+                {
+                  "text": "Interface `OrderRepository` com `save(order)`",
+                  "bucket": 0
+                },
+                {
+                  "text": "Interface `Notifier` com `send(to, text)`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`PostgresOrderRepository`, que executa o SQL",
+                  "bucket": 1
+                },
+                {
+                  "text": "A rota Flask `POST /orders` que faz o parsing do JSON",
+                  "bucket": 1
+                },
+                {
+                  "text": "O cliente de pagamento do Stripe",
+                  "bucket": 1
+                },
+                {
+                  "text": "Um repositório em memória usado pelos testes",
+                  "bucket": 1
+                }
+              ],
+              "hint": "As interfaces de que o núcleo *precisa* ficam no núcleo. Tudo o que conhece uma tecnologia específica fica do lado de fora.",
+              "explanation": "As regras de negócio e as **portas** de que elas precisam (as interfaces) ficam no núcleo, escritas em código simples sem importar nenhum framework. Tudo o que conhece uma tecnologia específica (SQL, HTTP, Stripe, até o dublê de teste) é um **adaptador**. Repare no repositório em memória: os testes são só mais um adaptador encaixado na mesma porta."
+            },
+            {
+              "type": "order",
+              "id": "q-trip",
+              "concepts": [
+                "ports-and-adapters"
+              ],
+              "prompt": "Um cliente toca em **Pedir**. Coloque em ordem a viagem pelo hexágono da Crumb.",
+              "items": [
+                "O adaptador HTTP faz o parsing da requisição JSON",
+                "O serviço de aplicação `place_order` é chamado com valores simples",
+                "O `Order` do domínio verifica as regras e calcula o total",
+                "O serviço chama a porta `OrderRepository` para salvá-lo",
+                "O adaptador do Postgres executa o INSERT",
+                "O adaptador HTTP transforma o resultado em uma resposta 201"
+              ],
+              "hint": "A requisição entra por um adaptador, vai até o centro, sai por uma porta até outro adaptador, e a resposta volta pelo mesmo caminho.",
+              "explanation": "**Entra** por um adaptador condutor (HTTP), vai até o serviço de aplicação, que usa o **domínio** para as regras, depois **sai** por uma porta até um adaptador conduzido (Postgres) e volta para o HTTP para a resposta. O domínio nunca vê JSON nem SQL, então daria para trocar o Flask por uma CLI ou o Postgres por outro banco de dados sem mexer nas regras."
+            },
+            {
+              "type": "output",
+              "id": "q-plug-in",
+              "concepts": [
+                "ports-and-adapters",
+                "dependency-inversion"
+              ],
+              "prompt": "`place_order` só conhece a porta `OrderRepository`. Aqui ela roda com um adaptador em memória. O que isto imprime?",
+              "language": "python",
+              "code": "from typing import Protocol\n\nclass OrderRepository(Protocol):\n    def save(self, order: dict) -> int: ...\n\nclass InMemoryOrders:\n    def __init__(self):\n        self.rows = []\n\n    def save(self, order):\n        self.rows.append(order)\n        return len(self.rows)\n\ndef place_order(repo: OrderRepository, items):\n    total = sum(items.values())\n    order_id = repo.save({\"items\": items, \"total\": total})\n    return f\"#{order_id}: {total}\"\n\nrepo = InMemoryOrders()\nprint(place_order(repo, {\"croissant\": 3, \"latte\": 4}))\nprint(place_order(repo, {\"bagel\": 2}))\nprint(len(repo.rows))",
+              "output": "#1: 7\n#2: 2\n2",
+              "hint": "`save` retorna o novo tamanho de `rows`, que vira o id do pedido.",
+              "explanation": "O primeiro pedido soma 3 + 4 = 7 e é a linha 1; o segundo soma 2 e é a linha 2; duas linhas ficam guardadas. `place_order` rodaria sem mudança nenhuma com um adaptador do Postgres que tivesse o mesmo método `save`. Essa é a vantagem da porta: o caso de uso é testado em milissegundos, sem precisar de banco de dados."
+            },
+            {
+              "type": "mcq",
+              "id": "q-layer-vs-hex",
+              "concepts": [
+                "layered-architecture",
+                "ports-and-adapters",
+                "dependency-rule"
+              ],
+              "prompt": "Qual é a diferença principal entre as camadas clássicas e portas e adaptadores?",
+              "choices": [
+                "Em portas e adaptadores, o domínio é dono das interfaces e o código do banco de dados depende dele; nas camadas clássicas, o domínio depende da camada de dados",
+                "Portas e adaptadores tem exatamente seis camadas, uma para cada lado do hexágono",
+                "As camadas clássicas não podem ter interface de usuário",
+                "Portas e adaptadores coloca o banco de dados no centro para que todas as partes cheguem até ele"
+              ],
+              "answer": 0,
+              "explanation": "As duas separam responsabilidades; a diferença é a **direção das setas**. Nas camadas clássicas, as regras ficam em cima da camada de dados e dependem dela. Em portas e adaptadores, as regras ficam no centro e tudo o que é técnico depende delas, apontando para dentro. Os seis lados do hexágono não significam nada: é só uma forma com espaço para muitos adaptadores."
+            },
+            {
+              "type": "mcq",
+              "id": "q-not-worth-it",
+              "concepts": [
+                "ports-and-adapters",
+                "over-engineering"
+              ],
+              "prompt": "O Theo quer portas e adaptadores em tudo. Onde é mais provável que **não** valha a pena?",
+              "choices": [
+                "Um script de uso único que lê um CSV com as vendas do mês passado e imprime um resumo",
+                "O núcleo de pedidos da Crumb, que conversa com um banco de dados, um provedor de pagamento e SMS",
+                "Um motor de preços cujas regras precisam ser testadas sem banco de dados",
+                "Um serviço cujo fornecedor de banco de dados vai ser trocado no ano que vem"
+              ],
+              "answer": 0,
+              "hint": "As portas compensam quando há lógica de verdade para proteger e coisas externas de verdade para trocar ou simular.",
+              "explanation": "Portas e adaptadores se paga onde há **regras valiosas** e **sistemas externos** para trocar, simular ou substituir: as outras três opções. Um script descartável tem pouca lógica, uma entrada e nenhum futuro; adicionar portas ali é cerimônia. Ajustar a estrutura ao que está em jogo faz parte do trabalho."
+            }
+          ]
+        },
+        {
+          "id": "modules-or-services",
+          "title": "Um app ou doze?",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Comece com um monólito modular de fronteiras firmes entre os módulos; extraia um serviço só quando uma necessidade concreta, como independência entre times, escalar separadamente ou isolamento, pagar o custo da rede.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Mesmas fronteiras, cola diferente",
+              "body": "**Microsserviços** são serviços implantáveis de forma independente, cada um dono dos próprios dados e conversando pela rede.\n\nUm **monólito modular** é uma única aplicação implantável, dividida por dentro em módulos com interfaces públicas claras. Os módulos não mexem nos detalhes internos nem nas tabelas uns dos outros.\n\nOs dois tratam de **fronteiras**. A diferença é se atravessar uma delas é uma chamada de função ou uma chamada de rede, e se as partes podem ser implantadas sozinhas."
+            },
+            {
+              "type": "buckets",
+              "id": "q-which-style",
+              "concepts": [
+                "modular-monolith",
+                "microservices"
+              ],
+              "prompt": "Classifique cada situação pelo estilo que ela favorece.",
+              "buckets": [
+                "Favorece um monólito modular",
+                "Favorece microsserviços"
+              ],
+              "items": [
+                {
+                  "text": "Um único time de cinco desenvolvedores",
+                  "bucket": 0
+                },
+                {
+                  "text": "O domínio ainda muda todo mês, conforme a Crumb descobre o que os clientes querem",
+                  "bucket": 0
+                },
+                {
+                  "text": "Pedidos e pagamentos precisam ser atualizados juntos em uma transação",
+                  "bucket": 0
+                },
+                {
+                  "text": "Depuração local simples e um único pipeline de deploy são o que mais importa",
+                  "bucket": 0
+                },
+                {
+                  "text": "Oito times vivem bloqueando as releases uns dos outros",
+                  "bucket": 1
+                },
+                {
+                  "text": "O redimensionamento de imagens precisa de 50 vezes o processamento de todo o resto no pico",
+                  "bucket": 1
+                },
+                {
+                  "text": "Os reguladores exigem que a parte de pagamento rode totalmente isolada",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Microsserviços compram independência (para implantar, escalar, isolar) ao preço da complexidade de rede e de operação. Quem precisa comprar isso?",
+              "explanation": "Microsserviços compensam quando você precisa de **independência**: muitos times lançando separadamente, uma parte escalando de um jeito muito diferente ou isolamento rígido. Um time pequeno com um domínio que ainda muda ganha pouco e paga muito: mover uma fronteira dentro de um monólito é uma refatoração, enquanto mover uma fronteira entre serviços é uma migração. Transações entre serviços também são bem mais difíceis."
+            },
+            {
+              "type": "explain",
+              "title": "A rede não é de graça",
+              "body": "Cada salto pela rede pode ser lento, falhar ou estourar o tempo limite. Você precisa de retentativas, timeouts, monitoramento entre serviços, APIs versionadas e um plano para dados que vivem em dois lugares.\n\nAs falhas também se multiplicam. Se uma requisição precisa de vários serviços e cada um fica no ar na maior parte do tempo, a requisição precisa de **todos** no ar ao mesmo tempo."
+            },
+            {
+              "type": "numeric",
+              "id": "q-chain",
+              "concepts": [
+                "microservices",
+                "trade-offs"
+              ],
+              "prompt": "O design do Theo: o checkout chama **5** serviços em cadeia, cada um disponível **99,9%** do tempo, de forma independente. Em que porcentagem das requisições de checkout os cinco estão no ar?",
+              "answer": 99.5,
+              "tolerance": 0.01,
+              "unit": "%",
+              "hint": "Os cinco precisam estar no ar: multiplique 0,999 por ele mesmo cinco vezes.",
+              "explanation": "0,999⁵ ≈ 0,995, então cerca de **99,5%**. Cada serviço cumpre sua meta de 99,9%, mas o checkout como um todo fica fora do ar umas cinco vezes mais (0,5% contra 0,1%), cerca de 3,6 horas por mês em vez de 43 minutos. Cadeias síncronas longas gastam seu orçamento de disponibilidade rapidinho."
+            },
+            {
+              "type": "explain",
+              "title": "O pior dos dois mundos: um monólito distribuído",
+              "body": "Um **monólito distribuído** é dividido em serviços, mas ainda se comporta como um app emaranhado: os serviços precisam ser implantados juntos, compartilham um banco de dados ou chamam uns aos outros em longas cadeias a cada requisição.\n\nVocê paga todos os custos da rede e não ganha nada da independência. Um **banco de dados compartilhado** é a causa clássica: quando três serviços leem as mesmas tabelas, nenhum deles consegue mudar essas tabelas sozinho."
+            },
+            {
+              "type": "buckets",
+              "id": "q-dm-smells",
+              "concepts": [
+                "distributed-monolith",
+                "coupling"
+              ],
+              "prompt": "A segunda tentativa da Crumb tem três serviços: Pedidos, Cozinha e Cobrança. Classifique o que o time relata.",
+              "buckets": [
+                "Sinal de monólito distribuído",
+                "Fronteira de serviço saudável"
+              ],
+              "items": [
+                {
+                  "text": "Lançar Pedidos significa lançar Cozinha e Cobrança na mesma noite",
+                  "bucket": 0
+                },
+                {
+                  "text": "Cobrança lê a tabela `orders` direto do banco de dados de Pedidos",
+                  "bucket": 0
+                },
+                {
+                  "text": "Mostrar uma página do cardápio faz 14 chamadas entre serviços",
+                  "bucket": 0
+                },
+                {
+                  "text": "Renomear uma coluna exige aprovação dos três times",
+                  "bucket": 0
+                },
+                {
+                  "text": "Cozinha guarda a própria cópia dos detalhes do pedido de que precisa, atualizada a partir de eventos",
+                  "bucket": 1
+                },
+                {
+                  "text": "Cada serviço pode ser implantado sozinho, em qualquer dia",
+                  "bucket": 1
+                },
+                {
+                  "text": "Os serviços combinam APIs versionadas, e não as tabelas uns dos outros",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Pergunte sobre cada um: este serviço consegue mudar e ir para produção sem os outros?",
+              "explanation": "Releases em conjunto, tabelas compartilhadas, cadeias de chamadas tagarelas e aprovação de vários times para uma coluna significam que os serviços **continuam acoplados**, agora com uma rede no meio. Serviços saudáveis são donos dos próprios dados, compartilham esses dados por APIs ou eventos e são implantados de forma independente. Se os seus não conseguem, juntá-los de volta em um monólito modular é uma correção legítima."
+            },
+            {
+              "type": "bug",
+              "id": "q-module-boundary",
+              "concepts": [
+                "modular-monolith",
+                "coupling"
+              ],
+              "prompt": "A Crumb é um monólito modular. Cobrança acabou de arrumar o código interno, e agora o módulo de Cozinha quebra ao iniciar. Clique na linha que atravessa a fronteira do módulo.",
+              "language": "python",
+              "code": "# kitchen/tickets.py  (the Kitchen module)\nfrom billing import api as billing\nfrom billing.models import _PRICE_CACHE\n\ndef make_ticket(order_id, items):\n    paid = billing.is_paid(order_id)\n    prices = [_PRICE_CACHE[item] for item in items]\n    return {\"order\": order_id, \"paid\": paid, \"total\": sum(prices)}",
+              "error": "Traceback (most recent call last):\n  ...\nImportError: cannot import name '_PRICE_CACHE' from 'billing.models' (...)",
+              "lines": [
+                3,
+                7
+              ],
+              "fixes": [
+                "Adicionar `price_of(item)` à API pública de Cobrança em `billing/api.py`, apagar a linha 3 e chamar `billing.price_of(item)` na linha 7",
+                "Mudar a linha 3 para importar `_price_cache`, o novo nome",
+                "Copiar a tabela de preços de Cobrança para o módulo de Cozinha como uma constante",
+                "Mover o import da linha 3 para dentro de `make_ticket`, para ele só rodar quando necessário"
+              ],
+              "answer": 0,
+              "hint": "Em Python, um sublinhado no início quer dizer *privado: não use fora deste módulo*.",
+              "explanation": "Cozinha importa um nome **privado** (o sublinhado no início diz isso) dos detalhes internos de Cobrança, então qualquer arrumação interna em Cobrança quebra Cozinha. Passar pela API pública de Cobrança mantém a fronteira: Cobrança pode renomear seu cache à vontade. Importar o novo nome privado quebra de novo na próxima vez, uma tabela de preços copiada fica desatualizada, e um import tardio só adia a quebra."
+            },
+            {
+              "type": "mcq",
+              "id": "q-twelve",
+              "concepts": [
+                "microservices",
+                "modular-monolith",
+                "over-engineering"
+              ],
+              "prompt": "O Theo propõe dividir a Crumb (cinco desenvolvedores, um app, algumas centenas de pedidos por dia) em 12 microsserviços “para estarmos prontos para escalar”. Qual é a melhor resposta?",
+              "choices": [
+                "Manter um monólito modular com fronteiras firmes entre os módulos e extrair um serviço quando surgir uma necessidade específica",
+                "Concordar: microsserviços são o padrão moderno para qualquer sistema novo",
+                "Recusar de vez: microsserviços nunca funcionam na prática",
+                "Dividir por camada técnica: um serviço de UI, um serviço de lógica e um serviço de banco de dados"
+              ],
+              "answer": 0,
+              "hint": "Que problema concreto os 12 serviços resolveriam para a Crumb hoje?",
+              "explanation": "Nada na situação da Crumb precisa de microsserviços ainda: um time, carga modesta, um domínio que ainda muda. Fronteiras firmes entre os módulos mantêm a opção aberta: um módulo bem separado pode ser extraído depois, quando surgir uma necessidade real. Microsserviços não são o padrão, mas também não estão sempre errados. Dividir por camada técnica é uma receita clássica de monólito distribuído: toda funcionalidade mexe nos três."
+            }
+          ]
+        },
+        {
+          "id": "domain-language",
+          "title": "Fale a língua da padaria",
+          "pareto": "extra",
+          "minutes": 7,
+          "takeaway": "Modele cada parte do negócio com as palavras dela dentro de um contexto delimitado, e deixe a raiz de um agregado ser o único jeito de mudar o que precisa continuar consistente.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Uma palavra, três significados",
+              "body": "Use no código as palavras do próprio negócio: se os padeiros dizem *fornada*, não chame isso de `ProductionUnit`. Cada tradução é um lugar onde bugs podem se esconder. O domain-driven design (DDD) chama um vocabulário compartilhado e preciso de **linguagem ubíqua**.\n\nMas uma palavra pode significar coisas diferentes em partes diferentes do negócio. Para a cozinha, um *pedido* é uma lista de coisas para assar até as 7:00. Para a cobrança, é dinheiro a receber. Para a entrega, é um pacote e um endereço."
+            },
+            {
+              "type": "buckets",
+              "id": "q-whose-order",
+              "concepts": [
+                "bounded-context"
+              ],
+              "prompt": "Todas as frases usam a palavra *pedido*. Qual parte da Crumb está falando?",
+              "buckets": [
+                "Cozinha",
+                "Cobrança",
+                "Entrega"
+              ],
+              "items": [
+                {
+                  "text": "O pedido precisa de 12 croissants saindo do forno até as 7:00",
+                  "bucket": 0
+                },
+                {
+                  "text": "O pão de fermentação natural do pedido precisa de 18 horas para crescer",
+                  "bucket": 0
+                },
+                {
+                  "text": "O pedido continua sem pagamento depois de 30 dias",
+                  "bucket": 1
+                },
+                {
+                  "text": "O reembolso do pedido voltou para o cartão",
+                  "bucket": 1
+                },
+                {
+                  "text": "O pedido vai para o apto 4B, toque duas vezes",
+                  "bucket": 2
+                },
+                {
+                  "text": "O entregador retirou o pedido às 7:40",
+                  "bucket": 2
+                }
+              ],
+              "hint": "A frase fala de assar, de dinheiro ou de levar algo até uma porta?",
+              "explanation": "Mesma palavra, três modelos. A cozinha se importa com itens e horários, a cobrança com valores e status de pagamento, a entrega com endereços e entregadores. Cada uma precisa de campos e regras diferentes, um forte sinal de que cada uma merece seu próprio modelo."
+            },
+            {
+              "type": "explain",
+              "title": "Contextos delimitados",
+              "body": "Um **contexto delimitado** (bounded context) é uma fronteira dentro da qual uma palavra tem um único significado preciso e um único modelo. O `Order` da Cozinha, a `Invoice` da Cobrança e o `Parcel` da Entrega podem compartilhar um id de pedido e ainda assim ser classes separadas, com regras separadas.\n\nA alternativa, um `Order` gigante para todo mundo, cresce até virar uma god class de 60 campos pela qual todos os times brigam. Contextos delimitados também são ótimos candidatos a **fronteiras de módulo ou de serviço**."
+            },
+            {
+              "type": "mcq",
+              "id": "q-one-customer",
+              "concepts": [
+                "bounded-context",
+                "coupling"
+              ],
+              "prompt": "O Theo quer uma única classe `Customer` compartilhada, usada por Marketing, Cobrança e Entrega, com todos os campos de que alguém precise. Qual é o resultado provável?",
+              "choices": [
+                "Uma classe inchada que todos os times precisam coordenar; é melhor cada contexto manter o próprio modelo de cliente, com os campos de que precisa, ligados por um id",
+                "Menos código e nenhuma desvantagem, já que só há uma classe para manter",
+                "É obrigatório: o domain-driven design diz que cada conceito precisa existir em exatamente uma classe",
+                "Melhor desempenho, porque todos os dados do cliente são carregados de uma vez"
+              ],
+              "answer": 0,
+              "hint": "O que acontece quando o Marketing precisa de um campo novo e as regras da Cobrança dependem da mesma classe?",
+              "explanation": "Um modelo compartilhado **acopla** cada contexto a todos os outros: uma mudança do Marketing põe a Cobrança em risco, e ninguém consegue simplificar nada. Modelos separados por contexto (as *preferências de contato* do Marketing, os *dados de pagamento* da Cobrança, os *endereços* da Entrega) ligados por um id de cliente mantêm cada um pequeno. O DDD recomenda o oposto de uma classe por conceito para o negócio inteiro."
+            },
+            {
+              "type": "explain",
+              "title": "Agregados protegem as regras",
+              "body": "Um **agregado** é um grupo de objetos alterado como uma unidade, com uma **raiz** que protege suas regras (*invariantes*). O código de fora altera o agregado **só por meio da raiz**.\n\nO `Order` da Crumb é uma raiz com as linhas do pedido dentro. As regras dele: no máximo 20 itens, e um pedido pago não pode mudar. Se o código consegue adicionar direto em `order.lines`, as regras podem ser puladas sem ninguém perceber."
+            },
+            {
+              "type": "bug",
+              "id": "q-bypass",
+              "concepts": [
+                "aggregate"
+              ],
+              "prompt": "As regras da Crumb: no máximo 20 itens, e nenhuma mudança depois do pagamento. Mesmo assim, isto imprime `42 True`. Clique na linha que passa por cima das regras.",
+              "language": "python",
+              "code": "class Order:\n    MAX_ITEMS = 20\n\n    def __init__(self):\n        self.lines = []\n        self.paid = False\n\n    def add(self, item, qty):\n        if self.paid:\n            raise ValueError(\"order already paid\")\n        if self.count() + qty > self.MAX_ITEMS:\n            raise ValueError(\"too many items\")\n        self.lines.append((item, qty))\n\n    def pay(self):\n        self.paid = True\n\n    def count(self):\n        return sum(qty for _, qty in self.lines)\n\norder = Order()\norder.add(\"croissant\", 12)\norder.pay()\norder.lines.append((\"bagel\", 30))\nprint(order.count(), order.paid)",
+              "error": "42 True",
+              "lines": [
+                24
+              ],
+              "fixes": [
+                "Mudar a linha 24 para `order.add(\"bagel\", 30)` para a raiz verificar as regras, e renomear `lines` para `_lines` para deixar claro que a lista não deve ser mexida de fora",
+                "Aumentar `MAX_ITEMS` na linha 2 para 50 para o pedido caber",
+                "Imprimir um aviso depois da linha 24 se `order.count()` passar de 20",
+                "Adicionar uma cópia da tupla na linha 24, para a lista original não ser compartilhada"
+              ],
+              "answer": 0,
+              "hint": "Qual linha muda o pedido sem passar por `add`?",
+              "explanation": "A linha 24 adiciona direto na lista interna, então nenhuma das verificações de `add` roda: um pedido pago ganha 30 bagels. Fazer toda mudança passar pela raiz (`order.add`) torna impossível pular as regras; aqui, isso lançaria `order already paid`. Aumentar o limite muda a regra de negócio, um aviso chega depois do estrago, e copiar a tupla não muda nada."
+            },
+            {
+              "type": "output",
+              "id": "q-guarded",
+              "concepts": [
+                "aggregate"
+              ],
+              "prompt": "Agora as linhas são privadas e toda mudança passa por `add`. O que isto imprime?",
+              "language": "python",
+              "code": "class Order:\n    MAX_ITEMS = 20\n\n    def __init__(self):\n        self._lines = []\n\n    def add(self, item, qty):\n        if self.count() + qty > self.MAX_ITEMS:\n            raise ValueError(\"too many items\")\n        self._lines.append((item, qty))\n\n    def count(self):\n        return sum(qty for _, qty in self._lines)\n\norder = Order()\norder.add(\"croissant\", 12)\nfor item, qty in [(\"bagel\", 10), (\"muffin\", 8)]:\n    try:\n        order.add(item, qty)\n        print(\"added\", item)\n    except ValueError as e:\n        print(\"rejected\", item, \"-\", e)\nprint(order.count())",
+              "output": "rejected bagel - too many items\nadded muffin\n20",
+              "hint": "Vá somando: primeiro 12 croissants. Mais 10 cabem no limite de 20? E mais 8?",
+              "explanation": "12 + 10 = 22 passa do limite, então a raiz recusa os bagels e o pedido fica igual. 12 + 8 = 20 é permitido, então os muffins entram e o pedido fica com **20** itens. A regra vive em um só lugar, a raiz, e todo caminho para dentro do pedido passa por ela."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "keeping-it-changeable",
+      "title": "Mantendo tudo fácil de mudar",
+      "description": "Como as partes conversam sem quebrar umas às outras, como registrar e proteger decisões e como resgatar um sistema que virou lama.",
+      "lessons": [
+        {
+          "id": "talking-between-parts",
+          "title": "Chame agora ou avise todo mundo depois",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Faça uma chamada síncrona quando precisar de uma resposta agora, publique eventos quando os outros só precisam ficar sabendo, e trate o formato de cada mensagem como um contrato que você muda em passos retrocompatíveis.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Dois jeitos de conversar",
+              "body": "Uma **chamada síncrona** (HTTP, gRPC) é requisição e resposta: *“Cobrança, cobre este cartão agora e me diga se deu certo.”* É simples e imediata, mas quem chama fica esperando, e falha se o outro lado estiver fora do ar.\n\nUm **evento** é uma mensagem dizendo que algo aconteceu: *“OrderPlaced.”* Quem publica não sabe quem está ouvindo; os assinantes reagem no seu próprio tempo. As partes ficam desacopladas no tempo e no conhecimento, mas os dados só ficam consistentes *eventualmente*, e os fluxos são mais difíceis de rastrear."
+            },
+            {
+              "type": "buckets",
+              "id": "q-call-or-event",
+              "concepts": [
+                "sync-call",
+                "domain-event"
+              ],
+              "prompt": "Classifique cada interação da Crumb pelo que combina melhor.",
+              "buckets": [
+                "Chamada síncrona",
+                "Publicar um evento"
+              ],
+              "items": [
+                {
+                  "text": "O checkout precisa saber se o cartão foi cobrado antes de mostrar “Obrigado”",
+                  "bucket": 0
+                },
+                {
+                  "text": "Validar um cupom de desconto enquanto o cliente ainda está na página de pagamento",
+                  "bucket": 0
+                },
+                {
+                  "text": "Buscar o cardápio de hoje para mostrar na tela inicial",
+                  "bucket": 0
+                },
+                {
+                  "text": "Quando um pedido é feito, Cozinha, Fidelidade e o painel de vendas reagem",
+                  "bucket": 1
+                },
+                {
+                  "text": "Mandar um SMS “seu pedido está pronto”; alguns segundos de atraso não fazem mal",
+                  "bucket": 1
+                },
+                {
+                  "text": "Adicionar depois uma nova etapa de checagem de fraude sem mudar o Checkout",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Quem chama precisa da resposta agora para continuar? Ou só precisa anunciar que algo aconteceu?",
+              "explanation": "Use uma **chamada** quando quem chama precisa da resposta para continuar: o resultado do pagamento, um cupom válido, o cardápio para exibir. Use um **evento** quando quem produz só precisa anunciar um fato e os outros reagem: vários consumidores, atraso não é problema, e novos consumidores podem assinar sem que o produtor mude. Muitos sistemas usam os dois, para interações diferentes."
+            },
+            {
+              "type": "output",
+              "id": "q-subscribers",
+              "concepts": [
+                "domain-event"
+              ],
+              "prompt": "Um barramento de eventos minúsculo, dentro do processo. Pedidos publica; não sabe que Fidelidade ou Cozinha existem. O que isto imprime?",
+              "language": "python",
+              "code": "subscribers = {}\n\ndef subscribe(event, handler):\n    subscribers.setdefault(event, []).append(handler)\n\ndef publish(event, data):\n    for handler in subscribers.get(event, []):\n        handler(data)\n\npoints = {}\ntickets = []\n\ndef add_points(order):\n    points[order[\"customer\"]] = points.get(order[\"customer\"], 0) + order[\"total\"]\n\ndef make_ticket(order):\n    tickets.append(order[\"id\"])\n\nsubscribe(\"OrderPlaced\", add_points)\nsubscribe(\"OrderPlaced\", make_ticket)\npublish(\"OrderPlaced\", {\"id\": 7, \"customer\": \"Ana\", \"total\": 9})\npublish(\"OrderPlaced\", {\"id\": 8, \"customer\": \"Ana\", \"total\": 4})\nprint(points, tickets)",
+              "output": "{'Ana': 13} [7, 8]",
+              "hint": "Cada `publish` roda os dois handlers inscritos, na ordem em que se inscreveram.",
+              "explanation": "Cada publicação roda os dois handlers. A Ana ganha 9 e depois 4 pontos (13 no total), e a cozinha recebe as comandas dos pedidos 7 e 8. O código que publica continuaria igual se um terceiro assinante fosse adicionado. Em produção, o barramento seria um broker como Kafka ou RabbitMQ, mas o formato é o mesmo."
+            },
+            {
+              "type": "explain",
+              "title": "O formato é um contrato",
+              "body": "Seja qual for o estilo, o formato da mensagem é um **contrato**: nomes de campos, tipos e significados em que outros times se apoiam. Quando outros dependem dele, mudá-lo é uma decisão de arquitetura.\n\n- **Retrocompatível:** adicionar um campo opcional; aceitar campos que você não conhece.\n- **Quebra o contrato:** renomear ou remover um campo, ou mudar o tipo ou o significado dele.\n\nOs consumidores ajudam sendo *leitores tolerantes*: leem só os campos de que precisam e ignoram o resto."
+            },
+            {
+              "type": "bug",
+              "id": "q-renamed",
+              "concepts": [
+                "api-contract",
+                "domain-event"
+              ],
+              "prompt": "Outros três times também consomem `OrderPlaced`, e cada um faz deploy no próprio ritmo. Depois que o time de Pedidos lançou a versão 2, Fidelidade quebra. Clique na linha que quebrou o contrato.",
+              "language": "python",
+              "code": "import json\n\n# Orders team: version 2 of the OrderPlaced event\ndef order_placed_event(order_id, customer, total):\n    return json.dumps({\"id\": order_id, \"customer_name\": customer, \"total\": total})\n\n# Loyalty team: consumer written against version 1\ndef on_order_placed(message):\n    event = json.loads(message)\n    return f\"{event['customer']} earns {event['total']} points\"\n\nprint(on_order_placed(order_placed_event(7, \"Ana\", 9)))",
+              "error": "Traceback (most recent call last):\n  ...\nKeyError: 'customer'",
+              "lines": [
+                5
+              ],
+              "fixes": [
+                "Na linha 5, enviar `customer` e `customer_name` por enquanto; remover `customer` só quando nenhum consumidor o ler mais",
+                "Mudar a linha 10 para ler `event['customer_name']`",
+                "Envolver a linha 10 em `try/except KeyError` e retornar uma string vazia",
+                "Renomear também `total` para `amount` na linha 5, para a versão 2 ficar consistente"
+              ],
+              "answer": 0,
+              "hint": "Qual lado mudou? O consumidor foi escrito para a versão 1 e não mudou.",
+              "explanation": "O produtor **renomeou** um campo: uma mudança que quebra o contrato. Enviar os dois nomes mantém todos os consumidores funcionando enquanto cada um migra no próprio ritmo. Corrigir só a linha de Fidelidade deixa os outros três times quebrados; engolir o `KeyError` esconde pontos perdidos; renomear outro campo quebra ainda mais coisas."
+            },
+            {
+              "type": "order",
+              "id": "q-expand-contract",
+              "concepts": [
+                "api-contract"
+              ],
+              "prompt": "Renomeie `customer` para `customer_name` sem quebrar ninguém. Coloque os passos em ordem.",
+              "items": [
+                "O produtor passa a enviar `customer` e `customer_name`",
+                "Cada consumidor passa a ler `customer_name`, no próprio ritmo",
+                "Confirmar que nenhum consumidor ainda lê `customer` (logs, testes de contrato)",
+                "O produtor para de enviar `customer`"
+              ],
+              "hint": "Expandir primeiro, contrair por último.",
+              "explanation": "Isso é **expandir e contrair** (expand and contract, também chamado de *mudança paralela*): primeiro amplie o contrato para que o antigo e o novo funcionem, migre os consumidores um a um, confira e depois estreite o contrato. Cada passo pode ir para produção sozinho com segurança. Endpoints ou tópicos versionados (`/v2/...`) são a alternativa mais pesada quando a mudança não pode ser feita só adicionando."
+            },
+            {
+              "type": "mcq",
+              "id": "q-compatible",
+              "concepts": [
+                "api-contract"
+              ],
+              "prompt": "Qual mudança na resposta pública de `GET /orders/{id}` é retrocompatível?",
+              "choices": [
+                "Adicionar um novo campo opcional `eta_minutes`",
+                "Renomear `total` para `amount`",
+                "Mudar `total` de dólares (`12.5`) para centavos (`1250`)",
+                "Remover `status`, já que o próprio app da Crumb não o usa mais"
+              ],
+              "answer": 0,
+              "hint": "Uma mudança é compatível se todo cliente existente continua funcionando sem ser tocado.",
+              "explanation": "Adicionar um campo opcional mantém os clientes existentes funcionando, desde que eles ignorem campos que não conhecem. Renomear ou remover quebra quem lê o campo, e o *seu* app não usar `status` não diz nada sobre os apps dos parceiros. A troca de dólares para centavos é a mais traiçoeira: mesmo nome, mesmo tipo, **significado** diferente, então nada quebra e todo total fica 100 vezes errado."
+            }
+          ]
+        },
+        {
+          "id": "decision-records",
+          "title": "Anote e depois proteja",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "Registre cada decisão importante em um ADR curto, com contexto e consequências, e transforme as regras que importam em fitness functions automatizadas que rodam a cada build.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Registros de decisão arquitetural",
+              "body": "Daqui a dois anos, ninguém vai lembrar *por que* a Crumb é um monólito modular. Um **registro de decisão arquitetural (ADR)** é um arquivo de texto curto, guardado junto do código, que diz o que foi decidido, o que se sabia na época e do que se abriu mão.\n\n```text\nADR 007: Keep Crumb a modular monolith\nStatus:       Accepted, 2026-03-02\nContext:      5 developers, one product, domain still changing.\nDecision:     One deployable; modules talk only through public APIs.\nConsequences: + one pipeline, simple debugging\n              - module boundaries need a check in CI\n```\n\nUma decisão por arquivo, numerada. ADRs aceitos não são reescritos; um ADR novo **substitui** um antigo."
+            },
+            {
+              "type": "order",
+              "id": "q-adr-parts",
+              "concepts": [
+                "adr"
+              ],
+              "prompt": "A Maya está escrevendo o ADR 012. Coloque as partes dele na ordem de costume.",
+              "items": [
+                "Título: ADR 012: Publicar eventos OrderPlaced",
+                "Status: Aceito",
+                "Contexto: Cozinha, Fidelidade e o painel consultam Pedidos a cada 5 segundos",
+                "Decisão: Pedidos publica um evento OrderPlaced; os outros assinam",
+                "Consequências: os consumidores não dependem mais de Pedidos estar no ar; agora mantemos um broker e precisamos lidar com eventos duplicados"
+              ],
+              "hint": "Dê um nome, diga se ela vale, explique a situação, declare a escolha e depois o que decorre dela.",
+              "explanation": "**Título, Status, Contexto, Decisão, Consequências** é o formato mais comum, vindo do modelo original de ADR de Michael Nygard. O contexto vem antes da decisão para que quem ler no futuro veja as forças em jogo. As consequências listam os custos além dos benefícios; um registro que só lista benefícios esconde o trade-off que o próximo time precisa conhecer."
+            },
+            {
+              "type": "buckets",
+              "id": "q-adr-worthy",
+              "concepts": [
+                "adr",
+                "architecture"
+              ],
+              "prompt": "Quais destas merecem um ADR?",
+              "buckets": [
+                "Escrever um ADR",
+                "Não precisa de ADR"
+              ],
+              "items": [
+                {
+                  "text": "Escolher um message broker para os eventos",
+                  "bucket": 0
+                },
+                {
+                  "text": "Determinar que os módulos nunca podem ler as tabelas uns dos outros",
+                  "bucket": 0
+                },
+                {
+                  "text": "Trocar REST por gRPC entre os serviços",
+                  "bucket": 0
+                },
+                {
+                  "text": "Escolher PostgreSQL como banco de dados principal",
+                  "bucket": 0
+                },
+                {
+                  "text": "Renomear uma função auxiliar privada",
+                  "bucket": 1
+                },
+                {
+                  "text": "Corrigir um erro de digitação numa mensagem de erro",
+                  "bucket": 1
+                },
+                {
+                  "text": "Atualizar uma biblioteca para a próxima versão de patch",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Use o teste da primeira lição: seria caro desfazer, ou alguém no futuro perguntaria *por que raios fizeram isso?*",
+              "explanation": "ADRs são para decisões **arquiteturalmente significativas**: difíceis de reverter, que afetam muitas partes ou que provavelmente vão confundir alguém no futuro. Broker, fronteiras, protocolos e bancos de dados se encaixam. Mudanças pequenas e fáceis de reverter ficam cobertas pela mensagem de commit. Se toda mudança ganhasse um ADR, ninguém os leria."
+            },
+            {
+              "type": "explain",
+              "title": "Fitness functions",
+              "body": "Uma regra escrita ainda pode ser quebrada em silêncio na terça que vem. Uma **fitness function** (função de aptidão) é uma verificação automatizada de que uma propriedade arquitetural continua valendo, executada a cada build:\n\n- um teste que falha se `domain` importar o driver do banco de dados,\n- um teste de carga que falha se o percentil 95 do tempo de resposta do cardápio passar de 300 ms,\n- uma verificação de que nenhum módulo importa o código privado de outro módulo.\n\nEla transforma *“por favor, lembrem”* em um build que falha."
+            },
+            {
+              "type": "output",
+              "id": "q-import-rule",
+              "concepts": [
+                "fitness-function",
+                "dependency-rule"
+              ],
+              "prompt": "Uma fitness function para “o domínio nunca importa infraestrutura”. Ela examina os imports de cada arquivo. O que ela imprime?",
+              "language": "python",
+              "code": "import ast\n\nsources = {\n    \"domain/order.py\": \"from decimal import Decimal\\n\",\n    \"domain/pricing.py\": \"import psycopg\\nfrom domain.order import Order\\n\",\n    \"adapters/db.py\": \"import psycopg\\nfrom domain.order import Order\\n\",\n}\n\nFORBIDDEN = {\"psycopg\", \"flask\", \"adapters\"}\n\ndef imported_roots(code):\n    for node in ast.walk(ast.parse(code)):\n        if isinstance(node, ast.Import):\n            yield from (a.name.split(\".\")[0] for a in node.names)\n        elif isinstance(node, ast.ImportFrom):\n            yield node.module.split(\".\")[0]\n\nfor path, code in sources.items():\n    if path.startswith(\"domain/\"):\n        bad = sorted(set(imported_roots(code)) & FORBIDDEN)\n        print(path, \"FAIL\" if bad else \"ok\", bad)",
+              "output": "domain/order.py ok []\ndomain/pricing.py FAIL ['psycopg']",
+              "hint": "Só os arquivos dentro de `domain/` são verificados. Quais nomes proibidos cada um importa?",
+              "explanation": "`domain/order.py` só importa `decimal`, então está tudo certo. `domain/pricing.py` importa `psycopg`, um driver de banco de dados, então falha. `adapters/db.py` é ignorado: os adaptadores *podem* depender do domínio e do driver. Projetos reais usam ferramentas como import-linter (Python) ou ArchUnit (Java), mas elas fazem essa mesma verificação."
+            },
+            {
+              "type": "mcq",
+              "id": "q-guard-latency",
+              "concepts": [
+                "fitness-function",
+                "quality-attributes"
+              ],
+              "prompt": "O ADR 009 diz: *“A página do cardápio responde em menos de 300 ms no percentil 95.”* Qual destas opções é uma fitness function para isso?",
+              "choices": [
+                "Um teste de carga no CI que pede o cardápio 1.000 vezes e quebra o build se o percentil 95 passar de 300 ms",
+                "Uma linha no README lembrando os desenvolvedores de manter o cardápio rápido",
+                "Revisar o desempenho uma vez por ano na reunião de planejamento",
+                "Adicionar servidores sempre que os clientes reclamarem que o cardápio está lento"
+              ],
+              "answer": 0,
+              "explanation": "Uma fitness function é **automatizada, objetiva e frequente**: mede a propriedade e falha alto quando ela escorrega. Uma nota no README não é verificada, uma revisão anual chega tarde demais, e esperar reclamações significa usar os clientes como sua suíte de testes."
+            },
+            {
+              "type": "mcq",
+              "id": "q-supersede",
+              "concepts": [
+                "adr"
+              ],
+              "prompt": "Dois anos depois, a Crumb move os pagamentos para um serviço próprio, o que vai contra o ADR 007 (*“manter um monólito modular”*). O que deve acontecer com o ADR 007?",
+              "choices": [
+                "Escrever o ADR 015 para a nova decisão e marcar o 007 como “Substituído pelo ADR 015”",
+                "Editar o ADR 007 para que ele descreva a nova decisão",
+                "Apagar o ADR 007 para ninguém se confundir",
+                "Deixar os dois marcados como “Aceito”"
+              ],
+              "answer": 0,
+              "hint": "Um ADR registra o que foi decidido *na época*, e por quê.",
+              "explanation": "O valor dos ADRs é o **histórico**: por que o monólito fazia sentido naquela época e o que mudou. Substituir mantém os dois registros e liga um ao outro. Editar ou apagar o antigo apaga o raciocínio, e dois registros *Aceitos* que se contradizem deixam quem lê adivinhando qual vale."
+            }
+          ]
+        },
+        {
+          "id": "rescue-the-mud",
+          "title": "Resgatando a grande bola de lama",
+          "pareto": "extra",
+          "minutes": 7,
+          "takeaway": "Não reescreva uma grande bola de lama do zero: abra costuras, coloque um roteador na frente e estrangule o sistema uma capacidade de cada vez, em passos pequenos e reversíveis.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Como os sistemas viram lama",
+              "body": "Uma **grande bola de lama** (big ball of mud) é um sistema sem estrutura visível: tudo depende de tudo, e uma correção num lugar quebra algo bem longe dali. Raramente a causa são desenvolvedores ruins. É o que anos de correções urgentes fazem quando ninguém protege as fronteiras.\n\nSuas companheiras de sempre: **god classes** (um `OrderManager` de 4.000 linhas) e um **banco de dados compartilhado** que todas as partes leem e escrevem."
+            },
+            {
+              "type": "buckets",
+              "id": "q-anti-patterns",
+              "concepts": [
+                "big-ball-of-mud",
+                "cohesion",
+                "coupling"
+              ],
+              "prompt": "A Crumb comprou o app de seis anos de uma padaria rival. Dê nome ao antipadrão por trás de cada reclamação.",
+              "buckets": [
+                "God class",
+                "Banco de dados compartilhado",
+                "Grande bola de lama"
+              ],
+              "items": [
+                {
+                  "text": "`OrderManager.py` tem 4.000 linhas: preços, e-mails, faturas em PDF e estoque",
+                  "bucket": 0
+                },
+                {
+                  "text": "Toda funcionalidade adiciona “só mais um método” a `BakeryService`",
+                  "bucket": 0
+                },
+                {
+                  "text": "Cozinha, Cobrança e Relatórios leem e escrevem a mesma tabela `orders`",
+                  "bucket": 1
+                },
+                {
+                  "text": "Renomear uma coluna exige que quatro times concordem",
+                  "bucket": 1
+                },
+                {
+                  "text": "Ninguém consegue desenhar como os módulos dependem uns dos outros",
+                  "bucket": 2
+                },
+                {
+                  "text": "Consertar a impressora de recibos quebrou os pontos de fidelidade",
+                  "bucket": 2
+                }
+              ],
+              "hint": "Uma classe fazendo tudo; um conjunto de tabelas em que todos mexem; ou nenhuma estrutura.",
+              "explanation": "Uma **god class** é a coesão no seu pior: uma classe com dezenas de motivos para mudar. Um **banco de dados compartilhado** acopla todas as partes pelas tabelas, então o schema não muda sem todo mundo. Uma **grande bola de lama** é a versão do sistema inteiro: nenhuma fronteira que dê para nomear, e as mudanças se propagam de forma imprevisível. Uma alimenta a outra."
+            },
+            {
+              "type": "explain",
+              "title": "O padrão strangler fig",
+              "body": "A solução tentadora é a **grande reescrita**. Ela é mais arriscada do que parece: o sistema antigo continua precisando de mudanças enquanto você reescreve, e o comportamento não documentado dele *é* a especificação real.\n\nO padrão **strangler fig** (figueira estranguladora, o nome de uma planta que cresce devagar em volta de uma árvore) o substitui peça por peça. Coloque um roteador na frente, construa uma capacidade nova, mande o tráfego dela para lá e repita:\n\n```text\n                 +--> new Menu module    (/menu)\nclient --> router\n                 +--> old Crumb app      (everything else)\n```"
+            },
+            {
+              "type": "order",
+              "id": "q-strangle-menu",
+              "concepts": [
+                "strangler-fig"
+              ],
+              "prompt": "Coloque em ordem a migração strangler fig da funcionalidade de cardápio.",
+              "items": [
+                "Colocar um roteador na frente do app antigo que manda todo o tráfego para ele, sem mudar nada",
+                "Construir o novo módulo de cardápio e testá-lo contra o comportamento do app antigo",
+                "Mandar uma pequena parte do tráfego de `/menu` para o módulo novo e comparar os resultados",
+                "Mandar todo o tráfego de `/menu` para o módulo novo",
+                "Apagar o código antigo do cardápio"
+              ],
+              "hint": "Cada passo deve poder ir para produção sozinho com segurança e ser fácil de reverter.",
+              "explanation": "O roteador vem primeiro e não muda nada, o que o torna seguro. Depois, construa e então desvie o tráfego **aos poucos**, para que um problema afete poucas requisições e reverter seja só uma mudança de roteamento. Só quando o caminho novo já carregou tudo por um tempo é que você apaga o código antigo. Repita para cada capacidade até o app antigo não ter mais nada a fazer."
+            },
+            {
+              "type": "explain",
+              "title": "Costuras: um jeito de entrar",
+              "body": "Antes de mover ou testar código legado, você precisa de uma **costura** (seam): um lugar onde dá para mudar o comportamento sem editar o código ao redor (o termo é de Michael Feathers).\n\nA antiga verificação de happy hour chamava `datetime.now()` lá no fundo, então nenhum teste conseguia controlar o horário. A primeira refatoração da Maya adiciona um parâmetro cujo valor padrão mantém o comportamento antigo. Nada muda para quem chama, mas agora os testes podem passar o horário que quiserem."
+            },
+            {
+              "type": "output",
+              "id": "q-seam",
+              "concepts": [
+                "dependency-inversion",
+                "strangler-fig"
+              ],
+              "prompt": "O happy hour vai das 15:00 até as 17:00. O que este teste imprime?",
+              "language": "python",
+              "code": "import datetime\n\ndef is_happy_hour(now=None):\n    now = now or datetime.datetime.now()\n    return 15 <= now.hour < 17\n\ndef at(hour, minute=0):\n    return datetime.datetime(2026, 10, 6, hour, minute)\n\nprint(is_happy_hour(at(16, 30)), is_happy_hour(at(17)), is_happy_hour(at(14, 59)))",
+              "output": "True False False",
+              "hint": "A verificação é `15 <= hour < 17`. Olhe a hora de cada horário passado, não os minutos.",
+              "explanation": "16:30 tem hora 16: dentro. 17:00 tem hora 17, e o limite superior é exclusivo: fora. 14:59 tem hora 14: fora. Como `now` pode ser passado de fora, o teste dá o mesmo resultado a qualquer hora do dia. Costuras assim são o jeito de cercar código legado com testes antes de movê-lo."
+            },
+            {
+              "type": "mcq",
+              "id": "q-rewrite",
+              "concepts": [
+                "strangler-fig",
+                "big-ball-of-mud"
+              ],
+              "prompt": "O Theo quer congelar as funcionalidades por um ano e reescrever do zero o app adquirido, com um design limpo. Qual é o principal risco?",
+              "choices": [
+                "O comportamento não documentado do app antigo é a especificação real, e o negócio continua precisando de mudanças durante esse ano; uma migração strangler fig entrega em passos pequenos e reversíveis",
+                "Há pouco risco: uma reescrita é mais rápida porque o código novo é mais limpo",
+                "Não há risco, desde que a versão nova use microsserviços",
+                "O único risco real é o custo dos servidores novos"
+              ],
+              "answer": 0,
+              "hint": "O que acontece com os novos pedidos da Ines durante o congelamento, e quem sabe tudo o que o app antigo faz?",
+              "explanation": "Grandes reescritas costumam atrasar porque o sistema antigo faz muitas coisas que ninguém anotou, e o negócio não pode parar por um ano. Enquanto isso, o app antigo continua precisando de correções, então você mantém dois sistemas. Estrangulá-lo entrega valor cedo, e cada passo pode ser revertido. Um novo estilo de arquitetura não elimina o risco; muitas vezes até acrescenta."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

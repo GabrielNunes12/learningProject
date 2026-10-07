@@ -6,15 +6,18 @@ import type { Course, Lesson } from '../types';
 import { CoursePath } from './CoursePath';
 import { Page } from './Layout';
 import { InlineMarkdown } from './Markdown';
-import { accentStyle, plural, ProgressBar, Ring } from './ui';
+import { accentStyle, ProgressBar, Ring } from './ui';
 import { CourseIcon } from './CourseIcon';
 import { CertificatePanel } from './Certificate';
+import { categoryLabel, levelLabel } from '../i18n/core';
+import { useT } from '../i18n/react';
 
 const FAST_KEY = 'projectlearn:fasttrack';
 const VIEW_KEY = 'projectlearn:pathview';
 type PathView = 'map' | 'list';
 
 export function CoursePage({ course }: { course: Course }) {
+  const { t, tx, pct } = useT();
   const p = useProgress();
   const s = courseStats(course, p);
   const [fast, setFast] = useState(() => {
@@ -68,13 +71,10 @@ export function CoursePage({ course }: { course: Course }) {
           </span>
           <span className="lesson-text">
             <strong>{l.title}</strong>
-            <small>
-              {l.minutes ?? 5} min · {plural(l.steps.length, 'step')}
-              {done && ' · completed'}
-            </small>
+            <small>{t(done ? 'course.lessonMetaDone' : 'course.lessonMeta', { minutes: l.minutes ?? 5, count: l.steps.length })}</small>
           </span>
-          <span className={`tag ${l.pareto}`}>{l.pareto === 'core' ? 'Core' : 'Deep dive'}</span>
-          {isNext && <span className="btn primary small">Start</span>}
+          <span className={`tag ${l.pareto}`}>{l.pareto === 'core' ? t('common.core') : t('common.deepDive')}</span>
+          {isNext && <span className="btn primary small">{t('common.start')}</span>}
         </a>
       </li>
     );
@@ -84,7 +84,7 @@ export function CoursePage({ course }: { course: Course }) {
     <Page wide>
       <div style={accentStyle(course.color)}>
         <a className="back" href="#/courses">
-          ← All courses
+          {t('course.allCourses')}
         </a>
         <header className="course-hero">
           <div className="course-hero-icon">
@@ -92,19 +92,22 @@ export function CoursePage({ course }: { course: Course }) {
           </div>
           <div className="course-hero-text">
             <span className="eyebrow">
-              {course.category}
-              {course.level && ` · ${course.level}`}
+              {course.category && course.level
+                ? t('course.categoryLevel', { category: categoryLabel(course.category), level: levelLabel(course.level) })
+                : course.category
+                  ? categoryLabel(course.category)
+                  : course.level && levelLabel(course.level)}
             </span>
             <h1>{course.title}</h1>
             <p className="lead">{course.description}</p>
             <div className="hero-actions">
               {s.next && (
                 <a className="btn primary big" href={href('course', course.id, 'lesson', s.next.id)}>
-                  {s.started ? 'Continue' : 'Start learning'} →
+                  {s.started ? t('course.continue') : t('course.startLearning')}
                 </a>
               )}
               <a className="btn big" href={href('course', course.id, 'quiz')}>
-                {s.started ? 'Take the quiz' : 'Test out with the quiz'}
+                {s.started ? t('course.takeQuiz') : t('course.testOut')}
               </a>
             </div>
           </div>
@@ -113,28 +116,24 @@ export function CoursePage({ course }: { course: Course }) {
         <div className="course-layout">
           <div className="course-path">
             <div className="path-toolbar">
-              <h2>Learning path</h2>
+              <h2>{t('course.path.title')}</h2>
               <div className="path-tools">
-                <div className="cpath-views" role="group" aria-label="Path view">
+                <div className="cpath-views" role="group" aria-label={t('course.path.view')}>
                   <button type="button" aria-pressed={view === 'map'} onClick={() => chooseView('map')}>
-                    Map
+                    {t('course.path.map')}
                   </button>
                   <button type="button" aria-pressed={view === 'list'} onClick={() => chooseView('list')}>
-                    List
+                    {t('course.path.list')}
                   </button>
                 </div>
                 <label className="switch">
                   <input type="checkbox" checked={fast} onChange={toggleFast} />
                   <span className="switch-track" aria-hidden />
-                  Fast track: core only
+                  {t('course.path.fastTrack')}
                 </label>
               </div>
             </div>
-            {fast && (
-              <p className="muted small">
-                Showing the {s.coreTotal} core lessons (~{s.coreMinutes} min) that cover most of what you'll use.
-              </p>
-            )}
+            {fast && <p className="muted small">{t('course.path.fastTrackNote', { count: s.coreTotal, minutes: s.coreMinutes })}</p>}
             {view === 'map' ? (
               <CoursePath course={course} stats={s} fast={fast} canAutoScroll={() => loadedFor.current !== course.id} />
             ) : (
@@ -147,7 +146,7 @@ export function CoursePage({ course }: { course: Course }) {
                 return (
                   <section key={u.id} className="unit">
                     <header className="unit-head">
-                      <span className="unit-num">Unit {ui + 1}</span>
+                      <span className="unit-num">{t('course.unit', { number: ui + 1 })}</span>
                       <h3>{u.title}</h3>
                       <span className="muted small">
                         {doneCount}/{u.lessons.length}
@@ -164,32 +163,23 @@ export function CoursePage({ course }: { course: Course }) {
           <aside className="course-side">
             <div className="panel">
               <div className="side-stats">
-                <Ring value={s.total ? s.completed / s.total : 0} size={72} stroke={8} label="Lessons completed">
-                  <strong>{Math.round((s.total ? s.completed / s.total : 0) * 100)}%</strong>
+                <Ring value={s.total ? s.completed / s.total : 0} size={72} stroke={8} label={t('course.side.lessonsCompleted')}>
+                  <strong>{pct(s.total ? s.completed / s.total : 0)}</strong>
                 </Ring>
                 <div>
-                  <div>
-                    <strong>
-                      {s.coreDone}/{s.coreTotal}
-                    </strong>{' '}
-                    core lessons
-                  </div>
-                  <div>
-                    <strong>{Math.round(s.mastery * 100)}%</strong> mastered
-                  </div>
-                  <div>
-                    <strong>{quizBest !== undefined ? `${quizBest}%` : '—'}</strong> best quiz
-                  </div>
+                  <div>{tx('course.side.coreLessons', { done: s.coreDone, total: s.coreTotal }, { b: (c) => <strong>{c}</strong> })}</div>
+                  <div>{tx('course.side.mastered', { pct: pct(s.mastery) }, { b: (c) => <strong>{c}</strong> })}</div>
+                  <div>{tx('course.side.bestQuiz', { score: quizBest !== undefined ? pct(quizBest / 100) : '—' }, { b: (c) => <strong>{c}</strong> })}</div>
                 </div>
               </div>
-              <ProgressBar value={s.mastery} thin label="Mastery" />
-              <p className="small muted">Mastered = remembered across several spaced reviews.</p>
+              <ProgressBar value={s.mastery} thin label={t('course.side.mastery')} />
+              <p className="small muted">{t('course.side.masteredNote')}</p>
             </div>
 
             <CertificatePanel course={course} />
 
             <div className="panel key-ideas">
-              <h2>The 20% that matters</h2>
+              <h2>{t('course.keyIdeas')}</h2>
               <ul>
                 {course.keyIdeas.map((idea, i) => (
                   <li key={i}>
@@ -201,26 +191,26 @@ export function CoursePage({ course }: { course: Course }) {
 
             <div className="panel side-links">
               <a href={href('course', course.id, 'quiz')}>
-                <strong>Quiz</strong>
-                <span>{Math.min(12, s.questionCount)} mixed questions — find your gaps</span>
+                <strong>{t('course.links.quiz')}</strong>
+                <span>{t('course.links.quizHelp', { count: Math.min(12, s.questionCount) })}</span>
               </a>
               <a href={href('course', course.id, 'map')}>
-                <strong>Knowledge map</strong>
+                <strong>{t('course.links.map')}</strong>
                 <span>
                   {course.concepts?.length
                     ? p.maps?.[course.id]?.recalled.length
-                      ? `${p.maps[course.id].recalled.length}/${course.concepts.length} ideas recalled so far — keep mapping`
-                      : 'Map what you know from memory, then connect the dots'
-                    : 'Recall the key ideas from memory'}
+                      ? t('course.links.mapProgress', { recalled: p.maps[course.id].recalled.length, total: course.concepts.length })
+                      : t('course.links.mapStart')
+                    : t('course.links.mapRecall')}
                 </span>
               </a>
               <a href={href('review', 'start', course.id)}>
-                <strong>Review this course</strong>
-                <span>Practise what's due from {course.title}</span>
+                <strong>{t('course.links.review')}</strong>
+                <span>{t('course.links.reviewHelp', { title: course.title })}</span>
               </a>
               <a href={href('course', course.id, 'cheatsheet')}>
-                <strong>Cheat sheet</strong>
-                <span>The whole course on one printable page</span>
+                <strong>{t('course.links.cheatSheet')}</strong>
+                <span>{t('course.links.cheatSheetHelp')}</span>
               </a>
             </div>
           </aside>

@@ -5,8 +5,8 @@ import {
   axisLog10,
   barExtent,
   CURVE_LABEL,
-  CURVE_NAME,
   CURVE_ORDER,
+  curveName,
   formatCount,
   formatFactor,
   formatOps,
@@ -20,6 +20,7 @@ import {
   timeFor,
   type Curve,
 } from '../../lib/growthsim';
+import { useT } from '../../i18n/react';
 import type { SimProps } from './SimStepView';
 import { useChartWidth } from './useChartWidth';
 import './GrowthSim.css';
@@ -27,10 +28,10 @@ import './GrowthSim.css';
 /** Fixed colour slot per class, so a class looks the same in every lesson. */
 const SLOT: Record<Curve, number> = { '1': 1, 'log n': 2, n: 3, 'n log n': 4, 'n^2': 5, '2^n': 6 };
 const color = (c: Curve) => `var(--gs-${SLOT[c]})`;
-const fmt = (n: number) => n.toLocaleString('en-US');
 const STEPS = 1000;
 
 export function GrowthSim({ step }: SimProps<'growth'>) {
+  const { t, tx, n: fmt } = useT();
   const maxN = step.maxN ?? 1000;
   const curves = useMemo(() => CURVE_ORDER.filter((c) => step.curves.includes(c)), [step.curves]);
   const [n, setN] = useState(() => Math.min(10, maxN));
@@ -46,7 +47,7 @@ export function GrowthSim({ step }: SimProps<'growth'>) {
     <div className="growth-sim">
       <div className="gs-controls">
         <label className="gs-n" htmlFor={sliderId}>
-          Input size <span className="gs-n-value">n = {fmt(n)}</span>
+          {t('sims.growth.inputSize')} <span className="gs-n-value">n = {fmt(n)}</span>
         </label>
         <input
           id={sliderId}
@@ -61,37 +62,37 @@ export function GrowthSim({ step }: SimProps<'growth'>) {
           style={{ ['--fill' as string]: `${(nToSlider(n, maxN, STEPS) / STEPS) * 100}%` }}
         />
         <div className="gs-row">
-          <div className="gs-presets" role="group" aria-label="Jump to an input size">
+          <div className="gs-presets" role="group" aria-label={t('sims.growth.presets')}>
             {presets.map((v) => (
               <button key={v} className={`chip-btn${v === n ? ' on' : ''}`} aria-pressed={v === n} onClick={() => setN(v)}>
                 {fmt(v)}
               </button>
             ))}
           </div>
-          <div className="gs-scale" role="group" aria-label="Bar scale">
+          <div className="gs-scale" role="group" aria-label={t('sims.growth.barScale')}>
             {(['linear', 'log'] as const).map((s) => (
               <button key={s} className={`chip-btn${scale === s ? ' on' : ''}`} aria-pressed={scale === s} onClick={() => setScale(s)}>
-                {s === 'linear' ? 'Linear' : 'Log'}
+                {s === 'linear' ? t('sims.growth.linear') : t('sims.growth.log')}
               </button>
             ))}
           </div>
         </div>
       </div>
 
-      <ol className="gs-lanes" aria-label={`Work at n = ${fmt(n)}, at 1 microsecond per operation`}>
+      <ol className="gs-lanes" aria-label={t('sims.growth.lanesLabel', { n: fmt(n) })}>
         {curves.map((c) => {
           const log = opsLog10(c, n);
           const { frac, overLog } = barExtent(log, axis, scale);
           const offText =
-            overLog > 0 ? (scale === 'linear' ? `${formatFactor(overLog)}× past the edge` : `off the chart even on a log scale`) : '';
+            overLog > 0 ? (scale === 'linear' ? t('sims.growth.pastEdge', { factor: formatFactor(overLog) }) : t('sims.growth.offChart')) : '';
           return (
             <li key={c} className="gs-lane" style={{ ['--c' as string]: color(c) }}>
               <span className="gs-label">
                 <i className="gs-swatch" aria-hidden />
-                <strong>{CURVE_LABEL[c]}</strong> <span className="muted">{CURVE_NAME[c]}</span>
+                <strong>{CURVE_LABEL[c]}</strong> <span className="muted">{curveName(c)}</span>
               </span>
               <span className="gs-value">
-                <strong>{formatOps(c, n)}</strong> ops · <strong>{timeFor(c, n)}</strong>
+                {tx('sims.growth.opsAndTime', { ops: <strong>{formatOps(c, n)}</strong>, time: <strong>{timeFor(c, n)}</strong> })}
               </span>
               <span className={`gs-track${overLog > 0 ? ' over' : ''}`} aria-hidden>
                 <span className="gs-bar" style={{ width: `${frac * 100}%` }} />
@@ -104,9 +105,9 @@ export function GrowthSim({ step }: SimProps<'growth'>) {
       </ol>
       <p className="gs-caption small muted">
         {scale === 'linear'
-          ? `Linear scale: the track is twice the ${CURVE_LABEL[ref]} count (${formatCount(axis)} operations), so faster-growing classes run off the edge.`
-          : `Log scale: every tenth of the track is another ×10 (up to 10${superscript(axis)}).`}{' '}
-        Times assume 1 µs per operation.
+          ? t('sims.growth.captionLinear', { curve: CURVE_LABEL[ref], count: formatCount(axis) })
+          : t('sims.growth.captionLog', { max: `10${superscript(axis)}` })}{' '}
+        {t('sims.growth.timesAssume')}
       </p>
 
       <GrowthChart curves={curves} n={n} maxN={maxN} onPick={setN} />
@@ -115,6 +116,7 @@ export function GrowthSim({ step }: SimProps<'growth'>) {
 }
 
 function GrowthChart({ curves, n, maxN, onPick }: { curves: Curve[]; n: number; maxN: number; onPick: (n: number) => void }) {
+  const { t, n: fmt, list } = useT();
   const [ref, width] = useChartWidth<HTMLDivElement>();
   const clipId = useId();
   const H = 220;
@@ -156,13 +158,13 @@ function GrowthChart({ curves, n, maxN, onPick }: { curves: Curve[]; n: number; 
   return (
     <figure className="gs-chart" ref={ref}>
       <figcaption className="gs-chart-title">
-        Operations as n grows <span className="muted small">(both axes logarithmic; tap or drag to pick n)</span>
+        {t('sims.growth.chartTitle')} <span className="muted small">{t('sims.growth.chartNote')}</span>
       </figcaption>
       <svg
         width={width}
         height={H}
         role="img"
-        aria-label={`Line chart of operations against n, from 1 to ${fmt(maxN)}, for ${curves.map((c) => CURVE_LABEL[c]).join(', ')}. The marker is at n = ${fmt(n)}.`}
+        aria-label={t('sims.growth.chartLabel', { max: fmt(maxN), curves: list(curves.map((c) => CURVE_LABEL[c])), n: fmt(n) })}
         onPointerDown={pick}
         onPointerMove={pick}
       >

@@ -4,6 +4,10 @@ Copy everything in the box below into Claude (or ask Claude Code directly: *"add
 Replace `<TOPIC>` and `<GOAL>`, save the result as `src/content/topics/<id>.json`, run `npm run check:content`, and refresh the site.
 If anything in the file is malformed, the site shows a red banner telling you exactly what to fix.
 
+New courses are written in English first. Translations (pt-BR, es, fr) are separate files that mirror it; see
+[`TRANSLATING.md`](TRANSLATING.md). When you change an English course that already has translations, make the same
+structural change in each translation (`npm run check:content` lists every place they drifted apart).
+
 ---
 
 ```

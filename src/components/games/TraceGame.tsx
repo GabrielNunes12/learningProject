@@ -20,10 +20,12 @@ import type { TraceStep } from '../../types';
 import { highlightLines, InlineMarkdown } from '../Markdown';
 import { AnswerLine, QuestionFrame, useCheckFlow, type QuestionProps } from '../QuestionFrame';
 import './TraceGame.css';
+import { useT } from '../../i18n/react';
 
 const PLAY_DELAY_MS = 1100;
 
 export function TraceGame({ step, mode, context, onDone }: QuestionProps<TraceStep>) {
+  const { t, tx } = useT();
   const flow = useCheckFlow(mode, onDone);
   const test = mode === 'test';
   const frames = step.frames;
@@ -145,11 +147,14 @@ export function TraceGame({ step, mode, context, onDone }: QuestionProps<TraceSt
   const askFrames = frames.map((f, i) => (f.ask ? i : -1)).filter((i) => i >= 0);
 
   const announce = !frame
-    ? `Nothing has run yet. ${frames.length} steps.`
+    ? t('games.trace.announce.notStarted', { count: frames.length })
     : asking
-      ? `Line ${frame.line} ran. Predict the value of ${frame.ask}.`
-      : `Step ${shown + 1} of ${frames.length}: line ${frame.line} ran.` +
-        ([...changed].length ? ` Changed: ${[...changed].map((k) => `${k} = ${frame.vars[k]}`).join(', ')}.` : ' Nothing changed.');
+      ? t('games.trace.announce.predict', { line: frame.line, name: frame.ask ?? '' })
+      : `${t('games.trace.announce.step', { n: shown + 1, total: frames.length, line: frame.line })} ${
+          [...changed].length
+            ? t('games.trace.announce.changed', { changes: [...changed].map((k) => `${k} = ${frame.vars[k]}`).join(', ') })
+            : t('games.trace.announce.nothingChanged')
+        }`;
 
   return (
     <QuestionFrame
@@ -157,18 +162,18 @@ export function TraceGame({ step, mode, context, onDone }: QuestionProps<TraceSt
       flow={flow}
       mode={mode}
       context={context}
-      kind="Trace the code"
+      kind={t('games.trace.kind')}
       canCheck={false}
       onCheck={() => {}}
       onRetry={reset}
       enterKey={false}
-      checkLabel="Step to the end"
+      checkLabel={t('games.trace.stepToEnd')}
       answer={<AnswerLine text={gameAnswerLabel(step)} />}
     >
       <div className="trace">
         <div className="trace-main">
           <div className="trace-code-col">
-            <div className="trace-code" role="group" aria-label="Code">
+            <div className="trace-code" role="group" aria-label={t('games.trace.code')}>
               {highlighted.map((nodes, i) => {
                 const n = i + 1;
                 const cls = n === currentLine ? ' current' : n === previousLine ? ' previous' : '';
@@ -193,12 +198,12 @@ export function TraceGame({ step, mode, context, onDone }: QuestionProps<TraceSt
           </div>
 
           <div className="trace-mem-col">
-            <section className="trace-memory" aria-label="Memory">
-              <span className="eyebrow">Memory</span>
+            <section className="trace-memory" aria-label={t('games.trace.memory')}>
+              <span className="eyebrow">{t('games.trace.memory')}</span>
               {!frame ? (
-                <p className="muted small trace-empty">Nothing has run yet. Press Step to run line {frames[0].line}.</p>
+                <p className="muted small trace-empty">{t('games.trace.notStarted', { line: frames[0].line })}</p>
               ) : Object.keys(frame.vars).length === 0 ? (
-                <p className="muted small trace-empty">No variables yet.</p>
+                <p className="muted small trace-empty">{t('games.trace.noVars')}</p>
               ) : (
                 <ul className="trace-vars">
                   {Object.entries(frame.vars).map(([name, value]) => {
@@ -214,7 +219,7 @@ export function TraceGame({ step, mode, context, onDone }: QuestionProps<TraceSt
                         <code className="trace-name">{name}</code>
                         <span className="trace-value" key={changed.has(name) ? `${name}@${shown}` : name}>
                           {isHidden ? (
-                            <span className={isAsk ? 'tv-q' : 'tv-q soft'} aria-label={isAsk ? 'unknown: predict it' : 'hidden for now'}>
+                            <span className={isAsk ? 'tv-q' : 'tv-q soft'} aria-label={isAsk ? t('games.trace.predictIt') : t('games.trace.hidden')}>
                               ?
                             </span>
                           ) : (
@@ -229,8 +234,8 @@ export function TraceGame({ step, mode, context, onDone }: QuestionProps<TraceSt
             </section>
 
             {output !== undefined && (
-              <section className="trace-console" aria-label="Output">
-                <span className="eyebrow">Output</span>
+              <section className="trace-console" aria-label={t('games.trace.output')}>
+                <span className="eyebrow">{t('games.trace.output')}</span>
                 <pre>{output}</pre>
               </section>
             )}
@@ -246,7 +251,7 @@ export function TraceGame({ step, mode, context, onDone }: QuestionProps<TraceSt
             }}
           >
             <label htmlFor={`trace-in-${step.id}`}>
-              Line {frame.line} just ran. What is <code>{frame.ask}</code> now?
+              {tx('games.trace.question', { line: frame.line, name: <code>{frame.ask}</code> })}
             </label>
             <div className="trace-ask-row" ref={askRowRef}>
               <input
@@ -254,21 +259,21 @@ export function TraceGame({ step, mode, context, onDone }: QuestionProps<TraceSt
                 ref={inputRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Type the value"
+                placeholder={t('games.trace.placeholder')}
                 autoComplete="off"
                 autoCapitalize="off"
                 spellCheck={false}
                 autoFocus
               />
               <button type="submit" className="btn primary" disabled={input.trim() === ''}>
-                Check
+                {t('common.check')}
               </button>
             </div>
             {tries > 0 && (
               <p className="trace-ask-msg" role="alert">
-                <span>✗ Not quite. Look at line {frame.line} again and retry.</span>
+                <span>{t('games.trace.notQuite', { line: frame.line })}</span>
                 <button type="button" className="link" onClick={() => dispatch({ type: 'reveal' })}>
-                  Show me
+                  {t('games.trace.showMe')}
                 </button>
               </p>
             )}
@@ -277,10 +282,22 @@ export function TraceGame({ step, mode, context, onDone }: QuestionProps<TraceSt
 
         {outcome && frame?.ask && (
           <p className={`trace-result ${outcome === 'missed' ? 'missed' : 'right'}`} role="status">
-            {outcome === 'right' ? '✓ Right: ' : outcome === 'retried' ? '✓ Got it: ' : test ? '✗ Not this time: ' : 'Here it is: '}
-            <code>
-              {frame.ask} = {frame.vars[frame.ask]}
-            </code>
+            {tx(
+              outcome === 'right'
+                ? 'games.trace.right'
+                : outcome === 'retried'
+                  ? 'games.trace.gotIt'
+                  : test
+                    ? 'games.trace.notThisTime'
+                    : 'games.trace.hereItIs',
+              {
+                value: (
+                  <code>
+                    {frame.ask} = {frame.vars[frame.ask]}
+                  </code>
+                ),
+              },
+            )}
           </p>
         )}
 
@@ -292,12 +309,12 @@ export function TraceGame({ step, mode, context, onDone }: QuestionProps<TraceSt
               dispatch({ type: 'back' });
             }}
             disabled={shown < 0}
-            aria-label="Back one step"
+            aria-label={t('games.trace.backLabel')}
           >
-            ← Back
+            {t('games.trace.back')}
           </button>
           <button className="btn small" onClick={togglePlay} disabled={asking} aria-pressed={playing}>
-            {playing ? '❚❚ Pause' : '▶ Play'}
+            {playing ? t('games.trace.pause') : t('games.trace.play')}
           </button>
           <button
             ref={stepRef}
@@ -307,13 +324,13 @@ export function TraceGame({ step, mode, context, onDone }: QuestionProps<TraceSt
               dispatch({ type: 'forward' });
             }}
             disabled={asking || state.pos >= last}
-            aria-label="Step forward"
+            aria-label={t('games.trace.forwardLabel')}
           >
-            Step →
+            {t('games.trace.forward')}
           </button>
           <span className="trace-count" aria-hidden>
-            {shown < 0 ? `Ready · ${frames.length} steps` : `Step ${shown + 1} of ${frames.length}`}
-            {finished && ' · done'}
+            {shown < 0 ? t('games.trace.ready', { count: frames.length }) : t('games.trace.stepOf', { n: shown + 1, total: frames.length })}
+            {finished && ` · ${t('games.trace.done')}`}
           </span>
         </div>
 
@@ -339,8 +356,10 @@ export function TraceGame({ step, mode, context, onDone }: QuestionProps<TraceSt
                 dispatch({ type: e.key === 'ArrowRight' ? 'forward' : 'back' });
               }
             }}
-            aria-label="Frame"
-            aria-valuetext={shown < 0 ? 'Not started' : `Step ${shown + 1} of ${frames.length}, line ${frame?.line}`}
+            aria-label={t('games.trace.frame')}
+            aria-valuetext={
+              shown < 0 ? t('games.trace.notStartedShort') : t('games.trace.stepOfLine', { n: shown + 1, total: frames.length, line: frame?.line ?? '' })
+            }
           />
           <div className="trace-ticks" aria-hidden>
             {askFrames.map((i) => (
@@ -348,7 +367,7 @@ export function TraceGame({ step, mode, context, onDone }: QuestionProps<TraceSt
                 key={i}
                 className={`trace-tick ${state.outcomes[i] ?? ''}`}
                 style={{ ['--at' as string]: (i + 1) / frames.length }}
-                title="Prediction"
+                title={t('games.trace.prediction')}
               />
             ))}
           </div>
@@ -358,8 +377,7 @@ export function TraceGame({ step, mode, context, onDone }: QuestionProps<TraceSt
           {announce}
         </p>
         <p className="muted small trace-tip">
-          {askFrames.length === 1 ? 'One value to predict' : `${askFrames.length} values to predict`} (marked on the timeline). Keys: ← →
-          to step.
+          {t('games.trace.tip', { count: askFrames.length })}
         </p>
       </div>
     </QuestionFrame>

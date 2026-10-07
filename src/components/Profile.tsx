@@ -22,8 +22,17 @@ import { Page } from './Layout';
 import { accentStyle, Avatar, Field, Notice, ProgressBar } from './ui';
 import { CourseIcon } from './CourseIcon';
 import { Icon } from './icons';
+import { LanguageSelect } from './LanguageSwitcher';
+import { tMaybe, type MessageKey } from '../i18n/core';
+import { useT } from '../i18n/react';
+
+const GOAL_NAMES: Record<number, MessageKey> = { 20: 'profile.goal.casual', 50: 'profile.goal.regular', 100: 'profile.goal.serious' };
+
+/** Status texts are kept as message keys (client) or as already-translated server text, and shown in the current language. */
+const showText = (s: string) => tMaybe(s, s);
 
 export function Profile() {
+  const { t, tx, n, pct, date } = useT();
   const p = useProgress();
   const { user, sync } = useAuth();
   const lvl = levelInfo(p.xp);
@@ -34,102 +43,110 @@ export function Profile() {
   return (
     <Page wide>
       <section className="profile-head">
-        <Avatar name={user?.username ?? 'Guest'} size={84} />
+        <Avatar name={user?.username ?? t('profile.guest')} size={84} />
         <div className="grow">
-          <h1>{user ? user.username : 'Guest learner'}</h1>
+          <h1>{user ? user.username : t('profile.guestLearner')}</h1>
           {user ? (
             <p className="muted">
-              {user.email} <span className="verified">✓ verified</span> · joined{' '}
-              {new Date(user.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              {tx(
+                'profile.accountLine',
+                { email: user.email, joined: date(user.createdAt, { month: 'long', year: 'numeric' }) },
+                { verified: (c) => <span className="verified">{c}</span> },
+              )}
             </p>
           ) : (
-            <p className="muted">Progress is stored only in this browser.</p>
+            <p className="muted">{t('profile.localOnly')}</p>
           )}
           <div className="level-line">
             <span className="level-badge small">{lvl.level}</span>
             <div className="grow">
               <div className="level-text">
-                <strong>
-                  Level {lvl.level} · {lvl.title}
-                </strong>
-                <span className="muted small">
-                  {lvl.into} / {lvl.needed} XP
-                </span>
+                <strong>{t('profile.levelLine', { level: lvl.level, title: lvl.title })}</strong>
+                <span className="muted small">{t('profile.levelXp', { into: lvl.into, needed: lvl.needed })}</span>
               </div>
-              <ProgressBar value={lvl.into / lvl.needed} label="Progress to next level" />
+              <ProgressBar value={lvl.into / lvl.needed} label={t('profile.levelProgress')} />
             </div>
           </div>
         </div>
         {user ? (
           <span className={`sync-pill ${sync}`}>
-            {sync === 'saving' ? 'Saving…' : sync === 'offline' ? 'Offline — will retry' : <><Icon name="check" size={14} /> Synced</>}
+            {sync === 'saving' ? (
+              t('profile.sync.saving')
+            ) : sync === 'offline' ? (
+              t('profile.sync.offline')
+            ) : (
+              <>
+                <Icon name="check" size={14} /> {t('profile.sync.synced')}
+              </>
+            )}
           </span>
         ) : (
           <div className="profile-cta">
             <a className="btn primary" href="#/signup">
-              Create profile
+              {t('profile.createProfile')}
             </a>
             <a className="btn ghost" href="#/signin">
-              Sign in
+              {t('common.signIn')}
             </a>
           </div>
         )}
       </section>
 
       <div className="stat-grid six">
-        <Stat label="Total XP" value={p.xp} />
+        <Stat label={t('profile.stat.totalXp')} value={n(p.xp)} />
         <Stat
-          label="Current streak"
+          label={t('profile.stat.currentStreak')}
           value={
             <>
-              <Icon name="flame" size={18} className="flame" /> {streak(p)}
+              <Icon name="flame" size={18} className="flame" /> {n(streak(p))}
             </>
           }
         />
-        <Stat label="Best streak" value={bestStreak(p)} />
-        <Stat label="Lessons done" value={lessonsDone} />
-        <Stat label="Questions mastered" value={mastered} />
-        <Stat label="Courses started" value={started.length} />
+        <Stat label={t('profile.stat.bestStreak')} value={n(bestStreak(p))} />
+        <Stat label={t('profile.stat.lessonsDone')} value={n(lessonsDone)} />
+        <Stat label={t('profile.stat.mastered')} value={n(mastered)} />
+        <Stat label={t('profile.stat.coursesStarted')} value={n(started.length)} />
       </div>
 
       <div className="profile-grid">
         <section className="panel">
           <div className="panel-head">
-            <h2>Activity</h2>
+            <h2>{t('profile.activity')}</h2>
           </div>
           <ActivityHeatmap p={p} />
         </section>
 
         <section className="panel">
-          <h2>Daily goal</h2>
-          <p className="muted small">How much XP do you want to earn each day? A lesson is about 30–50 XP.</p>
-          <div className="goal-options" role="radiogroup" aria-label="Daily XP goal">
+          <h2>{t('common.dailyGoal')}</h2>
+          <p className="muted small">{t('profile.goal.help')}</p>
+          <div className="goal-options" role="radiogroup" aria-label={t('profile.goal.label')}>
             {GOAL_OPTIONS.map((g) => (
               <button key={g} role="radio" aria-checked={p.dailyGoal === g} className={`goal-option${p.dailyGoal === g ? ' on' : ''}`} onClick={() => setDailyGoal(g)}>
-                <strong>{g} XP</strong>
-                <span>{g === 20 ? 'Casual' : g === 50 ? 'Regular' : g === 100 ? 'Serious' : 'Intense'}</span>
+                <strong>{t('common.xp', { count: g })}</strong>
+                <span>{t(GOAL_NAMES[g] ?? 'profile.goal.intense')}</span>
               </button>
             ))}
+          </div>
+          <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+            <LanguageSelect />
           </div>
         </section>
       </div>
 
       <section className="panel">
         <div className="panel-head">
-          <h2>Course progress</h2>
+          <h2>{t('profile.courseProgress')}</h2>
           <span className="row wrap">
             <a className="small" href={href('notebook')}>
-              Notebook →
+              {t('profile.notebookLink')}
             </a>
             <a className="small" href={href('insights')}>
-              Your learning report →
+              {t('profile.reportLink')}
             </a>
           </span>
         </div>
         {started.length === 0 ? (
-          <p className="muted">
-            No courses started yet. <a href="#/courses">Pick one →</a>
-          </p>
+          <p className="muted">{tx('profile.noCourses', {}, { link: (c) => <a href="#/courses">{c}</a> })}</p>
         ) : (
           <div className="course-progress-list">
             {started.map((c) => {
@@ -141,11 +158,12 @@ export function Profile() {
                     <div className="level-text">
                       <strong>{c.title}</strong>
                       <span className="muted small">
-                        Core {s.coreDone}/{s.coreTotal} · {Math.round(s.mastery * 100)}% mastered
-                        {p.quizBest[c.id] !== undefined && ` · quiz ${p.quizBest[c.id]}%`}
+                        {p.quizBest[c.id] !== undefined
+                          ? t('profile.courseLineQuiz', { done: s.coreDone, total: s.coreTotal, mastery: pct(s.mastery), quiz: pct(p.quizBest[c.id] / 100) })
+                          : t('profile.courseLine', { done: s.coreDone, total: s.coreTotal, mastery: pct(s.mastery) })}
                       </span>
                     </div>
-                    <ProgressBar value={s.total ? s.completed / s.total : 0} label={`${c.title} progress`} />
+                    <ProgressBar value={s.total ? s.completed / s.total : 0} label={t('profile.courseProgressLabel', { title: c.title })} />
                   </div>
                 </a>
               );
@@ -170,6 +188,7 @@ function Stat({ label, value }: { label: string; value: ReactNode }) {
 }
 
 function AccountSettings() {
+  const { t } = useT();
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
   const [msg, setMsg] = useState<{ tone: 'good' | 'bad'; text: string } | null>(null);
@@ -184,11 +203,11 @@ function AccountSettings() {
     setMsg(null);
     try {
       await api('/account/password', { current, next });
-      setMsg({ tone: 'good', text: 'Password changed. Other devices have been signed out.' });
+      setMsg({ tone: 'good', text: 'profile.account.passwordChanged' });
       setCurrent('');
       setNext('');
     } catch (err) {
-      setMsg({ tone: 'bad', text: err instanceof ApiError ? err.message : 'Something went wrong.' });
+      setMsg({ tone: 'bad', text: err instanceof ApiError ? err.message : 'profile.somethingWrong' });
     } finally {
       setBusy(false);
     }
@@ -196,22 +215,22 @@ function AccountSettings() {
 
   return (
     <section className="panel">
-      <h2>Account</h2>
+      <h2>{t('profile.account.title')}</h2>
       <div className="settings-grid">
         <form onSubmit={changePassword} className="stack">
-          <h3>Change password</h3>
-          <Field label="Current password" type="password" name="current" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} required />
-          <Field label="New password" type="password" name="new-password" autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} minLength={8} required help="At least 8 characters." />
-          {msg && <Notice tone={msg.tone}>{msg.text}</Notice>}
+          <h3>{t('profile.account.changePassword')}</h3>
+          <Field label={t('profile.account.currentPassword')} type="password" name="current" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} required />
+          <Field label={t('profile.account.newPassword')} type="password" name="new-password" autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} minLength={8} required help={t('profile.account.passwordHelp')} />
+          {msg && <Notice tone={msg.tone}>{showText(msg.text)}</Notice>}
           <div>
             <button className="btn" disabled={busy}>
-              {busy ? 'Saving…' : 'Update password'}
+              {busy ? t('profile.sync.saving') : t('profile.account.updatePassword')}
             </button>
           </div>
         </form>
         <div className="stack">
-          <h3>Session</h3>
-          <p className="muted small">Signing out removes your progress from this browser. It stays saved in your account.</p>
+          <h3>{t('profile.account.session')}</h3>
+          <p className="muted small">{t('profile.account.signOutHelp')}</p>
           <div>
             <button
               className="btn"
@@ -220,14 +239,14 @@ function AccountSettings() {
                 window.location.hash = '#/';
               }}
             >
-              Sign out
+              {t('profile.account.signOut')}
             </button>
           </div>
-          <h3 className="danger-title">Delete account</h3>
+          <h3 className="danger-title">{t('profile.account.delete')}</h3>
           {!deleting ? (
             <div>
               <button className="btn danger-outline" onClick={() => setDeleting(true)}>
-                Delete my account…
+                {t('profile.account.deleteStart')}
               </button>
             </div>
           ) : (
@@ -239,17 +258,17 @@ function AccountSettings() {
                   await deleteAccount(deletePw);
                   window.location.hash = '#/';
                 } catch (err) {
-                  setDeleteErr(err instanceof ApiError ? err.message : 'Something went wrong.');
+                  setDeleteErr(err instanceof ApiError ? err.message : 'profile.somethingWrong');
                 }
               }}
             >
-              <Notice tone="bad">This permanently deletes your profile and all synced progress. It can't be undone.</Notice>
-              <Field label="Confirm with your password" type="password" name="delete-password" autoComplete="current-password" value={deletePw} onChange={(e) => setDeletePw(e.target.value)} error={deleteErr} required />
+              <Notice tone="bad">{t('profile.account.deleteWarning')}</Notice>
+              <Field label={t('profile.account.deleteConfirm')} type="password" name="delete-password" autoComplete="current-password" value={deletePw} onChange={(e) => setDeletePw(e.target.value)} error={deleteErr && showText(deleteErr)} required />
               <div className="row">
                 <button type="button" className="btn ghost" onClick={() => setDeleting(false)}>
-                  Cancel
+                  {t('common.cancel')}
                 </button>
-                <button className="btn danger">Delete forever</button>
+                <button className="btn danger">{t('profile.account.deleteForever')}</button>
               </div>
             </form>
           )}
@@ -260,27 +279,26 @@ function AccountSettings() {
 }
 
 function DataSettings({ signedIn }: { signedIn: boolean }) {
+  const { t } = useT();
   const fileRef = useRef<HTMLInputElement>(null);
   return (
     <section className="panel">
-      <h2>Your data</h2>
-      <p className="muted small">
-        {signedIn ? 'Progress syncs to your account automatically. You can still keep a backup file.' : 'Back up your progress to a file, or restore it on another browser.'}
-      </p>
+      <h2>{t('profile.data.title')}</h2>
+      <p className="muted small">{signedIn ? t('profile.data.helpSignedIn') : t('profile.data.helpGuest')}</p>
       <div className="row wrap">
         <button className="btn" onClick={exportProgress}>
-          Export progress
+          {t('profile.data.export')}
         </button>
         <button className="btn" onClick={() => fileRef.current?.click()}>
-          Import progress
+          {t('profile.data.import')}
         </button>
         <button
           className="btn danger-outline"
           onClick={() => {
-            if (confirm('Erase all learning progress? Export first if you want a backup.')) resetProgress();
+            if (confirm(t('profile.data.resetConfirm'))) resetProgress();
           }}
         >
-          Reset progress
+          {t('profile.data.reset')}
         </button>
         <input
           ref={fileRef}
@@ -294,7 +312,7 @@ function DataSettings({ signedIn }: { signedIn: boolean }) {
             try {
               await importProgress(file);
             } catch (err) {
-              alert(err instanceof Error ? err.message : 'Could not read that file.');
+              alert(err instanceof Error ? err.message : t('profile.data.importFailed'));
             }
           }}
         />

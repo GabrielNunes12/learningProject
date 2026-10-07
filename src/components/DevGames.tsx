@@ -1,5 +1,6 @@
 // Development-only page (#/dev/games): open any mini-game or simulator step directly, in learn or test mode.
 import { courses } from '../content';
+import { useT } from '../i18n/react';
 import { href } from '../lib/router';
 import { isQuestion, type Step } from '../types';
 import { Page } from './Layout';
@@ -20,6 +21,7 @@ const entries = courses.flatMap((course) =>
 const label = (s: Step) => (s.type === 'sim' ? `sim: ${s.sim}` : s.type);
 
 export function DevGames({ index, mode }: { index?: string; mode?: string }) {
+  const { t, locale } = useT();
   const n = index === undefined ? -1 : Number(index);
   const entry = entries[n];
   const testMode = mode === 'test';
@@ -27,16 +29,16 @@ export function DevGames({ index, mode }: { index?: string; mode?: string }) {
   if (!entry) {
     return (
       <Page>
-        <h1>Mini-games & simulators</h1>
-        <p className="muted">{entries.length} visual steps in the courses. Development only.</p>
+        <h1>{t('sims.dev.title')}</h1>
+        <p className="muted">{t('sims.dev.count', { count: entries.length })}</p>
         <ol className="dev-games-list">
           {entries.map((e, i) => (
             <li key={i}>
               <a href={href('dev', 'games', String(i))}>
-                <strong>{label(e.step)}</strong> · {e.course.title} → {e.lesson.title} (step {e.i + 1})
+                <strong>{label(e.step)}</strong> · {e.course.title} → {e.lesson.title} {t('sims.dev.stepNumber', { number: e.i + 1 })}
               </a>{' '}
               <a className="muted small" href={href('dev', 'games', String(i), 'test')}>
-                test mode
+                {t('sims.dev.testMode')}
               </a>
             </li>
           ))}
@@ -51,10 +53,10 @@ export function DevGames({ index, mode }: { index?: string; mode?: string }) {
   const step = entry.step;
   return (
     <div className="player" style={accentStyle(entry.course.color)}>
-      <main className="player-body" key={`${n}-${mode}`}>
+      <main className="player-body" key={`${n}-${mode}-${locale}`}>
         <div className="lesson-crumb">
-          <a href={href('dev', 'games')}>← All</a> · {label(step)} · {entry.course.title} → {entry.lesson.title}
-          {testMode ? ' · test mode' : ''}
+          <a href={href('dev', 'games')}>{t('sims.dev.all')}</a> · {label(step)} · {entry.course.title} → {entry.lesson.title}
+          {testMode ? ` · ${t('sims.dev.testMode')}` : ''}
         </div>
         {isQuestion(step) && (
           <article className="step-card">

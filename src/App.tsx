@@ -19,14 +19,17 @@ import { Roadmap } from './components/Roadmap';
 import { useAuth } from './lib/auth';
 import { useRoute } from './lib/router';
 import { Icon } from './components/icons';
+import { useT } from './i18n/react';
 
 export function App() {
   const route = useRoute();
+  // Re-renders the whole app when the language changes (course text is swapped in place).
+  const { t } = useT();
   return (
     <>
       {contentErrors.length > 0 && (
         <div className="content-errors" role="alert">
-          <strong>Some course files have problems and were skipped:</strong>
+          <strong>{t('app.contentErrors')}</strong>
           <ul>
             {contentErrors.map((e, i) => (
               <li key={i}>{e}</li>
@@ -41,6 +44,7 @@ export function App() {
 
 function Route({ route }: { route: string[] }) {
   const { user } = useAuth();
+  const { t } = useT();
   const [section, a, b, c] = route;
 
   switch (section) {
@@ -101,10 +105,10 @@ function Route({ route }: { route: string[] }) {
         <div className="celebrate" aria-hidden>
           <Icon name="compass" size={72} />
         </div>
-        <h1>Page not found</h1>
-        <p className="lead">That link doesn't lead anywhere.</p>
+        <h1>{t('app.notFound')}</h1>
+        <p className="lead">{t('app.notFoundLead')}</p>
         <a className="btn primary" href="#/">
-          Go home
+          {t('common.goHome')}
         </a>
       </section>
     </Page>

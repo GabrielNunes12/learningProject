@@ -1,0 +1,2005 @@
+{
+  "id": "unit-testing",
+  "title": "Testes unitários",
+  "icon": "✓",
+  "color": "#c2255c",
+  "order": 13,
+  "category": "Programming",
+  "level": "Intermediate",
+  "description": "Escreva testes rápidos e confiáveis que pegam bugs de verdade — primeiro os princípios, depois JUnit 5, Mockito, pytest e unittest.mock na prática.",
+  "keyIdeas": [
+    "Um teste unitário é **rápido, isolado, repetível e autoverificável** — sua função é pegar regressões em segundos.",
+    "Todo teste segue **Arrange → Act → Assert** (preparar, agir, verificar), checa um único comportamento e tem um nome que explica a falha.",
+    "Teste o caminho feliz, os **limites** e os casos de erro — pela API pública, não pelos detalhes internos.",
+    "Verifique valores exatos: `assertEquals(expected, actual)` no JUnit, `assert` simples no pytest.",
+    "Use dublês de teste para fronteiras lentas ou imprevisíveis, injete-os pelo construtor e **não exagere nos mocks**.",
+    "A cobertura revela código sem teste, mas não é uma meta; testes instáveis vêm de tempo, aleatoriedade e estado compartilhado fora de controle."
+  ],
+  "concepts": [
+    {
+      "id": "unit-test",
+      "label": "Teste unitário",
+      "lesson": "what-is-a-unit-test",
+      "summary": "Uma pequena verificação automática de uma função ou classe, rápida, isolada de I/O real e repetível, que dá segurança contra regressões.",
+      "aliases": [
+        "teste",
+        "segurança contra regressões",
+        "regressão",
+        "FIRST",
+        "unit test"
+      ]
+    },
+    {
+      "id": "self-checking",
+      "label": "Teste autoverificável",
+      "lesson": "what-is-a-unit-test",
+      "summary": "O próprio teste decide se passou ou falhou com uma asserção; imprimir um resultado para uma pessoa ler não verifica nada.",
+      "aliases": [
+        "assert",
+        "asserção",
+        "verificação automática",
+        "imprimir vs verificar",
+        "print vs assert"
+      ]
+    },
+    {
+      "id": "arrange-act-assert",
+      "label": "Arrange-Act-Assert",
+      "lesson": "arrange-act-assert",
+      "summary": "Prepare as entradas, execute a única ação sob teste e depois confira o resultado, nessa ordem.",
+      "aliases": [
+        "AAA",
+        "dado quando então",
+        "given when then",
+        "arrange act assert",
+        "preparar agir verificar"
+      ]
+    },
+    {
+      "id": "one-behavior",
+      "label": "Um comportamento por teste",
+      "lesson": "arrange-act-assert",
+      "summary": "Cada teste verifica um comportamento e recebe o nome da situação e do resultado esperado, então uma falha diz exatamente o que quebrou.",
+      "aliases": [
+        "nome do teste",
+        "nomes descritivos",
+        "uma única ação",
+        "single act"
+      ]
+    },
+    {
+      "id": "edge-cases",
+      "label": "Casos extremos",
+      "lesson": "what-to-test",
+      "summary": "Além do caminho feliz, teste os limites (no limite e logo depois dele), entradas vazias ou nulas e casos de erro, onde os bugs se concentram.",
+      "aliases": [
+        "valores-limite",
+        "casos de borda",
+        "off-by-one",
+        "erro por um",
+        "caminho feliz",
+        "happy path",
+        "casos de erro",
+        "edge cases"
+      ]
+    },
+    {
+      "id": "behavior-not-implementation",
+      "label": "Comportamento, não implementação",
+      "lesson": "what-to-test",
+      "summary": "Teste pela API pública e confira resultados observáveis, não helpers privados nem como o resultado foi calculado, para que refatorações não quebrem os testes.",
+      "aliases": [
+        "API pública",
+        "testes frágeis",
+        "brittle tests",
+        "detalhes de implementação",
+        "caixa-preta",
+        "black box"
+      ]
+    },
+    {
+      "id": "exact-assertion",
+      "label": "Asserção exata",
+      "lesson": "assertions-and-failures",
+      "summary": "Verifique o valor esperado exato, conhecido de forma independente, com a asserção mais específica possível (approx para floats), e não apenas “not None”.",
+      "aliases": [
+        "assertEquals",
+        "asserção fraca",
+        "weak assertion",
+        "pytest.approx",
+        "valor esperado",
+        "expected value"
+      ]
+    },
+    {
+      "id": "failure-message",
+      "label": "Esperado vs obtido",
+      "lesson": "assertions-and-failures",
+      "summary": "O relatório de uma falha mostra o que o teste esperava e o que o código produziu, o que depende de passar o esperado e o obtido na ordem certa.",
+      "aliases": [
+        "mensagem de falha",
+        "failure message",
+        "expected but was",
+        "esperado mas era",
+        "ler falhas",
+        "expected vs actual"
+      ]
+    },
+    {
+      "id": "test-discovery",
+      "label": "Descoberta de testes",
+      "lesson": "junit5-essentials",
+      "summary": "O runner encontra os testes por anotação (o org.junit.jupiter.api.Test do JUnit 5) ou por nome (as funções test_* do pytest); qualquer outra coisa nunca roda, sem avisar.",
+      "aliases": [
+        "@Test",
+        "prefixo test_",
+        "test_ prefix",
+        "test runner",
+        "executor de testes",
+        "collection"
+      ]
+    },
+    {
+      "id": "test-isolation",
+      "label": "Estado novo a cada teste",
+      "lesson": "junit5-essentials",
+      "summary": "Cada teste recebe seus próprios objetos novos (@BeforeEach, uma nova instância da classe de teste, fixtures com escopo de função), então os testes não afetam uns aos outros.",
+      "aliases": [
+        "@BeforeEach",
+        "estado compartilhado",
+        "shared state",
+        "isolamento de testes",
+        "test isolation",
+        "setUp"
+      ]
+    },
+    {
+      "id": "expected-exception",
+      "label": "Verificar exceções",
+      "lesson": "junit5-essentials",
+      "summary": "assertThrows, pytest.raises e assertFailsWith só passam se o código lançar a exceção esperada, e o código depois do throw nunca roda.",
+      "aliases": [
+        "assertThrows",
+        "pytest.raises",
+        "assertFailsWith",
+        "exceção esperada",
+        "expected exception"
+      ]
+    },
+    {
+      "id": "parameterized-test",
+      "label": "Teste parametrizado",
+      "lesson": "junit5-essentials",
+      "summary": "Um único método de teste roda uma vez para cada linha de entradas e resultados esperados, e cada uma é reportada como um teste próprio.",
+      "aliases": [
+        "@ParameterizedTest",
+        "@CsvSource",
+        "pytest.mark.parametrize",
+        "teste orientado por tabela",
+        "table-driven test",
+        "parametrizado"
+      ]
+    },
+    {
+      "id": "fixture",
+      "label": "Fixture do pytest",
+      "lesson": "pytest-essentials",
+      "summary": "Código de preparação que o pytest injeta pelo nome do parâmetro, reconstruído a cada teste por padrão (o escopo amplia por quanto tempo ele é compartilhado).",
+      "aliases": [
+        "@pytest.fixture",
+        "escopo da fixture",
+        "fixture scope",
+        "conftest",
+        "fixture"
+      ]
+    },
+    {
+      "id": "kotlin-test-idioms",
+      "label": "Convenções de teste em Kotlin",
+      "lesson": "kotlin-testing",
+      "summary": "Testes em Kotlin rodam no JUnit 5 com nomes entre crases, assertFailsWith<T> e funções @JvmStatic em companion objects para o @BeforeAll.",
+      "aliases": [
+        "nomes com crase",
+        "backtick names",
+        "kotlin.test",
+        "@JvmStatic",
+        "companion object"
+      ]
+    },
+    {
+      "id": "test-double",
+      "label": "Dublê de teste",
+      "lesson": "test-doubles",
+      "summary": "Um substituto sob seu controle para uma dependência real (banco de dados, rede, relógio, e-mail): um stub, mock, fake ou spy.",
+      "aliases": [
+        "fake",
+        "spy",
+        "dublê",
+        "substituto",
+        "test double"
+      ]
+    },
+    {
+      "id": "stub",
+      "label": "Stub",
+      "lesson": "test-doubles",
+      "summary": "Um dublê que devolve respostas prontas para alimentar com dados o código sob teste.",
+      "aliases": [
+        "resposta pronta",
+        "canned answer",
+        "return_value",
+        "thenReturn"
+      ]
+    },
+    {
+      "id": "mock",
+      "label": "Mock",
+      "lesson": "test-doubles",
+      "summary": "Um dublê que registra as chamadas para o teste poder verificar o que o código enviou, útil em comandos sem valor de retorno relevante.",
+      "aliases": [
+        "verify",
+        "assert_called_once_with",
+        "Mockito",
+        "unittest.mock"
+      ]
+    },
+    {
+      "id": "dependency-injection",
+      "label": "Injeção de dependência",
+      "lesson": "test-doubles",
+      "summary": "Receber as dependências de fora, geralmente pelo construtor, em vez de criá-las por dentro, permite que o teste entregue um dublê.",
+      "aliases": [
+        "injeção por construtor",
+        "constructor injection",
+        "seam",
+        "ponto de substituição",
+        "dependência fixa",
+        "hard-wired dependency",
+        "dependency injection"
+      ]
+    },
+    {
+      "id": "patching",
+      "label": "Patching",
+      "lesson": "mockito-and-unittest-mock",
+      "summary": "unittest.mock.patch troca um nome temporariamente, e precisa mirar nele onde é usado (billing.charge_card), não onde é definido.",
+      "aliases": [
+        "patch",
+        "monkeypatch",
+        "patch onde é usado",
+        "patch where used"
+      ]
+    },
+    {
+      "id": "over-mocking",
+      "label": "Excesso de mocks",
+      "lesson": "mockito-and-unittest-mock",
+      "summary": "Use mocks só em fronteiras como rede e bancos de dados; fazer mock de valores simples ou verificar chamadas de stubs testa o como, não o quê.",
+      "aliases": [
+        "mocks demais",
+        "too many mocks",
+        "over-mocking",
+        "stub em consultas, verify em comandos"
+      ]
+    },
+    {
+      "id": "tdd",
+      "label": "Vermelho-verde-refatorar",
+      "lesson": "tdd",
+      "summary": "Desenvolvimento guiado por testes: escreva um teste que falha, faça-o passar com o código mais simples e depois refatore sem sair do verde; para bugs, reproduza primeiro.",
+      "aliases": [
+        "TDD",
+        "teste primeiro",
+        "test first",
+        "red green refactor",
+        "vermelho verde refatorar"
+      ]
+    },
+    {
+      "id": "flaky-test",
+      "label": "Teste instável (flaky)",
+      "lesson": "flaky-tests",
+      "summary": "Um teste que passa ou falha sem nenhuma mudança no código porque depende de tempo, aleatoriedade, ordem, estado compartilhado ou I/O real.",
+      "aliases": [
+        "flaky",
+        "teste flaky",
+        "teste não determinístico",
+        "nondeterministic test",
+        "falha intermitente",
+        "sleep em testes",
+        "sleep in tests"
+      ]
+    },
+    {
+      "id": "coverage",
+      "label": "Cobertura de código",
+      "lesson": "coverage-and-pyramid",
+      "summary": "A parcela das linhas ou ramificações que seus testes executaram: boa para achar código sem teste, mas uma meta ruim, porque executar não é verificar.",
+      "aliases": [
+        "cobertura de linhas",
+        "line coverage",
+        "cobertura de branches",
+        "branch coverage",
+        "JaCoCo",
+        "pytest-cov",
+        "coverage"
+      ]
+    },
+    {
+      "id": "test-pyramid",
+      "label": "Pirâmide de testes",
+      "lesson": "coverage-and-pyramid",
+      "summary": "Muitos testes unitários rápidos, menos testes de integração contra bancos de dados ou HTTP reais e poucos testes de ponta a ponta no topo.",
+      "aliases": [
+        "teste de integração",
+        "integration test",
+        "teste de ponta a ponta",
+        "end-to-end test",
+        "teste e2e",
+        "cone de sorvete",
+        "ice-cream cone"
+      ]
+    }
+  ],
+  "links": [
+    {
+      "from": "self-checking",
+      "to": "unit-test",
+      "label": "faz parte de"
+    },
+    {
+      "from": "arrange-act-assert",
+      "to": "unit-test",
+      "label": "estrutura"
+    },
+    {
+      "from": "one-behavior",
+      "to": "arrange-act-assert",
+      "label": "se apoia em"
+    },
+    {
+      "from": "parameterized-test",
+      "to": "edge-cases",
+      "label": "cobre"
+    },
+    {
+      "from": "exact-assertion",
+      "to": "self-checking",
+      "label": "reforça"
+    },
+    {
+      "from": "failure-message",
+      "to": "exact-assertion",
+      "label": "se apoia em"
+    },
+    {
+      "from": "one-behavior",
+      "to": "failure-message",
+      "label": "esclarece"
+    },
+    {
+      "from": "unit-test",
+      "to": "test-discovery",
+      "label": "precisa de"
+    },
+    {
+      "from": "test-isolation",
+      "to": "unit-test",
+      "label": "faz parte de"
+    },
+    {
+      "from": "fixture",
+      "to": "test-isolation",
+      "label": "fornece"
+    },
+    {
+      "from": "fixture",
+      "to": "arrange-act-assert",
+      "label": "faz parte de"
+    },
+    {
+      "from": "kotlin-test-idioms",
+      "to": "expected-exception",
+      "label": "se apoia em"
+    },
+    {
+      "from": "expected-exception",
+      "to": "edge-cases",
+      "label": "verifica"
+    },
+    {
+      "from": "stub",
+      "to": "test-double",
+      "label": "é um tipo de"
+    },
+    {
+      "from": "mock",
+      "to": "test-double",
+      "label": "é um tipo de"
+    },
+    {
+      "from": "stub",
+      "to": "mock",
+      "label": "contrasta com"
+    },
+    {
+      "from": "test-double",
+      "to": "dependency-injection",
+      "label": "precisa de"
+    },
+    {
+      "from": "test-double",
+      "to": "unit-test",
+      "label": "é usado(a) em"
+    },
+    {
+      "from": "patching",
+      "to": "dependency-injection",
+      "label": "é um plano B para"
+    },
+    {
+      "from": "patching",
+      "to": "test-double",
+      "label": "insere"
+    },
+    {
+      "from": "over-mocking",
+      "to": "behavior-not-implementation",
+      "label": "é o oposto de"
+    },
+    {
+      "from": "over-mocking",
+      "to": "mock",
+      "label": "usa mal"
+    },
+    {
+      "from": "tdd",
+      "to": "unit-test",
+      "label": "se apoia em"
+    },
+    {
+      "from": "tdd",
+      "to": "behavior-not-implementation",
+      "label": "precisa de"
+    },
+    {
+      "from": "tdd",
+      "to": "self-checking",
+      "label": "precisa de"
+    },
+    {
+      "from": "test-isolation",
+      "to": "flaky-test",
+      "label": "evita"
+    },
+    {
+      "from": "dependency-injection",
+      "to": "flaky-test",
+      "label": "evita"
+    },
+    {
+      "from": "coverage",
+      "to": "self-checking",
+      "label": "contrasta com"
+    },
+    {
+      "from": "coverage",
+      "to": "edge-cases",
+      "label": "revela lacunas em"
+    },
+    {
+      "from": "unit-test",
+      "to": "test-pyramid",
+      "label": "faz parte de"
+    }
+  ],
+  "units": [
+    {
+      "id": "foundations",
+      "title": "Fundamentos de testes",
+      "description": "O que torna um teste valioso, como estruturá-lo e quais casos escolher.",
+      "lessons": [
+        {
+          "id": "what-is-a-unit-test",
+          "title": "O que é um teste unitário (e por que se importar)",
+          "pareto": "core",
+          "minutes": 5,
+          "takeaway": "Um teste unitário é um programinha que verifica um comportamento em milissegundos — rápido, isolado, repetível e autoverificável — para você mudar o código sem medo.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Código que verifica código",
+              "body": "Um **teste unitário** é um pedacinho de código que executa um pedacinho do seu código — uma *unidade*, geralmente uma função ou classe — e confere o resultado automaticamente.\n\n```python\ndef add(a, b):\n    return a + b\n\ndef test_add():\n    assert add(2, 3) == 5\n```\n\nUm test runner (pytest, JUnit) executa todos os testes e informa **passou** ou **falhou**. Sem ler printouts, sem clicar pelo app."
+            },
+            {
+              "type": "explain",
+              "title": "Quatro propriedades de um bom teste unitário",
+              "body": "- **Rápido** — milissegundos cada um, então você pode rodar milhares a cada mudança\n- **Isolado** — sem rede, banco de dados ou arquivos compartilhados de verdade; um teste não pode quebrar outro\n- **Repetível** — mesmo resultado a cada execução, em qualquer máquina\n- **Autoverificável** — o próprio teste decide se passou ou falhou; ninguém precisa inspecionar a saída\n\nO retorno é a **segurança contra regressões**: quando você refatora ou adiciona uma funcionalidade, a suíte avisa em segundos se você quebrou algo que funcionava."
+            },
+            {
+              "type": "mcq",
+              "id": "q-self-checking",
+              "concepts": [
+                "self-checking"
+              ],
+              "prompt": "Qual destes **não** é um teste autoverificável?",
+              "choices": [
+                "`assert total([1, 2]) == 3`",
+                "`assertEquals(3, total(List.of(1, 2)));`",
+                "`print(total([1, 2]))` — e depois uma pessoa confere a saída a olho",
+                "`with pytest.raises(ValueError): parse_age(\"abc\")`"
+              ],
+              "answer": 2,
+              "explanation": "Um teste autoverificável carrega o resultado esperado, então o runner decide sozinho se passou ou falhou. Imprimir faz de uma *pessoa* o assert — ela se cansa, passa os olhos por cima e deixa escapar o único número errado."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-print-not-assert",
+              "concepts": [
+                "self-checking"
+              ],
+              "prompt": "`discount` está quebrada: VIPs ganham 2% de desconto em vez de 20%. O teste abaixo deveria pegar isso, mas a suíte informa `1 passed`. Clique na linha do **teste** que deixa o bug passar.",
+              "language": "python",
+              "code": "def discount(price, tier):\n    if tier == \"VIP\":\n        return price * 0.98\n    return price\n\ndef test_vip_gets_20_percent_off():\n    print(discount(100, \"VIP\"))",
+              "error": "1 passed\n(discount(100, \"VIP\") actually returns 98.0)",
+              "lines": [
+                7
+              ],
+              "fixes": [
+                "Mudar a linha 7 para `assert discount(100, \"VIP\") == 80`",
+                "Mudar a linha 7 para `assert discount(100, \"VIP\")`",
+                "Mudar a linha 7 para `assert discount(100, \"VIP\") is not None`",
+                "Mudar a linha 7 para `print(discount(100, \"VIP\") == 80)`"
+              ],
+              "answer": 0,
+              "hint": "O que o test runner faz com o que é impresso?",
+              "explanation": "O teste só **imprime** o resultado, então nunca pode falhar: ele não é autoverificável. Com `assert discount(100, \"VIP\") == 80`, o runner compara por você e informa `assert 98.0 == 80`. `assert discount(...)` e `is not None` passam para 98.0 (qualquer número diferente de zero conta como verdadeiro), e imprimir `False` ainda deixa a decisão para uma pessoa que não está olhando."
+            },
+            {
+              "type": "mcq",
+              "id": "q-not-unit",
+              "concepts": [
+                "unit-test"
+              ],
+              "prompt": "Um teste chama uma API de pagamento de verdade pela internet, leva 4 segundos e às vezes falha quando o Wi-Fi cai. Quais propriedades de um teste unitário ele quebra?",
+              "choices": [
+                "Apenas autoverificável",
+                "Rápido, isolado e repetível",
+                "Nenhuma — ele faz assert no resultado, então é um ótimo teste unitário",
+                "Apenas rápido"
+              ],
+              "answer": 1,
+              "explanation": "Ele é lento (segundos, não milissegundos), depende de um sistema externo (não é isolado) e o resultado depende da rede (não é repetível). Pode ser um teste de *integração* útil, mas um teste unitário trocaria a API de pagamento por um substituto."
+            },
+            {
+              "type": "example",
+              "title": "Segurança contra regressões em ação",
+              "problem": "Você tem o teste `assert discount(100, \"VIP\") == 80`. Meses depois, um colega “simplifica” `discount` e, sem querer, dá aos VIPs 2% de desconto em vez de 20%. O que acontece?",
+              "steps": [
+                "O colega roda a suíte — ou o CI roda sozinho a cada push.",
+                "`discount(100, \"VIP\")` agora devolve 98, então a asserção `98 == 80` falha.",
+                "O relatório mostra o nome do teste que falhou e os dois valores, apontando direto para o comportamento quebrado."
+              ],
+              "answer": "O bug é pego **em segundos, antes de ir para produção**. Os testes lembram como o código deve se comportar, então ninguém precisa lembrar."
+            },
+            {
+              "type": "mcq",
+              "id": "q-why-fast",
+              "concepts": [
+                "unit-test"
+              ],
+              "prompt": "Por que a velocidade importa tanto nos testes unitários?",
+              "choices": [
+                "Testes lentos produzem resultados errados",
+                "Os test runners se recusam a rodar testes mais lentos que um segundo",
+                "Testes rápidos precisam de menos asserts",
+                "Testes rápidos são rodados o tempo todo — a cada salvamento ou commit — então os bugs são pegos minutos depois de escritos"
+              ],
+              "answer": 3,
+              "explanation": "Uma suíte que roda em segundos é executada o tempo todo; uma que leva 20 minutos é executada “depois” (ou nunca). Quanto mais cedo um bug é pego, mais barato é corrigi-lo — você ainda lembra o que acabou de mudar."
+            }
+          ]
+        },
+        {
+          "id": "arrange-act-assert",
+          "title": "Arrange, Act, Assert — e bons nomes",
+          "pareto": "core",
+          "minutes": 6,
+          "takeaway": "Dê a todo teste o formato Arrange → Act → Assert, verifique um comportamento por teste e dê um nome para que a falha se explique sozinha.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Três partes",
+              "body": "Quase todo bom teste tem o mesmo formato:\n\n- **Arrange** (preparar) — monte as entradas e os objetos\n- **Act** (agir) — chame a única coisa que você está testando (geralmente uma linha só)\n- **Assert** (verificar) — confira o resultado\n\n```java\n@Test\nvoid withdrawReducesBalance() {\n    Account account = new Account(100);   // Arrange\n\n    account.withdraw(30);                 // Act\n\n    assertEquals(70, account.getBalance()); // Assert\n}\n```\n\nLinhas em branco entre as partes bastam; os comentários são opcionais."
+            },
+            {
+              "type": "mcq",
+              "id": "q-act-line",
+              "concepts": [
+                "arrange-act-assert"
+              ],
+              "prompt": "Qual linha é o passo **Act**?\n\n```python\ndef test_cart_total_includes_tax():\n    cart = Cart(tax_rate=0.10)          # line 1\n    cart.add(Item(\"book\", price=20))    # line 2\n    total = cart.total()                # line 3\n    assert total == pytest.approx(22)   # line 4\n```",
+              "choices": [
+                "Linha 1",
+                "Linha 2",
+                "Linha 3",
+                "Linha 4"
+              ],
+              "answer": 2,
+              "explanation": "As linhas 1–2 montam a situação (Arrange). A linha 3 chama o comportamento sobre o qual o teste trata, `total()` (Act). A linha 4 o verifica (Assert). Adicionar o item é *preparação* aqui, porque o teste é sobre o total, não sobre adicionar.",
+              "hint": "Que comportamento o nome do teste diz que ele verifica?"
+            },
+            {
+              "type": "trace",
+              "id": "q-trace-aaa-cart",
+              "concepts": [
+                "arrange-act-assert"
+              ],
+              "prompt": "O pytest roda este teste. Avance pelas três partes e preveja os valores quando perguntado.",
+              "language": "python",
+              "code": "def cart_total(cart, coupon):\n    return sum(cart) - coupon\n\ndef test_coupon_is_subtracted():\n    cart = []\n    cart.append(20)\n    cart.append(15)\n    coupon = 5\n\n    total = cart_total(cart, coupon)\n\n    assert total == 30",
+              "frames": [
+                {
+                  "line": 5,
+                  "vars": {
+                    "cart": "[]"
+                  },
+                  "note": "**Arrange:** monte as entradas."
+                },
+                {
+                  "line": 6,
+                  "vars": {
+                    "cart": "[20]"
+                  }
+                },
+                {
+                  "line": 7,
+                  "vars": {
+                    "cart": "[20, 15]"
+                  },
+                  "ask": "cart"
+                },
+                {
+                  "line": 8,
+                  "vars": {
+                    "cart": "[20, 15]",
+                    "coupon": "5"
+                  }
+                },
+                {
+                  "line": 10,
+                  "vars": {
+                    "cart": "[20, 15]",
+                    "coupon": "5",
+                    "total": "30"
+                  },
+                  "note": "**Act:** uma única chamada ao código sob teste.",
+                  "ask": "total"
+                },
+                {
+                  "line": 12,
+                  "vars": {
+                    "cart": "[20, 15]",
+                    "coupon": "5",
+                    "total": "30"
+                  },
+                  "note": "**Assert:** `30 == 30`, então o teste passa em silêncio."
+                }
+              ],
+              "explanation": "As linhas 5–8 **preparam** as entradas, a linha 10 é o único **act** (a chamada sob teste) e a linha 12 **verifica** o resultado: 20 + 15 − 5 = 30. Um `assert` que passa não faz nada; um que falha interrompe o teste com um `AssertionError`.",
+              "hint": "O carrinho tem 20 e 15; o cupom tira 5 da soma."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-act-too-early",
+              "concepts": [
+                "arrange-act-assert"
+              ],
+              "prompt": "`Cart.total()` funciona direito, mas este teste falha. Ele deveria passar: um livro de preço 20 mais 10% de imposto dá 22. Clique na linha com o bug.",
+              "language": "python",
+              "code": "def test_cart_total_includes_tax():\n    cart = Cart(tax_rate=0.10)\n    total = cart.total()\n    cart.add(Item(\"book\", price=20))\n    assert total == pytest.approx(22)",
+              "error": "FAILED test_cart_total_includes_tax - assert 0.0 == 22 ± 2.2e-05\n1 failed",
+              "lines": [
+                3,
+                4
+              ],
+              "fixes": [
+                "Mover a linha 3 para baixo da linha 4",
+                "Mudar a linha 2 para `cart = Cart(tax_rate=10)`",
+                "Mudar a linha 4 para `cart.add(Item(\"book\", price=22))`",
+                "Adicionar `cart.total()` acima da linha 5"
+              ],
+              "answer": 0,
+              "hint": "Classifique cada linha como Arrange, Act ou Assert. Elas estão nessa ordem?",
+              "explanation": "O Act (`cart.total()`) roda antes de o Arrange terminar, então soma um carrinho **vazio** e guarda 0.0. Adicionar o livro depois não muda o número que já está em `total`. Mover o Act para baixo do `add` dá Arrange → Act → Assert e um total de 22. Mudar a taxa de imposto ou o preço ainda soma um carrinho vazio, e chamar `cart.total()` de novo sem guardar o resultado deixa `total` em 0.0."
+            },
+            {
+              "type": "explain",
+              "title": "Um comportamento por teste",
+              "body": "Um teste deve verificar **um comportamento**. Um teste que faz act-assert-act-assert-act-assert tem dois problemas:\n\n- O primeiro assert que falha interrompe o teste, então tudo o que vem depois fica **sem verificação**.\n- O nome não consegue descrever tudo, então uma falha diz pouco.\n\nVários asserts não têm problema quando descrevem *um* resultado (por exemplo, as duas coordenadas de um ponto devolvido). Várias *ações* normalmente significam que você quer vários testes."
+            },
+            {
+              "type": "example",
+              "title": "Dividindo um teste que faz coisa demais",
+              "problem": "```python\ndef test_stack():\n    s = Stack()\n    s.push(1)\n    assert s.peek() == 1\n    s.pop()\n    assert s.is_empty()\n    with pytest.raises(IndexError):\n        s.pop()\n```",
+              "steps": [
+                "Identifique os comportamentos separados: o peek mostra o último push, remover o último item esvazia a pilha, e remover de uma pilha vazia lança exceção.",
+                "Dê a cada um o seu próprio teste, com o seu próprio Arrange: `test_peek_returns_last_pushed_item`, `test_pop_last_item_leaves_stack_empty`, `test_pop_on_empty_stack_raises_index_error`.",
+                "Agora, se o pop em pilha vazia quebrar, falha exatamente um teste, e o nome dele diz o que está errado."
+              ],
+              "answer": "Três testes pequenos, um Act cada. Uma falha aponta para **um comportamento**, em vez de “algo em algum lugar do test_stack”."
+            },
+            {
+              "type": "mcq",
+              "id": "q-multi-act",
+              "concepts": [
+                "one-behavior"
+              ],
+              "prompt": "Um teste longo falha no **primeiro** assert. Depois dele ainda há quatro pares act-assert. O que você descobre sobre esses comportamentos posteriores?",
+              "choices": [
+                "Nada — o teste parou no primeiro assert que falhou",
+                "Todos passaram",
+                "Todos falharam também",
+                "O runner tenta cada um deles separadamente"
+              ],
+              "answer": 0,
+              "explanation": "Um assert que falha lança uma exceção (`AssertionError` / `AssertionFailedError`) e encerra o teste ali mesmo. As verificações seguintes nunca rodaram — elas também podem estar quebradas, e você só vai saber depois de consertar a primeira. Testes separados reportam de forma independente."
+            },
+            {
+              "type": "explain",
+              "title": "Nomes que explicam falhas",
+              "body": "Quando um teste falha, o nome dele é a primeira coisa que você lê. Bons nomes dizem **a situação** e **o resultado esperado**:\n\n- `test_withdraw_more_than_balance_raises_error`\n- `emptyCartHasZeroTotal()`\n- Ruins: `test1`, `testWithdraw`, `testCartWorks`\n\nUm modelo útil: *ação_situação_resultadoEsperado*. Nomes longos não têm problema — você nunca os digita em outro lugar."
+            },
+            {
+              "type": "mcq",
+              "id": "q-best-name",
+              "concepts": [
+                "one-behavior"
+              ],
+              "prompt": "Qual nome de teste é mais útil quando ele falha?",
+              "choices": [
+                "`testParse`",
+                "`test_parse_works_correctly`",
+                "`test_parse_2`",
+                "`test_parse_date_with_month_13_raises_value_error`"
+              ],
+              "answer": 3,
+              "explanation": "Ele diz a situação da entrada (mês 13) e o comportamento esperado (lança ValueError) sem você abrir o arquivo. “Funciona corretamente” não diz nada — todo teste afirma isso."
+            }
+          ]
+        },
+        {
+          "id": "what-to-test",
+          "title": "O que testar: o 80/20 dos casos de teste",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "Para cada comportamento, teste o caminho feliz, os limites e os casos de erro — pela API pública, nunca pelos detalhes internos privados.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Três tipos de caso",
+              "body": "Você não consegue testar todas as entradas. Estes casos pegam a maior parte dos bugs:\n\n- **Caminho feliz** — uma entrada normal e típica funciona\n- **Limites e casos extremos** — exatamente no limite e logo dos dois lados dele; vazio, zero, um, negativo, `null`/`None`, enorme\n- **Casos de erro** — uma entrada inválida é rejeitada do jeito certo (uma exceção, um resultado de erro)\n\nOs bugs se concentram nos limites: escrever `>` onde você queria `>=` é um dos bugs mais comuns que existem."
+            },
+            {
+              "type": "example",
+              "title": "Escolhendo casos para uma regra",
+              "problem": "`is_adult(age)` deve devolver `True` para idades de 18 anos em diante e lançar `ValueError` para idades negativas. Quais entradas você deve testar?",
+              "steps": [
+                "Caminho feliz: um valor claramente típico de cada lado — 30 → `True`, 10 → `False`.",
+                "Limite: a borda exata e o vizinho dela — 18 → `True`, 17 → `False`. Também o 0, a menor idade válida.",
+                "Caso de erro: -1 → lança `ValueError`."
+              ],
+              "answer": "Cerca de seis testes (10, 17, 18, 30, 0, -1) pegam quase todo bug realista desta função — inclusive `>` escrito no lugar de `>=`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-off-by-one",
+              "concepts": [
+                "edge-cases"
+              ],
+              "prompt": "A implementação é `return age > 18` (o bug: deveria ser `>=`). Qual teste o pega?",
+              "choices": [
+                "`is_adult(30)` é `True`",
+                "`is_adult(18)` é `True`",
+                "`is_adult(5)` é `False`",
+                "`is_adult(17)` é `False`"
+              ],
+              "answer": 1,
+              "explanation": "Só em exatamente 18 o `>` e o `>=` discordam. 30, 5 e 17 dão a mesma resposta nos dois, então esses testes passam com o bug ainda lá. Por isso os testes de limite valem a pena."
+            },
+            {
+              "type": "mcq",
+              "id": "q-missing-edge",
+              "concepts": [
+                "edge-cases"
+              ],
+              "prompt": "Testes para `average(numbers)`: `average([2, 4]) == 3` e `average([5]) == 5`. Qual caso extremo importante está faltando?",
+              "choices": [
+                "`average([1, 2, 3])`",
+                "`average([10, 20])`",
+                "Uma lista de 1.000 números",
+                "Uma lista vazia"
+              ],
+              "answer": 3,
+              "explanation": "Dividir por `len([])` é divisão por zero — o crash clássico. Decida o que *deveria* acontecer (lançar um erro claro? devolver 0?) e fixe isso com um teste. As outras opções são só mais caminhos felizes.",
+              "hint": "Pense em “vazio, zero, um, vários”."
+            },
+            {
+              "type": "numeric",
+              "id": "q-boundary-length",
+              "concepts": [
+                "edge-cases"
+              ],
+              "prompt": "As senhas devem ter de 8 a 64 caracteres (inclusive). Você já testa os tamanhos 7, 8 e 64. Qual tamanho testar em seguida para cobrir o lado **inválido** do outro limite?",
+              "answer": 65,
+              "explanation": "Cada limite merece um teste dos dois lados: 7 (inválido) / 8 (válido) embaixo, 64 (válido) / **65** (inválido) em cima. Um `<= 64` escrito como `< 65` está certo; um escrito como `<= 65` só é pego pelo 65."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-upper-boundary",
+              "concepts": [
+                "edge-cases"
+              ],
+              "prompt": "As senhas devem ter de 8 a 64 caracteres (inclusive). Os três testes passam, mas usuários com uma senha de 64 caracteres são rejeitados. Clique na linha com o bug.",
+              "language": "python",
+              "code": "def is_valid_password(pw):\n    return 8 <= len(pw) < 64\n\ndef test_typical_length_is_valid():\n    assert is_valid_password(\"a\" * 12)\n\ndef test_eight_characters_is_valid():\n    assert is_valid_password(\"a\" * 8)\n\ndef test_seven_characters_is_too_short():\n    assert not is_valid_password(\"a\" * 7)",
+              "error": "3 passed\n(but is_valid_password(\"a\" * 64) returns False)",
+              "lines": [
+                2
+              ],
+              "fixes": [
+                "Mudar a linha 2 para `return 8 <= len(pw) <= 64`",
+                "Mudar a linha 2 para `return 8 < len(pw) <= 64`",
+                "Mudar a linha 2 para `return 7 <= len(pw) < 65`",
+                "Mudar a linha 2 para `return 8 <= len(pw) <= 65`"
+              ],
+              "answer": 0,
+              "hint": "Qual limite os testes nunca tocam?",
+              "explanation": "`< 64` exclui o próprio 64, o clássico erro por um. Os testes só sondam o limite **inferior** (7 e 8) e um valor típico, então o superior fica sem verificação. `<= 64` aceita exatamente de 8 a 64. `8 < len(pw)` agora rejeita o 8, `7 <= ...` aceita o 7, e `<= 65` aceita o 65. Fixe isso adicionando testes para 64 (válido) e 65 (inválido)."
+            },
+            {
+              "type": "explain",
+              "title": "Teste comportamento, não implementação",
+              "body": "Teste pela **API pública** — os métodos que quem chama de verdade usa — e confira **resultados observáveis**: valores de retorno, estado que você consegue ler de volta, exceções lançadas, mensagens enviadas a colaboradores.\n\nNão chame helpers privados diretamente, e não faça assert de *como* o resultado foi calculado (qual lista interna foi usada, quantas vezes um helper rodou). Esses testes quebram a cada refatoração mesmo que nada esteja errado, e deixam as pessoas com medo de melhorar o código."
+            },
+            {
+              "type": "mcq",
+              "id": "q-brittle",
+              "concepts": [
+                "behavior-not-implementation"
+              ],
+              "prompt": "Qual teste tem mais chance de quebrar durante uma refatoração inofensiva de uma função de ordenação?",
+              "choices": [
+                "Verifica que `sort([3, 1, 2])` devolve `[1, 2, 3]`",
+                "Verifica que ordenar uma lista vazia devolve uma lista vazia",
+                "Verifica que `sort(None)` lança um `TypeError`",
+                "Chama diretamente o helper privado `_partition()` e verifica qual índice de pivô ele escolhe"
+              ],
+              "answer": 3,
+              "explanation": "Troque o algoritmo de quicksort para merge sort e `_partition` desaparece — esse teste quebra mesmo com a ordenação funcionando perfeitamente. Os outros três testam *o que* o sort promete, então sobrevivem a qualquer reescrita correta."
+            }
+          ]
+        },
+        {
+          "id": "assertions-and-failures",
+          "title": "Boas asserções e como ler falhas",
+          "pareto": "core",
+          "minutes": 6,
+          "takeaway": "Verifique o valor esperado exato com a asserção mais específica disponível e leia toda falha como “esperava X, mas veio Y” antes de mexer no código.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Verifique com precisão",
+              "body": "Um teste é tão bom quanto as suas asserções. As fracas deixam bugs passarem:\n\n- `assert result is not None` — passa para quase qualquer resposta errada\n- `assertTrue(items.size() > 0)` — passa com os itens errados\n\nPrefira o **valor esperado exato**: `assert result == [1, 2, 3]`, `assertEquals(\"Ada\", user.getName())`.\n\nUse também a asserção mais específica que existir: `assertEquals(a, b)` é melhor que `assertTrue(a.equals(b))` porque a falha mostra os dois valores em vez de só “expected true”."
+            },
+            {
+              "type": "mcq",
+              "id": "q-weak-assert",
+              "concepts": [
+                "exact-assertion"
+              ],
+              "prompt": "`slugify(\"Hello World\")` deveria devolver `\"hello-world\"`. Uma versão com bug devolve `\"hello world\"`. Qual teste pega o bug?",
+              "choices": [
+                "`assert slugify(\"Hello World\") is not None`",
+                "`assert isinstance(slugify(\"Hello World\"), str)`",
+                "`assert len(slugify(\"Hello World\")) == 11`",
+                "`assert slugify(\"Hello World\") == \"hello-world\"`"
+              ],
+              "answer": 3,
+              "explanation": "`\"hello world\"` é uma string não-None de tamanho 11 — exatamente como `\"hello-world\"`. As três asserções fracas passam com o bug. Só comparar com o valor esperado exato o pega."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-expected-from-code",
+              "concepts": [
+                "exact-assertion"
+              ],
+              "prompt": "`total_with_tax(100, 0.2)` deveria devolver 120, mas devolve 100.2. O teste abaixo ainda passa. Clique na linha do **teste** que deixa o bug passar.",
+              "language": "python",
+              "code": "def total_with_tax(price, rate):\n    return price + rate\n\ndef test_total_with_tax():\n    expected = total_with_tax(100, 0.2)\n    assert total_with_tax(100, 0.2) == expected",
+              "error": "1 passed\n(total_with_tax(100, 0.2) actually returns 100.2)",
+              "lines": [
+                5
+              ],
+              "fixes": [
+                "Mudar a linha 5 para `expected = 120`",
+                "Mudar a linha 6 para `assert total_with_tax(100, 0.2) == pytest.approx(expected)`",
+                "Mudar a linha 5 para `expected = 100 + 0.2`",
+                "Mudar a linha 6 para `assert total_with_tax(100, 0.2) > 100`"
+              ],
+              "answer": 0,
+              "hint": "De onde vem o valor esperado?",
+              "explanation": "O valor esperado é calculado **pelo próprio código sob teste**, então o teste compara a função com ela mesma e passa seja qual for o resultado. Escreva o valor esperado exato à mão: com `expected = 120` o teste falha com `assert 100.2 == 120`, como deve. `approx` ainda compara a função com ela mesma, `100 + 0.2` copia o bug para dentro do teste, e `> 100` é uma asserção fraca que 100.2 satisfaz."
+            },
+            {
+              "type": "explain",
+              "title": "Lendo uma mensagem de falha",
+              "body": "JUnit:\n\n```\nexpected: <70> but was: <100>\n```\n\npytest:\n\n```\n>       assert account.balance == 70\nE       assert 100 == 70\nE        +  where 100 = <Account object>.balance\n```\n\nLeia como uma história: *o teste esperava 70; o código produziu 100*. Antes de mudar qualquer coisa, pergunte: o **código** está errado, ou a **expectativa** do teste é que está errada? Depois olhe o nome do teste e a linha do Act para ver qual comportamento quebrou."
+            },
+            {
+              "type": "example",
+              "title": "Diagnosticando uma falha",
+              "problem": "Depois de `account.withdraw(30)` em uma conta com 100, o `assertEquals(70, account.getBalance())` falha com `expected: <70> but was: <100>`. Onde você olha?",
+              "steps": [
+                "Esperava 70, veio 100: o saldo **não mudou nada**.",
+                "Então `withdraw` rodou, mas não teve efeito. Um cálculo errado daria outra coisa, como 130 (somou em vez de subtrair).",
+                "Procure em `withdraw` um resultado que nunca é guardado — por exemplo, `balance - amount;` calculado mas não atribuído de volta a `balance`."
+              ],
+              "answer": "O valor obtido já estreita o bug antes mesmo de você abrir o código: **100 significa “nada aconteceu”**."
+            },
+            {
+              "type": "mcq",
+              "id": "q-swapped",
+              "concepts": [
+                "failure-message"
+              ],
+              "prompt": "No JUnit, alguém escreve `assertEquals(account.getBalance(), 70)`, e o saldo na verdade é 100. O que a falha diz?",
+              "choices": [
+                "`expected: <70> but was: <100>`",
+                "`expected: <100> but was: <70>`",
+                "Nada — não compila",
+                "Nada — o teste passa"
+              ],
+              "answer": 1,
+              "explanation": "A assinatura do JUnit é `assertEquals(expected, actual)`: ele trata o *primeiro* argumento como o valor esperado. Com os argumentos trocados o teste ainda falha, mas a mensagem diz que se esperava 100 — mandando você procurar na direção errada.",
+              "hint": "Qual argumento o JUnit chama de “expected”?"
+            },
+            {
+              "type": "mcq",
+              "id": "q-float",
+              "concepts": [
+                "exact-assertion"
+              ],
+              "prompt": "`assert 0.1 + 0.2 == 0.3` falha em Python. Qual é a correção certa?",
+              "choices": [
+                "Apagar o teste — a matemática de ponto flutuante é imprevisível",
+                "`assert 0.1 + 0.2 == pytest.approx(0.3)`",
+                "`assert str(0.1 + 0.2) == \"0.3\"`",
+                "`assert round(0.1 + 0.2) == 0`"
+              ],
+              "answer": 1,
+              "explanation": "O ponto flutuante binário não consegue representar 0.1 com exatidão, então a soma é `0.30000000000000004`. Compare com uma tolerância: `pytest.approx` no pytest, ou `assertEquals(0.3, x, 1e-9)` (um delta) no JUnit. A versão com `str` ainda falha, e arredondar para 0 passaria para quase qualquer coisa."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tools",
+      "title": "Ferramentas na prática",
+      "description": "O punhado de recursos do JUnit 5 e do pytest que você vai usar todo dia — e também Kotlin.",
+      "lessons": [
+        {
+          "id": "junit5-essentials",
+          "title": "O essencial do JUnit 5",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "JUnit 5 em poucas palavras: métodos `@Test`, `assertEquals(expected, actual)`, `assertThrows` para erros, `@BeforeEach` para preparação nova e `@ParameterizedTest` para tabelas de casos.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Uma classe de teste do JUnit 5",
+              "body": "```java\nimport org.junit.jupiter.api.Test;\nimport static org.junit.jupiter.api.Assertions.assertEquals;\n\nclass CalculatorTest {\n    @Test\n    void addsTwoNumbers() {\n        Calculator calc = new Calculator();\n        assertEquals(5, calc.add(2, 3));\n    }\n}\n```\n\n- Marque cada teste com `@Test`, de `org.junit.jupiter.api`. Os métodos retornam `void` e não precisam ser `public`.\n- As asserções são métodos estáticos de `Assertions`; a ordem é **(expected, actual)**.\n- As classes de teste ficam em `src/test/java`, por convenção com nome terminado em `...Test`, onde o Maven e o Gradle as encontram."
+            },
+            {
+              "type": "explain",
+              "title": "Exceções e preparação nova",
+              "body": "```java\nprivate ShoppingCart cart;\n\n@BeforeEach\nvoid setUp() {\n    cart = new ShoppingCart();\n}\n\n@Test\n@DisplayName(\"rejects a negative quantity\")\nvoid rejectsNegativeQuantity() {\n    IllegalArgumentException ex = assertThrows(\n        IllegalArgumentException.class,\n        () -> cart.add(\"apple\", -1));\n    assertEquals(\"quantity must be positive\", ex.getMessage());\n}\n```\n\n- `@BeforeEach` roda antes de **cada** teste, então cada um começa do zero.\n- `assertThrows` executa a lambda, falha se ela não lançar aquele tipo e devolve a exceção para você conferir a mensagem.\n- `@DisplayName` define um nome legível para os relatórios."
+            },
+            {
+              "type": "mcq",
+              "id": "q-junit-throws",
+              "concepts": [
+                "expected-exception"
+              ],
+              "prompt": "Qual linha testa corretamente que `parseAge(\"abc\")` lança `NumberFormatException`?",
+              "choices": [
+                "`assertEquals(NumberFormatException.class, parseAge(\"abc\"));`",
+                "`try { parseAge(\"abc\"); } catch (NumberFormatException e) { }`",
+                "`assertThrows(NumberFormatException.class, () -> parseAge(\"abc\"));`",
+                "`assertThrows(parseAge(\"abc\"), NumberFormatException.class);`"
+              ],
+              "answer": 2,
+              "explanation": "A lambda deixa o JUnit chamar `parseAge` *dentro* do seu próprio try/catch. Chamar `parseAge(\"abc\")` direto como argumento lança a exceção antes de qualquer asserção rodar (e a versão com os argumentos trocados nem compila). O try/catch sem asserção passa mesmo quando **nada** é lançado — o clássico teste silencioso."
+            },
+            {
+              "type": "mcq",
+              "id": "q-shared-state",
+              "concepts": [
+                "test-isolation"
+              ],
+              "prompt": "Um `cart` é criado uma única vez em um método `@BeforeAll static` e compartilhado pela classe. O Teste A adiciona um item; o Teste B verifica que o carrinho está vazio. Qual é o risco?",
+              "choices": [
+                "O Teste A falha",
+                "O Teste B passa ou falha dependendo de qual teste roda primeiro",
+                "O JUnit se recusa a compilar a classe",
+                "Nenhum — o JUnit reinicia os campos estáticos entre os testes"
+              ],
+              "answer": 1,
+              "explanation": "Estado mutável compartilhado liga os testes pela ordem de execução, e você não deve confiar na ordem dos métodos do JUnit. Crie o carrinho no `@BeforeEach` para cada teste ter o seu. Reserve o `@BeforeAll` para preparações caras e *somente leitura*."
+            },
+            {
+              "type": "explain",
+              "title": "Testes parametrizados",
+              "body": "```java\n@ParameterizedTest\n@ValueSource(ints = {2, 4, 100})\nvoid evenNumbersAreEven(int n) {\n    assertTrue(MathUtils.isEven(n));\n}\n\n@ParameterizedTest\n@CsvSource({\n    \"1, 2, 3\",\n    \"0, 0, 0\",\n    \"-5, 5, 0\"\n})\nvoid adds(int a, int b, int expected) {\n    assertEquals(expected, calc.add(a, b));\n}\n```\n\nUm método, vários casos — cada linha roda e é reportada como um teste próprio. As anotações ficam no `junit-jupiter-params`, que a dependência usual `junit-jupiter` já inclui."
+            },
+            {
+              "type": "numeric",
+              "id": "q-csv-count",
+              "concepts": [
+                "parameterized-test"
+              ],
+              "prompt": "Quantas execuções de teste isto produz?\n\n```java\n@ParameterizedTest\n@CsvSource({\"3, 4, 7\", \"10, -2, 8\"})\nvoid adds(int a, int b, int expected) { ... }\n```",
+              "answer": 2,
+              "explanation": "Cada string em `@CsvSource` é uma linha, e cada linha é uma execução. Duas strings → **2** execuções (as vírgulas *dentro* de uma string separam os três argumentos).",
+              "hint": "Conte as strings, não os números."
+            },
+            {
+              "type": "example",
+              "title": "Transformando copiar e colar em uma tabela",
+              "problem": "Você tem três testes quase idênticos: `isLeapYear(2024)` é verdadeiro, `isLeapYear(1900)` é falso, `isLeapYear(2000)` é verdadeiro. Reescreva-os como um único teste parametrizado.",
+              "steps": [
+                "Identifique o que varia: o ano e o resultado esperado. Eles viram os parâmetros do método.",
+                "Cada caso vira uma linha CSV: `\"2024, true\"`, `\"1900, false\"`, `\"2000, true\"`.",
+                "O corpo é uma única asserção. O JUnit converte o texto `true` em um `boolean` para você."
+              ],
+              "answer": "```java\n@ParameterizedTest\n@CsvSource({\"2024, true\", \"1900, false\", \"2000, true\"})\nvoid leapYears(int year, boolean expected) {\n    assertEquals(expected, isLeapYear(year));\n}\n```"
+            },
+            {
+              "type": "mcq",
+              "id": "q-ignored-test",
+              "concepts": [
+                "test-discovery"
+              ],
+              "prompt": "Um método de teste nunca roda — ele não aparece nem como aprovado **nem** como reprovado. Seu projeto usa apenas JUnit 5. Qual é a causa mais provável?",
+              "choices": [
+                "Ele não tem `@DisplayName`",
+                "Ele é package-private em vez de `public`",
+                "Ele usa `assertEquals` em vez de `assertTrue`",
+                "Ele está anotado com o `org.junit.Test` do JUnit 4 em vez de `org.junit.jupiter.api.Test`"
+              ],
+              "answer": 3,
+              "explanation": "O motor do JUnit 5 só procura anotações Jupiter; um `@Test` do JUnit 4 é ignorado em silêncio, a menos que o motor “vintage” esteja instalado. Um import automático errado é um jeito fácil de ter um teste que nunca roda. Métodos package-private funcionam no JUnit 5, e `@DisplayName` é opcional.",
+              "hint": "Confira a linha do import."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-csv-row",
+              "concepts": [
+                "parameterized-test"
+              ],
+              "prompt": "`Years.isLeapYear` segue as regras reais do calendário e está correta, mas este teste parametrizado falha. Clique na linha com o bug.",
+              "language": "java",
+              "code": "@ParameterizedTest\n@CsvSource({\n    \"2024, true\",\n    \"1900, false\",\n    \"2000, false\"\n})\nvoid leapYears(int year, boolean expected) {\n    assertEquals(expected, Years.isLeapYear(year));\n}",
+              "error": "2 tests successful\n1 tests failed\norg.opentest4j.AssertionFailedError: expected: <false> but was: <true>",
+              "lines": [
+                5
+              ],
+              "fixes": [
+                "Mudar a linha 5 para `\"2000, true\"`",
+                "Mudar a linha 8 para `assertEquals(Years.isLeapYear(year), expected);`",
+                "Mudar a linha 7 para `void leapYears(int year, Boolean expected) {`",
+                "Mudar a linha 4 para `\"1900, true\",`"
+              ],
+              "answer": 0,
+              "hint": "Anos de século só são bissextos quando divisíveis por 400.",
+              "explanation": "O código está certo; os **dados do teste** é que estão errados. 2000 é divisível por 400, então é bissexto: a linha deveria ser `\"2000, true\"`. A falha diz que o teste esperava `false` e o código devolveu `true`, e só duas linhas esperam `false`. 1900 realmente não é bissexto (divisível por 100, mas não por 400), então mudar essa linha cria uma segunda falha. Trocar os argumentos do `assertEquals` só inverte a mensagem, e `Boolean` em vez de `boolean` não muda nada."
+            }
+          ]
+        },
+        {
+          "id": "pytest-essentials",
+          "title": "O essencial do pytest",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "O pytest coleta funções `test_`, usa `assert` simples, injeta fixtures pelo nome do parâmetro e oferece `parametrize` para tabelas e `pytest.raises` para erros.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Funções simples, assert simples",
+              "body": "```python\n# test_pricing.py\nimport pytest\nfrom pricing import apply_discount\n\ndef test_ten_percent_discount():\n    assert apply_discount(200, 0.10) == pytest.approx(180)\n```\n\n- **Descoberta:** arquivos chamados `test_*.py` ou `*_test.py`; funções cujo nome começa com `test` (e também métodos de classes `Test...`).\n- Use um `assert` simples. O pytest o reescreve para que a falha mostre os dois lados da comparação.\n- Rode `pytest` na pasta do projeto; `pytest -k discount` roda só os testes cujo nome combina."
+            },
+            {
+              "type": "mcq",
+              "id": "q-discovery",
+              "concepts": [
+                "test-discovery"
+              ],
+              "prompt": "Em `test_cart.py`, qual função o pytest vai coletar e rodar como teste?",
+              "choices": [
+                "`def check_total():`",
+                "`def total_test():`",
+                "`def test_total():`",
+                "`def verify_total():`"
+              ],
+              "answer": 2,
+              "explanation": "*Funções* de teste precisam começar com `test`. O padrão `*_test` vale para nomes de arquivo, não de funções — então `total_test` é ignorada em silêncio como uma função auxiliar comum."
+            },
+            {
+              "type": "explain",
+              "title": "Fixtures",
+              "body": "```python\nimport pytest\n\n@pytest.fixture\ndef cart():\n    return Cart(tax_rate=0.10)\n\ndef test_empty_cart_total_is_zero(cart):\n    assert cart.total() == 0\n\ndef test_total_includes_tax(cart):\n    cart.add(Item(\"book\", price=20))\n    assert cart.total() == pytest.approx(22)\n```\n\nUma **fixture** é um código de preparação que o pytest injeta casando o **nome do parâmetro**. Por padrão, ela roda de novo a cada teste, então cada um recebe um `cart` novo. Use `yield` em vez de `return` para rodar uma limpeza depois do teste; coloque fixtures compartilhadas em `conftest.py`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-fixture-fresh",
+              "concepts": [
+                "fixture",
+                "test-isolation"
+              ],
+              "prompt": "Usando a fixture acima (escopo padrão): o Teste A adiciona um item ao `cart`. O Teste B, que roda depois, verifica `cart.total() == 0`. O B passa?",
+              "choices": [
+                "Não — o B enxerga o item do A, porque as fixtures são criadas uma vez por arquivo",
+                "Sim — a função da fixture roda de novo a cada teste, então o B recebe um carrinho novo e vazio",
+                "Só se o B por acaso rodar antes do A",
+                "Não — dois testes não podem compartilhar uma fixture"
+              ],
+              "answer": 1,
+              "explanation": "O escopo padrão de uma fixture é `\"function\"`: um valor novo por teste. Escopos maiores (`scope=\"module\"`, `\"session\"`) compartilham um único valor — útil para preparações caras e somente leitura, arriscado para qualquer coisa que um teste modifique."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-fixture-scope",
+              "concepts": [
+                "fixture",
+                "test-isolation"
+              ],
+              "prompt": "Cada teste deveria receber o seu próprio carrinho novo, então os dois testes deveriam passar. Em vez disso, o segundo falha. Clique na linha com o bug.",
+              "language": "python",
+              "code": "@pytest.fixture(scope=\"module\")\ndef cart():\n    return Cart(tax_rate=0.10)\n\ndef test_total_includes_tax(cart):\n    cart.add(Item(\"book\", price=20))\n    assert cart.total() == pytest.approx(22)\n\ndef test_empty_cart_total_is_zero(cart):\n    assert cart.total() == 0",
+              "error": "FAILED test_empty_cart_total_is_zero - assert 22.0 == 0\n1 failed, 1 passed",
+              "lines": [
+                1
+              ],
+              "fixes": [
+                "Mudar a linha 1 para `@pytest.fixture`",
+                "Mudar a linha 1 para `@pytest.fixture(scope=\"session\")`",
+                "Mudar a linha 3 para `yield Cart(tax_rate=0.10)`",
+                "Mudar a linha 10 para `assert cart.total() == pytest.approx(0)`"
+              ],
+              "answer": 0,
+              "hint": "Com que frequência uma fixture com `scope=\"module\"` roda?",
+              "explanation": "`scope=\"module\"` cria **um** carrinho para o arquivo inteiro, então o segundo teste enxerga o livro que o primeiro adicionou. O escopo padrão (`\"function\"`) roda a fixture de novo a cada teste. `\"session\"` compartilha o carrinho de forma ainda mais ampla, `yield` só abre um lugar para a limpeza (o carrinho continua compartilhado), e `approx(0)` não transforma 22 em 0."
+            },
+            {
+              "type": "explain",
+              "title": "Erros e tabelas",
+              "body": "```python\ndef test_negative_price_rejected():\n    with pytest.raises(ValueError, match=\"negative\"):\n        apply_discount(-5, 0.10)\n\n@pytest.mark.parametrize(\"price, rate, expected\", [\n    (200, 0.10, 180),\n    (100, 0, 100),\n    (50, 1, 0),\n])\ndef test_apply_discount(price, rate, expected):\n    assert apply_discount(price, rate) == pytest.approx(expected)\n```\n\n- `pytest.raises` reprova o teste se o bloco **não** lançar aquela exceção; `match` confere a mensagem com uma regex.\n- `parametrize` roda o teste uma vez por tupla e reporta cada caso separadamente."
+            },
+            {
+              "type": "mcq",
+              "id": "q-raises-dead-code",
+              "concepts": [
+                "expected-exception"
+              ],
+              "prompt": "O que há de errado neste teste?\n\n```python\ndef test_parse_rejects_text():\n    with pytest.raises(ValueError):\n        result = parse_age(\"abc\")\n        assert result is None\n```",
+              "choices": [
+                "`pytest.raises` precisa que a função seja passada como lambda",
+                "O `assert` depois da chamada que lança exceção nunca roda, então é código morto fingindo verificar algo",
+                "`ValueError` precisa ser importado de `pytest`",
+                "Nada — é um bom teste"
+              ],
+              "answer": 1,
+              "explanation": "Quando `parse_age` lança a exceção, o controle sai direto do bloco `with`, então o assert é pulado. Deixe dentro do `pytest.raises` apenas a chamada que deve lançar; coloque verificações adicionais depois do bloco (por exemplo, sobre o `ExceptionInfo` de `as exc_info`).",
+              "hint": "Acompanhe o que acontece na linha em que a exceção é lançada."
+            },
+            {
+              "type": "example",
+              "title": "Uma tabela de limites no pytest",
+              "problem": "Transforme os casos de `is_adult` — 10, 17, 18, 30, mais -1 lançando `ValueError` — em testes do pytest.",
+              "steps": [
+                "Os casos válidos têm o mesmo formato (entrada, bool esperado), então vão em uma única tabela de `parametrize`.",
+                "O caso de erro tem outro formato — ele lança exceção — então ganha o seu próprio teste com `pytest.raises`.",
+                "Cada tupla é reportada separadamente, por exemplo `test_is_adult[18-True]`, então uma falha aponta a entrada exata."
+              ],
+              "answer": "```python\n@pytest.mark.parametrize(\"age, expected\", [\n    (10, False), (17, False), (18, True), (30, True),\n])\ndef test_is_adult(age, expected):\n    assert is_adult(age) is expected\n\ndef test_negative_age_raises():\n    with pytest.raises(ValueError):\n        is_adult(-1)\n```"
+            },
+            {
+              "type": "text",
+              "id": "q-parametrize-name",
+              "concepts": [
+                "parameterized-test"
+              ],
+              "prompt": "Preencha a lacuna: `@pytest.mark.______(\"x, expected\", [(1, 2), (2, 4)])`",
+              "accept": [
+                "parametrize",
+                "mark.parametrize",
+                "pytest.mark.parametrize"
+              ],
+              "explanation": "É `parametrize` — repare na grafia do pytest, *não* “parameterize”. O pytest rejeita as grafias erradas mais comuns com um erro, em vez de ignorá-las em silêncio."
+            }
+          ]
+        },
+        {
+          "id": "kotlin-testing",
+          "title": "Testes em Kotlin",
+          "pareto": "extra",
+          "minutes": 5,
+          "takeaway": "Kotlin roda no mesmo motor do JUnit 5; adicione nomes de teste entre crases e asserções do `kotlin.test`, como `assertFailsWith`, para testes idiomáticos.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Mesmo motor, sintaxe mais agradável",
+              "body": "```kotlin\nimport org.junit.jupiter.api.Test\nimport kotlin.test.assertEquals\n\nclass PriceCalculatorTest {\n    @Test\n    fun `applies ten percent discount`() {\n        val calc = PriceCalculator()\n        assertEquals(90, calc.discounted(100, percent = 10))\n    }\n}\n```\n\n- Testes em Kotlin normalmente rodam no **JUnit 5**: os mesmos `@Test`, `@BeforeEach`, `@ParameterizedTest`.\n- **Nomes entre crases** transformam o nome do teste em uma frase legível (na JVM).\n- `kotlin.test` adiciona asserções amigáveis ao Kotlin. No Gradle: `testImplementation(kotlin(\"test\"))` mais `useJUnitPlatform()` na task `test`."
+            },
+            {
+              "type": "explain",
+              "title": "Exceções do jeito Kotlin",
+              "body": "```kotlin\n@Test\nfun `rejects negative quantity`() {\n    val cart = ShoppingCart()\n    val ex = assertFailsWith<IllegalArgumentException> {\n        cart.add(\"apple\", -1)\n    }\n    assertEquals(\"quantity must be positive\", ex.message)\n}\n```\n\n`assertFailsWith<T> { ... }` é o equivalente Kotlin do `assertThrows`: o tipo vai entre os sinais de menor e maior, o código vai em uma lambda final, e ele devolve a exceção. O `require(qty > 0) { \"quantity must be positive\" }` do Kotlin lança exatamente essa `IllegalArgumentException`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-kt-throws",
+              "concepts": [
+                "expected-exception",
+                "kotlin-test-idioms"
+              ],
+              "prompt": "Qual asserção em Kotlin verifica que `parse(\"x\")` lança `NumberFormatException`?",
+              "choices": [
+                "`assertEquals(NumberFormatException, parse(\"x\"))`",
+                "`assertFailsWith<NumberFormatException> { parse(\"x\") }`",
+                "`assertFailsWith(parse(\"x\"))`",
+                "`assertTrue { parse(\"x\") is NumberFormatException }`"
+              ],
+              "answer": 1,
+              "explanation": "O código sob teste precisa ficar *dentro* da lambda para o `assertFailsWith` capturar o que ele lança. Nas outras opções, `parse(\"x\")` roda primeiro e a exceção escapa antes de qualquer asserção poder tratá-la (e a primeira nem compila)."
+            },
+            {
+              "type": "mcq",
+              "id": "q-kt-fresh",
+              "concepts": [
+                "test-isolation",
+                "kotlin-test-idioms"
+              ],
+              "prompt": "Uma classe de teste em Kotlin tem a propriedade `private val cart = ShoppingCart()`. O Teste A adiciona um item; o Teste B verifica que o carrinho está vazio. Com o ciclo de vida padrão do JUnit 5, o B passa?",
+              "choices": [
+                "Sim — o JUnit cria uma nova instância da classe de teste para cada método de teste, então cada teste tem o seu próprio `cart`",
+                "Não — propriedades de classe são compartilhadas por todos os testes da classe",
+                "Só se o B rodar primeiro",
+                "Não — uma propriedade `val` não pode ser modificada, então o `add` falha"
+              ],
+              "answer": 0,
+              "explanation": "O JUnit 5 usa por padrão uma instância da classe de teste **por método**, então os inicializadores das propriedades rodam de novo a cada teste. (Anotar a classe com `@TestInstance(Lifecycle.PER_CLASS)` muda isso e faz esse estado ser compartilhado.) `val` só fixa a *referência* — o objeto do carrinho continua mutável."
+            },
+            {
+              "type": "example",
+              "title": "Data classes facilitam as asserções",
+              "problem": "`parseUser(\"Ada,36\")` devolve `User(name = \"Ada\", age = 36)`, em que `User` é uma `data class`. Como você deve verificar o resultado?",
+              "steps": [
+                "Uma `data class` gera o `equals()` a partir das suas propriedades: dois `User` com o mesmo nome e idade são iguais.",
+                "Então compare o objeto inteiro de uma vez: `assertEquals(User(\"Ada\", 36), parseUser(\"Ada,36\"))`.",
+                "Se falhar, a mensagem imprime os dois objetos pelo `toString()` gerado, por exemplo `User(name=Ada, age=36)` vs `User(name=Ada, age=63)`."
+              ],
+              "answer": "Uma asserção sobre o valor inteiro: mais curta que conferir campo por campo, e a falha mostra exatamente qual campo difere."
+            },
+            {
+              "type": "bug",
+              "id": "q-kt-beforeall",
+              "concepts": [
+                "kotlin-test-idioms"
+              ],
+              "prompt": "`Prices.load()` é lenta, então deveria rodar **uma vez** para a classe toda. Em vez disso, o JUnit se recusa a rodar a classe. Clique na linha com o bug.",
+              "language": "kotlin",
+              "code": "import org.junit.jupiter.api.BeforeAll\nimport org.junit.jupiter.api.Test\nimport kotlin.test.assertEquals\n\nclass PriceTest {\n    @BeforeAll\n    fun loadPrices() {\n        Prices.load()\n    }\n\n    @Test\n    fun `apple costs 30`() {\n        assertEquals(30, Prices.of(\"apple\"))\n    }\n}",
+              "error": "JUnit Jupiter ✘ TestEngine with ID 'junit-jupiter' encountered a critical issue during test discovery:\n(1) [ERROR] @BeforeAll method 'public final void PriceTest.loadPrices()' must be static unless the test class is annotated with @TestInstance(Lifecycle.PER_CLASS).\n  ...",
+              "lines": [
+                6,
+                7
+              ],
+              "fixes": [
+                "Envolver as linhas 6–9 em `companion object { ... }` e adicionar `@JvmStatic` acima da linha 7",
+                "Envolver as linhas 6–9 em `companion object { ... }`",
+                "Adicionar `@JvmStatic` acima da linha 7",
+                "Mudar a linha 7 para `private fun loadPrices() {`"
+              ],
+              "answer": 0,
+              "hint": "Como o Kotlin produz um método estático do Java?",
+              "explanation": "Kotlin não tem a palavra-chave `static`; um membro de `companion object` marcado com `@JvmStatic` compila para um método estático de verdade em `PriceTest`, que é o que o JUnit precisa. Sem `@JvmStatic`, a função vive só na classe `Companion` separada, então o JUnit nunca a encontra: a classe roda, o `load()` nunca acontece, e o teste falha com *Key apple is missing in the map*. `@JvmStatic` fora de um object não compila, e `private` continua não sendo estático. A alternativa é `@TestInstance(Lifecycle.PER_CLASS)`, que permite que o `@BeforeAll` seja um método normal."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "doubles",
+      "title": "Dublês de teste",
+      "description": "Stubs, mocks e fakes: testando código que conversa com o mundo externo.",
+      "lessons": [
+        {
+          "id": "test-doubles",
+          "title": "Stubs, mocks, fakes e spies",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "Troque dependências lentas ou imprevisíveis por dublês — stubs trazem respostas para dentro, mocks verificam as chamadas que saem, fakes são versões leves que funcionam — e passe-os pelo construtor.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Por que dublês de teste",
+              "body": "Unidades reais têm **dependências**: um banco de dados, um cliente HTTP, o relógio, um serviço de e-mail. Usar a coisa de verdade deixa o teste lento, instável ou perigoso (ninguém quer testes que mandam e-mail para clientes).\n\nUm **dublê de teste** é um substituto que você controla:\n\n- **Stub** — devolve respostas prontas (`findUser(42)` → Ada). Alimenta dados *para dentro*.\n- **Mock** — registra as chamadas para o teste poder **verificá-las**. Confere o que sai *para fora*.\n- **Fake** — uma implementação leve que funciona de verdade, como um repositório em memória no lugar de um banco de dados.\n- **Spy** — envolve um objeto real: os métodos reais rodam e as chamadas são registradas."
+            },
+            {
+              "type": "explain",
+              "title": "A injeção de dependência torna isso possível",
+              "body": "Você só consegue trocar por um dublê se o código *deixar*:\n\n```java\n// Hard to test: builds its own dependency\nclass SignupService {\n    private final EmailSender email = new SmtpEmailSender();\n}\n\n// Testable: the dependency is passed in\nclass SignupService {\n    private final EmailSender email;\n    SignupService(EmailSender email) { this.email = email; }\n}\n```\n\nCom **injeção por construtor**, a produção passa um `SmtpEmailSender` de verdade e os testes passam um dublê. Python funciona do mesmo jeito: receba o colaborador como argumento do `__init__` em vez de criá-lo por dentro."
+            },
+            {
+              "type": "mcq",
+              "id": "q-which-double",
+              "concepts": [
+                "stub",
+                "test-double"
+              ],
+              "prompt": "Você está testando `ReportService`, que lê números de vendas de um `SalesRepository`. Você só precisa que o repositório devolva uma lista fixa. Qual dublê serve melhor?",
+              "choices": [
+                "Um mock cujas chamadas você verifica",
+                "Um spy envolvendo o repositório real do banco de dados",
+                "Um stub que devolve uma lista fixa",
+                "Nenhum dublê — use o banco de dados de produção"
+              ],
+              "answer": 2,
+              "explanation": "O repositório é uma *fonte de dados* para o código sob teste, então um stub basta: devolva a lista e depois faça o assert no relatório. Verificar a chamada da consulta não acrescenta nada — se o relatório está certo, os dados claramente foram buscados."
+            },
+            {
+              "type": "mcq",
+              "id": "q-which-mock",
+              "concepts": [
+                "mock",
+                "test-double"
+              ],
+              "prompt": "`SignupService.register(email)` deveria enviar um e-mail de boas-vindas por meio de `EmailSender.send(to, subject)` e não devolve nada útil. Como você testa esse comportamento?",
+              "choices": [
+                "Use um mock de `EmailSender` e verifique que `send` foi chamado com o endereço do novo usuário",
+                "Faça o assert no valor de retorno de `register`",
+                "Envie um e-mail de verdade e confira a caixa de entrada no teste",
+                "Faça um stub de `send` para devolver `true` e não verifique nada"
+              ],
+              "answer": 0,
+              "explanation": "O comportamento *é* uma chamada de saída sem valor de retorno visível — exatamente para o que os mocks servem. Verificar `send(\"ada@example.com\", \"Welcome!\")` confere o efeito sem tocar em um servidor de e-mail de verdade."
+            },
+            {
+              "type": "example",
+              "title": "Um fake escrito à mão",
+              "problem": "`UserService` depende de uma interface `UserRepository` com `save(user)` e `findByEmail(email)`. Teste que registrar o mesmo e-mail duas vezes é rejeitado — sem banco de dados.",
+              "steps": [
+                "Escreva um fake: `InMemoryUserRepository` implementa `UserRepository` com um `HashMap<String, User>` por dentro — `save` coloca, `findByEmail` busca.",
+                "Arrange: `UserService service = new UserService(new InMemoryUserRepository());` e depois registre `\"ada@example.com\"` uma vez.",
+                "Act + Assert: `assertThrows(DuplicateEmailException.class, () -> service.register(\"ada@example.com\"));`"
+              ],
+              "answer": "O fake *lembra* o que foi salvo, então o teste exercita comportamento real em milissegundos. Fakes brilham quando o código grava dados e lê de volta."
+            },
+            {
+              "type": "mcq",
+              "id": "q-hard-to-test",
+              "concepts": [
+                "dependency-injection"
+              ],
+              "prompt": "Por que isto é difícil de testar unitariamente?\n\n```python\nclass WeatherAlert:\n    def check(self, city):\n        data = requests.get(f\"https://api.weather.example/{city}\").json()\n        return data[\"temp\"] > 35\n```",
+              "choices": [
+                "Ele devolve um booleano",
+                "Ele faz a chamada HTTP internamente, então o teste não consegue passar um dublê sem patching",
+                "Ele usa uma f-string",
+                "Métodos de classes não podem ser testados unitariamente"
+              ],
+              "answer": 1,
+              "explanation": "A dependência está fixa no código. Injete-a — `WeatherAlert(weather_client)` com um método `get_temp(city)` — e o teste pode passar um stub que devolve 36 ou 35 para conferir os dois lados do limite, na hora e offline."
+            },
+            {
+              "type": "buckets",
+              "id": "q-buckets-doubles",
+              "concepts": [
+                "test-double",
+                "stub",
+                "mock"
+              ],
+              "prompt": "Que tipo de dublê de teste é cada um?",
+              "buckets": [
+                "Stub",
+                "Mock",
+                "Fake",
+                "Spy"
+              ],
+              "items": [
+                {
+                  "text": "`findUser(42)` sempre devolve uma Ada fixa no código",
+                  "bucket": 0
+                },
+                {
+                  "text": "Devolve uma taxa de câmbio de 1.1, seja qual for a moeda pedida",
+                  "bucket": 0
+                },
+                {
+                  "text": "Depois, o teste verifica que `send(\"ada@example.com\", \"Welcome!\")` foi chamado uma vez",
+                  "bucket": 1
+                },
+                {
+                  "text": "Não faz nada por conta própria; o teste verifica que `charge(30)` foi chamado",
+                  "bucket": 1
+                },
+                {
+                  "text": "Um `InMemoryUserRepository` que guarda os usuários salvos em um `HashMap`",
+                  "bucket": 2
+                },
+                {
+                  "text": "Uma fila em memória que funciona, no lugar do message broker real",
+                  "bucket": 2
+                },
+                {
+                  "text": "Envolve um `ArrayList` real: `add` realmente adiciona, e toda chamada é registrada",
+                  "bucket": 3
+                },
+                {
+                  "text": "O `PriceCalculator` real roda, e o teste também verifica que `round()` foi chamado duas vezes",
+                  "bucket": 3
+                }
+              ],
+              "hint": "Stub: respostas prontas entrando. Mock: chamadas saindo, verificadas. Fake: uma versão leve que realmente funciona. Spy: o objeto real, com as chamadas registradas.",
+              "explanation": "**Stubs** só alimentam dados prontos *para dentro*: um usuário fixo, uma taxa fixa. **Mocks** existem para que suas chamadas sejam *verificadas*; o comportamento deles em si não importa. **Fakes** funcionam de verdade, só que de forma leve: um `HashMap` no lugar de um banco de dados, uma fila em memória no lugar de um broker. **Spies** envolvem um objeto real, então os métodos reais rodam e as chamadas também são registradas. Escolha pelo que o teste precisa: dados entrando → stub, uma chamada de saída para conferir → mock, comportamento de gravar e depois ler → fake."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-ignored-injection",
+              "concepts": [
+                "dependency-injection",
+                "stub"
+              ],
+              "prompt": "`SalesRepository` conversa com o banco de dados de produção, que os testes não alcançam. Este teste passa um stub no lugar, então deveria passar sem banco de dados, mas quebra. Clique na linha com o bug.",
+              "language": "python",
+              "code": "class ReportService:\n    def __init__(self, repo):\n        self.repo = SalesRepository()\n\n    def total_sales(self):\n        return sum(self.repo.monthly_sales())\n\nclass StubSalesRepository:\n    def monthly_sales(self):\n        return [100, 250, 50]\n\ndef test_total_sales_adds_up_months():\n    service = ReportService(StubSalesRepository())\n    assert service.total_sales() == 400",
+              "error": "FAILED test_total_sales_adds_up_months - ConnectionError: could not connect to sales-db:5432\n1 failed",
+              "lines": [
+                3
+              ],
+              "fixes": [
+                "Mudar a linha 3 para `self.repo = repo`",
+                "Mudar a linha 13 para `service = ReportService(repo=StubSalesRepository())`",
+                "Mudar a linha 13 para `service = ReportService(StubSalesRepository)`",
+                "Mudar a linha 2 para `def __init__(self, repo=None):`"
+              ],
+              "answer": 0,
+              "hint": "O construtor recebe um `repo`. Ele o usa?",
+              "explanation": "O construtor aceita `repo`, mas depois o ignora e cria um `SalesRepository` real, então o stub nunca é usado. É uma dependência fixa disfarçada. Guardar o argumento (`self.repo = repo`) é injeção por construtor de verdade: a produção passa o repositório real, o teste passa o stub, e o total é 400. Passar o stub por nome, passar a classe ou dar um valor padrão a `repo` deixam a linha 3 jogando o stub fora do mesmo jeito."
+            }
+          ]
+        },
+        {
+          "id": "mockito-and-unittest-mock",
+          "title": "Mockito e unittest.mock",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Faça stubs com `when(...).thenReturn(...)` ou `return_value`, verifique com `verify` ou `assert_called_once_with`, faça patch dos nomes onde eles são consultados — e use mock só nas fronteiras.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Mockito em três movimentos",
+              "body": "```java\n@Test\nvoid convertsAndLogs() {\n    ExchangeRates rates = mock(ExchangeRates.class);\n    AuditLog log = mock(AuditLog.class);\n    when(rates.rate(\"USD\", \"EUR\")).thenReturn(0.5);\n\n    PriceService service = new PriceService(rates, log);\n    double eur = service.toEuros(100.0);\n\n    assertEquals(50.0, eur, 1e-9);\n    verify(log).record(\"converted 100.0 USD\");\n}\n```\n\n- `mock(X.class)` — um dublê cujos métodos devolvem valores padrão (`0`, `false`, `null`, coleções vazias).\n- `when(...).thenReturn(...)` — define uma resposta (stub).\n- `verify(mock).method(args)` — verifica que foi chamado (exatamente uma vez, por padrão).\n\nEstes vêm de `import static org.mockito.Mockito.*;` (ou use `@ExtendWith(MockitoExtension.class)` com campos `@Mock`)."
+            },
+            {
+              "type": "mcq",
+              "id": "q-mockito-default",
+              "concepts": [
+                "mock",
+                "stub"
+              ],
+              "prompt": "Você esquece a linha `when(rates.rate(\"USD\", \"EUR\")).thenReturn(0.5)`. `rate` devolve um `double`. O que o mock devolve quando o código o chama?",
+              "choices": [
+                "Lança uma exceção",
+                "A taxa de câmbio real",
+                "`null`",
+                "`0.0` — métodos sem stub devolvem valores padrão"
+              ],
+              "answer": 3,
+              "explanation": "Os mocks do Mockito são “bonzinhos”: métodos sem stub devolvem `0`/`0.0`, `false`, `null` ou uma coleção vazia. Então `toEuros` devolve 0.0 e o teste falha com `expected: <50.0> but was: <0.0>` — um zero inesperado é um forte indício de um stub esquecido."
+            },
+            {
+              "type": "explain",
+              "title": "unittest.mock em Python",
+              "body": "```python\nfrom unittest.mock import Mock\n\ndef test_converts_and_logs():\n    rates = Mock()\n    rates.rate.return_value = 0.5\n    log = Mock()\n\n    service = PriceService(rates, log)\n    eur = service.to_euros(100)\n\n    assert eur == 50\n    log.record.assert_called_once_with(\"converted 100 USD\")\n```\n\n- `return_value` define um resultado; `side_effect = SomeError(...)` faz a chamada lançar exceção.\n- `assert_called_once_with(...)` verifica uma chamada.\n- Um `Mock` simples aceita *qualquer* atributo, até os escritos errado. `Mock(spec=ExchangeRates)` ou `create_autospec(ExchangeRates)` rejeita métodos que a classe real não tem."
+            },
+            {
+              "type": "text",
+              "id": "q-side-effect",
+              "concepts": [
+                "stub"
+              ],
+              "prompt": "Seu mock `rates` deve simular o serviço de câmbio fora do ar. Preencha a lacuna: `rates.rate.______ = ConnectionError(\"down\")`",
+              "accept": [
+                "side_effect",
+                "side effect",
+                "rates.rate.side_effect"
+              ],
+              "explanation": "Definir `side_effect` como uma instância (ou classe) de exceção faz toda chamada lançá-la — perfeito para testar o tratamento de erros. Também pode ser uma lista de valores a devolver em chamadas sucessivas, ou uma função que calcula o resultado."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-mock-return-value",
+              "concepts": [
+                "stub"
+              ],
+              "prompt": "Usando o `PriceService` de acima (`to_euros` multiplica o valor por `self.rates.rate(\"USD\", \"EUR\")`), este teste deveria passar. Em vez disso, ele quebra. Clique na linha com o bug.",
+              "language": "python",
+              "code": "def test_converts_and_logs():\n    rates = Mock()\n    rates.return_value = 0.5\n    log = Mock()\n\n    service = PriceService(rates, log)\n    eur = service.to_euros(100)\n\n    assert eur == 50\n    log.record.assert_called_once_with(\"converted 100 USD\")",
+              "error": "TypeError: unsupported operand type(s) for *: 'int' and 'Mock'",
+              "lines": [
+                3
+              ],
+              "fixes": [
+                "Mudar a linha 3 para `rates.rate.return_value = 0.5`",
+                "Mudar a linha 3 para `rates.rate = 0.5`",
+                "Mudar a linha 2 para `rates = Mock(return_value=0.5)`",
+                "Mudar a linha 3 para `rates.rate(\"USD\", \"EUR\").return_value = 0.5`"
+              ],
+              "answer": 0,
+              "hint": "O código chama `rates.rate(...)`, não `rates(...)`.",
+              "explanation": "`rates.return_value` define o que a chamada a `rates(...)` em si devolve. O código chama o **método** `rates.rate(...)`, que é um mock filho separado e sem stub, que devolve outro `Mock`, e `100 * Mock` é um `TypeError`. Faça o stub do método: `rates.rate.return_value = 0.5`. `rates.rate = 0.5` troca o método por um float (“'float' object is not callable”), `Mock(return_value=0.5)` é o mesmo erro da linha 3, e a última opção faz o stub do mock que `rate(...)` *devolve*, não de `rate` em si."
+            },
+            {
+              "type": "explain",
+              "title": "Faça o patch onde o nome é consultado",
+              "body": "Quando o código busca uma dependência por conta própria, `unittest.mock.patch` a troca temporariamente — mas você precisa fazer o patch do nome **onde ele é usado**, não onde é definido.\n\n```python\n# weather.py\nfrom requests import get\n\ndef is_hot(city):\n    return get(f\"https://api.example/{city}\").json()[\"temp\"] > 35\n```\n\n```python\n# test_weather.py\nfrom unittest.mock import patch\nfrom weather import is_hot\n\n@patch(\"weather.get\")\ndef test_is_hot(mock_get):\n    mock_get.return_value.json.return_value = {\"temp\": 36}\n    assert is_hot(\"Seville\") is True\n```\n\n`from requests import get` copiou o nome para dentro de `weather`, então `weather.get` é o que o código realmente chama."
+            },
+            {
+              "type": "mcq",
+              "id": "q-patch-target",
+              "concepts": [
+                "patching"
+              ],
+              "prompt": "`billing.py` faz `from payments import charge_card` e chama `charge_card(...)` dentro de `checkout()`. Qual patch impede que o seu teste de `billing.checkout()` cobre um cartão de verdade?",
+              "choices": [
+                "`patch(\"payments.charge_card\")`",
+                "`patch(\"charge_card\")`",
+                "`patch(\"billing.charge_card\")`",
+                "`patch(\"billing.payments.charge_card\")`"
+              ],
+              "answer": 2,
+              "explanation": "O `from ... import` criou um segundo nome, `billing.charge_card`, apontando para a função real. Fazer patch em `payments.charge_card` substitui apenas o nome original — `checkout` ainda chama a função real. O `patch` precisa de um caminho completo com pontos, então um simples `\"charge_card\"` é um erro, e `billing` não tem nenhum atributo `payments`.",
+              "hint": "Em qual namespace de módulo o `checkout()` procura o nome quando roda?"
+            },
+            {
+              "type": "explain",
+              "title": "Não exagere nos mocks",
+              "body": "- Use mock nas **fronteiras**: rede, banco de dados, sistema de arquivos, relógio, e-mail, outros serviços.\n- Use **objetos reais** para valores simples e lógica simples dentro do processo (`Money`, `Item`, listas).\n- **Stub em consultas, verify em comandos.** Não faça `verify` de uma chamada que você só simulou pelo valor de retorno — a asserção do resultado já prova que ela foi usada.\n- Se um teste precisa de cinco mocks, a classe sob teste provavelmente faz coisa demais.\n\nTestes com mocks demais passam quando o código está quebrado e falham quando ele apenas foi refatorado — o pior dos dois mundos."
+            },
+            {
+              "type": "mcq",
+              "id": "q-overmock",
+              "concepts": [
+                "over-mocking",
+                "behavior-not-implementation"
+              ],
+              "prompt": "Qual é o maior problema deste teste?\n\n```java\n@Test\nvoid totalIsSumOfPrices() {\n    Item a = mock(Item.class);\n    Item b = mock(Item.class);\n    when(a.price()).thenReturn(3);\n    when(b.price()).thenReturn(4);\n    Cart cart = new Cart(List.of(a, b));\n\n    cart.total();\n\n    verify(a).price();\n    verify(b).price();\n}\n```",
+              "choices": [
+                "As chamadas `verify` precisam vir antes das chamadas `when`",
+                "O Mockito só consegue fazer mock de interfaces, não de classes",
+                "Ele nunca verifica o total — só *como* ele foi calculado — então uma soma errada ainda passa",
+                "O carrinho deveria ser criado no `@BeforeEach`"
+              ],
+              "answer": 2,
+              "explanation": "Se `total()` devolvesse 12 em vez de 7, este teste ainda passaria. Use itens reais — `new Item(3)`, `new Item(4)` — e `assertEquals(7, cart.total())`. Itens são valores simples; não há nada a ganhar fazendo mock deles. (E o Mockito faz mock de classes sem problema.)",
+              "hint": "O que acontece com este teste se `total()` devolver o número errado?"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "testing-well",
+      "title": "Testando bem",
+      "description": "TDD, testes instáveis, cobertura e o formato de uma suíte de testes saudável.",
+      "lessons": [
+        {
+          "id": "tdd",
+          "title": "Desenvolvimento guiado por testes: vermelho, verde, refatorar",
+          "pareto": "extra",
+          "minutes": 6,
+          "takeaway": "O TDD gira em ciclos de minutos: escreva um teste que falha (vermelho), o código mais simples que passa (verde) e depois faça a limpeza enquanto os testes protegem você (refatorar).",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "O ciclo",
+              "body": "O **desenvolvimento guiado por testes** (TDD) inverte a ordem de sempre: o teste vem primeiro.\n\n- **Vermelho** — escreva um pequeno teste para o próximo pedaço de comportamento. Rode e *veja-o falhar*.\n- **Verde** — escreva o código mais simples que o faz passar. Ingênuo não tem problema.\n- **Refatorar** — limpe o código e os testes enquanto tudo continua verde.\n\nCada ciclo leva minutos. Cada linha de código é justificada por um teste, o design é moldado por como ele é *usado*, e você nunca fica longe de um estado que funciona."
+            },
+            {
+              "type": "example",
+              "title": "FizzBuzz no estilo TDD",
+              "problem": "Construa `fizzbuzz(n)` em Python, com o teste primeiro. Ele devolve `\"Fizz\"` para múltiplos de 3, `\"Buzz\"` para múltiplos de 5, `\"FizzBuzz\"` para ambos e, caso contrário, o número como texto.",
+              "steps": [
+                "Vermelho: `assert fizzbuzz(1) == \"1\"` falha — a função ainda não existe. Verde: `return str(n)`.",
+                "Vermelho: `assert fizzbuzz(3) == \"Fizz\"`. Verde: adicione `if n % 3 == 0: return \"Fizz\"`.",
+                "Vermelho: `assert fizzbuzz(5) == \"Buzz\"`. Verde: adicione o ramo `n % 5`.",
+                "Vermelho: `assert fizzbuzz(15) == \"FizzBuzz\"` falha — devolve `\"Fizz\"`, porque a checagem do 3 roda primeiro. Verde: verifique `n % 15` antes das outras.",
+                "Refatorar: arrume o código; os quatro testes continuam verdes."
+              ],
+              "answer": "Cada regra chegou com um teste que a exigia, e o caso do 15 expôs o bug de ordem no momento em que isso importou."
+            },
+            {
+              "type": "mcq",
+              "id": "q-why-red",
+              "concepts": [
+                "tdd",
+                "self-checking"
+              ],
+              "prompt": "Por que rodar o novo teste e vê-lo falhar **antes** de escrever o código?",
+              "choices": [
+                "Os test runners exigem pelo menos uma falha por execução",
+                "Para provar que o teste realmente consegue detectar o comportamento que falta — um teste que passa de cara pode não estar verificando nada",
+                "Para medir o quanto o teste é lento",
+                "É um ritual opcional, sem finalidade real"
+              ],
+              "answer": 1,
+              "explanation": "Um teste que nunca falhou nunca provou que *consegue* falhar. Erros de digitação na asserção, um teste que nunca roda ou a verificação da coisa errada aparecem, nesta etapa, como um verde inesperado."
+            },
+            {
+              "type": "mcq",
+              "id": "q-green-step",
+              "concepts": [
+                "tdd"
+              ],
+              "prompt": "Você está na etapa Verde. O único teste até agora é `assert is_even(4) is True`. Qual é a jogada no TDD?",
+              "choices": [
+                "Escrever a coisa mais simples que passa, mesmo ingênua — os próximos testes (como `is_even(3)`) vão forçar a solução geral",
+                "Escrever a solução completa e otimizada, cobrindo todos os casos em que você consegue pensar",
+                "Refatorar o módulo inteiro primeiro",
+                "Escrever mais cinco testes antes de escrever qualquer código"
+              ],
+              "answer": 0,
+              "explanation": "O Verde serve para chegar rápido ao teste passando. Um código mais geral do que os testes exigem é código sem teste. Adicione um teste como `is_even(3) is False` e a versão ingênua é forçada a virar `n % 2 == 0`."
+            },
+            {
+              "type": "explain",
+              "title": "Onde o TDD mais compensa",
+              "body": "O TDD brilha em lógica com entradas e saídas claras: parsers, regras de preço, validação, algoritmos. É menos natural em experimentos exploratórios ou em layout de interface.\n\nMesmo que você nunca faça TDD à risca, pegue o melhor hábito dele para **correção de bugs**: primeiro escreva um teste que **reproduz o bug** e falha, depois conserte o código até ele passar. Você prova que a correção funciona, e o bug nunca mais volta em silêncio."
+            },
+            {
+              "type": "mcq",
+              "id": "q-refactor-red",
+              "concepts": [
+                "tdd",
+                "behavior-not-implementation"
+              ],
+              "prompt": "Durante a etapa Refatorar você renomeia variáveis e extrai um helper, e um teste fica vermelho. O que isso diz?",
+              "choices": [
+                "Refatorar sempre quebra testes, então ignore",
+                "Apague o teste que falha — estava desatualizado",
+                "Você terminou a funcionalidade",
+                "A refatoração mudou o comportamento (ou o teste depende de detalhes internos) — corrija ou desfaça antes de seguir em frente"
+              ],
+              "answer": 3,
+              "explanation": "Uma refatoração deve mudar a estrutura, não o comportamento, então a suíte deve continuar verde. Vermelho significa que você quebrou algo — desfazer é barato, já que você mudou só um pouco — ou que o teste estava acoplado a detalhes de implementação e deve ser reescrito contra a API pública."
+            },
+            {
+              "type": "order",
+              "id": "q-order-tdd-loop",
+              "concepts": [
+                "tdd"
+              ],
+              "prompt": "Você está adicionando a próxima funcionalidade no estilo TDD. Coloque um ciclo completo em ordem.",
+              "items": [
+                "Escrever um pequeno teste para o próximo pedaço de comportamento",
+                "Rodá-lo e vê-lo falhar",
+                "Escrever o código mais simples que o faz passar",
+                "Rodar os testes e ver todos passarem",
+                "Limpar o código enquanto todos os testes continuam verdes"
+              ],
+              "hint": "Vermelho, verde, refatorar, e o teste sempre vem primeiro.",
+              "explanation": "Esse é o ciclo **vermelho → verde → refatorar**. O teste vem primeiro e precisa falhar, o que prova que ele detecta o comportamento que falta. Depois vem o código mais simples que passa, confirmado por uma execução verde. Só com tudo verde é seguro refatorar: qualquer teste que fique vermelho agora aponta direto para a mudança que você acabou de fazer. Aí o ciclo recomeça com o próximo teste."
+            }
+          ]
+        },
+        {
+          "id": "flaky-tests",
+          "title": "Testes instáveis e determinismo",
+          "pareto": "extra",
+          "minutes": 6,
+          "takeaway": "Um teste precisa dar o mesmo resultado a cada execução: controle o tempo, a aleatoriedade e o estado compartilhado injetando-os, nunca torcendo para dar certo.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "De onde vem a instabilidade",
+              "body": "Um **teste instável** (*flaky*) passa às vezes e falha às vezes sem nenhuma mudança no código. Logo o time passa a ignorar builds vermelhos — e deixa passar bugs reais. Causas usuais:\n\n- **Tempo** — `LocalDate.now()`, `datetime.now()`, fusos horários, meia-noite\n- **Aleatoriedade** — números aleatórios sem seed, IDs gerados\n- **Ordem e estado compartilhado** — campos estáticos, uma linha de banco de dados ou um arquivo compartilhado\n- **Concorrência e I/O real** — `sleep` “até provavelmente terminar”, chamadas de rede reais\n- **Coleções sem ordem** — verificar a ordem de iteração de um `HashSet` ou de um `set` do Python"
+            },
+            {
+              "type": "mcq",
+              "id": "q-clock",
+              "concepts": [
+                "flaky-test",
+                "dependency-injection"
+              ],
+              "prompt": "Este teste passa quando o CI roda às 9h e falha às 15h. `greet()` lê `LocalTime.now()` internamente.\n\n```java\n@Test\nvoid greetsInTheMorning() {\n    assertEquals(\"Good morning\", new Greeter().greet());\n}\n```\n\nQual é a causa raiz?",
+              "choices": [
+                "`assertEquals` não é confiável para strings",
+                "O código lê o relógio real, que o teste não controla",
+                "O JUnit roda os testes em ordem aleatória",
+                "O `Greeter` deveria ser criado no `@BeforeEach`"
+              ],
+              "answer": 1,
+              "explanation": "O resultado depende de uma entrada — a hora atual — que o teste não consegue definir. Torne o tempo uma entrada explícita (próximo passo) e o teste passa a ser determinístico."
+            },
+            {
+              "type": "example",
+              "title": "Injetando o relógio",
+              "problem": "Torne `Greeter.greet()` testável em qualquer hora do dia.",
+              "steps": [
+                "O Java tem um ponto de substituição pronto, `java.time.Clock`. Passe um — `new Greeter(clock)` — e chame `LocalTime.now(clock)` por dentro.",
+                "O código de produção passa `Clock.systemDefaultZone()`.",
+                "O teste passa um relógio congelado: `Clock.fixed(Instant.parse(\"2024-01-01T09:00:00Z\"), ZoneOffset.UTC)`, e depois verifica `\"Good morning\"`.",
+                "Em Python, faça o mesmo injetando uma função `now` — `Greeter(now=lambda: datetime(2024, 1, 1, 9, 0))` — ou use patch."
+              ],
+              "answer": "O tempo vira uma entrada que você controla: o teste passa às 15h, à meia-noite e na virada do ano — e você também pode testar a saudação da tarde."
+            },
+            {
+              "type": "mcq",
+              "id": "q-random",
+              "concepts": [
+                "flaky-test"
+              ],
+              "prompt": "`shuffle_deck()` usa o `random.shuffle` do Python. Um teste verifica que a primeira carta é o Ás de Espadas e passa cerca de 2% das vezes. Qual é a melhor correção?",
+              "choices": [
+                "Rodar o teste 50 vezes e considerar aprovado se alguma execução passar",
+                "Adicionar `time.sleep(1)` antes de embaralhar",
+                "Injetar um `random.Random(42)` com seed, ou verificar propriedades que sempre valem, como “52 cartas únicas”",
+                "Marcar o teste como ignorado"
+              ],
+              "answer": 2,
+              "explanation": "A aleatoriedade, como o tempo, deve ser uma entrada. Um gerador com seed torna o embaralhamento reproduzível; verificações de propriedades (as mesmas 52 cartas, sem duplicatas) não dependem da ordem. 2% ≈ 1 em 52 — o teste só estava tendo sorte."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-set-order",
+              "concepts": [
+                "flaky-test"
+              ],
+              "prompt": "Este teste passa em algumas execuções e falha em outras, sem mudança no código. Clique na linha que o torna instável.",
+              "language": "python",
+              "code": "def unique_tags(posts):\n    return list({tag for post in posts for tag in post['tags']})\n\ndef test_unique_tags():\n    posts = [{'tags': ['python', 'testing']}, {'tags': ['testing', 'ci']}]\n    assert unique_tags(posts) == ['python', 'testing', 'ci']",
+              "error": "Run 1: 1 passed\nRun 2: 1 failed\nE       AssertionError: assert ['python', 'ci', 'testing'] == ['python', 'testing', 'ci']",
+              "lines": [
+                6,
+                2
+              ],
+              "fixes": [
+                "Mudar a linha 6 para `assert sorted(unique_tags(posts)) == ['ci', 'python', 'testing']`",
+                "Mudar a linha 6 para `assert unique_tags(posts) == ['ci', 'python', 'testing']`",
+                "Mudar a linha 2 para `return [tag for post in posts for tag in post['tags']]`",
+                "Adicionar `random.seed(0)` antes da linha 5 (e `import random` no topo)"
+              ],
+              "answer": 0,
+              "hint": "Em que ordem um `set` de strings devolve seus itens?",
+              "explanation": "`unique_tags` monta um **set**, e um set não tem ordem definida: o Python randomiza o hash das strings em cada novo processo, então a lista sai em uma ordem diferente de uma execução para outra. O teste verifica uma ordem específica. Ordenar os dois lados confere *quais* tags voltaram, que é o contrato de verdade. Comparar com outra ordem fixa é igualmente instável, uma list comprehension mantém o `'testing'` duplicado e falha toda vez, e `random.seed` não mexe na randomização de hash."
+            },
+            {
+              "type": "explain",
+              "title": "Não use sleep — espere ou elimine a espera",
+              "body": "`Thread.sleep(500)` ou `time.sleep(0.5)` “para deixar a tarefa em segundo plano terminar” é uma instabilidade clássica: curto demais em uma máquina de CI ocupada, tempo desperdiçado em todo o resto.\n\nOpções melhores:\n\n- Em testes unitários, torne o trabalho **síncrono** — injete um executor que roda as tarefas na hora.\n- Quando você realmente precisa esperar, **consulte a condição repetidamente** com um timeout (por exemplo, o Awaitility em Java).\n\nE nunca “resolva” a instabilidade só com retentativas automáticas: isso esconde um bug real, às vezes um que seus usuários vão encontrar."
+            },
+            {
+              "type": "mcq",
+              "id": "q-order-dep",
+              "concepts": [
+                "flaky-test",
+                "test-isolation"
+              ],
+              "prompt": "O Teste A adiciona um usuário a uma lista estática compartilhada; o Teste B verifica que a lista está vazia. O B passa quando roda primeiro e falha quando o A roda primeiro. O que está acontecendo?",
+              "choices": [
+                "Dependência de ordem por estado compartilhado — dê a cada teste um estado novo no `@BeforeEach` ou em uma fixture",
+                "Dependência do relógio",
+                "Arredondamento de ponto flutuante",
+                "O B é simplesmente lento demais"
+              ],
+              "answer": 0,
+              "explanation": "Cada teste precisa preparar tudo de que depende e não deixar nada para trás. Estado novo por teste torna a ordem irrelevante — o que também permite rodar os testes em paralelo."
+            },
+            {
+              "type": "buckets",
+              "id": "q-buckets-flaky",
+              "concepts": [
+                "flaky-test"
+              ],
+              "prompt": "Separe cada ingrediente de teste: ele pode deixar um teste instável, ou dá o mesmo resultado em toda execução?",
+              "buckets": [
+                "Pode ser instável: depende de algo que o teste não controla",
+                "Determinístico: mesmo resultado em toda execução"
+              ],
+              "items": [
+                {
+                  "text": "Verificar o resultado de `greet()` quando ele lê `datetime.now()` internamente",
+                  "bucket": 0
+                },
+                {
+                  "text": "Embaralhar com um `random.shuffle` sem seed",
+                  "bucket": 0
+                },
+                {
+                  "text": "`time.sleep(0.5)` para deixar uma tarefa em segundo plano terminar",
+                  "bucket": 0
+                },
+                {
+                  "text": "Verificar que `list(tags)` é igual a uma lista fixa, sendo `tags` um set de strings",
+                  "bucket": 0
+                },
+                {
+                  "text": "Dois testes que adicionam e leem a mesma lista estática",
+                  "bucket": 0
+                },
+                {
+                  "text": "Um teste unitário que chama uma API de previsão do tempo de terceiros de verdade",
+                  "bucket": 0
+                },
+                {
+                  "text": "Passar ao greeter um `Clock.fixed(...)` ajustado para 9h",
+                  "bucket": 1
+                },
+                {
+                  "text": "Embaralhar com um `random.Random(42)` injetado",
+                  "bucket": 1
+                },
+                {
+                  "text": "Comparar `sorted(result)` com uma lista esperada",
+                  "bucket": 1
+                },
+                {
+                  "text": "Cada teste criando a sua própria lista nova no `@BeforeEach`",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Pergunte: isto poderia dar um resultado diferente amanhã, em outra máquina ou em outra ordem de testes?",
+              "explanation": "Testes instáveis dependem de uma entrada que o teste não define: o relógio real, aleatoriedade sem seed, tempo (`sleep`), ordem de hash, estado compartilhado deixado por outro teste ou uma rede real. Cada versão determinística transforma essa entrada em algo que o teste controla: um relógio fixo, um gerador com seed, uma comparação que independe da ordem, estado novo por teste."
+            }
+          ]
+        },
+        {
+          "id": "coverage-and-pyramid",
+          "title": "Cobertura e a pirâmide de testes",
+          "pareto": "extra",
+          "minutes": 7,
+          "takeaway": "A cobertura mostra o que seus testes nunca executaram, não se eles verificam alguma coisa; construa muitos testes unitários rápidos, menos testes de integração e um punhado de testes de ponta a ponta.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Cobertura de linhas vs de branches",
+              "body": "A **cobertura** mede qual código rodou enquanto os seus testes rodavam.\n\n- **Cobertura de linhas** — a % de linhas executadas\n- **Cobertura de branches** — a % de resultados de decisão percorridos: cada `if` tanto verdadeiro *quanto* falso\n\nFerramentas: **JaCoCo** para Java e Kotlin; **coverage.py** para Python, geralmente via **pytest-cov** (`pytest --cov`)."
+            },
+            {
+              "type": "example",
+              "title": "100% das linhas, metade dos branches",
+              "problem": "```python\ndef shipping(total):\n    fee = 5\n    if total >= 50:\n        fee = 0\n    return fee\n```\n\nO único teste é `assert shipping(80) == 0`.",
+              "steps": [
+                "Com um total de 80, todas as linhas rodam: `fee = 5`, o `if`, `fee = 0`, `return`. Cobertura de linhas: **100%**.",
+                "Mas o `if` só foi verdadeiro. O caminho em que a condição é falsa — a taxa continua 5 — nunca rodou. Cobertura de branches: **50%**.",
+                "Adicione `assert shipping(20) == 5`, mais o limite `assert shipping(50) == 0`."
+              ],
+              "answer": "A cobertura de linhas pode chegar a 100% enquanto caminhos inteiros ficam sem teste. A cobertura de branches é o número mais honesto."
+            },
+            {
+              "type": "mcq",
+              "id": "q-no-assert",
+              "concepts": [
+                "coverage",
+                "self-checking"
+              ],
+              "prompt": "Um teste chama `calculate_tax(100)`, mas **não tem nenhuma asserção**. O que acontece com a cobertura?",
+              "choices": [
+                "A cobertura fica igual, porque nada é verificado",
+                "A ferramenta de cobertura reporta um erro",
+                "A cobertura sobe, mesmo que o teste não consiga pegar um resultado errado",
+                "A cobertura cai"
+              ],
+              "answer": 2,
+              "explanation": "A cobertura conta *execução*, não *verificação*. Um teste sem asserção executa código e infla o número sem pegar nada além de crashes."
+            },
+            {
+              "type": "explain",
+              "title": "Por que 100% não é a meta",
+              "body": "A cobertura é ótima em uma coisa: revelar código que **nenhum teste jamais executou**. Essas lacunas merecem uma olhada.\n\nMas é uma *meta* ruim. Perseguir 100% gera testes de getters triviais e testes sem asserção que só inflam o número. Muitos times miram em algo como 70–90% e se concentram na lógica de risco.\n\nA pergunta melhor é: *se eu quebrasse esta linha, algum teste falharia?* Ferramentas de **teste de mutação** (PIT para Java, mutmut para Python) verificam exatamente isso, automaticamente."
+            },
+            {
+              "type": "explain",
+              "title": "A pirâmide de testes",
+              "body": "- **Muitos testes unitários** na base — milissegundos cada, falhas fáceis de localizar\n- **Menos testes de integração** no meio — um banco de dados real, HTTP real entre os seus componentes; mais lentos, mas pegam erros de ligação\n- **Poucos testes de ponta a ponta** no topo — comandam o app inteiro como um usuário; os mais lentos e frágeis\n\nVire isso de cabeça para baixo — quase só testes de ponta a ponta lentos, o “cone de sorvete” — e você terá feedback lento e falhas difíceis de diagnosticar."
+            },
+            {
+              "type": "mcq",
+              "id": "q-sql-typo",
+              "concepts": [
+                "test-pyramid"
+              ],
+              "prompt": "Seus testes unitários passam usando um repositório com mock, mas, em produção, a consulta SQL tem um erro de digitação no nome de uma coluna. Qual teste teria pego isso?",
+              "choices": [
+                "Outro teste unitário com um repositório com mock",
+                "Um teste de integração que roda a consulta em um banco de dados real (por exemplo, um iniciado em um contêiner)",
+                "Uma meta de cobertura mais alta",
+                "Um teste unitário parametrizado"
+              ],
+              "answer": 1,
+              "explanation": "Um mock nunca executa SQL, então nenhum teste unitário enxerga o erro de digitação. É exatamente a lacuna que os testes de integração preenchem: as junções entre o seu código e a infraestrutura real."
+            },
+            {
+              "type": "mcq",
+              "id": "q-ice-cream",
+              "concepts": [
+                "test-pyramid"
+              ],
+              "prompt": "Uma suíte tem 20 testes unitários e 400 testes de ponta a ponta comandados por navegador. Ela leva 2 horas e falha aleatoriamente. Qual é o melhor caminho?",
+              "choices": [
+                "Adicionar mais testes de ponta a ponta para cobrir as falhas",
+                "Subir a meta de cobertura para 100%",
+                "Rodar os testes de ponta a ponta com menos frequência e apagar os testes unitários",
+                "Empurrar a maior parte das verificações para testes unitários e de integração; manter poucos testes de ponta a ponta para as jornadas críticas do usuário"
+              ],
+              "answer": 3,
+              "explanation": "A maioria das regras (validação, preços, casos extremos) pode ser verificada por testes unitários em milissegundos. Reserve os testes de ponta a ponta para “um usuário consegue se cadastrar e finalizar a compra?” — as poucas jornadas em que o sistema inteiro precisa funcionar em conjunto."
+            },
+            {
+              "type": "buckets",
+              "id": "q-buckets-pyramid",
+              "concepts": [
+                "test-pyramid"
+              ],
+              "prompt": "A que camada da pirâmide de testes pertence cada teste?",
+              "buckets": [
+                "Unitário",
+                "Integração",
+                "Ponta a ponta"
+              ],
+              "items": [
+                {
+                  "text": "`shipping(20) == 5`, verificado em memória em um milissegundo",
+                  "bucket": 0
+                },
+                {
+                  "text": "Regras de senha verificadas com o repositório de usuários substituído por mock",
+                  "bucket": 0
+                },
+                {
+                  "text": "Um teste parametrizado de uma função que interpreta datas",
+                  "bucket": 0
+                },
+                {
+                  "text": "A consulta SQL de um repositório executada em um Postgres real iniciado em um contêiner",
+                  "bucket": 1
+                },
+                {
+                  "text": "Salvar um pedido pelo repositório e depois lê-lo de volta de um banco de dados real",
+                  "bucket": 1
+                },
+                {
+                  "text": "Verificar que o seu consumidor realmente lê mensagens de um broker Kafka em um contêiner",
+                  "bucket": 1
+                },
+                {
+                  "text": "Um script de navegador se cadastra, enche um carrinho e finaliza a compra no app em execução",
+                  "bucket": 2
+                },
+                {
+                  "text": "Fazer login pela interface real e conferir se o painel carrega",
+                  "bucket": 2
+                }
+              ],
+              "hint": "Unitário: seu código sozinho, com fakes ou mocks. Integração: seu código mais uma peça real de infraestrutura. Ponta a ponta: o app inteiro, comandado como um usuário.",
+              "explanation": "Os testes **unitários** executam a sua lógica sozinha, em milissegundos, com os colaboradores substituídos por mocks ou fakes. Os testes de **integração** verificam uma junção entre o seu código e algo real, como um banco de dados ou um message broker, então pegam erros de ligação como um erro de digitação no SQL. Os testes **de ponta a ponta** comandam o sistema inteiro pela interface como um usuário: valiosos para poucas jornadas críticas, mas os mais lentos e frágeis, e por isso ficam no topo estreito."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

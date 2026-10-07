@@ -9,6 +9,7 @@ import { PlayerHeader } from './Layout';
 import { QuestionView } from './QuestionView';
 import { accentStyle, useBodyAccent } from './ui';
 import { CourseIcon } from './CourseIcon';
+import { useT } from '../i18n/react';
 
 export interface SessionResult {
   ref: QuestionRef;
@@ -33,6 +34,7 @@ interface Props {
 
 /** Runs a list of questions one at a time in test mode (quiz and review share this). */
 export function Session({ ritual, questions, exitHref, onFinish, renderEnd }: Props) {
+  const { t, locale } = useT();
   const [againSheet] = useState(() => dueSheet(getProgress().sheets ?? {}));
   const [phase, setPhase] = useState<'again' | 'questions' | 'shorter' | 'end'>(againSheet ? 'again' : 'questions');
   const [idx, setIdx] = useState(0);
@@ -71,11 +73,11 @@ export function Session({ ritual, questions, exitHref, onFinish, renderEnd }: Pr
           )}
           {phase === 'shorter' && (
             <ShorterPhase
-              heading="Squeeze this session into anchors"
-              intro="What will you remember, or do differently next time? Two or three anchors, four words at most each."
+              heading={t('lesson.session.shorterHeading')}
+              intro={t('lesson.session.shorterIntro')}
               concepts={sessionConcepts(questions)}
               focus={missedConcepts(results)}
-              doneLabel="See results"
+              doneLabel={t('lesson.session.seeResults')}
               onDone={(anchors) => {
                 const now = Date.now();
                 const sheet = finishShorter({ key: sessionSheetKey(ritual.kind, now), course: ritual.course, title: ritual.title, again: [], createdAt: now, updatedAt: now }, anchors, now);
@@ -98,13 +100,14 @@ export function Session({ ritual, questions, exitHref, onFinish, renderEnd }: Pr
         done={lead + idx}
         total={total}
         right={
-          <span className="xp-pill" aria-label={`${right} correct so far`}>
+          <span className="xp-pill" aria-label={t('lesson.session.correctSoFar', { count: right })}>
             ✓ {right}/{idx}
           </span>
         }
       />
       <main className="player-body">
-        <article className="step-card" key={idx}>
+        {/* The locale in the key remounts the current question in the new language; idx and results are kept. */}
+        <article className="step-card" key={`${idx}-${locale}`}>
           <QuestionView
             step={q.step}
             mode="test"

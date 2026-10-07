@@ -52,6 +52,7 @@ Check it with `https://learning.mentor-hub.space/api/auth/me`, which should retu
 | **Certificates** | Finish every lesson of a course to earn a certificate (signed-in learners). It shows your name, the course, the lessons and the hours of learning: active study time, tracked in lessons, sessions and the knowledge map, and never less than the lessons' estimated time. Download it as a PDF (generated in the browser with the PDF standard fonts, so names need Latin letters; accents are fine) or print it, add it to your LinkedIn profile, or share it on LinkedIn, X and Facebook. The shared link (`/c/<id>`) shows a preview card and opens a public page where anyone can verify it. |
 | **Quiz** | 12 questions mixed from across the course. The results list which lessons to study and which you can skip. |
 | **Review** | Spaced repetition: correct answers wait 1 → 3 → 7 → 16 → 35 days, misses come back right away. Shows a 7-day forecast, memory strength, and per-course review. |
+| **Languages** | English, Brazilian Portuguese, Spanish and French. The first visit follows the browser's language; the globe chip in the header (and the Profile page) switches it, mid-lesson too. The choice is saved with your progress, so it follows you to other devices; progress, reviews and certificates are shared across languages. Courses without a translation yet are shown in English. See [`docs/TRANSLATING.md`](docs/TRANSLATING.md). |
 | **XP & levels** | XP for answers and lessons, levels with titles, a daily goal ring, a streak, a weekly chart and an activity heatmap on your profile. |
 
 ## Security notes
@@ -71,6 +72,8 @@ npm run check:content
 
 The quickest way to write one is to have Claude do it using [`docs/NEW_TOPIC_PROMPT.md`](docs/NEW_TOPIC_PROMPT.md). The schema is in [`src/types.ts`](src/types.ts).
 
+**Translations** live next to the English files: `src/content/topics/<locale>/<course id>.json` (a field-by-field mirror of the English course; only human-language text differs) and `src/i18n/<locale>/` for the interface. `npm run check:content` validates them and `npm run i18n:status` shows which courses exist in which language. How to translate a course: [`docs/TRANSLATING.md`](docs/TRANSLATING.md).
+
 **Interactive by default:** every lesson must include at least one interactive step (predict the output, find the bug, put in order, sort into buckets, trace the code, or a simulator). The validator rejects lessons without one. Open any of them directly at http://localhost:5173/#/dev/games while developing.
 
 > Review history is keyed on `course id / lesson id / question id`. If you rename an id, that question's review history starts over.
@@ -80,7 +83,10 @@ The quickest way to write one is to have Claude do it using [`docs/NEW_TOPIC_PRO
 ```
 src/
   content/topics/*.json   courses (the only files you touch to add content)
+  content/topics/<locale>/ translated courses (pt-BR, es, fr), loaded on demand
   content/validate.ts     course validator (used by the app and npm run check:content)
+  content/translation.ts  translation validator: which fields are translated and which stay identical
+  i18n/                   interface strings: en/ (source of truth) and pt-BR/, es/, fr/; t(), plurals, Intl formatting
   components/             pages: Home, Courses, CoursePage, LessonPlayer, Quiz, Review, Profile, Auth
   lib/storage.ts          progress, XP, levels, streak, spaced-repetition scheduling
   lib/auth.ts             session state and progress sync

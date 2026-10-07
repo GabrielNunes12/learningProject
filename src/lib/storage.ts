@@ -1,4 +1,6 @@
 import { useSyncExternalStore } from 'react';
+import { t, type MessageKey } from '../i18n/core.ts';
+import type { Locale } from '../i18n/locales.ts';
 
 // Progress lives in localStorage and, when signed in, is synced to the server (see lib/auth.ts).
 
@@ -117,6 +119,8 @@ export interface Progress {
   thinkDays: string[];
   /** Active study time per course id, in ms (lessons, sessions and the knowledge map; idle time doesn't count). */
   studyMs: Record<string, number>;
+  /** The site language the learner picked (unset until they pick one: the browser's language is used). Synced, so it follows them. */
+  locale?: Locale;
   /** Bumped on every change; used to resolve sync conflicts. */
   updatedAt: number;
 }
@@ -201,6 +205,8 @@ const subscribe = (cb: () => void) => {
     listeners.delete(cb);
   };
 };
+/** Runs `cb` after every change to progress (from this tab, another tab or the server). */
+export const onProgress = subscribe;
 
 export const useProgress = () => useSyncExternalStore(subscribe, () => state);
 export const getProgress = () => state;
@@ -308,6 +314,11 @@ export function setDailyGoal(goal: number) {
   set({ ...state, dailyGoal: goal });
 }
 
+/** Remembers the learner's language choice in their (synced) progress. */
+export function setLocalePref(locale: Locale) {
+  if (state.locale !== locale) set({ ...state, locale });
+}
+
 export function resetProgress() {
   set(emptyProgress());
 }
@@ -361,9 +372,10 @@ export function levelInfo(xp: number) {
   while (50 * (level + 1) * level <= xp) level++;
   const start = 50 * level * (level - 1);
   const end = 50 * (level + 1) * level;
-  return { level, start, end, into: xp - start, needed: end - start, title: LEVEL_TITLES[Math.min(level, LEVEL_TITLES.length) - 1] };
+  return { level, start, end, into: xp - start, needed: end - start, title: t(`common.levelTitle.${Math.min(level, LEVEL_TITLES)}` as MessageKey) };
 }
-const LEVEL_TITLES = ['Curious', 'Learner', 'Explorer', 'Builder', 'Practitioner', 'Specialist', 'Expert', 'Master', 'Sage', 'Legend'];
+/** Levels with their own title (common.levelTitle.1 … 10); higher levels keep the last one. */
+const LEVEL_TITLES = 10;
 
 // ---------- merge (guest progress + server progress on sign-in) ----------
 
@@ -390,6 +402,8 @@ export function mergeProgress(a: Progress, b: Progress): Progress {
   for (const [k, x] of Object.entries(b.sheets ?? {})) if (!sheets[k] || x.updatedAt > sheets[k].updatedAt) sheets[k] = x;
 
   const newer = a.updatedAt >= b.updatedAt ? a : b;
+  // The newer side's language choice, like the daily goal (a side that never picked one doesn't erase it).
+  const locale = newer.locale ?? (newer === a ? b : a).locale;
   return {
     completed,
     cards,
@@ -399,6 +413,7 @@ export function mergeProgress(a: Progress, b: Progress): Progress {
     quizBest,
     last: (a.last?.at ?? 0) >= (b.last?.at ?? 0) ? a.last : b.last,
     dailyGoal: newer.dailyGoal,
+    ...(locale ? { locale } : {}),
     maps,
     sheets,
     thinkDays: [...new Set([...(a.thinkDays ?? []), ...(b.thinkDays ?? [])])].sort().slice(-400),
@@ -426,7 +441,7 @@ export function exportProgress() {
 export async function importProgress(file: File) {
   const data = JSON.parse(await file.text());
   if (typeof data !== 'object' || data === null || typeof data.cards !== 'object') {
-    throw new Error('That file does not look like a ProjectLearn progress export.');
+    throw new Error(t('profile.importBadFile'));
   }
   set(mergeProgress(state, { ...emptyProgress(), ...data }));
 }

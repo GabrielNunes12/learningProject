@@ -1,4 +1,5 @@
 import { useEffect, useState, type CSSProperties, type InputHTMLAttributes, type ReactNode } from 'react';
+import { useT } from '../i18n/react';
 
 export const accentStyle = (color?: string) => (color ? ({ '--accent': color } as CSSProperties) : undefined);
 
@@ -55,6 +56,7 @@ interface FieldProps extends InputHTMLAttributes<HTMLInputElement> {
 }
 
 export function Field({ label, error, help, type, ...rest }: FieldProps) {
+  const { t } = useT();
   const [show, setShow] = useState(false);
   const isPassword = type === 'password';
   const id = rest.id ?? rest.name;
@@ -64,8 +66,8 @@ export function Field({ label, error, help, type, ...rest }: FieldProps) {
       <span className="field-input">
         <input id={id} type={isPassword && show ? 'text' : type} aria-invalid={Boolean(error)} {...rest} />
         {isPassword && (
-          <button type="button" className="field-toggle" onClick={() => setShow(!show)} aria-label={show ? 'Hide password' : 'Show password'}>
-            {show ? 'Hide' : 'Show'}
+          <button type="button" className="field-toggle" onClick={() => setShow(!show)} aria-label={show ? t('common.hidePassword') : t('common.showPassword')}>
+            {show ? t('common.hide') : t('common.show')}
           </button>
         )}
       </span>
@@ -82,8 +84,6 @@ export function Notice({ tone = 'info', children }: { tone?: 'info' | 'good' | '
     </div>
   );
 }
-
-export const plural = (n: number, word: string, many = `${word}s`) => `${n} ${n === 1 ? word : many}`;
 
 /** While a lesson/session is open, use the course colour for page-level UI (e.g. the portaled bottom bar). */
 export function useBodyAccent(color?: string) {

@@ -1,0 +1,35 @@
+// Spanish UI strings: api. Mirrors src/i18n/en/api.ts (see docs/TRANSLATING.md).
+import type { Translation } from '../core.ts';
+import type en from '../en/api.ts';
+
+export default {
+  'api.unreachable': 'No se puede conectar con el servidor. ¿Está en marcha? (npm run dev)',
+  'api.requestFailed': 'La solicitud falló ({status})',
+  'api.signIn': 'Inicia sesión.',
+  'api.passwordShort': 'La contraseña debe tener al menos 8 caracteres.',
+  'api.passwordLong': 'La contraseña es demasiado larga (máx. 128).',
+  'api.passwordIsUsername': 'La contraseña no puede ser tu nombre de usuario.',
+  'api.rateLimited': 'Demasiados intentos. Espera unos minutos y vuelve a intentarlo.',
+  'api.expectedJson': 'Se esperaba JSON.',
+  'api.crossOrigin': 'Solicitud de origen cruzado bloqueada.',
+  'api.usernameFormat': 'Nombre de usuario: de 3 a 20 letras, números o guiones bajos.',
+  'api.emailInvalid': 'Introduce un correo electrónico válido.',
+  'api.emailTaken': 'Ya existe una cuenta con este correo. Prueba a iniciar sesión.',
+  'api.usernameTaken': 'Ese nombre de usuario ya está en uso.',
+  'api.justTaken': 'Ese nombre de usuario o correo se acaba de registrar.',
+  'api.emailFailed': 'Ahora mismo no pudimos enviar el correo de confirmación. Vuelve a intentarlo en unos minutos.',
+  'api.verifyInvalid': 'Este enlace de confirmación no es válido o ha caducado. Pide uno nuevo.',
+  'api.wrongLogin': 'Usuario/correo o contraseña incorrectos.',
+  'api.notVerified': 'Primero confirma tu correo. Busca el enlace en tu bandeja de entrada.',
+  'api.resetInvalid': 'Este enlace para restablecer la contraseña no es válido o ha caducado. Pide uno nuevo.',
+  'api.currentPasswordWrong': 'La contraseña actual es incorrecta.',
+  'api.passwordWrong': 'La contraseña es incorrecta.',
+  'api.badProgress': 'Datos de progreso no válidos.',
+  'api.badCertificate': 'Solicitud de certificado no válida.',
+  'api.notSynced': 'Tus lecciones terminadas todavía no han llegado al servidor. Espera un momento y vuelve a intentarlo.',
+  'api.certFailed': 'No se pudo emitir el certificado. Vuelve a intentarlo.',
+  'api.certNotFound': 'No hay ningún certificado con ese ID.',
+  'api.notFound': 'No encontrado.',
+  'api.badJson': 'JSON mal formado.',
+  'api.serverError': 'Algo salió mal en el servidor.',
+} satisfies Translation<typeof en>;

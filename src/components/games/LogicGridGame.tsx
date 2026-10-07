@@ -31,14 +31,18 @@ import { InlineMarkdown } from '../Markdown';
 import { AnswerLine, QuestionFrame, useCheckFlow, type QuestionProps } from '../QuestionFrame';
 import './LogicGridGame.css';
 import { Icon } from '../icons';
+import type { MessageKey } from '../../i18n/core';
+import { useT } from '../../i18n/react';
 
 const LONG_PRESS_MS = 450;
 const UNDO_LIMIT = 60;
 const plain = (s: string) => s.replace(/[`*_]/g, '');
-const markWord = (m: Mark) => (m === 'o' ? 'yes' : m === '' ? 'blank' : 'no');
+const markWord = (m: Mark): MessageKey =>
+  m === 'o' ? 'games.logicGrid.mark.yes' : m === '' ? 'games.logicGrid.mark.blank' : 'games.logicGrid.mark.no';
 const glyph = (m: Mark) => (m === 'o' ? '✓' : m === '' ? '' : '✗');
 
 export function LogicGridGame({ step, mode, context, onDone }: QuestionProps<LogicGridStep>) {
+  const { t } = useT();
   const flow = useCheckFlow(mode, onDone);
   const { status } = flow;
   const cats = step.categories.length;
@@ -89,8 +93,8 @@ export function LogicGridGame({ step, mode, context, onDone }: QuestionProps<Log
     const after = setMark(grid, b, r, c, next, helpers);
     setHistory((h) => [...h.slice(-UNDO_LIMIT + 1), grid]);
     setGrid(after);
-    const crossed = helpers && next === 'o' ? ' The rest of its row and column are crossed out.' : '';
-    setAnnounce(`${itemOf(blk.rowCat, r)} and ${itemOf(blk.colCat, c)}: ${markWord(next)}.${crossed}`);
+    const set = t('games.logicGrid.announce.set', { row: itemOf(blk.rowCat, r), col: itemOf(blk.colCat, c), mark: t(markWord(next)) });
+    setAnnounce(helpers && next === 'o' ? `${set} ${t('games.logicGrid.announce.crossed')}` : set);
   }
 
   function undo() {
@@ -99,21 +103,21 @@ export function LogicGridGame({ step, mode, context, onDone }: QuestionProps<Log
     const prev = history[history.length - 1];
     setGrid(helpers ? autoFillAll(prev) : clearAuto(prev));
     setHistory((h) => h.slice(0, -1));
-    setAnnounce('Undone.');
+    setAnnounce(t('games.common.undone'));
   }
 
   function clearGrid() {
     if (locked) return;
     setHistory((h) => [...h.slice(-UNDO_LIMIT + 1), grid]);
     setGrid(emptyLogicGrid(cats, size));
-    setAnnounce('Grid cleared. Undo brings it back.');
+    setAnnounce(t('games.logicGrid.announce.cleared'));
   }
 
   function toggleHelpers() {
     const on = !helpers;
     setHelpers(on);
     if (!locked) setGrid((g) => (on ? autoFillAll(g) : clearAuto(g)));
-    setAnnounce(on ? 'Helpers on: a check mark crosses out the rest of its row and column.' : 'Helpers off.');
+    setAnnounce(on ? t('games.logicGrid.announce.helpersOn') : t('games.logicGrid.announce.helpersOff'));
   }
 
   function toggleClue(i: number) {
@@ -185,11 +189,11 @@ export function LogicGridGame({ step, mode, context, onDone }: QuestionProps<Log
     const ok = isLogicGridSolved(step, derivePicks(grid, cats));
     if (ok) {
       setWrong(null);
-      setAnnounce('Solved! Every match is right.');
+      setAnnounce(t('games.logicGrid.announce.solved'));
     } else {
       const bad = wrongTicks(grid, step);
       setWrong(bad);
-      setAnnounce(`${bad.size} ${bad.size === 1 ? 'check mark is' : 'check marks are'} wrong. They're highlighted in the grid.`);
+      setAnnounce(t('games.logicGrid.announce.wrong', { count: bad.size }));
     }
     flow.grade(ok);
   }
@@ -212,9 +216,11 @@ export function LogicGridGame({ step, mode, context, onDone }: QuestionProps<Log
     if (isWrong) cls += ' wrong';
     if (isMissed) cls += ' missed';
     if (solved && m === 'o') cls += ' win';
-    const label = `${itemOf(blk.rowCat, r)} and ${itemOf(blk.colCat, c)}: ${markWord(m)}${
-      isWrong ? ', wrong' : isMissed ? ', you had this as a match' : ''
-    }`;
+    const label = t(isWrong ? 'games.logicGrid.cellWrong' : isMissed ? 'games.logicGrid.cellMissed' : 'games.logicGrid.cell', {
+      row: itemOf(blk.rowCat, r),
+      col: itemOf(blk.colCat, c),
+      mark: t(markWord(m)),
+    });
     return (
       <td key={gc} className="lg-td">
         <button
@@ -261,7 +267,7 @@ export function LogicGridGame({ step, mode, context, onDone }: QuestionProps<Log
   const pickWrong = (row: number, k: number, item: number | null) => status === 'wrong' && item !== null && item !== solIdx[row][k];
 
   const board = (
-    <div className="lg-board-scroll" role="region" aria-label="Logic grid">
+    <div className="lg-board-scroll" role="region" aria-label={t('games.logicGrid.gridLabel')}>
       <table className={`lg-table${solved ? ' solved' : ''}${revealed ? ' answer' : ''}`} aria-describedby={howtoId}>
         <thead>
           <tr>
@@ -328,21 +334,19 @@ export function LogicGridGame({ step, mode, context, onDone }: QuestionProps<Log
       flow={flow}
       mode={mode}
       context={context}
-      kind="Solve the logic grid"
+      kind={t('games.logicGrid.kind')}
       canCheck={complete}
       onCheck={check}
       onRetry={() => setWrong(null)}
-      checkLabel={complete ? 'Check' : `${picked}/${size} matched`}
+      checkLabel={complete ? t('common.check') : t('games.logicGrid.matchedCount', { done: picked, total: size })}
       answer={<AnswerLine text={gameAnswerLabel(step)} />}
     >
       <div className="lg-wrap">
         <div className="lg-layout">
           <details className="lg-clues" open>
             <summary>
-              <span className="lg-clues-title">Clues</span>
-              <span className="lg-clues-count">
-                {struck.size}/{step.clues.length} used
-              </span>
+              <span className="lg-clues-title">{t('games.logicGrid.clues')}</span>
+              <span className="lg-clues-count">{t('games.logicGrid.cluesUsed', { used: struck.size, total: step.clues.length })}</span>
             </summary>
             <ol className="lg-clue-list">
               {step.clues.map((clue, i) => (
@@ -363,31 +367,31 @@ export function LogicGridGame({ step, mode, context, onDone }: QuestionProps<Log
                 </li>
               ))}
             </ol>
-            <p className="lg-clues-tip muted small">Tap a clue to cross it off once you've used it.</p>
+            <p className="lg-clues-tip muted small">{t('games.logicGrid.clueTip')}</p>
           </details>
 
           <div className="lg-main">
             <div className="lg-tools">
-              <button type="button" className={`lg-toggle${helpers ? ' on' : ''}`} aria-pressed={helpers} aria-label="Auto cross-out helper" onClick={toggleHelpers}>
+              <button type="button" className={`lg-toggle${helpers ? ' on' : ''}`} aria-pressed={helpers} aria-label={t('games.logicGrid.helperLabel')} onClick={toggleHelpers}>
                 <span className="lg-switch" aria-hidden />
-                Auto-✗
+                {t('games.logicGrid.helper')}
               </button>
               {status === 'answering' && (
                 <>
                   <button type="button" className="btn ghost small" onClick={undo} disabled={history.length === 0}>
-                    ↶ Undo
+                    {t('games.common.undo')}
                   </button>
                   <button type="button" className="btn ghost small" onClick={clearGrid} disabled={grid.every((b) => b.every((row) => row.every((m) => m === '')))}>
-                    Clear
+                    {t('games.common.clear')}
                   </button>
                 </>
               )}
-              <span className="lg-tip muted small">Tap: ✗ → ✓ · hold or right-click: ✓</span>
+              <span className="lg-tip muted small">{t('games.logicGrid.tapTip')}</span>
             </div>
             {board}
 
             <div className="lg-summary-wrap">
-              <span className="eyebrow">{revealed ? 'Solution' : 'Solution so far'}</span>
+              <span className="eyebrow">{revealed ? t('games.logicGrid.solution') : t('games.logicGrid.solutionSoFar')}</span>
               <table className={`lg-summary${solved ? ' solved' : ''}`}>
                 <thead>
                   <tr>
@@ -408,11 +412,11 @@ export function LogicGridGame({ step, mode, context, onDone }: QuestionProps<Log
                         return (
                           <td key={k} className={`${s.item === null ? 'empty' : 'known'}${s.inferred ? ' inferred' : ''}${isBad ? ' wrong' : ''}`}>
                             {s.item === null ? (
-                              <span aria-label="unknown">?</span>
+                              <span aria-label={t('games.logicGrid.unknown')}>?</span>
                             ) : (
                               <span key={s.item} className="lg-sum-item">
                                 {plain(cat.items[s.item])}
-                                {isBad && <span className="sr-only"> (wrong)</span>}
+                                {isBad && <span className="sr-only">{t('games.logicGrid.wrongSr')}</span>}
                               </span>
                             )}
                           </td>
@@ -423,7 +427,7 @@ export function LogicGridGame({ step, mode, context, onDone }: QuestionProps<Log
                 </tbody>
               </table>
               {cats === 3 && !revealed && summary.some((row) => row.some((s) => s.inferred)) && (
-                <p className="muted small lg-sum-note">Faded entries come from the bottom block: tick them in the rows above too.</p>
+                <p className="muted small lg-sum-note">{t('games.logicGrid.inferredNote')}</p>
               )}
             </div>
           </div>
@@ -432,19 +436,18 @@ export function LogicGridGame({ step, mode, context, onDone }: QuestionProps<Log
 
       {revealed && missed && missed.size > 0 && (
         <p className="lg-legend muted small">
-          <span className="lg-legend-swatch" aria-hidden /> Matches you had wrong.
+          <span className="lg-legend-swatch" aria-hidden /> {t('games.logicGrid.legend')}
         </p>
       )}
       {solved && (
         <p className="lg-result" role="status">
-          <Icon name="sparkle" size={16} /> Solved! All {size} rows matched from {step.clues.length} {step.clues.length === 1 ? 'clue' : 'clues'}.
+          <Icon name="sparkle" size={16} /> {t('games.logicGrid.result', { size, count: step.clues.length })}
         </p>
       )}
 
       <p id={howtoId} className="sr-only">
-        Each cell pairs the item of its row with the item of its column. Use the arrow keys to move. Press O for a match, X
-        to rule it out, Space to cycle, Backspace to clear.
-        {helpers ? ' Helpers are on: a match crosses out the rest of its row and column.' : ''}
+        {t('games.logicGrid.howto')}
+        {helpers ? ` ${t('games.logicGrid.howtoHelpers')}` : ''}
       </p>
       <p className="sr-only" aria-live="polite">
         {announce}

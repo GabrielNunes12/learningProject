@@ -1,0 +1,2063 @@
+{
+  "id": "sql",
+  "title": "SQL",
+  "icon": "SQL",
+  "color": "#0b7fab",
+  "description": "Interroge et modifie les données d'une base relationnelle en toute confiance : réponds à de vraies questions métier, lis les requêtes des autres et conçois des tables simples. Les exemples utilisent PostgreSQL, avec les différences de MySQL, SQLite et SQL Server quand elles comptent.",
+  "order": 14,
+  "category": "Data",
+  "level": "Beginner",
+  "keyIdeas": [
+    "Une requête s'exécute dans l'ordre FROM → WHERE → GROUP BY → HAVING → SELECT → ORDER BY → LIMIT ; cet ordre explique la plupart des erreurs du type « pourquoi je ne peux pas utiliser ça ici ? ».",
+    "`NULL` veut dire inconnu : une comparaison avec lui n'est jamais vraie, donc utilise `IS NULL`, `COALESCE`, et `NOT EXISTS` plutôt que `NOT IN`.",
+    "`WHERE` filtre les lignes avant le regroupement ; `HAVING` filtre les groupes après l'agrégation.",
+    "INNER JOIN ne garde que les correspondances ; LEFT JOIN garde chaque ligne de gauche, et les conditions sur la table de droite vont dans `ON`, pas dans `WHERE`.",
+    "Chaque `UPDATE` et chaque `DELETE` a besoin d'un `WHERE` : prévisualise avec `SELECT`, exécute dans une transaction, vérifie le nombre de lignes, puis `COMMIT`.",
+    "Stocke chaque information à un seul endroit, relie les tables par des clés primaires et étrangères, et laisse les contraintes rejeter les mauvaises données."
+  ],
+  "concepts": [
+    {
+      "id": "where-filter",
+      "label": "Filtre WHERE",
+      "lesson": "select-where",
+      "summary": "WHERE ne garde que les lignes dont la condition est vraie ; AND est prioritaire sur OR, et IN, BETWEEN (bornes incluses) et LIKE sont des raccourcis.",
+      "aliases": [
+        "clause WHERE",
+        "priorité AND / OR",
+        "BETWEEN",
+        "LIKE",
+        "filtrer les lignes"
+      ]
+    },
+    {
+      "id": "order-by-limit",
+      "label": "ORDER BY et LIMIT",
+      "lesson": "sort-limit-case",
+      "summary": "Sans ORDER BY (croissant par défaut), les lignes n'ont aucun ordre garanti, et LIMIT garde les n premières lignes après le tri.",
+      "aliases": [
+        "tri",
+        "trier",
+        "top N",
+        "DESC",
+        "OFFSET"
+      ]
+    },
+    {
+      "id": "case-expression",
+      "label": "Expression CASE",
+      "lesson": "sort-limit-case",
+      "summary": "CASE transforme des valeurs en étiquettes en testant ses branches WHEN de haut en bas ; la première branche vraie l'emporte, et sans ELSE, aucune correspondance donne NULL.",
+      "aliases": [
+        "CASE WHEN",
+        "colonne conditionnelle",
+        "si / sinon"
+      ]
+    },
+    {
+      "id": "null",
+      "label": "NULL",
+      "lesson": "null-values",
+      "summary": "NULL veut dire manquant ou inconnu, pas 0 ni une chaîne vide ; COALESCE le remplace par la première valeur de secours non NULL.",
+      "aliases": [
+        "valeur manquante",
+        "valeur inconnue",
+        "COALESCE",
+        "IFNULL"
+      ]
+    },
+    {
+      "id": "three-valued-logic",
+      "label": "Logique à trois valeurs",
+      "lesson": "null-values",
+      "summary": "Toute comparaison avec NULL est inconnue plutôt que vraie ou fausse, et WHERE écarte les lignes inconnues : on ne teste donc NULL qu'avec IS NULL / IS NOT NULL.",
+      "aliases": [
+        "IS NULL",
+        "= NULL",
+        "inconnu",
+        "vrai faux inconnu"
+      ]
+    },
+    {
+      "id": "aggregate-functions",
+      "label": "Fonctions d'agrégation",
+      "lesson": "group-by-having",
+      "summary": "COUNT, SUM, AVG, MIN et MAX transforment plusieurs lignes en une seule valeur ; COUNT(*) compte les lignes, tandis que les autres (et COUNT(colonne)) ignorent les NULL.",
+      "aliases": [
+        "agrégats",
+        "COUNT",
+        "SUM",
+        "AVG",
+        "COUNT DISTINCT"
+      ]
+    },
+    {
+      "id": "group-by",
+      "label": "GROUP BY",
+      "lesson": "group-by-having",
+      "summary": "GROUP BY répartit les lignes en groupes qui partagent une valeur et calcule les agrégats par groupe ; chaque colonne sélectionnée doit être regroupée ou agrégée.",
+      "aliases": [
+        "regroupement",
+        "par groupe",
+        "regrouper"
+      ]
+    },
+    {
+      "id": "having",
+      "label": "HAVING",
+      "lesson": "group-by-having",
+      "summary": "HAVING filtre les groupes après l'agrégation, et peut donc utiliser des agrégats, ce que WHERE ne peut pas faire.",
+      "aliases": [
+        "filtrer les groupes",
+        "HAVING COUNT"
+      ]
+    },
+    {
+      "id": "logical-query-order",
+      "label": "Ordre logique d'une requête",
+      "lesson": "group-by-having",
+      "summary": "Une requête s'exécute dans l'ordre FROM, WHERE, GROUP BY, HAVING, SELECT, ORDER BY, LIMIT, ce qui détermine ce que chaque clause peut voir.",
+      "aliases": [
+        "ordre d'exécution",
+        "ordre des clauses",
+        "FROM WHERE GROUP BY"
+      ]
+    },
+    {
+      "id": "foreign-key",
+      "label": "Clé étrangère",
+      "lesson": "inner-join",
+      "summary": "Une colonne clé étrangère pointe vers la clé primaire d'une autre table, et REFERENCES fait rejeter par la base les valeurs qui n'y existent pas.",
+      "aliases": [
+        "clé primaire",
+        "REFERENCES",
+        "PK",
+        "FK",
+        "foreign key"
+      ]
+    },
+    {
+      "id": "inner-join",
+      "label": "INNER JOIN",
+      "lesson": "inner-join",
+      "summary": "Une jointure renvoie une ligne par paire correspondante entre les tables ; les lignes sans correspondance disparaissent, et une condition de jointure oubliée associe chaque ligne à toutes les autres.",
+      "aliases": [
+        "JOIN",
+        "jointure",
+        "jointure interne",
+        "clause ON",
+        "produit cartésien",
+        "auto-jointure"
+      ]
+    },
+    {
+      "id": "left-join",
+      "label": "LEFT JOIN",
+      "lesson": "left-join",
+      "summary": "LEFT JOIN garde chaque ligne de la table de gauche et remplit le côté droit avec des NULL là où rien ne correspond.",
+      "aliases": [
+        "jointure externe",
+        "jointure gauche",
+        "LEFT OUTER JOIN",
+        "RIGHT JOIN",
+        "FULL JOIN"
+      ]
+    },
+    {
+      "id": "anti-join",
+      "label": "Anti-jointure",
+      "lesson": "left-join",
+      "summary": "Pour trouver les lignes sans correspondance, fais un LEFT JOIN et ne garde que les lignes où une colonne de droite jamais NULL (sa clé) IS NULL, ou utilise NOT EXISTS.",
+      "aliases": [
+        "qui n'a jamais",
+        "LEFT JOIN IS NULL",
+        "NOT EXISTS",
+        "lignes manquantes",
+        "anti-join"
+      ]
+    },
+    {
+      "id": "filter-in-on",
+      "label": "Filtrer dans ON",
+      "lesson": "left-join",
+      "summary": "Une condition sur la table de droite d'un LEFT JOIN va dans ON ; placée dans WHERE, elle écarte les lignes remplies de NULL et en fait une jointure interne.",
+      "aliases": [
+        "ON ou WHERE",
+        "ON vs WHERE",
+        "WHERE annule le LEFT JOIN"
+      ]
+    },
+    {
+      "id": "subquery",
+      "label": "Sous-requête",
+      "lesson": "subqueries-ctes",
+      "summary": "Une requête dans une requête : une sous-requête scalaire renvoie une seule valeur, les autres renvoient une liste pour IN ou un oui/non pour un EXISTS corrélé.",
+      "aliases": [
+        "requête imbriquée",
+        "sous-requête scalaire",
+        "EXISTS",
+        "sous-requête corrélée",
+        "subquery"
+      ]
+    },
+    {
+      "id": "not-in-null-trap",
+      "label": "Piège NOT IN et NULL",
+      "lesson": "subqueries-ctes",
+      "summary": "NOT IN face à une liste qui contient un NULL n'est jamais vrai, et ne renvoie donc aucune ligne ; NOT EXISTS donne la réponse attendue.",
+      "aliases": [
+        "NOT IN",
+        "NOT IN avec NULL"
+      ]
+    },
+    {
+      "id": "cte",
+      "label": "CTE",
+      "lesson": "subqueries-ctes",
+      "summary": "WITH nom AS (...) donne un nom à une sous-requête en haut de la requête, pour que les étapes suivantes la lisent comme une table.",
+      "aliases": [
+        "WITH",
+        "expression de table commune",
+        "common table expression"
+      ]
+    },
+    {
+      "id": "union",
+      "label": "UNION",
+      "lesson": "self-joins-union",
+      "summary": "UNION empile les lignes de requêtes qui ont le même nombre de colonnes compatibles ; UNION supprime les doublons, UNION ALL garde toutes les lignes et coûte moins cher.",
+      "aliases": [
+        "UNION ALL",
+        "opérateur ensembliste",
+        "empiler des lignes"
+      ]
+    },
+    {
+      "id": "update-delete",
+      "label": "UPDATE et DELETE",
+      "lesson": "insert-update-delete",
+      "summary": "UPDATE et DELETE modifient exactement les lignes que leur WHERE sélectionne, avec les mêmes règles sur NULL que SELECT ; sans WHERE, toutes les lignes changent.",
+      "aliases": [
+        "INSERT",
+        "modifier des lignes",
+        "supprimer des lignes",
+        "DML"
+      ]
+    },
+    {
+      "id": "transaction",
+      "label": "Transaction",
+      "lesson": "insert-update-delete",
+      "summary": "BEGIN ... COMMIT fait de plusieurs instructions une seule unité en tout-ou-rien que ROLLBACK peut annuler ; sans BEGIN, chaque instruction est validée seule (autocommit).",
+      "aliases": [
+        "BEGIN",
+        "COMMIT",
+        "ROLLBACK",
+        "ACID"
+      ]
+    },
+    {
+      "id": "constraints",
+      "label": "Contrainte",
+      "lesson": "create-table-constraints",
+      "summary": "Les types de colonnes, plus PRIMARY KEY, NOT NULL, UNIQUE, CHECK et DEFAULT, permettent à la base de refuser les mauvaises données dès l'entrée (numeric, pas float, pour l'argent).",
+      "aliases": [
+        "contraintes",
+        "NOT NULL",
+        "UNIQUE",
+        "CHECK",
+        "DEFAULT"
+      ]
+    },
+    {
+      "id": "normalization",
+      "label": "Normalisation",
+      "lesson": "normalization",
+      "summary": "Stocker chaque information à un seul endroit, réparti entre des tables reliées par des clés (avec une table de jonction pour le plusieurs-à-plusieurs), pour éviter les anomalies de mise à jour.",
+      "aliases": [
+        "une information, un seul endroit",
+        "table de jonction",
+        "table d'association",
+        "plusieurs-à-plusieurs",
+        "anomalie de mise à jour"
+      ]
+    },
+    {
+      "id": "window-function",
+      "label": "Fonction de fenêtrage",
+      "lesson": "window-functions",
+      "summary": "Une fonction avec OVER (PARTITION BY ... ORDER BY ...) calcule sur des lignes liées tout en gardant chaque ligne, par exemple des cumuls, ROW_NUMBER ou RANK.",
+      "aliases": [
+        "window function",
+        "fonction de fenêtre",
+        "OVER",
+        "PARTITION BY",
+        "ROW_NUMBER",
+        "RANK"
+      ]
+    },
+    {
+      "id": "index",
+      "label": "Index",
+      "lesson": "indexes-explain",
+      "summary": "Une structure de recherche triée qui évite un parcours complet, mais seulement quand la requête compare la colonne indexée telle quelle (ou les colonnes les plus à gauche) ; EXPLAIN montre s'il est utilisé.",
+      "aliases": [
+        "B-tree",
+        "arbre B",
+        "EXPLAIN",
+        "seq scan",
+        "index composite"
+      ]
+    }
+  ],
+  "links": [
+    {
+      "from": "null",
+      "to": "three-valued-logic",
+      "label": "entraîne"
+    },
+    {
+      "from": "three-valued-logic",
+      "to": "where-filter",
+      "label": "est utilisée dans"
+    },
+    {
+      "from": "having",
+      "to": "where-filter",
+      "label": "s'oppose à"
+    },
+    {
+      "from": "having",
+      "to": "group-by",
+      "label": "nécessite"
+    },
+    {
+      "from": "aggregate-functions",
+      "to": "group-by",
+      "label": "sont utilisées dans"
+    },
+    {
+      "from": "aggregate-functions",
+      "to": "null",
+      "label": "ignorent"
+    },
+    {
+      "from": "where-filter",
+      "to": "logical-query-order",
+      "label": "fait partie de"
+    },
+    {
+      "from": "having",
+      "to": "logical-query-order",
+      "label": "fait partie de"
+    },
+    {
+      "from": "order-by-limit",
+      "to": "logical-query-order",
+      "label": "font partie de"
+    },
+    {
+      "from": "case-expression",
+      "to": "order-by-limit",
+      "label": "est utilisée dans"
+    },
+    {
+      "from": "three-valued-logic",
+      "to": "not-in-null-trap",
+      "label": "entraîne"
+    },
+    {
+      "from": "anti-join",
+      "to": "not-in-null-trap",
+      "label": "évite"
+    },
+    {
+      "from": "subquery",
+      "to": "where-filter",
+      "label": "est utilisée dans"
+    },
+    {
+      "from": "cte",
+      "to": "subquery",
+      "label": "est une forme de"
+    },
+    {
+      "from": "foreign-key",
+      "to": "inner-join",
+      "label": "est utilisée dans"
+    },
+    {
+      "from": "left-join",
+      "to": "inner-join",
+      "label": "s'oppose à"
+    },
+    {
+      "from": "left-join",
+      "to": "null",
+      "label": "entraîne"
+    },
+    {
+      "from": "anti-join",
+      "to": "left-join",
+      "label": "s'appuie sur"
+    },
+    {
+      "from": "anti-join",
+      "to": "three-valued-logic",
+      "label": "nécessite"
+    },
+    {
+      "from": "filter-in-on",
+      "to": "left-join",
+      "label": "fait partie de"
+    },
+    {
+      "from": "filter-in-on",
+      "to": "where-filter",
+      "label": "s'oppose à"
+    },
+    {
+      "from": "window-function",
+      "to": "group-by",
+      "label": "s'oppose à"
+    },
+    {
+      "from": "window-function",
+      "to": "aggregate-functions",
+      "label": "s'appuie sur"
+    },
+    {
+      "from": "union",
+      "to": "inner-join",
+      "label": "s'oppose à"
+    },
+    {
+      "from": "update-delete",
+      "to": "where-filter",
+      "label": "nécessitent"
+    },
+    {
+      "from": "transaction",
+      "to": "update-delete",
+      "label": "regroupe"
+    },
+    {
+      "from": "foreign-key",
+      "to": "constraints",
+      "label": "est une forme de"
+    },
+    {
+      "from": "normalization",
+      "to": "foreign-key",
+      "label": "nécessite"
+    },
+    {
+      "from": "constraints",
+      "to": "index",
+      "label": "crée"
+    },
+    {
+      "from": "index",
+      "to": "where-filter",
+      "label": "accélère"
+    },
+    {
+      "from": "index",
+      "to": "inner-join",
+      "label": "accélère"
+    }
+  ],
+  "units": [
+    {
+      "id": "querying",
+      "title": "Interroger une table",
+      "description": "Filtrer, trier, résumer et gérer les valeurs manquantes : les requêtes que tu écriras tous les jours.",
+      "lessons": [
+        {
+          "id": "select-where",
+          "title": "SELECT, FROM et WHERE",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "Une requête nomme les colonnes voulues (`SELECT`), la table où elles se trouvent (`FROM`) et les lignes à garder (`WHERE`) ; quand tu mélanges `AND` et `OR`, ajoute des parenthèses.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Ta première requête",
+              "body": "Une base de données relationnelle range les données dans des **tables** : des lignes d'enregistrements, qui ont toutes les mêmes colonnes nommées. Tout ce cours utilise la petite base de données d'une boutique. Voici sa table `customers` (clients) :\n\n```\ncustomers\n id | name | city\n----+------+--------\n  1 | Ana  | Lisbon\n  2 | Ben  | Porto\n  3 | Cara | Lisbon\n  4 | Dev  | NULL\n  5 | Eli  | Madrid\n```\n\nUne requête demande des colonnes **depuis** (*from*) une table :\n\n```sql\nSELECT name, city\nFROM customers;\n```\n\nElle renvoie les 5 lignes, avec seulement ces deux colonnes. `SELECT *` veut dire « toutes les colonnes ». Pratique pour explorer, mais nomme tes colonnes dans les vraies requêtes. Les mots-clés ne sont pas sensibles à la casse (`select` marche aussi) ; les écrire en majuscules n'est qu'une convention."
+            },
+            {
+              "type": "explain",
+              "title": "Filtrer les lignes avec WHERE",
+              "body": "`WHERE` ne garde que les lignes où une condition est **vraie**. Voici la table `orders` (commandes) :\n\n```\norders\n id  | customer_id | total | created_at\n-----+-------------+-------+-----------\n 101 | 1           | 40.00 | 2026-01-05\n 102 | 1           | 25.00 | 2026-02-10\n 103 | 2           | 80.00 | 2026-02-14\n 104 | 3           | 15.00 | 2026-03-01\n 105 | 2           | 50.00 | 2026-03-03\n 106 | NULL        | 30.00 | 2026-03-08\n```\n\n```sql\nSELECT id, total\nFROM orders\nWHERE total >= 50;   -- orders 103 and 105\n```\n\n- Comparaisons : `=`, `<>` (différent ; `!=` marche aussi), `<`, `<=`, `>`, `>=`.\n- Le texte et les dates s'écrivent entre **apostrophes** (guillemets simples) : `city = 'Lisbon'`, `created_at < '2026-03-01'`. Les guillemets doubles servent aux noms de colonnes, pas aux valeurs.\n- Combine des conditions avec `AND`, `OR` et `NOT`."
+            },
+            {
+              "type": "numeric",
+              "id": "q-and-count",
+              "concepts": [
+                "where-filter"
+              ],
+              "prompt": "Combien de lignes cette requête renvoie-t-elle ?\n\n```sql\nSELECT id\nFROM orders\nWHERE total >= 30 AND created_at < '2026-03-01';\n```\n\n```\norders\n id  | customer_id | total | created_at\n-----+-------------+-------+-----------\n 101 | 1           | 40.00 | 2026-01-05\n 102 | 1           | 25.00 | 2026-02-10\n 103 | 2           | 80.00 | 2026-02-14\n 104 | 3           | 15.00 | 2026-03-01\n 105 | 2           | 50.00 | 2026-03-03\n 106 | NULL        | 30.00 | 2026-03-08\n```",
+              "answer": 2,
+              "explanation": "`AND` exige que les **deux** conditions soient vraies. Totaux d'au moins 30 : 101, 103, 105, 106. Créées avant mars : 101, 102, 103. Seules **101** et **103** sont dans les deux listes.",
+              "hint": "Liste les commandes qui passent chaque condition, puis garde celles qui sont dans les deux listes."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-double-quotes",
+              "concepts": [
+                "where-filter"
+              ],
+              "prompt": "Cette requête devrait lister les clients de Lisbonne (Ana et Cara), mais elle échoue. Clique sur la ligne qui provoque l'erreur.",
+              "language": "sql",
+              "code": "SELECT name\nFROM customers\nWHERE city = \"Lisbon\";",
+              "error": "ERROR:  column \"Lisbon\" does not exist",
+              "lines": [
+                3
+              ],
+              "fixes": [
+                "Remplacer la ligne 3 par `WHERE city = 'Lisbon';`",
+                "Remplacer la ligne 3 par `WHERE city = Lisbon;`",
+                "Remplacer la ligne 3 par `WHERE \"city\" = \"Lisbon\";`",
+                "Remplacer la ligne 3 par `WHERE city LIKE \"Lisbon\";`"
+              ],
+              "answer": 0,
+              "hint": "Quels guillemets sont pour les valeurs, et lesquels pour les noms de colonnes ?",
+              "explanation": "Les guillemets doubles désignent une **colonne**, donc `\"Lisbon\"` demande une colonne nommée Lisbon, qui n'existe pas. Les valeurs texte vont entre apostrophes : `city = 'Lisbon'` renvoie Ana et Cara. Sans guillemets du tout, `Lisbon` est aussi lu comme un nom de colonne (PostgreSQL le met en minuscules : `lisbon`), et `LIKE` ne change rien à la façon de citer la valeur. Écrire `\"city\"` entre guillemets ne pose pas de problème ; c'est la valeur qui est fautive."
+            },
+            {
+              "type": "explain",
+              "title": "IN, BETWEEN et LIKE",
+              "body": "Trois raccourcis que tu verras dans presque tous les projets :\n\n- `city IN ('Lisbon', 'Porto')` est l'abréviation de `city = 'Lisbon' OR city = 'Porto'`.\n- `total BETWEEN 25 AND 50` veut dire `total >= 25 AND total <= 50`. **Les deux bornes sont incluses**, et la plus petite valeur vient en premier.\n- `name LIKE 'C%'` cherche un motif : `%` représente n'importe quelle suite de caractères (même vide), `_` exactement un caractère. `'%son'` veut dire « se termine par son ».\n\nDans PostgreSQL, `LIKE` est **sensible à la casse** (`'a%'` ne correspond pas à `Ana`) ; utilise `ILIKE` pour ignorer la casse. MySQL et SQL Server comparent en général sans tenir compte de la casse par défaut."
+            },
+            {
+              "type": "example",
+              "title": "AND est prioritaire sur OR",
+              "problem": "Tu veux les commandes du client 1 ou 2 qui dépassent 60. Un collègue a écrit :\n\n```sql\nSELECT id\nFROM orders\nWHERE customer_id = 1 OR customer_id = 2 AND total > 60;\n```\n\nQue renvoie cette requête, avec la table `orders` ci-dessus ?",
+              "steps": [
+                "`AND` est évalué avant `OR` (comme × avant +), donc la condition signifie en réalité `customer_id = 1 OR (customer_id = 2 AND total > 60)`.",
+                "Les commandes du client 1 passent quel que soit le total : **101** et **102**.",
+                "Celles du client 2 doivent aussi dépasser 60 : seulement **103** (80,00). La commande 105 (50,00) échoue.",
+                "Cela fait 3 lignes, dont la commande 102 à seulement 25,00. La correction, ce sont des parenthèses : `WHERE (customer_id = 1 OR customer_id = 2) AND total > 60` ne renvoie que la commande 103. Ou écris `customer_id IN (1, 2) AND total > 60`."
+              ],
+              "answer": "3 lignes (101, 102, 103) au lieu de la seule ligne voulue (103)."
+            },
+            {
+              "type": "mcq",
+              "id": "q-between",
+              "concepts": [
+                "where-filter"
+              ],
+              "prompt": "Quelle clause `WHERE` trouve les commandes dont le total va de 25 à 50, 25 et 50 **compris** ?",
+              "choices": [
+                "`WHERE total > 25 AND total < 50`",
+                "`WHERE total IN (25, 50)`",
+                "`WHERE total BETWEEN 25 AND 50`",
+                "`WHERE total BETWEEN 50 AND 25`"
+              ],
+              "answer": 2,
+              "explanation": "`BETWEEN low AND high` inclut les deux bornes, et renvoie donc 101, 102, 105 et 106. Les comparaisons strictes `>` et `<` écartent les commandes à 25,00 et 50,00, `IN` ne trouve que ces deux valeurs exactes, et `BETWEEN 50 AND 25` ne trouve rien, car la borne basse doit venir en premier."
+            },
+            {
+              "type": "numeric",
+              "id": "q-like-underscore",
+              "concepts": [
+                "where-filter"
+              ],
+              "prompt": "Combien de lignes cette requête renvoie-t-elle dans PostgreSQL ?\n\n```sql\nSELECT name\nFROM customers\nWHERE name LIKE '_e%';\n```\n\n```\ncustomers\n id | name | city\n----+------+--------\n  1 | Ana  | Lisbon\n  2 | Ben  | Porto\n  3 | Cara | Lisbon\n  4 | Dev  | NULL\n  5 | Eli  | Madrid\n```",
+              "answer": 2,
+              "explanation": "`_` correspond à exactement un caractère et `%` au reste, donc le motif veut dire « la **deuxième** lettre est `e` ». Ce sont **Ben** et **Dev**. Eli ne correspond pas : sa deuxième lettre est `l`.",
+              "hint": "Le tiret bas représente exactement un caractère."
+            },
+            {
+              "type": "text",
+              "id": "q-in-keyword",
+              "concepts": [
+                "where-filter"
+              ],
+              "prompt": "Complète le mot-clé manquant pour que la requête renvoie les clients de Lisbonne ou de Madrid :\n\n```sql\nSELECT name\nFROM customers\nWHERE city ___ ('Lisbon', 'Madrid');\n```",
+              "accept": [
+                "IN"
+              ],
+              "explanation": "`IN (...)` compare une valeur à une liste : c'est l'abréviation de `city = 'Lisbon' OR city = 'Madrid'`. Elle renvoie Ana, Cara et Eli."
+            }
+          ]
+        },
+        {
+          "id": "sort-limit-case",
+          "title": "Trier, limiter et calculer des colonnes",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "Les lignes n'ont pas d'ordre tant que tu n'écris pas `ORDER BY` ; ajoute `LIMIT` pour un top N, `DISTINCT` pour supprimer les doublons et `CASE` pour transformer des valeurs en étiquettes.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "ORDER BY",
+              "body": "Une table n'a **aucun ordre garanti**. Sans `ORDER BY`, la base peut renvoyer les lignes dans n'importe quel ordre, et cet ordre peut changer demain.\n\n```sql\nSELECT id, total, created_at\nFROM orders\nORDER BY total DESC;        -- biggest first\n```\n\n- `ASC` (croissant) est la valeur par défaut ; `DESC` l'inverse.\n- Trie sur plusieurs colonnes pour départager les égalités : `ORDER BY city, name` trie par ville, puis par nom dans chaque ville.\n- Tu peux trier sur une colonne que tu ne sélectionnes pas.\n- Dans PostgreSQL, les `NULL` se placent **en dernier** en ordre croissant (et en premier en décroissant) ; ajoute `NULLS FIRST` ou `NULLS LAST` pour choisir."
+            },
+            {
+              "type": "explain",
+              "title": "LIMIT : les listes top N",
+              "body": "`LIMIT n` garde les *n* premières lignes **après** le tri. C'est ce qui répond aux questions de type « top 3 » :\n\n```sql\nSELECT id, total\nFROM orders\nORDER BY total DESC\nLIMIT 3;          -- 103, 105, 101\n```\n\n`OFFSET` saute d'abord des lignes : `LIMIT 3 OFFSET 3`, c'est « la page 2 ».\n\nLes dialectes diffèrent ici :\n- PostgreSQL, MySQL, SQLite : `LIMIT 3`\n- SQL Server : `SELECT TOP 3 id, total FROM orders ORDER BY total DESC`\n- SQL standard (PostgreSQL, Oracle) : `FETCH FIRST 3 ROWS ONLY` ; SQL Server exige `OFFSET 0 ROWS` avant\n\n`LIMIT` sans `ORDER BY` renvoie *n'importe quelles* 3 lignes, pas les 3 « premières »."
+            },
+            {
+              "type": "mcq",
+              "id": "q-recent-two",
+              "concepts": [
+                "order-by-limit"
+              ],
+              "prompt": "Quelle requête renvoie les **deux commandes les plus récentes** ?",
+              "choices": [
+                "`SELECT id FROM orders ORDER BY created_at DESC LIMIT 2;`",
+                "`SELECT id FROM orders ORDER BY created_at LIMIT 2;`",
+                "`SELECT id FROM orders LIMIT 2 ORDER BY created_at DESC;`",
+                "`SELECT id FROM orders WHERE created_at = MAX(created_at) LIMIT 2;`"
+              ],
+              "answer": 0,
+              "explanation": "Les plus récentes, ce sont les dates les plus nouvelles en premier : trie en `DESC`, puis garde 2 lignes, les commandes 106 et 105. L'ordre croissant donne les deux **plus anciennes**. `LIMIT` doit venir après `ORDER BY`, et les agrégats comme `MAX` sont interdits dans `WHERE` (tu verras pourquoi dans la leçon sur GROUP BY)."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-top-three",
+              "concepts": [
+                "order-by-limit"
+              ],
+              "prompt": "Cette requête devrait renvoyer les **3 plus grosses** commandes (103, 105 et 101), mais elle renvoie les mauvaises. Clique sur la ligne qui contient le bug.\n\n(Totaux : 101 : 40,00 ; 102 : 25,00 ; 103 : 80,00 ; 104 : 15,00 ; 105 : 50,00 ; 106 : 30,00.)",
+              "language": "sql",
+              "code": "SELECT id, total\nFROM orders\nORDER BY total\nLIMIT 3;",
+              "error": " id  | total\n-----+-------\n 104 | 15.00\n 102 | 25.00\n 106 | 30.00",
+              "lines": [
+                3
+              ],
+              "fixes": [
+                "Remplacer la ligne 3 par `ORDER BY total DESC`",
+                "Remplacer la ligne 3 par `ORDER BY total ASC`",
+                "Remplacer la ligne 3 par `ORDER BY id DESC`",
+                "Remplacer la ligne 4 par `LIMIT 3 DESC;`"
+              ],
+              "answer": 0,
+              "hint": "Dans quel sens `ORDER BY` trie-t-il quand tu ne précises rien ?",
+              "explanation": "`ORDER BY` trie en ordre croissant par défaut : les plus petits totaux viennent en premier et `LIMIT 3` garde les 3 commandes **les plus petites**. `ORDER BY total DESC` met les plus grosses en premier : 103, 105, 101. Écrire `ASC` ne change rien, trier par `id DESC` donne les identifiants les plus récents (106, 105, 104), et `DESC` appartient à `ORDER BY`, pas à `LIMIT` (c'est une erreur de syntaxe)."
+            },
+            {
+              "type": "explain",
+              "title": "DISTINCT, alias et expressions",
+              "body": "`SELECT DISTINCT` supprime les lignes de résultat en double :\n\n```sql\nSELECT DISTINCT city FROM customers;\n-- Lisbon, Porto, Madrid and NULL: 4 rows\n```\n\n`DISTINCT` traite tous les `NULL` comme une seule valeur, donc la ville manquante n'apparaît qu'une fois.\n\nTu peux aussi calculer des colonnes et les nommer avec `AS` :\n\n```sql\nSELECT id, total, total * 1.23 AS total_with_vat\nFROM orders;\n```\n\nPour coller du texte, PostgreSQL, SQLite et Oracle utilisent `||` (`name || ' from ' || city`). MySQL utilise `CONCAT(name, ' from ', city)` (là-bas, `||` veut dire OR), et SQL Server utilise `+` ou `CONCAT`."
+            },
+            {
+              "type": "numeric",
+              "id": "q-distinct-null",
+              "concepts": [
+                "null"
+              ],
+              "prompt": "Combien de lignes cette requête renvoie-t-elle ?\n\n```sql\nSELECT DISTINCT customer_id\nFROM orders;\n```\n\n```\norders\n id  | customer_id | total | created_at\n-----+-------------+-------+-----------\n 101 | 1           | 40.00 | 2026-01-05\n 102 | 1           | 25.00 | 2026-02-10\n 103 | 2           | 80.00 | 2026-02-14\n 104 | 3           | 15.00 | 2026-03-01\n 105 | 2           | 50.00 | 2026-03-03\n 106 | NULL        | 30.00 | 2026-03-08\n```",
+              "answer": 4,
+              "explanation": "Les valeurs distinctes sont 1, 2, 3 et `NULL` (la commande invité 106). `DISTINCT` garde un exemplaire de chacune, et traite `NULL` comme une valeur à part entière : la réponse est donc **4**, pas 3.",
+              "hint": "La commande invité, sans client, compte-t-elle ?"
+            },
+            {
+              "type": "explain",
+              "title": "CASE : un si/sinon dans une requête",
+              "body": "`CASE` transforme des valeurs en étiquettes ou en catégories :\n\n```sql\nSELECT id, total,\n       CASE\n         WHEN total >= 50 THEN 'large'\n         WHEN total >= 20 THEN 'medium'\n         ELSE 'small'\n       END AS size\nFROM orders;\n```\n\n- Les branches sont testées **de haut en bas** ; la première vraie l'emporte.\n- Sans `ELSE`, les lignes qui ne correspondent à aucune branche reçoivent `NULL`.\n- `CASE` marche partout où une valeur est permise : dans `SELECT`, dans `ORDER BY`, et même dans `SUM(...)` pour ne compter que certaines lignes (tu t'en serviras plus tard)."
+            },
+            {
+              "type": "example",
+              "title": "Étiqueté et trié",
+              "problem": "Exécute la requête `CASE` ci-dessus avec `ORDER BY total DESC`. À quoi ressemble le résultat ?\n\n```\norders\n id  | customer_id | total | created_at\n-----+-------------+-------+-----------\n 101 | 1           | 40.00 | 2026-01-05\n 102 | 1           | 25.00 | 2026-02-10\n 103 | 2           | 80.00 | 2026-02-14\n 104 | 3           | 15.00 | 2026-03-01\n 105 | 2           | 50.00 | 2026-03-03\n 106 | NULL        | 30.00 | 2026-03-08\n```",
+              "steps": [
+                "On trie d'abord : 80,00 (103), 50,00 (105), 40,00 (101), 30,00 (106), 25,00 (102), 15,00 (104).",
+                "103 et 105 sont `>= 50`, donc la première branche les étiquette **large**.",
+                "101, 106 et 102 échouent à la première branche mais passent `>= 20` : **medium**.",
+                "104 (15,00) ne correspond à aucune branche, donc `ELSE` donne **small**."
+              ],
+              "answer": "```\n id  | total | size\n-----+-------+-------\n 103 | 80.00 | large\n 105 | 50.00 | large\n 101 | 40.00 | medium\n 106 | 30.00 | medium\n 102 | 25.00 | medium\n 104 | 15.00 | small\n```"
+            },
+            {
+              "type": "numeric",
+              "id": "q-case-order",
+              "concepts": [
+                "case-expression"
+              ],
+              "prompt": "Quelqu'un a inversé les branches. Combien de commandes reçoivent l'étiquette `'large'` ?\n\n```sql\nSELECT id,\n       CASE\n         WHEN total > 20 THEN 'medium'\n         WHEN total > 50 THEN 'large'\n         ELSE 'small'\n       END AS size\nFROM orders;\n```\n\n(Totaux : 40, 25, 80, 15, 50, 30.)",
+              "answer": 0,
+              "explanation": "La première branche qui correspond l'emporte. Tout total supérieur à 50 est aussi supérieur à 20 : il est donc intercepté par la branche `'medium'` et n'atteint jamais `'large'`. Mets la condition la plus spécifique en premier.",
+              "hint": "Teste les branches dans l'ordre pour la commande à 80,00."
+            }
+          ]
+        },
+        {
+          "id": "null-values",
+          "title": "NULL : la valeur manquante",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "`NULL` veut dire « inconnu » : une comparaison avec lui n'est jamais vraie, donc teste-le avec `IS NULL` et remplace-le avec `COALESCE`.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "NULL n'est pas une valeur",
+              "body": "`NULL` veut dire **manquant ou inconnu**. Ce n'est pas 0, ni `''`, ni `'NULL'`. La ville de Dev est `NULL` : on ne la connaît pas.\n\n```\ncustomers\n id | name | city\n----+------+--------\n  1 | Ana  | Lisbon\n  2 | Ben  | Porto\n  3 | Cara | Lisbon\n  4 | Dev  | NULL\n  5 | Eli  | Madrid\n```\n\nToute comparaison avec une inconnue donne une inconnue : la ville de Dev est-elle `<> 'Lisbon'` ? Impossible à dire. Donc `city <> 'Lisbon'` est **inconnu** pour Dev, pas vrai.\n\n`WHERE` ne garde que les lignes où la condition est **vraie**. Les lignes où elle est fausse *ou inconnue* sont écartées."
+            },
+            {
+              "type": "numeric",
+              "id": "q-not-lisbon",
+              "concepts": [
+                "three-valued-logic",
+                "null"
+              ],
+              "prompt": "Combien de lignes cette requête renvoie-t-elle ?\n\n```sql\nSELECT name\nFROM customers\nWHERE city <> 'Lisbon';\n```\n\n(Avec la table `customers` ci-dessus : Ana et Cara sont à Lisbonne, Ben à Porto, Eli à Madrid, et la ville de Dev est `NULL`.)",
+              "answer": 2,
+              "explanation": "Ben et Eli passent. Pour Dev, `NULL <> 'Lisbon'` est **inconnu**, et `WHERE` écarte les lignes inconnues. Pour l'inclure, écris `WHERE city <> 'Lisbon' OR city IS NULL`.",
+              "hint": "Que vaut `NULL <> 'Lisbon'` : vrai, faux ou inconnu ?"
+            },
+            {
+              "type": "explain",
+              "title": "La logique à trois valeurs et IS NULL",
+              "body": "La logique SQL a trois valeurs : **vrai**, **faux** et **inconnu**.\n\n- `NULL = NULL` est inconnu (rien ne dit que deux inconnues sont égales), donc `WHERE city = NULL` ne trouve jamais rien.\n- Utilise plutôt `IS NULL` et `IS NOT NULL` : ils renvoient toujours vrai ou faux.\n- `NOT unknown` reste inconnu.\n- `true OR unknown` est vrai ; `false AND unknown` est faux. Sinon, `AND`/`OR` avec une inconnue donnent inconnu.\n- L'arithmétique et le texte avec `NULL` donnent `NULL` : `total + NULL` vaut `NULL`, tout comme `'Dev from ' || NULL`."
+            },
+            {
+              "type": "bug",
+              "id": "q-eq-null",
+              "concepts": [
+                "three-valued-logic"
+              ],
+              "prompt": "Cette requête devrait lister les clients dont la ville est inconnue (c'est-à-dire Dev), mais elle ne renvoie aucune ligne. Clique sur la ligne qui contient le bug.",
+              "language": "sql",
+              "code": "SELECT name\nFROM customers\nWHERE city = NULL;",
+              "error": " name\n------\n(0 rows)",
+              "lines": [
+                3
+              ],
+              "fixes": [
+                "Remplacer la ligne 3 par `WHERE city IS NULL;`",
+                "Remplacer la ligne 3 par `WHERE city = 'NULL';`",
+                "Remplacer la ligne 3 par `WHERE city <> NULL;`",
+                "Remplacer la ligne 3 par `WHERE NOT (city = NULL);`"
+              ],
+              "answer": 0,
+              "explanation": "La requête s'exécute, mais `city = NULL` est inconnu pour chaque ligne (même celle de Dev), donc rien ne revient. `IS NULL` est le seul test fiable des valeurs manquantes. `'NULL'` n'est qu'une chaîne de quatre lettres, et `city <> NULL` comme `NOT (city = NULL)` restent inconnus pour chaque ligne."
+            },
+            {
+              "type": "explain",
+              "title": "COALESCE : une valeur de secours",
+              "body": "`COALESCE(a, b, ...)` renvoie son premier argument qui n'est pas `NULL` :\n\n```sql\nSELECT name, COALESCE(city, 'Unknown') AS city\nFROM customers;\n-- Dev now shows 'Unknown'\n```\n\nUsages typiques : des étiquettes par défaut, traiter un nombre manquant comme 0 (`COALESCE(discount, 0)`), ou prendre le premier moyen de contact disponible (`COALESCE(mobile, phone, email)`).\n\n`COALESCE` est standard et marche partout. Tu croiseras aussi `IFNULL` (MySQL, SQLite) et `ISNULL` (SQL Server), qui font la version à deux arguments."
+            },
+            {
+              "type": "example",
+              "title": "Les clients hors de Lisbonne, correctement",
+              "problem": "Liste les clients qui **ne** sont **pas** à Lisbonne, y compris ceux dont la ville est inconnue, en affichant `'Unknown'` pour les villes manquantes.\n\n```sql\nSELECT name, COALESCE(city, 'Unknown') AS city\nFROM customers\nWHERE city <> 'Lisbon' OR city IS NULL;\n```",
+              "steps": [
+                "Ana et Cara : `city <> 'Lisbon'` est faux et `city IS NULL` est faux, donc elles sont écartées.",
+                "Ben (Porto) et Eli (Madrid) : `city <> 'Lisbon'` est vrai. `true OR anything` est vrai.",
+                "Dev : `city <> 'Lisbon'` est inconnu, mais `city IS NULL` est vrai, et `unknown OR true` est **vrai** : il est gardé.",
+                "Dans le résultat, `COALESCE` remplace le `NULL` de Dev par `'Unknown'`. `WHERE` a quand même vu le vrai `NULL` : il s'exécute avant que `SELECT` calcule la colonne."
+              ],
+              "answer": "3 lignes : Ben (Porto), Dev (Unknown), Eli (Madrid)."
+            },
+            {
+              "type": "numeric",
+              "id": "q-not-null-trap",
+              "concepts": [
+                "three-valued-logic"
+              ],
+              "prompt": "Combien de lignes cette requête renvoie-t-elle ?\n\n```sql\nSELECT id\nFROM orders\nWHERE NOT (customer_id = 1);\n```\n\n```\norders\n id  | customer_id | total | created_at\n-----+-------------+-------+-----------\n 101 | 1           | 40.00 | 2026-01-05\n 102 | 1           | 25.00 | 2026-02-10\n 103 | 2           | 80.00 | 2026-02-14\n 104 | 3           | 15.00 | 2026-03-01\n 105 | 2           | 50.00 | 2026-03-03\n 106 | NULL        | 30.00 | 2026-03-08\n```",
+              "answer": 3,
+              "explanation": "Les commandes 103, 104 et 105 ont un `customer_id` égal à 2 ou 3, donc la condition est vraie. Pour 101 et 102, elle est fausse. Pour la commande 106, `customer_id = 1` est inconnu, et `NOT unknown` reste **inconnu** : elle est écartée aussi.",
+              "hint": "Que devient la commande invité 106 ?"
+            },
+            {
+              "type": "text",
+              "id": "q-coalesce",
+              "concepts": [
+                "null"
+              ],
+              "prompt": "La ville de Dev est `NULL`, donc cette requête affiche `NULL` pour lui au lieu d'une étiquette :\n\n```sql\nSELECT name || ' (' || city || ')' FROM customers;\n```\n\nComplète la fonction pour que Dev s'affiche `Dev (unknown)` :\n\n```sql\nSELECT name || ' (' || ________(city, 'unknown') || ')' FROM customers;\n```",
+              "accept": [
+                "COALESCE"
+              ],
+              "explanation": "Coller du texte à `NULL` rend tout le résultat `NULL`. `COALESCE(city, 'unknown')` met d'abord une valeur de secours, donc la concaténation a toujours une valeur. (En MySQL, on écrirait `CONCAT(name, ' (', COALESCE(city, 'unknown'), ')')`.)"
+            },
+            {
+              "type": "output",
+              "id": "q-out-coalesce",
+              "concepts": [
+                "null"
+              ],
+              "prompt": "Avec la table `customers` de cette leçon (Ana et Cara à Lisbonne, Ben à Porto, Dev avec une ville `NULL`, Eli à Madrid ; ids 1 à 5 dans cet ordre), que renvoie cette requête ? Tape une valeur par ligne, sans l'en-tête.",
+              "language": "sql",
+              "code": "SELECT COALESCE(city, '?') AS city\nFROM customers\nWHERE city <> 'Lisbon' OR city IS NULL\nORDER BY id;",
+              "output": "Porto\n?\nMadrid",
+              "hint": "Ben et Eli passent `city <> 'Lisbon'`. Pour Dev, cette comparaison est inconnue, donc il a besoin de la partie `IS NULL`.",
+              "explanation": "Ben (Porto) et Eli (Madrid) passent `city <> 'Lisbon'`. Pour Dev, c'est inconnu, mais `city IS NULL` est vrai, donc `OR` le laisse passer. Ana et Cara sont filtrées. `COALESCE` affiche ensuite la ville manquante de Dev sous la forme `?`, et `ORDER BY id` donne l'ordre 2, 4, 5."
+            }
+          ]
+        },
+        {
+          "id": "group-by-having",
+          "title": "Agrégats, GROUP BY et HAVING",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "`GROUP BY` produit une ligne par groupe ; `WHERE` filtre les lignes avant le regroupement et `HAVING` filtre les groupes après, car SQL exécute FROM → WHERE → GROUP BY → HAVING → SELECT → ORDER BY.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Les agrégats écrasent les lignes",
+              "body": "Les fonctions d'agrégation transforment plusieurs lignes en une seule valeur :\n\n```sql\nSELECT COUNT(*) AS orders, SUM(total) AS revenue,\n       AVG(total) AS avg_order, MAX(total) AS biggest\nFROM orders;\n-- 6 | 240.00 | 40.00 | 80.00\n```\n\nLa règle des `NULL` :\n- `COUNT(*)` compte les **lignes**.\n- `COUNT(customer_id)` compte les **valeurs non NULL** : 5 ici, car la commande invité 106 n'a pas de client.\n- `SUM`, `AVG`, `MIN`, `MAX` ignorent aussi les `NULL`.\n- `COUNT(DISTINCT col)` compte les valeurs non NULL différentes."
+            },
+            {
+              "type": "numeric",
+              "id": "q-count-distinct",
+              "concepts": [
+                "aggregate-functions",
+                "null"
+              ],
+              "prompt": "Que renvoie cette requête ?\n\n```sql\nSELECT COUNT(DISTINCT customer_id)\nFROM orders;\n```\n\n```\norders\n id  | customer_id | total | created_at\n-----+-------------+-------+-----------\n 101 | 1           | 40.00 | 2026-01-05\n 102 | 1           | 25.00 | 2026-02-10\n 103 | 2           | 80.00 | 2026-02-14\n 104 | 3           | 15.00 | 2026-03-01\n 105 | 2           | 50.00 | 2026-03-03\n 106 | NULL        | 30.00 | 2026-03-08\n```",
+              "answer": 3,
+              "explanation": "Les valeurs de `customer_id` sont 1, 1, 2, 3, 2, `NULL`. `DISTINCT` laisse 1, 2, 3 et `NULL`, et `COUNT(column)` ne compte jamais `NULL` : la réponse est donc **3**. (À comparer : `COUNT(*)` vaut 6 et `COUNT(customer_id)` vaut 5.)",
+              "hint": "COUNT sur une colonne ignore les NULL, même avec DISTINCT."
+            },
+            {
+              "type": "explain",
+              "title": "GROUP BY : une ligne par groupe",
+              "body": "`GROUP BY` répartit les lignes en groupes qui partagent une valeur, puis calcule les agrégats **par groupe** :\n\n```sql\nSELECT customer_id, COUNT(*) AS orders, SUM(total) AS spent\nFROM orders\nGROUP BY customer_id;\n```\n\nLa règle d'or : chaque colonne du `SELECT` doit soit figurer dans le `GROUP BY`, soit être dans un agrégat. `SELECT customer_id, created_at, SUM(total) ... GROUP BY customer_id` est une erreur : un client a plusieurs dates, alors laquelle afficher ?\n\nTu peux aussi regrouper par expression, par exemple le chiffre d'affaires mensuel avec `GROUP BY date_trunc('month', created_at)` dans PostgreSQL."
+            },
+            {
+              "type": "example",
+              "title": "Dépenses par client",
+              "problem": "Que renvoie cette requête ?\n\n```sql\nSELECT customer_id, COUNT(*) AS orders, SUM(total) AS spent\nFROM orders\nGROUP BY customer_id\nORDER BY spent DESC;\n```\n\n```\norders\n id  | customer_id | total | created_at\n-----+-------------+-------+-----------\n 101 | 1           | 40.00 | 2026-01-05\n 102 | 1           | 25.00 | 2026-02-10\n 103 | 2           | 80.00 | 2026-02-14\n 104 | 3           | 15.00 | 2026-03-01\n 105 | 2           | 50.00 | 2026-03-03\n 106 | NULL        | 30.00 | 2026-03-08\n```",
+              "steps": [
+                "On forme les groupes : client 1 → {101, 102}, client 2 → {103, 105}, client 3 → {104}. `GROUP BY` met tous les `NULL` dans **un seul** groupe : {106}.",
+                "On agrège chaque groupe : 1 → 2 commandes, 65,00. 2 → 2 commandes, 130,00. 3 → 1 commande, 15,00. `NULL` → 1 commande, 30,00.",
+                "On trie par `spent` décroissant : 130, 65, 30, 15. `ORDER BY` peut utiliser l'alias `spent` parce qu'il s'exécute après `SELECT`."
+              ],
+              "answer": "```\n customer_id | orders | spent\n-------------+--------+-------\n 2           | 2      | 130.00\n 1           | 2      | 65.00\n NULL        | 1      | 30.00\n 3           | 1      | 15.00\n```"
+            },
+            {
+              "type": "explain",
+              "title": "WHERE ou HAVING, et le vrai ordre",
+              "body": "On écrit SQL en commençant par `SELECT`, mais il **s'exécute** dans cet ordre logique :\n\n```\nFROM → WHERE → GROUP BY → HAVING → SELECT → ORDER BY → LIMIT\n```\n\n- `WHERE` filtre les **lignes**, avant le regroupement. Il ne peut pas utiliser d'agrégats : ils n'existent pas encore.\n- `HAVING` filtre les **groupes**, après l'agrégation : `HAVING COUNT(*) >= 2`.\n- Les alias du `SELECT` ne sont pas visibles dans `WHERE` (il s'est exécuté avant), mais le sont dans `ORDER BY`.\n\nEn pratique : filtre dans `WHERE` chaque fois que tu peux (moins de lignes à regrouper), et réserve `HAVING` aux conditions sur des agrégats."
+            },
+            {
+              "type": "numeric",
+              "id": "q-where-having",
+              "concepts": [
+                "having",
+                "where-filter",
+                "logical-query-order"
+              ],
+              "prompt": "Combien de lignes cette requête renvoie-t-elle ?\n\n```sql\nSELECT customer_id\nFROM orders\nWHERE total > 30\nGROUP BY customer_id\nHAVING COUNT(*) >= 2;\n```\n\n```\norders\n id  | customer_id | total | created_at\n-----+-------------+-------+-----------\n 101 | 1           | 40.00 | 2026-01-05\n 102 | 1           | 25.00 | 2026-02-10\n 103 | 2           | 80.00 | 2026-02-14\n 104 | 3           | 15.00 | 2026-03-01\n 105 | 2           | 50.00 | 2026-03-03\n 106 | NULL        | 30.00 | 2026-03-08\n```",
+              "answer": 1,
+              "explanation": "`WHERE` s'exécute en premier et garde 101 (client 1), 103 et 105 (client 2). Le client 1 n'a plus qu'**une** ligne, le client 2 en a deux. `HAVING COUNT(*) >= 2` ne garde que le client 2. (Sans le `WHERE`, les clients 1 et 2 seraient tous les deux retenus.)",
+              "hint": "Applique d'abord WHERE, puis compte ce qui reste dans chaque groupe."
+            },
+            {
+              "type": "bug",
+              "id": "q-agg-in-where",
+              "concepts": [
+                "having",
+                "logical-query-order",
+                "aggregate-functions"
+              ],
+              "prompt": "Cette requête devrait lister les clients qui ont dépensé plus de 50 au total, mais elle échoue. Clique sur la ligne qui provoque l'erreur.",
+              "language": "sql",
+              "code": "SELECT customer_id, SUM(total)\nFROM orders\nWHERE SUM(total) > 50\nGROUP BY customer_id;",
+              "error": "ERROR:  aggregate functions are not allowed in WHERE",
+              "lines": [
+                3
+              ],
+              "fixes": [
+                "Supprimer la ligne 3 et ajouter `HAVING SUM(total) > 50` sous la ligne 4",
+                "Placer la ligne 4 au-dessus de la ligne 3",
+                "Remplacer la ligne 3 par `WHERE total > 50`",
+                "Remplacer la ligne 1 par `SELECT SUM(customer_id), SUM(total)`"
+              ],
+              "answer": 0,
+              "explanation": "`WHERE` examine les lignes une à une avant que les groupes existent : il n'y a donc encore aucune `SUM` à tester. PostgreSQL répond *aggregate functions are not allowed in WHERE*. Déplace la condition dans `HAVING`, qui s'exécute après `GROUP BY`. `customer_id` ne pose pas de problème, car il est dans le `GROUP BY`. Échanger les lignes est une erreur de syntaxe (`WHERE` doit venir avant `GROUP BY`), et `WHERE total > 50` teste chaque commande séparément : il ne renvoie que le client 2, avec 80,00."
+            },
+            {
+              "type": "order",
+              "id": "q-order-logical",
+              "concepts": [
+                "logical-query-order"
+              ],
+              "prompt": "Remets les clauses de cette requête dans l'ordre où la base les **exécute logiquement**, pas dans l'ordre où tu les écris :\n\n```sql\nSELECT customer_id, SUM(total) AS spent\nFROM orders\nWHERE total > 20\nGROUP BY customer_id\nHAVING COUNT(*) >= 2\nORDER BY spent DESC\nLIMIT 3;\n```",
+              "items": [
+                "`FROM orders`",
+                "`WHERE total > 20`",
+                "`GROUP BY customer_id`",
+                "`HAVING COUNT(*) >= 2`",
+                "`SELECT customer_id, SUM(total) AS spent`",
+                "`ORDER BY spent DESC`",
+                "`LIMIT 3`"
+              ],
+              "hint": "Les lignes doivent exister avant qu'on puisse les filtrer, et les groupes doivent exister avant qu'on puisse *les* filtrer. Quelle est la première clause qui peut utiliser l'alias `spent` ?",
+              "explanation": "On choisit la table (`FROM`), on écarte des lignes (`WHERE`), on forme les groupes (`GROUP BY`), on écarte des groupes (`HAVING`), on calcule les colonnes du résultat (`SELECT`), on les trie (`ORDER BY`), puis on coupe la liste (`LIMIT`). Cet ordre explique les erreurs classiques : PostgreSQL refuse `WHERE COUNT(*) > 1` (*aggregate functions are not allowed in WHERE*) et `WHERE spent > 50` (*column \"spent\" does not exist*), car `WHERE` s'exécute avant qu'aucun agrégat ni alias n'existe. `ORDER BY spent` marche parce qu'il s'exécute après `SELECT`."
+            },
+            {
+              "type": "text",
+              "id": "q-having-keyword",
+              "concepts": [
+                "having",
+                "group-by"
+              ],
+              "prompt": "Complète le mot-clé pour lister les villes qui ont au moins 2 clients :\n\n```sql\nSELECT city, COUNT(*)\nFROM customers\nGROUP BY city\n______ COUNT(*) >= 2;\n```",
+              "accept": [
+                "HAVING"
+              ],
+              "explanation": "La condition utilise un agrégat (`COUNT(*)`), donc ce doit être `HAVING`, qui filtre les groupes une fois comptés. Le résultat est une ligne : Lisbon, 2."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "combining",
+      "title": "Combiner des données",
+      "description": "Jointures, sous-requêtes et CTE pour répondre aux questions qui portent sur plusieurs tables.",
+      "lessons": [
+        {
+          "id": "inner-join",
+          "title": "INNER JOIN : associer les lignes de plusieurs tables",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Une jointure associe les lignes dont les clés correspondent (`ON o.customer_id = c.id`) ; un INNER JOIN écarte les lignes sans partenaire, et une jointure un-à-plusieurs répète le côté « un ».",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Pourquoi les données sont réparties en tables",
+              "body": "`orders` stocke `customer_id`, pas le nom du client. Le nom n'existe qu'une fois, dans `customers`, et `orders.customer_id` **pointe vers** `customers.id`. `customers.id` est une *clé primaire* (elle identifie une ligne) ; `orders.customer_id` est une *clé étrangère* (elle fait référence à une ligne).\n\nUne **jointure** les réunit :\n\n```sql\nSELECT o.id, c.name, o.total\nFROM orders AS o\nJOIN customers AS c ON c.id = o.customer_id;\n```\n\n- `o` et `c` sont des alias de table, pour garder des noms de colonnes courts et sans ambiguïté.\n- `ON` indique quelles lignes vont ensemble.\n- `JOIN` veut dire `INNER JOIN` : seules les lignes qui ont une correspondance des **deux** côtés sont gardées."
+            },
+            {
+              "type": "numeric",
+              "id": "q-join-count",
+              "concepts": [
+                "inner-join"
+              ],
+              "prompt": "Combien de lignes la jointure ci-dessus renvoie-t-elle ?\n\n```\ncustomers\n id | name | city\n----+------+--------\n  1 | Ana  | Lisbon\n  2 | Ben  | Porto\n  3 | Cara | Lisbon\n  4 | Dev  | NULL\n  5 | Eli  | Madrid\n```\n\n```\norders\n id  | customer_id | total | created_at\n-----+-------------+-------+-----------\n 101 | 1           | 40.00 | 2026-01-05\n 102 | 1           | 25.00 | 2026-02-10\n 103 | 2           | 80.00 | 2026-02-14\n 104 | 3           | 15.00 | 2026-03-01\n 105 | 2           | 50.00 | 2026-03-03\n 106 | NULL        | 30.00 | 2026-03-08\n```",
+              "answer": 5,
+              "explanation": "Chaque commande est associée au client dont l'`id` est égal à son `customer_id`. Les commandes 101 à 105 trouvent toutes un client. La commande 106 a un `customer_id` `NULL`, et `NULL = anything` n'est jamais vrai, donc l'INNER JOIN l'écarte. Dev et Eli n'ont pas de commandes, donc ils n'apparaissent pas non plus.",
+              "hint": "Quelle commande n'a pas de client correspondant ?"
+            },
+            {
+              "type": "sim",
+              "sim": "join",
+              "title": "Voir les correspondances",
+              "body": "Chaque trait relie un client à une commande dont le `customer_id` est égal à l'`id` du client. Survole ou touche une ligne du résultat pour voir les deux lignes dont elle vient.\n\nRegarde qui manque : Dev et Eli n'ont pas de commandes, et la commande 106 a un `customer_id` `NULL`, qui ne correspond jamais à rien.",
+              "left": {
+                "name": "customers",
+                "columns": [
+                  "id",
+                  "name"
+                ],
+                "rows": [
+                  [
+                    1,
+                    "Ana"
+                  ],
+                  [
+                    2,
+                    "Ben"
+                  ],
+                  [
+                    3,
+                    "Cara"
+                  ],
+                  [
+                    4,
+                    "Dev"
+                  ],
+                  [
+                    5,
+                    "Eli"
+                  ]
+                ]
+              },
+              "right": {
+                "name": "orders",
+                "columns": [
+                  "id",
+                  "customer_id",
+                  "total"
+                ],
+                "rows": [
+                  [
+                    101,
+                    1,
+                    "40.00"
+                  ],
+                  [
+                    102,
+                    1,
+                    "25.00"
+                  ],
+                  [
+                    103,
+                    2,
+                    "80.00"
+                  ],
+                  [
+                    104,
+                    3,
+                    "15.00"
+                  ],
+                  [
+                    105,
+                    2,
+                    "50.00"
+                  ],
+                  [
+                    106,
+                    null,
+                    "30.00"
+                  ]
+                ]
+              },
+              "on": [
+                "id",
+                "customer_id"
+              ],
+              "joins": [
+                "inner"
+              ]
+            },
+            {
+              "type": "explain",
+              "title": "Les jointures multiplient les lignes",
+              "body": "Une jointure produit une ligne **par paire correspondante**. Ana a deux commandes, donc elle apparaît deux fois :\n\n```\n id  | name | total\n-----+------+------\n 101 | Ana  | 40.00\n 102 | Ana  | 25.00\n 103 | Ben  | 80.00\n 104 | Cara | 15.00\n 105 | Ben  | 50.00\n```\n\nC'est correct pour « lister les commandes avec les noms », mais attention quand tu agrèges après une jointure : additionner une colonne propre au client (par exemple un plafond de crédit) sur ce résultat compterait celle d'Ana deux fois.\n\nTu verras aussi l'ancien style avec une virgule, `FROM orders o, customers c WHERE c.id = o.customer_id`. C'est la même jointure interne. Oublie la condition et tu obtiens toutes les combinaisons : un *produit cartésien* (*cross join*)."
+            },
+            {
+              "type": "example",
+              "title": "Chiffre d'affaires par ville",
+              "problem": "Quelle ville rapporte le plus de chiffre d'affaires ?\n\n```sql\nSELECT c.city, SUM(o.total) AS revenue\nFROM customers c\nJOIN orders o ON o.customer_id = c.id\nGROUP BY c.city\nORDER BY revenue DESC;\n```",
+              "steps": [
+                "`FROM` et `JOIN` s'exécutent en premier et construisent 5 lignes : Ana/Lisbon 40, Ana/Lisbon 25, Ben/Porto 80, Cara/Lisbon 15, Ben/Porto 50.",
+                "Dev et Eli n'ont pas de commandes et la commande invité 106 n'a pas de client, donc la jointure interne les laisse de côté.",
+                "`GROUP BY c.city` : Lisbon = 40 + 25 + 15 = 80. Porto = 80 + 50 = 130.",
+                "On trie par chiffre d'affaires, du plus élevé au plus bas."
+              ],
+              "answer": "```\n city   | revenue\n--------+--------\n Porto  | 130.00\n Lisbon | 80.00\n```"
+            },
+            {
+              "type": "numeric",
+              "id": "q-cross-join",
+              "concepts": [
+                "inner-join"
+              ],
+              "prompt": "Quelqu'un a oublié la condition de jointure. Combien de lignes cette requête renvoie-t-elle ?\n\n```sql\nSELECT c.name, o.id\nFROM customers c, orders o;\n```\n\n(5 clients, 6 commandes.)",
+              "answer": 30,
+              "explanation": "Sans condition, chaque client est associé à chaque commande : 5 × 6 = **30** lignes. Ce *produit cartésien* est une cause classique de totaux complètement gonflés. Si un résultat de jointure a un nombre de lignes suspect, vérifie tes conditions `ON` / `WHERE`."
+            },
+            {
+              "type": "bug",
+              "id": "q-join-bug",
+              "concepts": [
+                "inner-join",
+                "foreign-key"
+              ],
+              "prompt": "Cette requête devrait lister qui a acheté une bouilloire (Kettle), mais une condition de jointure est fausse. (`order_items(order_id, product_id, quantity)` liste le contenu de chaque commande.) Clique sur la ligne qui contient le bug.",
+              "language": "sql",
+              "code": "SELECT c.name\nFROM customers c\nJOIN orders o       ON o.customer_id = c.id\nJOIN order_items oi ON oi.order_id = c.id\nJOIN products p     ON p.id = oi.product_id\nWHERE p.name = 'Kettle';",
+              "error": " name\n------\n(0 rows)",
+              "lines": [
+                4
+              ],
+              "fixes": [
+                "Remplacer la ligne 4 par `JOIN order_items oi ON oi.order_id = o.id`",
+                "Remplacer la ligne 3 par `JOIN orders o       ON o.id = c.id`",
+                "Remplacer la ligne 4 par `LEFT JOIN order_items oi ON oi.order_id = c.id`",
+                "Remplacer la ligne 5 par `JOIN products p     ON p.id = oi.order_id`"
+              ],
+              "answer": 0,
+              "hint": "Pour chaque ON, vérifie que les deux côtés décrivent la même chose.",
+              "explanation": "La ligne 4 compare un id de **commande** à un id de **client**. Sur nos données d'exemple, elle ne renvoie rien, car les ids clients (1–5) ne sont jamais égaux aux ids commandes (101–106) ; dans une vraie base où les plages se chevauchent, elle renverrait des clients au hasard. Il faut `ON oi.order_id = o.id`. Suis les flèches : customers → orders (par id client) → order_items (par id commande) → products (par id produit). Un `LEFT JOIN` n'aide pas : les lignes sans correspondance n'ont pas de produit, donc `WHERE p.name = 'Kettle'` les écarte."
+            },
+            {
+              "type": "numeric",
+              "id": "q-kettle-rows",
+              "concepts": [
+                "inner-join"
+              ],
+              "prompt": "Une fois la ligne 4 corrigée, combien de lignes la requête renvoie-t-elle ?\n\n```sql\nSELECT c.name\nFROM customers c\nJOIN orders o       ON o.customer_id = c.id\nJOIN order_items oi ON oi.order_id = o.id\nJOIN products p     ON p.id = oi.product_id\nWHERE p.name = 'Kettle';\n```\n\nDes bouilloires (Kettle) apparaissent dans `order_items` pour les commandes **101** (Ana), **103** (Ben) et **105** (Ben).",
+              "answer": 3,
+              "explanation": "Une ligne par article de commande correspondant : Ana, Ben, Ben. Ben apparaît deux fois parce qu'il a acheté des bouilloires dans deux commandes. Si tu veux chaque client une seule fois, utilise `SELECT DISTINCT c.name` (2 lignes).",
+              "hint": "Une jointure renvoie une ligne par correspondance, pas une ligne par client."
+            }
+          ]
+        },
+        {
+          "id": "left-join",
+          "title": "LEFT JOIN et trouver ce qui manque",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Un LEFT JOIN garde chaque ligne de la table de gauche (avec des NULL là où rien ne correspond) ; mets les conditions sur la table de droite dans `ON`, pas dans `WHERE`, sinon tu obtiens sans le savoir un INNER JOIN.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Garder chaque ligne de gauche",
+              "body": "« Lister **tous** les clients avec leurs commandes » ne peut pas utiliser une jointure interne : Dev et Eli disparaîtraient. Un `LEFT JOIN` garde chaque ligne de la table de gauche et remplit le côté droit avec `NULL` quand il n'y a pas de correspondance :\n\n```sql\nSELECT c.name, o.id AS order_id, o.total\nFROM customers c\nLEFT JOIN orders o ON o.customer_id = c.id;\n```\n\n```\n name | order_id | total\n------+----------+------\n Ana  | 101      | 40.00\n Ana  | 102      | 25.00\n Ben  | 103      | 80.00\n Ben  | 105      | 50.00\n Cara | 104      | 15.00\n Dev  | NULL     | NULL\n Eli  | NULL     | NULL\n```\n\n`RIGHT JOIN` en est le reflet (rarement utilisé : il suffit d'échanger les tables). `FULL OUTER JOIN` garde les lignes sans correspondance des deux côtés (indisponible dans MySQL)."
+            },
+            {
+              "type": "numeric",
+              "id": "q-left-orders",
+              "concepts": [
+                "left-join"
+              ],
+              "prompt": "Maintenant, les tables sont inversées. Combien de lignes cette requête renvoie-t-elle ?\n\n```sql\nSELECT o.id, c.name\nFROM orders o\nLEFT JOIN customers c ON c.id = o.customer_id;\n```\n\n```\norders\n id  | customer_id | total | created_at\n-----+-------------+-------+-----------\n 101 | 1           | 40.00 | 2026-01-05\n 102 | 1           | 25.00 | 2026-02-10\n 103 | 2           | 80.00 | 2026-02-14\n 104 | 3           | 15.00 | 2026-03-01\n 105 | 2           | 50.00 | 2026-03-03\n 106 | NULL        | 30.00 | 2026-03-08\n```\n\n(Les clients 1–5 existent ; chaque commande correspond à au plus un client.)",
+              "answer": 6,
+              "explanation": "`orders` est maintenant la table de gauche, donc **chaque commande** est gardée : 101–105 avec le nom de leur client, et la commande invité 106 avec `name` = `NULL`. Les clients sans commande (Dev, Eli) n'apparaissent pas : ils sont du côté droit.",
+              "hint": "Quelle table est à gauche maintenant ?"
+            },
+            {
+              "type": "sim",
+              "sim": "join",
+              "title": "Comparer les types de jointure",
+              "body": "Les mêmes tables, quatre types de jointure. Passe de l'un à l'autre et regarde quelles lignes sans correspondance survivent :\n\n- **INNER** : seulement les paires correspondantes (5 lignes).\n- **LEFT** : chaque client ; Dev et Eli reçoivent des colonnes de commande `NULL`.\n- **RIGHT** : chaque commande ; la commande invité 106 reçoit des colonnes client `NULL`. C'est le LEFT JOIN avec les tables inversées de la question précédente.\n- **FULL** : les lignes sans correspondance des deux côtés.",
+              "left": {
+                "name": "customers",
+                "columns": [
+                  "id",
+                  "name"
+                ],
+                "rows": [
+                  [
+                    1,
+                    "Ana"
+                  ],
+                  [
+                    2,
+                    "Ben"
+                  ],
+                  [
+                    3,
+                    "Cara"
+                  ],
+                  [
+                    4,
+                    "Dev"
+                  ],
+                  [
+                    5,
+                    "Eli"
+                  ]
+                ]
+              },
+              "right": {
+                "name": "orders",
+                "columns": [
+                  "id",
+                  "customer_id",
+                  "total"
+                ],
+                "rows": [
+                  [
+                    101,
+                    1,
+                    "40.00"
+                  ],
+                  [
+                    102,
+                    1,
+                    "25.00"
+                  ],
+                  [
+                    103,
+                    2,
+                    "80.00"
+                  ],
+                  [
+                    104,
+                    3,
+                    "15.00"
+                  ],
+                  [
+                    105,
+                    2,
+                    "50.00"
+                  ],
+                  [
+                    106,
+                    null,
+                    "30.00"
+                  ]
+                ]
+              },
+              "on": [
+                "id",
+                "customer_id"
+              ]
+            },
+            {
+              "type": "explain",
+              "title": "Trouver les lignes sans correspondance",
+              "body": "Puisque les lignes sans correspondance reçoivent des `NULL` à droite, tu peux **ne garder qu'elles**. C'est la requête classique « qui n'a jamais… ? » :\n\n```sql\n-- customers who have never ordered\nSELECT c.name\nFROM customers c\nLEFT JOIN orders o ON o.customer_id = c.id\nWHERE o.id IS NULL;\n-- Dev, Eli\n```\n\nTeste une colonne de droite qui ne peut pas être `NULL` dans une vraie correspondance, idéalement sa clé primaire (`o.id`). Tester une colonne qui accepte NULL, comme un `discount`, attraperait aussi des lignes correspondantes qui n'ont simplement pas de remise."
+            },
+            {
+              "type": "mcq",
+              "id": "q-never-ordered",
+              "concepts": [
+                "anti-join",
+                "left-join"
+              ],
+              "prompt": "Quelle requête liste les produits qui n'ont **jamais** été commandés ?\n\n```\nproducts\n id | name     | category | price\n----+----------+----------+------\n  1 | Pen      | Office   |  2.50\n  2 | Notebook | Office   |  6.00\n  3 | Mug      | Kitchen  |  9.00\n  4 | Kettle   | Kitchen  | 35.00\n  5 | Lamp     | Home     | 25.00\n```\n\n(`order_items(order_id, product_id, quantity)` a une ligne pour chaque produit de chaque commande.)",
+              "choices": [
+                "`SELECT p.name FROM products p LEFT JOIN order_items oi ON oi.product_id = p.id WHERE oi.product_id IS NULL;`",
+                "`SELECT p.name FROM products p JOIN order_items oi ON oi.product_id = p.id WHERE oi.product_id IS NULL;`",
+                "`SELECT p.name FROM order_items oi LEFT JOIN products p ON p.id = oi.product_id WHERE p.id IS NULL;`",
+                "`SELECT p.name FROM products p LEFT JOIN order_items oi ON oi.product_id = p.id WHERE oi.product_id = NULL;`"
+              ],
+              "answer": 0,
+              "explanation": "Les produits doivent être à **gauche** pour que ceux jamais commandés survivent à la jointure, puis `IS NULL` ne garde qu'eux : ici, **Lamp**. La version en jointure interne ne peut jamais produire de correspondance `NULL`, donc elle ne renvoie rien. Mettre `order_items` à gauche cherche des articles sans produit : ce n'est pas la bonne question. Et `= NULL` n'est jamais vrai."
+            },
+            {
+              "type": "explain",
+              "title": "Le piège du WHERE",
+              "body": "Une condition sur la table de **droite** dans `WHERE` annule ton LEFT JOIN :\n\n```sql\nSELECT c.name, o.id\nFROM customers c\nLEFT JOIN orders o ON o.customer_id = c.id\nWHERE o.created_at >= '2026-03-01';\n```\n\nPour Dev et Eli, `o.created_at` est `NULL`, la condition est inconnue, et `WHERE` les écarte. Tu as écrit un INNER JOIN avec des étapes en plus.\n\nLa correction : mets les conditions sur la table de droite **dans la clause `ON`**. `ON` décide de ce qui compte comme une correspondance ; les lignes de gauche survivent dans tous les cas. Les conditions sur la table de **gauche**, elles, vont toujours dans `WHERE`."
+            },
+            {
+              "type": "example",
+              "title": "Tous les clients, avec leurs commandes de mars",
+              "problem": "Compare les deux versions :\n\n```sql\n-- Version 1\nSELECT c.name, o.id\nFROM customers c\nLEFT JOIN orders o ON o.customer_id = c.id\nWHERE o.created_at >= '2026-03-01';\n\n-- Version 2\nSELECT c.name, o.id\nFROM customers c\nLEFT JOIN orders o ON o.customer_id = c.id\n                  AND o.created_at >= '2026-03-01';\n```\n\nCommandes de mars : 104 (Cara), 105 (Ben), 106 (invité).",
+              "steps": [
+                "La version 1 fait d'abord la jointure, ce qui donne 7 lignes (comme dans la première table de cette leçon), puis `WHERE` garde les lignes avec une date de mars : Cara/104 et Ben/105. **2 lignes** ; Ana, Dev et Eli ont disparu.",
+                "La version 2 ne considère comme correspondances que les commandes de mars. Ben correspond à 105 et Cara à 104.",
+                "Les commandes d'Ana datent de janvier et février, donc elle n'a pas de correspondance : elle est gardée avec `NULL`. Dev et Eli sont aussi gardés avec `NULL`.",
+                "La version 2 renvoie **5 lignes** : une par client, ce qu'on demandait avec « tous les clients »."
+              ],
+              "answer": "Version 1 : 2 lignes. Version 2 : 5 lignes (Ana NULL, Ben 105, Cara 104, Dev NULL, Eli NULL)."
+            },
+            {
+              "type": "numeric",
+              "id": "q-count-star-left",
+              "concepts": [
+                "left-join",
+                "aggregate-functions"
+              ],
+              "prompt": "Quel nombre cette requête affiche-t-elle pour **Dev** ?\n\n```sql\nSELECT c.name, COUNT(*) AS orders\nFROM customers c\nLEFT JOIN orders o ON o.customer_id = c.id\nGROUP BY c.name;\n```\n\n(Dev n'a pas de commandes.)",
+              "answer": 1,
+              "explanation": "Le LEFT JOIN donne à Dev **une** ligne (avec des colonnes de commande `NULL`), et `COUNT(*)` compte les lignes : il affiche donc 1. Compte plutôt une colonne de droite : `COUNT(o.id)` ignore le `NULL` et donne correctement 0.",
+              "hint": "`COUNT(*)` compte les lignes, y compris celle remplie de NULL."
+            },
+            {
+              "type": "numeric",
+              "id": "q-left-where",
+              "concepts": [
+                "filter-in-on",
+                "three-valued-logic"
+              ],
+              "prompt": "Combien de lignes cette requête renvoie-t-elle ?\n\n```sql\nSELECT c.name\nFROM customers c\nLEFT JOIN orders o ON o.customer_id = c.id\nWHERE o.total > 20;\n```\n\n```\norders\n id  | customer_id | total | created_at\n-----+-------------+-------+-----------\n 101 | 1           | 40.00 | 2026-01-05\n 102 | 1           | 25.00 | 2026-02-10\n 103 | 2           | 80.00 | 2026-02-14\n 104 | 3           | 15.00 | 2026-03-01\n 105 | 2           | 50.00 | 2026-03-03\n 106 | NULL        | 30.00 | 2026-03-08\n```",
+              "answer": 4,
+              "explanation": "Après la jointure, `WHERE o.total > 20` garde Ana/101 (40), Ana/102 (25), Ben/103 (80) et Ben/105 (50). La seule commande de Cara est à 15,00, et Dev et Eli ont des totaux `NULL` : ils sont tous écartés. Le `WHERE` sur la table de droite a fait se comporter cette requête comme une jointure interne."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-left-where",
+              "concepts": [
+                "filter-in-on",
+                "left-join"
+              ],
+              "prompt": "Cette requête devrait lister **chaque** client avec le nombre de commandes de plus de 20 qu'il a passées, en affichant 0 pour ceux qui n'en ont aucune. Les clients sans commande de ce type manquent dans le résultat. Clique sur la ligne qui contient le bug.",
+              "language": "sql",
+              "code": "SELECT c.name, COUNT(o.id) AS big_orders\nFROM customers c\nLEFT JOIN orders o ON o.customer_id = c.id\nWHERE o.total > 20\nGROUP BY c.name;",
+              "error": "Only customers who have at least one order over 20 appear.\nCustomers with no orders, or only small ones, are missing instead of showing 0.",
+              "lines": [
+                4
+              ],
+              "fixes": [
+                "Supprimer la ligne 4 et remplacer la ligne 3 par `LEFT JOIN orders o ON o.customer_id = c.id AND o.total > 20`",
+                "Remplacer la ligne 1 par `SELECT c.name, COUNT(*) AS big_orders`",
+                "Remplacer la ligne 3 par `INNER JOIN orders o ON o.customer_id = c.id`",
+                "Remplacer la ligne 4 par `WHERE o.total > 20 OR o.total = 0`"
+              ],
+              "answer": 0,
+              "hint": "Que vaut `o.total` pour un client que le LEFT JOIN n'a pas pu associer, et que fait `WHERE` de cette ligne ?",
+              "explanation": "Pour les clients sans commande correspondante, le LEFT JOIN remplit `o.total` avec `NULL`. `NULL > 20` est inconnu, donc `WHERE` écarte ces lignes et le LEFT JOIN se comporte comme une jointure interne. Déplacer la condition dans `ON` garde chaque client et ne joint que ses grosses commandes, donc `COUNT(o.id)` vaut 0 pour les autres. `COUNT(*)` compterait 1 pour eux, et `INNER JOIN` les écarte volontairement."
+            }
+          ]
+        },
+        {
+          "id": "subqueries-ctes",
+          "title": "Sous-requêtes et CTE",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Utilise une sous-requête quand une réponse dépend d'une autre, donne un nom à chaque étape avec `WITH`, et préfère `NOT EXISTS` à `NOT IN` quand des NULL peuvent traîner.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Une requête dans une requête",
+              "body": "Certaines questions demandent deux étapes : « Quelles commandes sont au-dessus de la moyenne ? » Il te faut d'abord la moyenne.\n\n```sql\nSELECT id, total\nFROM orders\nWHERE total > (SELECT AVG(total) FROM orders);\n```\n\nLa requête interne s'exécute et renvoie une seule valeur, que la requête externe utilise ensuite comme une constante. Une sous-requête qui renvoie une seule valeur est une *sous-requête scalaire*.\n\nLes sous-requêtes peuvent aussi renvoyer une liste (utilisée avec `IN`) ou une table entière (utilisée dans `FROM`, où elle a besoin d'un alias)."
+            },
+            {
+              "type": "numeric",
+              "id": "q-above-avg",
+              "concepts": [
+                "subquery"
+              ],
+              "prompt": "Combien de lignes la requête ci-dessus renvoie-t-elle ?\n\n```\norders\n id  | customer_id | total | created_at\n-----+-------------+-------+-----------\n 101 | 1           | 40.00 | 2026-01-05\n 102 | 1           | 25.00 | 2026-02-10\n 103 | 2           | 80.00 | 2026-02-14\n 104 | 3           | 15.00 | 2026-03-01\n 105 | 2           | 50.00 | 2026-03-03\n 106 | NULL        | 30.00 | 2026-03-08\n```",
+              "answer": 2,
+              "explanation": "La moyenne vaut (40 + 25 + 80 + 15 + 50 + 30) / 6 = 240 / 6 = **40**. Seules 80,00 (103) et 50,00 (105) sont strictement supérieures ; la commande 101 vaut exactement 40, ce qui ne compte pas.",
+              "hint": "Calcule d'abord la moyenne. 40 est-il supérieur à 40 ?"
+            },
+            {
+              "type": "explain",
+              "title": "IN et EXISTS",
+              "body": "Les clients qui ont commandé au moins une fois :\n\n```sql\nSELECT name FROM customers\nWHERE id IN (SELECT customer_id FROM orders);\n\nSELECT name FROM customers c\nWHERE EXISTS (SELECT 1 FROM orders o WHERE o.customer_id = c.id);\n```\n\nLes deux renvoient Ana, Ben et Cara. La sous-requête `EXISTS` est *corrélée* : elle fait référence à `c`, de la requête externe, donc elle est testée une fois par client et demande seulement « y a-t-il au moins une ligne ? » (`SELECT 1` n'est qu'une convention ; la valeur sélectionnée n'a pas d'importance).\n\nC'est avec les versions négatives que ça devient intéressant : `NOT IN` et `NOT EXISTS` ne sont **pas** interchangeables."
+            },
+            {
+              "type": "numeric",
+              "id": "q-not-in-null",
+              "concepts": [
+                "not-in-null-trap",
+                "three-valued-logic"
+              ],
+              "prompt": "Combien de lignes cette requête renvoie-t-elle ?\n\n```sql\nSELECT name\nFROM customers\nWHERE id NOT IN (SELECT customer_id FROM orders);\n```\n\nLa sous-requête renvoie `1, 1, 2, 3, 2, NULL` (la commande invité 106 n'a pas de client).",
+              "answer": 0,
+              "explanation": "Pour Dev, `4 NOT IN (1, 2, 3, NULL)` veut dire `4 <> 1 AND 4 <> 2 AND 4 <> 3 AND 4 <> NULL`. La dernière partie est inconnue, donc toute la condition est inconnue (jamais vraie), et ce pour **chaque** client. Un seul `NULL` dans la liste vide le résultat. C'est l'un des pièges les plus sournois de SQL.",
+              "hint": "Développe NOT IN en une chaîne de comparaisons <> reliées par AND."
+            },
+            {
+              "type": "mcq",
+              "id": "q-not-exists-fix",
+              "concepts": [
+                "not-in-null-trap",
+                "subquery"
+              ],
+              "prompt": "Quelle requête renvoie correctement les clients qui n'ont jamais commandé (Dev et Eli), alors que `orders.customer_id` contient un NULL ?",
+              "choices": [
+                "`SELECT name FROM customers WHERE id NOT IN (SELECT DISTINCT customer_id FROM orders);`",
+                "`SELECT name FROM customers c WHERE NOT EXISTS (SELECT 1 FROM orders o WHERE o.customer_id = c.id);`",
+                "`SELECT name FROM customers WHERE NOT EXISTS (SELECT 1 FROM orders);`",
+                "`SELECT name FROM customers WHERE id <> (SELECT customer_id FROM orders);`"
+              ],
+              "answer": 1,
+              "explanation": "`NOT EXISTS` demande seulement si une ligne correspondante existe, donc les `NULL` ne peuvent pas le fausser. `DISTINCT` garde toujours le `NULL` dans la liste. Le `NOT EXISTS` non corrélé teste si **orders** est vide, donc il ne renvoie personne. Et `<>` avec une sous-requête qui renvoie plusieurs lignes provoque une erreur. (`LEFT JOIN … WHERE o.id IS NULL` marche aussi, tout comme ajouter `WHERE customer_id IS NOT NULL` dans la sous-requête du `NOT IN`.)"
+            },
+            {
+              "type": "explain",
+              "title": "CTE : nomme tes étapes",
+              "body": "Une **CTE** (*common table expression*, expression de table commune) donne un nom à une sous-requête en haut de la requête :\n\n```sql\nWITH spend AS (\n  SELECT customer_id, SUM(total) AS spent\n  FROM orders\n  WHERE customer_id IS NOT NULL\n  GROUP BY customer_id\n)\nSELECT c.name, s.spent\nFROM spend s\nJOIN customers c ON c.id = s.customer_id;\n```\n\n- Lis-la de haut en bas, comme les étapes d'une recette.\n- Enchaînes-en plusieurs : `WITH a AS (...), b AS (... FROM a ...) SELECT ...`\n- Utilise la même CTE plusieurs fois dans la requête principale.\n\nLa plupart des requêtes « trop compliquées » deviennent lisibles dès que chaque étape a un nom."
+            },
+            {
+              "type": "example",
+              "title": "Les clients qui dépensent plus que la moyenne",
+              "problem": "Quels clients ont dépensé plus que le client moyen ?\n\n```sql\nWITH spend AS (\n  SELECT customer_id, SUM(total) AS spent\n  FROM orders\n  WHERE customer_id IS NOT NULL\n  GROUP BY customer_id\n)\nSELECT c.name, s.spent\nFROM spend s\nJOIN customers c ON c.id = s.customer_id\nWHERE s.spent > (SELECT AVG(spent) FROM spend);\n```",
+              "steps": [
+                "On construit `spend` : client 1 → 65,00, client 2 → 130,00, client 3 → 15,00. La commande invité est filtrée.",
+                "La sous-requête scalaire réutilise la CTE : moyenne de 65, 130 et 15 = 210 / 3 = **70**. C'est la moyenne *par client*, pas par commande (qui valait 40).",
+                "On garde les clients dont la dépense dépasse 70 : seulement le client 2. La jointure avec `customers` donne le nom."
+              ],
+              "answer": "Une ligne : Ben, 130,00."
+            },
+            {
+              "type": "text",
+              "id": "q-with-keyword",
+              "concepts": [
+                "cte"
+              ],
+              "prompt": "Complète le mot-clé qui commence une CTE :\n\n```sql\n____ big_orders AS (\n  SELECT * FROM orders WHERE total >= 50\n)\nSELECT COUNT(*) FROM big_orders;\n```",
+              "accept": [
+                "WITH"
+              ],
+              "explanation": "`WITH name AS (query)` définit une CTE que le `SELECT` qui suit peut utiliser comme une table. Ici, elle compte 2 grosses commandes (103 et 105)."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-cte-average",
+              "concepts": [
+                "cte",
+                "aggregate-functions"
+              ],
+              "prompt": "Cette requête devrait lister les clients dont la dépense totale dépasse la **dépense moyenne par client**. Seul Ben (130,00) devrait être retenu, mais Ana apparaît aussi. Clique sur la ligne qui contient le bug.",
+              "language": "sql",
+              "code": "WITH spend AS (\n  SELECT customer_id, SUM(total) AS spent\n  FROM orders\n  WHERE customer_id IS NOT NULL\n  GROUP BY customer_id\n)\nSELECT c.name, s.spent\nFROM spend s\nJOIN customers c ON c.id = s.customer_id\nWHERE s.spent > (SELECT AVG(total) FROM orders);",
+              "error": "It returns two rows: Ana (65.00) and Ben (130.00).",
+              "lines": [
+                10
+              ],
+              "fixes": [
+                "Remplacer la ligne 10 par `WHERE s.spent > (SELECT AVG(spent) FROM spend);`",
+                "Remplacer la ligne 10 par `WHERE s.spent > (SELECT AVG(total) FROM orders WHERE customer_id IS NOT NULL);`",
+                "Remplacer la ligne 10 par `WHERE s.spent > (SELECT AVG(total) FROM spend);`",
+                "Remplacer la ligne 10 par `WHERE s.spent >= (SELECT AVG(total) FROM orders);`"
+              ],
+              "answer": 0,
+              "hint": "`AVG(total) FROM orders` est-il une moyenne par client, ou par commande ?",
+              "explanation": "`AVG(total) FROM orders` est la **commande** moyenne (40), donc les 65,00 d'Ana passent aussi. La moyenne par client doit se calculer sur les lignes de la CTE : `AVG(spent) FROM spend` vaut (65 + 130 + 15) / 3 = 70, et seul Ben la dépasse. Exclure la commande invité fait toujours une moyenne des commandes (42), `spend` n'a pas de colonne `total` (c'est une erreur), et `>=` ne corrige pas la mauvaise moyenne."
+            }
+          ]
+        },
+        {
+          "id": "self-joins-union",
+          "title": "Auto-jointures et UNION",
+          "pareto": "extra",
+          "minutes": 6,
+          "takeaway": "Joins une table à elle-même avec deux alias pour comparer ses lignes ; empile des résultats avec `UNION ALL`, et n'utilise `UNION` que si tu as besoin de supprimer les doublons.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Joindre une table à elle-même",
+              "body": "Une **auto-jointure** (*self-join*) utilise deux fois la même table avec des alias différents. Le cas classique est une hiérarchie, comme `staff(id, name, manager_id)` :\n\n```sql\nSELECT e.name AS employee, m.name AS manager\nFROM staff e\nLEFT JOIN staff m ON m.id = e.manager_id;\n```\n\nElle sert aussi à comparer les lignes entre elles. Les paires de clients qui vivent dans la même ville :\n\n```sql\nSELECT a.name AS customer, b.name AS neighbour\nFROM customers a\nJOIN customers b ON a.city = b.city AND a.id < b.id;\n-- Ana | Cara\n```\n\n`a.id < b.id` empêche un client d'être associé à lui-même, et liste chaque paire une fois au lieu de deux."
+            },
+            {
+              "type": "numeric",
+              "id": "q-self-pairs",
+              "concepts": [
+                "inner-join"
+              ],
+              "prompt": "Sans la condition `a.id < b.id`, combien de lignes cette requête renvoie-t-elle ?\n\n```sql\nSELECT a.name, b.name\nFROM customers a\nJOIN customers b ON a.city = b.city;\n```\n\n```\ncustomers\n id | name | city\n----+------+--------\n  1 | Ana  | Lisbon\n  2 | Ben  | Porto\n  3 | Cara | Lisbon\n  4 | Dev  | NULL\n  5 | Eli  | Madrid\n```",
+              "answer": 6,
+              "explanation": "Lisbon a 2 clients, ce qui donne 2 × 2 = 4 paires (Ana–Ana, Ana–Cara, Cara–Ana, Cara–Cara). Porto et Madrid ajoutent Ben–Ben et Eli–Eli. La ville de Dev est `NULL`, et `NULL = NULL` n'est pas vrai, donc il ne correspond même pas à lui-même. Total : **6**.",
+              "hint": "Chaque client correspond à lui-même… sauf si sa ville est NULL."
+            },
+            {
+              "type": "explain",
+              "title": "UNION et UNION ALL",
+              "body": "`UNION` empile les lignes de deux requêtes l'une sur l'autre :\n\n```sql\nSELECT name FROM customers WHERE city = 'Lisbon'\nUNION ALL\nSELECT name FROM customers WHERE name LIKE 'E%';\n```\n\n- Les deux requêtes doivent avoir le **même nombre de colonnes**, de types compatibles. Les noms de colonnes viennent de la première requête.\n- `UNION ALL` garde toutes les lignes.\n- `UNION` supprime les lignes en double, ce qui coûte une étape de tri ou de hachage en plus.\n- `ORDER BY` ne s'écrit qu'une fois, tout à la fin, et trie le résultat combiné.\n\nDans la même famille : `INTERSECT` (les lignes présentes dans les deux) et `EXCEPT` (les lignes de la première mais pas de la seconde)."
+            },
+            {
+              "type": "example",
+              "title": "UNION ou UNION ALL",
+              "problem": "Combien de lignes chaque version renvoie-t-elle ?\n\n```sql\nSELECT customer_id FROM orders WHERE total >= 50\nUNION            -- or UNION ALL\nSELECT customer_id FROM orders WHERE created_at >= '2026-03-01';\n```\n\n```\norders\n id  | customer_id | total | created_at\n-----+-------------+-------+-----------\n 101 | 1           | 40.00 | 2026-01-05\n 102 | 1           | 25.00 | 2026-02-10\n 103 | 2           | 80.00 | 2026-02-14\n 104 | 3           | 15.00 | 2026-03-01\n 105 | 2           | 50.00 | 2026-03-03\n 106 | NULL        | 30.00 | 2026-03-08\n```",
+              "steps": [
+                "Première requête : les commandes 103 et 105 ont des totaux ≥ 50, ce qui donne `2, 2`.",
+                "Deuxième requête : les commandes de mars 104, 105, 106 donnent `3, 2, NULL`.",
+                "`UNION ALL` les empile simplement : `2, 2, 3, 2, NULL`, soit **5 lignes**.",
+                "`UNION` supprime les doublons : `2, 3, NULL`, soit **3 lignes**. Comme `DISTINCT`, il considère les `NULL` comme égaux entre eux."
+              ],
+              "answer": "UNION ALL : 5 lignes. UNION : 3 lignes."
+            },
+            {
+              "type": "numeric",
+              "id": "q-union-all",
+              "concepts": [
+                "union"
+              ],
+              "prompt": "Combien de lignes cette requête renvoie-t-elle ?\n\n```sql\nSELECT name FROM customers WHERE city = 'Lisbon'\nUNION ALL\nSELECT name FROM customers WHERE name LIKE '%a';\n```\n\n```\ncustomers\n id | name | city\n----+------+--------\n  1 | Ana  | Lisbon\n  2 | Ben  | Porto\n  3 | Cara | Lisbon\n  4 | Dev  | NULL\n  5 | Eli  | Madrid\n```",
+              "answer": 4,
+              "explanation": "Lisbon donne Ana et Cara. Les noms qui se terminent par un `a` minuscule sont aussi Ana et Cara. `UNION ALL` garde les doublons, ce qui fait **4** lignes. Avec `UNION`, ce serait 2."
+            },
+            {
+              "type": "bug",
+              "id": "q-union-error",
+              "concepts": [
+                "union"
+              ],
+              "prompt": "Cette requête devrait construire une seule liste de contacts : le nom et la ville de chaque client, plus le nom de chaque membre de `staff(id, name, manager_id)`, dont on ne connaît pas la ville. Elle échoue. Clique sur la ligne qui contient le bug.",
+              "language": "sql",
+              "code": "SELECT name, city FROM customers\nUNION ALL\nSELECT name FROM staff;",
+              "error": "ERROR:  each UNION query must have the same number of columns",
+              "lines": [
+                3
+              ],
+              "fixes": [
+                "Remplacer la ligne 3 par `SELECT name, NULL FROM staff;`",
+                "Remplacer la ligne 2 par `UNION`",
+                "Remplacer la ligne 3 par `SELECT name, manager_id FROM staff;`",
+                "Remplacer la ligne 3 par `SELECT name FROM staff ORDER BY name;`"
+              ],
+              "answer": 0,
+              "hint": "Compte les colonnes de chaque côté du `UNION ALL`.",
+              "explanation": "Chaque requête d'un `UNION` doit renvoyer le même nombre de colonnes, ici 2 contre 1, et les colonnes qui se correspondent doivent avoir des types compatibles. `SELECT name, NULL` donne au personnel une ville vide, donc chaque membre du personnel s'empile sous les clients avec une ville vide. `UNION` vérifie le nombre de colonnes exactement pareil ; `manager_id` fait bien deux colonnes mais empile un entier sous la colonne texte `city` (*UNION types text and integer cannot be matched*) ; et `ORDER BY` ne fait que trier le résultat combiné. Utiliser deux tables différentes ne pose aucun problème : c'est le cas habituel."
+            },
+            {
+              "type": "text",
+              "id": "q-union-all-choice",
+              "concepts": [
+                "union"
+              ],
+              "prompt": "Tu combines les tables de commandes de cette année et de l'année dernière dans un seul rapport. Elles ne peuvent jamais contenir la même ligne, et elles sont énormes. Quel opérateur ensembliste dois-tu utiliser ? (deux mots)",
+              "accept": [
+                "UNION ALL"
+              ],
+              "explanation": "Les deux donnent les mêmes lignes ici, mais `UNION` passerait du temps à trier ou hacher des millions de lignes pour chercher des doublons qui ne peuvent pas exister. Utilise `UNION ALL` par défaut, et `UNION` seulement quand tu veux vraiment supprimer les doublons."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "changing-design",
+      "title": "Modifier les données et la structure",
+      "description": "Insérer, mettre à jour et supprimer sans risque, et concevoir des tables qui gardent tes données correctes.",
+      "lessons": [
+        {
+          "id": "insert-update-delete",
+          "title": "INSERT, UPDATE, DELETE et transactions",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Chaque `UPDATE` et chaque `DELETE` a besoin d'un `WHERE` : prévisualise-le avec un `SELECT`, exécute-le dans un `BEGIN`, vérifie le nombre de lignes, puis `COMMIT` ou `ROLLBACK`.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "INSERT : ajouter des lignes",
+              "body": "```sql\nINSERT INTO customers (id, name, city)\nVALUES (6, 'Fay', 'Porto');\n\nINSERT INTO customers (id, name, city)\nVALUES (7, 'Gus', NULL),\n       (8, 'Hal', 'Lisbon');      -- several rows at once\n```\n\n- **Liste** toujours **les colonnes**. Du code qui dépend de l'ordre des colonnes de la table casse dès que quelqu'un ajoute une colonne.\n- Les colonnes que tu omets reçoivent leur valeur `DEFAULT`, ou `NULL`.\n- `INSERT INTO ... SELECT ...` copie les lignes renvoyées par une requête.\n- Dans PostgreSQL, `RETURNING id` renvoie les valeurs générées par l'insertion."
+            },
+            {
+              "type": "explain",
+              "title": "UPDATE et DELETE",
+              "body": "```sql\nUPDATE customers\nSET city = 'Faro'\nWHERE id = 4;\n\nDELETE FROM orders\nWHERE id = 106;\n```\n\n`WHERE` choisit quelles lignes changent, exactement comme dans un `SELECT` (avec les mêmes règles sur `NULL`). **Oublie-le, et toutes les lignes changent.** `UPDATE customers SET city = 'Faro';` déménage tous tes clients à Faro, et `DELETE FROM orders;` vide la table.\n\n`SET` peut utiliser les valeurs actuelles de la ligne : `SET price = price * 1.10`."
+            },
+            {
+              "type": "numeric",
+              "id": "q-update-count",
+              "concepts": [
+                "update-delete",
+                "three-valued-logic"
+              ],
+              "prompt": "En partant de la table `customers` d'origine, combien de lignes PostgreSQL annonce-t-il comme mises à jour ?\n\n```sql\nUPDATE customers\nSET city = 'Lisbon'\nWHERE city <> 'Porto';\n```\n\n```\ncustomers\n id | name | city\n----+------+--------\n  1 | Ana  | Lisbon\n  2 | Ben  | Porto\n  3 | Cara | Lisbon\n  4 | Dev  | NULL\n  5 | Eli  | Madrid\n```",
+              "answer": 3,
+              "explanation": "Ana, Cara (déjà à Lisbon) et Eli correspondent à `city <> 'Porto'`, donc PostgreSQL annonce `UPDATE 3` : il compte les lignes trouvées, même si la valeur n'a pas changé. Ben est à Porto, et pour Dev, `NULL <> 'Porto'` est inconnu, donc sa ville reste `NULL`. (MySQL distingue les lignes trouvées et modifiées : 3 trouvées, 1 modifiée.)",
+              "hint": "Souviens-toi de la façon dont NULL se comporte dans WHERE."
+            },
+            {
+              "type": "example",
+              "title": "Modifier des données sans risque",
+              "problem": "Les prix de la catégorie Kitchen augmentent de 10 %. Comment le faire sans mettre en danger toute la table `products` ?\n\n```\nproducts\n id | name     | category | price\n----+----------+----------+------\n  1 | Pen      | Office   |  2.50\n  2 | Notebook | Office   |  6.00\n  3 | Mug      | Kitchen  |  9.00\n  4 | Kettle   | Kitchen  | 35.00\n  5 | Lamp     | Home     | 25.00\n```",
+              "steps": [
+                "**Prévisualise** avec un `SELECT` qui utilise exactement le même `WHERE` : `SELECT * FROM products WHERE category = 'Kitchen';` renvoie 2 lignes (Mug, Kettle).",
+                "**Démarre une transaction** pour que rien ne soit encore définitif : `BEGIN;`",
+                "**Lance la modification** et lis le nombre de lignes : `UPDATE products SET price = price * 1.10 WHERE category = 'Kitchen';` affiche `UPDATE 2`, comme la prévisualisation.",
+                "**Vérifie** le résultat (à nouveau un `SELECT` : Mug 9,90, Kettle 38,50), puis `COMMIT;` pour le rendre définitif. Si le nombre ou les valeurs semblent faux, `ROLLBACK;` et rien ne s'est passé."
+              ],
+              "answer": "Prévisualiser → BEGIN → UPDATE (vérifier le nombre de lignes) → contrôler → COMMIT ou ROLLBACK."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-update-or",
+              "concepts": [
+                "update-delete",
+                "where-filter"
+              ],
+              "prompt": "Avec la table `products` ci-dessus : les produits Kitchen et Home à moins de 30 (c'est-à-dire Mug et Lamp) doivent augmenter de 10 %. PostgreSQL annonce une ligne de trop. Clique sur la ligne qui contient le bug.",
+              "language": "sql",
+              "code": "UPDATE products\nSET price = price * 1.10\nWHERE category = 'Kitchen' OR category = 'Home' AND price < 30;",
+              "error": "UPDATE 3\nThe Kettle went from 35.00 to 38.50 as well.",
+              "lines": [
+                3
+              ],
+              "fixes": [
+                "Remplacer la ligne 3 par `WHERE (category = 'Kitchen' OR category = 'Home') AND price < 30;`",
+                "Remplacer la ligne 3 par `WHERE category = 'Kitchen' OR (category = 'Home' AND price < 30);`",
+                "Remplacer la ligne 3 par `WHERE category = 'Kitchen' OR category = 'Home' AND price <= 30;`",
+                "Remplacer la ligne 3 par `WHERE category IN ('Kitchen', 'Home') OR price < 30;`"
+              ],
+              "answer": 0,
+              "hint": "Lequel est prioritaire, `AND` ou `OR` ?",
+              "explanation": "`AND` est évalué avant `OR`, donc la condition veut dire `Kitchen OR (Home AND price < 30)` : chaque produit Kitchen correspond, y compris le Kettle à 35,00. Des parenthèses autour du `OR` appliquent la limite de prix aux deux catégories : `UPDATE 2`. (`category IN ('Kitchen', 'Home') AND price < 30` marche aussi.) Mettre des parenthèses autour de la partie `AND` ne fait qu'expliciter le sens fautif, `<= 30` laisse toujours passer chaque produit Kitchen, et `IN (...) OR price < 30` met à jour les 5 produits. Le nombre affiché par PostgreSQL est ton signal d'alerte : la prévisualisation disait 2."
+            },
+            {
+              "type": "mcq",
+              "id": "q-stray-semicolon",
+              "concepts": [
+                "transaction",
+                "update-delete"
+              ],
+              "prompt": "Tu tapes ceci dans `psql`, qui envoie chaque instruction dès qu'il rencontre un `;` (l'autocommit est activé, c'est le réglage par défaut). Que se passe-t-il ?\n\n```sql\nUPDATE orders SET total = 0;\nWHERE id = 104;\n```",
+              "choices": [
+                "Le total de la commande 104 passe à 0, et rien d'autre",
+                "Rien : PostgreSQL rejette les deux lignes avant d'exécuter quoi que ce soit",
+                "Le point-virgule termine l'`UPDATE` trop tôt, donc le total de toutes les commandes passe à 0 ; ensuite la ligne `WHERE` échoue avec une erreur de syntaxe",
+                "Le total de la commande 104 passe à 0 et un avertissement signale le point-virgule en trop"
+              ],
+              "answer": 2,
+              "explanation": "`;` termine une instruction. La première ligne est un `UPDATE` complet et valide, sans `WHERE`, et avec l'autocommit il est appliqué (et validé) immédiatement aux 6 commandes. La deuxième ligne est alors une instruction invalide à elle seule. Exécuter les modifications dans un `BEGIN` t'aurait permis de faire un `ROLLBACK`."
+            },
+            {
+              "type": "explain",
+              "title": "Transactions et ACID",
+              "body": "Une **transaction** regroupe des instructions en une seule unité, en tout-ou-rien :\n\n```sql\nBEGIN;\nUPDATE accounts SET balance = balance - 100 WHERE id = 1;\nUPDATE accounts SET balance = balance + 100 WHERE id = 2;\nCOMMIT;      -- or ROLLBACK; to undo both\n```\n\nSans `BEGIN`, chaque instruction est validée seule (*autocommit*). Les bases de données garantissent les propriétés **ACID** :\n\n- **Atomicité** : toutes les instructions s'appliquent, ou aucune. Un plantage au milieu ne fait jamais disparaître d'argent.\n- **Cohérence** : les contraintes (clés, `NOT NULL`, vérifications) sont respectées avant et après.\n- **Isolation** : les autres sessions ne voient pas ton travail à moitié fini.\n- **Durabilité** : une fois que `COMMIT` a répondu, les données survivent à un plantage."
+            },
+            {
+              "type": "numeric",
+              "id": "q-rollback-count",
+              "concepts": [
+                "transaction"
+              ],
+              "prompt": "La table `orders` commence avec 6 lignes. Que renvoie le `SELECT` final ?\n\n```sql\nBEGIN;\nDELETE FROM orders WHERE customer_id = 2;\nINSERT INTO orders (id, customer_id, total, created_at)\nVALUES (107, 5, 20.00, '2026-03-09');\nROLLBACK;\nSELECT COUNT(*) FROM orders;\n```",
+              "answer": 6,
+              "explanation": "Dans la transaction, la table a eu brièvement 6 − 2 + 1 = 5 lignes, mais `ROLLBACK` annule **tout** depuis `BEGIN` : les deux commandes supprimées reviennent et la commande 107 disparaît. Le compte revient à **6**."
+            },
+            {
+              "type": "text",
+              "id": "q-rollback-keyword",
+              "concepts": [
+                "transaction"
+              ],
+              "prompt": "Tu as lancé un `UPDATE` dans un `BEGIN`, en t'attendant à modifier 1 ligne, et PostgreSQL a affiché `UPDATE 5`. Quelle commande l'annule ?",
+              "accept": [
+                "ROLLBACK",
+                "ROLLBACK TRANSACTION",
+                "ABORT"
+              ],
+              "explanation": "`ROLLBACK` abandonne toutes les modifications depuis `BEGIN` (`ABORT` est un synonyme propre à PostgreSQL). C'est justement pour ça qu'on exécute les modifications risquées dans une transaction : le nombre de lignes est ta dernière chance de repérer un mauvais `WHERE`."
+            }
+          ]
+        },
+        {
+          "id": "create-table-constraints",
+          "title": "Créer des tables : types et contraintes",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Choisis des types précis (`numeric` pour l'argent, `date` pour les dates) et laisse les contraintes (`PRIMARY KEY`, `REFERENCES`, `NOT NULL`, `UNIQUE`, `CHECK`) rejeter les mauvaises données avant qu'elles n'entrent.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "CREATE TABLE",
+              "body": "Voici comment notre table `customers` pourrait être définie (avec maintenant une colonne `email` en plus) :\n\n```sql\nCREATE TABLE customers (\n  id    integer PRIMARY KEY,\n  name  text    NOT NULL,\n  email text    UNIQUE,\n  city  text\n);\n```\n\nChaque colonne a un nom, un **type** et des **contraintes** facultatives. Pour laisser la base numéroter les nouvelles lignes à ta place, PostgreSQL utilise `id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY` (dans du code plus ancien : `serial`). MySQL utilise `AUTO_INCREMENT` et SQL Server `IDENTITY(1,1)`.\n\n`ALTER TABLE customers ADD COLUMN phone text;` modifie une table existante ; `DROP TABLE` la supprime, données comprises."
+            },
+            {
+              "type": "explain",
+              "title": "Les types que tu utiliseras vraiment",
+              "body": "- `integer` / `bigint` : nombres entiers, identifiants, compteurs.\n- `numeric(10, 2)` : décimaux exacts, le bon choix pour **l'argent** (10 chiffres, dont 2 après la virgule).\n- `real` / `double precision` : nombres à virgule flottante approximatifs, bien pour des mesures mais pas pour l'argent (0,1 + 0,2 ne fait pas exactement 0,3).\n- `text` ou `varchar(n)` : chaînes de caractères. Dans PostgreSQL, `text` est la norme ; `varchar(n)` ajoute une limite de longueur.\n- `boolean` : vrai / faux.\n- `date`, `timestamp`, `timestamptz` : dates et heures. Préfère `timestamptz` pour un instant précis ; il gère les fuseaux horaires.\n\nStocker des dates en texte ou des nombres en chaînes casse les tris, les comparaisons et les calculs de dates."
+            },
+            {
+              "type": "mcq",
+              "id": "q-money-type",
+              "concepts": [
+                "constraints"
+              ],
+              "prompt": "`orders.total` contient des montants comme 40,00 et 2,50 euros, que les rapports additionnent. Quel type de colonne convient le mieux ?",
+              "choices": [
+                "`double precision`",
+                "`numeric(10, 2)`",
+                "`varchar(10)`",
+                "`integer`"
+              ],
+              "answer": 1,
+              "explanation": "`numeric` stocke les décimaux **exactement**, donc les sommes d'argent tombent juste au centime près. Les types à virgule flottante peuvent introduire de minuscules erreurs d'arrondi, le texte ne peut pas être additionné ni comparé numériquement, et `integer` perdrait les centimes de 2,50. (Stocker les montants en **centimes** entiers dans un `integer` est aussi une conception valable, mais tu stockerais alors 250, pas 2,50.)"
+            },
+            {
+              "type": "explain",
+              "title": "Les contraintes protègent tes données",
+              "body": "```sql\nCREATE TABLE orders (\n  id          integer PRIMARY KEY,\n  customer_id integer REFERENCES customers (id),\n  total       numeric(10, 2) NOT NULL CHECK (total >= 0),\n  created_at  date NOT NULL DEFAULT current_date\n);\n```\n\n- `PRIMARY KEY` : unique et jamais `NULL` ; une par table.\n- `REFERENCES` (une **clé étrangère**) : la valeur doit exister dans `customers.id` (ou être `NULL`). Ici, elle accepte NULL exprès : c'est ce qui permet à la commande invité 106 d'exister.\n- `NOT NULL` : une valeur est obligatoire.\n- `UNIQUE` : deux lignes ne peuvent pas partager une valeur (plusieurs `NULL` sont autorisés).\n- `CHECK` : n'importe quelle condition que la ligne doit respecter.\n- `DEFAULT` : la valeur utilisée quand un `INSERT` omet la colonne."
+            },
+            {
+              "type": "example",
+              "title": "Quelles insertions passent ?",
+              "problem": "Avec la définition de `orders` ci-dessus, les clients 1–5 et les commandes 101–106 vus plus tôt, lesquelles de ces instructions réussissent ? Chacune s'exécute seule.\n\n```sql\nINSERT INTO orders (id, customer_id, total) VALUES (107, 2, 19.99);   -- a\nINSERT INTO orders (id, customer_id, total) VALUES (108, 9, 10.00);   -- b\nINSERT INTO orders (id, customer_id, total) VALUES (101, 1, 5.00);    -- c\nINSERT INTO orders (id, customer_id, total) VALUES (109, NULL, 12.00); -- d\nINSERT INTO orders (id, customer_id, total) VALUES (110, 3, -5.00);   -- e\n```",
+              "steps": [
+                "**a** réussit : le client 2 existe, et `created_at` reçoit la date du jour grâce au `DEFAULT`.",
+                "**b** échoue : il n'y a pas de client 9, donc la clé étrangère la rejette.",
+                "**c** échoue : la commande 101 existe déjà, et la clé primaire doit être unique.",
+                "**d** réussit : `customer_id` accepte NULL, donc c'est une autre commande invité. Une clé étrangère `NULL` n'est pas vérifiée.",
+                "**e** échoue au `CHECK (total >= 0)`."
+              ],
+              "answer": "a et d réussissent ; b, c et e sont rejetées."
+            },
+            {
+              "type": "numeric",
+              "id": "q-insert-fails",
+              "concepts": [
+                "constraints"
+              ],
+              "prompt": "Voici une table qui contient déjà les 5 produits d'exemple (ids 1–5, dont un Mug) :\n\n```sql\nCREATE TABLE products (\n  id       integer PRIMARY KEY,\n  name     text NOT NULL UNIQUE,\n  category text,\n  price    numeric(8, 2) NOT NULL CHECK (price > 0)\n);\n```\n\nChaque ligne ci-dessous s'exécute seule sous la forme `INSERT INTO products (id, name, category, price) VALUES ...` avec ces valeurs. Combien **échouent** ?\n\n```\n(6, 'Stapler', 'Office', 8.00)\n(7, 'Mug', 'Kitchen', 12.00)\n(8, 'Tray', NULL, 4.00)\n(3, 'Bowl', 'Kitchen', 7.00)\n(9, 'Vase', 'Home', 0.00)\n```",
+              "answer": 3,
+              "explanation": "- Stapler : ça passe.\n- Mug : `name` est `UNIQUE` et un Mug existe déjà. **Échoue.**\n- Tray : `category` n'a pas de `NOT NULL`, donc `NULL` est autorisé. Ça passe.\n- Bowl : l'id 3 est déjà pris (Mug). **Échoue** sur la clé primaire.\n- Vase : `CHECK (price > 0)` rejette 0. **Échoue.**",
+              "hint": "Confronte chaque ligne à PRIMARY KEY, UNIQUE, NOT NULL et CHECK, l'un après l'autre."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-missing-default",
+              "concepts": [
+                "constraints",
+                "null"
+              ],
+              "prompt": "Les nouvelles commandes devraient recevoir automatiquement la date du jour quand un `INSERT` omet `created_at`, mais l'insertion échoue. Clique sur la ligne qui contient le bug.",
+              "language": "sql",
+              "code": "CREATE TABLE orders (\n  id          integer PRIMARY KEY,\n  customer_id integer REFERENCES customers (id),\n  total       numeric(10, 2) NOT NULL CHECK (total >= 0),\n  created_at  date NOT NULL\n);\n\nINSERT INTO orders (id, customer_id, total) VALUES (107, 2, 19.99);",
+              "error": "ERROR:  null value in column \"created_at\" of relation \"orders\" violates not-null constraint",
+              "lines": [
+                5
+              ],
+              "fixes": [
+                "Remplacer la ligne 5 par `created_at  date NOT NULL DEFAULT current_date`",
+                "Remplacer la ligne 5 par `created_at  date`",
+                "Remplacer la ligne 5 par `created_at  date NOT NULL CHECK (created_at = current_date)`",
+                "Remplacer la ligne 8 par `INSERT INTO orders (id, customer_id, total, created_at) VALUES (107, 2, 19.99, NULL);`"
+              ],
+              "answer": 0,
+              "hint": "Une colonne omise dans un `INSERT` reçoit sa valeur par défaut. Quelle est cette valeur quand aucune n'est déclarée ?",
+              "explanation": "Sans `DEFAULT`, une colonne que l'`INSERT` omet reçoit `NULL`, et `NOT NULL` la rejette. `DEFAULT current_date` remplit plutôt la date du jour, donc l'insertion réussit. Retirer `NOT NULL` laisse passer l'insertion sans aucune date, un `CHECK` ne fournit pas de valeur (le `NULL` échoue d'abord sur `NOT NULL`), et insérer `NULL` explicitement échoue de la même façon."
+            },
+            {
+              "type": "mcq",
+              "id": "q-fk-delete",
+              "concepts": [
+                "foreign-key",
+                "constraints"
+              ],
+              "prompt": "`orders.customer_id` est déclaré `REFERENCES customers (id)` sans autre option. Ana (id 1) a les commandes 101 et 102. Que se passe-t-il ?\n\n```sql\nDELETE FROM customers WHERE id = 1;\n```",
+              "choices": [
+                "Ana est supprimée, et ses commandes avec elle",
+                "Ana est supprimée, et ses commandes pointent maintenant vers un client qui n'existe pas",
+                "Ana est supprimée, et le `customer_id` de ses commandes devient NULL",
+                "Le DELETE échoue pour violation de clé étrangère ; rien ne change"
+              ],
+              "answer": 3,
+              "explanation": "Par défaut, une clé étrangère **bloque** la suppression d'une ligne encore référencée ailleurs, pour que tu ne puisses pas créer d'orphelins. Si tu veux un autre comportement, précise-le en la définissant : `REFERENCES customers (id) ON DELETE CASCADE` supprime aussi les commandes, et `ON DELETE SET NULL` efface la référence."
+            },
+            {
+              "type": "text",
+              "id": "q-references",
+              "concepts": [
+                "foreign-key"
+              ],
+              "prompt": "Complète le mot-clé pour que la base rejette toute commande dont le client n'existe pas :\n\n```sql\nCREATE TABLE orders (\n  id          integer PRIMARY KEY,\n  customer_id integer __________ customers (id)\n);\n```",
+              "accept": [
+                "REFERENCES"
+              ],
+              "explanation": "`REFERENCES customers (id)` déclare une clé étrangère : chaque `customer_id` non NULL doit correspondre à un `customers.id` existant. La forme longue, sur une ligne à part, est `FOREIGN KEY (customer_id) REFERENCES customers (id)`."
+            }
+          ]
+        },
+        {
+          "id": "normalization",
+          "title": "Normalisation : une information, un seul endroit",
+          "pareto": "extra",
+          "minutes": 6,
+          "takeaway": "Stocke chaque information une seule fois et désigne-la par sa clé : clients, produits et commandes ont chacun leur table, et les liens plusieurs-à-plusieurs passent par une table de jonction.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Le problème d'une seule grosse table",
+              "body": "Beaucoup de bases de données commencent leur vie comme un tableur :\n\n```\n order_id | customer | city   | product  | price | qty\n----------+----------+--------+----------+-------+----\n 101      | Ana      | Lisbon | Kettle   | 35.00 | 1\n 101      | Ana      | Lisbon | Pen      |  2.50 | 2\n 102      | Ana      | Lisbon | Notebook |  6.00 | 1\n```\n\nLa ville d'Ana est répétée sur chaque ligne. Cela provoque des **anomalies** :\n- **De mise à jour** : si Ana déménage, tu dois modifier chaque ligne ; oublies-en une et les données se contredisent.\n- **D'insertion** : impossible d'enregistrer un nouveau client tant qu'il n'a rien commandé.\n- **De suppression** : supprimer la seule commande d'un client supprime aussi le client.\n\nLa **normalisation** règle ça avec une règle simple : **chaque information vit à un seul endroit**, et les autres tables y font référence par sa clé."
+            },
+            {
+              "type": "example",
+              "title": "Découper le tableur",
+              "problem": "Transforme la table plate ci-dessus en vraies tables. Pour chaque colonne, demande-toi : **que décrit-elle ?**",
+              "steps": [
+                "`customer` et `city` décrivent un **client** → `customers(id, name, city)`.",
+                "`product` et `price` décrivent un **produit** → `products(id, name, category, price)`.",
+                "La date de commande et qui l'a passée décrivent une **commande** → `orders(id, customer_id, created_at)` (la nôtre stocke aussi le `total` de la commande).",
+                "`qty` décrit un produit *au sein* d'une commande, donc dépend de la paire (commande, produit) → `order_items(order_id, product_id, quantity)`.",
+                "Recombine-les par jointure chaque fois que tu as besoin de la vue à plat. C'est exactement le schéma que ce cours utilise depuis le début."
+              ],
+              "answer": "customers, products, orders et order_items, reliées par des clés."
+            },
+            {
+              "type": "numeric",
+              "id": "q-update-anomaly",
+              "concepts": [
+                "normalization"
+              ],
+              "prompt": "Dans la version plate, il y a une ligne par article de commande. La commande 101 d'Ana a 2 articles et la commande 102 en a 3. Ana déménage à Faro. Combien de lignes dois-tu modifier dans la table plate ?",
+              "answer": 5,
+              "explanation": "Sa ville est recopiée sur chaque ligne de chaque article qu'elle a acheté : 2 + 3 = **5** lignes, et en oublier une seule laisse des données contradictoires. Dans le schéma normalisé, c'est une seule ligne dans `customers`."
+            },
+            {
+              "type": "explain",
+              "title": "Listes, plusieurs-à-plusieurs et historique",
+              "body": "Trois situations qui reviennent tout le temps :\n\n- **Pas de liste dans une cellule.** Une colonne `tags` qui contient `'red,blue'` ne peut être ni indexée, ni jointe, ni validée. Donne à ces valeurs leurs propres lignes.\n- **Le plusieurs-à-plusieurs exige une table de jonction.** Une commande contient plusieurs produits et un produit figure dans plusieurs commandes, donc `order_items` se place entre les deux, avec une clé étrangère vers chacune.\n- **Des « copies » peuvent être des informations différentes.** Le prix *actuel* d'un produit et le prix *payé par un client* sont deux informations différentes. Stocke le prix payé dans `order_items` (par exemple `unit_price`), sinon les anciennes commandes changent à chaque modification du catalogue.\n\nLes bases de reporting dénormalisent parfois exprès pour la vitesse, mais commence normalisé."
+            },
+            {
+              "type": "mcq",
+              "id": "q-many-categories",
+              "concepts": [
+                "normalization",
+                "foreign-key"
+              ],
+              "prompt": "Les produits peuvent maintenant appartenir à plusieurs catégories à la fois (un Mug est à la fois « Kitchen » et « Gifts »). Quelle conception est la meilleure ?",
+              "choices": [
+                "Une colonne texte `categories` contenant une liste séparée par des virgules, comme `'Kitchen,Gifts'`",
+                "Des colonnes `category1`, `category2` et `category3` dans `products`",
+                "Une table `categories(id, name)` plus une table de jonction `product_categories(product_id, category_id)`",
+                "Une ligne dans `products` par catégorie, en répétant le nom et le prix"
+              ],
+              "answer": 2,
+              "explanation": "C'est une relation plusieurs-à-plusieurs, donc elle reçoit une table de jonction avec une clé étrangère vers chaque côté. Une liste à virgules ne peut être ni jointe ni contrainte ; des colonnes numérotées plafonnent le nombre de catégories et obligent les requêtes à tester trois colonnes ; et dupliquer les produits répète le prix, exactement l'anomalie que la normalisation évite."
+            },
+            {
+              "type": "mcq",
+              "id": "q-price-history",
+              "concepts": [
+                "normalization"
+              ],
+              "prompt": "Notre `order_items` n'a pas de colonne de prix ; les rapports de chiffre d'affaires multiplient `quantity` par `products.price`. Le prix du Kettle passe de 35,00 à 39,00. Que se passe-t-il ?",
+              "choices": [
+                "Le chiffre d'affaires des commandes passées change sans prévenir, car les anciennes commandes utilisent maintenant le nouveau prix",
+                "Rien ; les commandes passées gardent le prix qu'elles avaient au moment de la commande",
+                "L'UPDATE échoue, car des commandes passées font référence au Kettle",
+                "Seules les commandes passées après le changement sont concernées"
+              ],
+              "answer": 0,
+              "explanation": "La base ne connaît que le prix *actuel*, donc chaque rapport recalcule le chiffre d'affaires de janvier avec 39,00. Le prix payé est une information distincte qui appartient à la ligne de commande : ajoute `unit_price` à `order_items` et remplis-le au moment du paiement."
+            },
+            {
+              "type": "buckets",
+              "id": "q-buckets-which-table",
+              "concepts": [
+                "normalization"
+              ],
+              "prompt": "Chaque information a exactement une place. Classe ces informations dans la table où elles doivent aller dans notre schéma : `customers`, `products`, `orders` et `order_items`.",
+              "buckets": [
+                "`customers`",
+                "`products`",
+                "`orders`",
+                "`order_items`"
+              ],
+              "items": [
+                {
+                  "text": "La ville d'Ana",
+                  "bucket": 0
+                },
+                {
+                  "text": "L'adresse e-mail d'Ana",
+                  "bucket": 0
+                },
+                {
+                  "text": "Le prix actuel du Kettle",
+                  "bucket": 1
+                },
+                {
+                  "text": "La catégorie du Kettle",
+                  "bucket": 1
+                },
+                {
+                  "text": "La date de la commande 101",
+                  "bucket": 2
+                },
+                {
+                  "text": "Le client qui a passé la commande 102",
+                  "bucket": 2
+                },
+                {
+                  "text": "Le nombre de Pen dans la commande 101",
+                  "bucket": 3
+                },
+                {
+                  "text": "Le prix réellement payé par Ana pour chaque Pen de la commande 101",
+                  "bucket": 3
+                }
+              ],
+              "hint": "Demande-toi ce que décrit chaque information : une personne, un article du catalogue, une commande entière, ou un produit au sein d'une commande ?",
+              "explanation": "Une information va avec la chose qu'elle décrit. La ville et l'e-mail décrivent un **client**. Le prix actuel et la catégorie décrivent un **produit**. La date et l'acheteur décrivent une **commande** entière, qui désigne le client par `customer_id`. Une quantité, et le prix payé au moment de l'achat, décrivent un produit *au sein* d'une commande : ils dépendent de la paire (commande, produit) et vivent dans `order_items`. C'est pour ça que le prix payé est une information distincte de `products.price` : modifier le catalogue ne doit pas réécrire les anciennes commandes."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "going-further",
+      "title": "Aller plus loin",
+      "description": "Les fonctions de fenêtrage pour les classements et les cumuls, et les index pour la vitesse.",
+      "lessons": [
+        {
+          "id": "window-functions",
+          "title": "Fonctions de fenêtrage",
+          "pareto": "extra",
+          "minutes": 8,
+          "takeaway": "Une fonction de fenêtrage (`... OVER (PARTITION BY ... ORDER BY ...)`) calcule sur des lignes liées sans les fusionner, ce qui te donne des classements, des cumuls et des top N par groupe.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Des agrégats qui gardent les lignes",
+              "body": "`GROUP BY` fusionne les lignes en une par groupe. Une **fonction de fenêtrage** (*window function*) calcule sur un groupe de lignes mais garde chaque ligne :\n\n```sql\nSELECT id, customer_id, total,\n       SUM(total) OVER (PARTITION BY customer_id) AS customer_total\nFROM orders;\n```\n\nChaque commande garde sa propre ligne, avec le total de son client à côté (101 et 102 affichent toutes les deux 65,00). Du coup, « quelle part des dépenses du client représente cette commande ? » tient en une ligne : `total / SUM(total) OVER (PARTITION BY customer_id)`.\n\n- `OVER (...)` transforme une fonction en fonction de fenêtrage.\n- `PARTITION BY` répartit les lignes en groupes (comme `GROUP BY`, mais sans les fusionner).\n- `ORDER BY` dans `OVER` ordonne les lignes au sein de chaque partition."
+            },
+            {
+              "type": "example",
+              "title": "Un cumul",
+              "problem": "Qu'affiche `running_total` ?\n\n```sql\nSELECT id, created_at, total,\n       SUM(total) OVER (ORDER BY created_at) AS running_total\nFROM orders;\n```\n\n```\norders\n id  | customer_id | total | created_at\n-----+-------------+-------+-----------\n 101 | 1           | 40.00 | 2026-01-05\n 102 | 1           | 25.00 | 2026-02-10\n 103 | 2           | 80.00 | 2026-02-14\n 104 | 3           | 15.00 | 2026-03-01\n 105 | 2           | 50.00 | 2026-03-03\n 106 | NULL        | 30.00 | 2026-03-08\n```",
+              "steps": [
+                "Avec `ORDER BY` dans `OVER`, la somme porte sur les lignes **depuis le début jusqu'à la ligne courante**.",
+                "101 : 40. 102 : 40 + 25 = 65. 103 : 65 + 80 = 145.",
+                "104 : 145 + 15 = 160. 105 : 160 + 50 = 210. 106 : 210 + 30 = 240, le total général.",
+                "(Si deux lignes avaient le même `created_at`, elles recevraient par défaut le même cumul, car la fenêtre inclut les ex aequo.)"
+              ],
+              "answer": "40, 65, 145, 160, 210, 240."
+            },
+            {
+              "type": "explain",
+              "title": "Classer et regarder en arrière",
+              "body": "- `ROW_NUMBER()` : 1, 2, 3… sans ex aequo.\n- `RANK()` : les ex aequo partagent un rang, puis on saute : 1, 1, 3.\n- `DENSE_RANK()` : les ex aequo partagent un rang, sans trou : 1, 1, 2.\n- `LAG(total)` / `LEAD(total)` : la valeur de la ligne précédente / suivante, idéal pour « l'évolution depuis le mois dernier ».\n\n```sql\nROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY total DESC)\n```\n\nnumérote les commandes de chaque client de la plus grosse à la plus petite, en recommençant à 1 pour chaque client.\n\nLes fonctions de fenêtrage s'exécutent **après** `WHERE`, `GROUP BY` et `HAVING`, donc tu ne peux pas filtrer dessus dans `WHERE`. Calcule-les dans une CTE, puis filtre à l'extérieur."
+            },
+            {
+              "type": "numeric",
+              "id": "q-row-number",
+              "concepts": [
+                "window-function"
+              ],
+              "prompt": "Que vaut `rn` pour la commande **102** ?\n\n```sql\nSELECT id, customer_id, total,\n       ROW_NUMBER() OVER (PARTITION BY customer_id\n                          ORDER BY total DESC) AS rn\nFROM orders;\n```\n\n```\norders\n id  | customer_id | total | created_at\n-----+-------------+-------+-----------\n 101 | 1           | 40.00 | 2026-01-05\n 102 | 1           | 25.00 | 2026-02-10\n 103 | 2           | 80.00 | 2026-02-14\n 104 | 3           | 15.00 | 2026-03-01\n 105 | 2           | 50.00 | 2026-03-03\n 106 | NULL        | 30.00 | 2026-03-08\n```",
+              "answer": 2,
+              "explanation": "La partition du client 1 contient 101 (40,00) et 102 (25,00). Triée par total décroissant, 101 vaut 1 et 102 vaut **2**. La numérotation recommence pour chaque client, donc 103 et 104 valent chacune 1 à nouveau."
+            },
+            {
+              "type": "numeric",
+              "id": "q-rank-ties",
+              "concepts": [
+                "window-function",
+                "group-by"
+              ],
+              "prompt": "Que vaut `rnk` pour le client **3** ?\n\n```sql\nSELECT customer_id, COUNT(*) AS n,\n       RANK() OVER (ORDER BY COUNT(*) DESC) AS rnk\nFROM orders\nWHERE customer_id IS NOT NULL\nGROUP BY customer_id;\n```\n\n(Les clients 1 et 2 ont 2 commandes chacun ; le client 3 en a 1.)",
+              "answer": 3,
+              "explanation": "La fenêtre s'exécute après `GROUP BY`, donc elle classe les lignes regroupées. Les clients 1 et 2 sont ex aequo au rang 1, et `RANK` **saute** ensuite à 3. Avec `DENSE_RANK()`, le client 3 aurait 2 ; avec `ROW_NUMBER()`, 3 aussi, mais les deux clients ex aequo recevraient 1 et 2 dans un ordre non garanti.",
+              "hint": "RANK laisse un trou après une égalité."
+            },
+            {
+              "type": "mcq",
+              "id": "q-top-per-group",
+              "concepts": [
+                "window-function",
+                "cte",
+                "logical-query-order"
+              ],
+              "prompt": "Quelle requête renvoie la **plus grosse commande** de chaque client (id et total) ?\n\n```sql\n-- Query A\nSELECT customer_id, id, total\nFROM orders\nWHERE ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY total DESC) = 1;\n\n-- Query B\nWITH ranked AS (\n  SELECT customer_id, id, total,\n         ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY total DESC) AS rn\n  FROM orders\n)\nSELECT customer_id, id, total FROM ranked WHERE rn = 1;\n\n-- Query C\nSELECT customer_id, id, MAX(total)\nFROM orders\nGROUP BY customer_id;\n```",
+              "choices": [
+                "La requête A",
+                "La requête B",
+                "La requête C",
+                "Les requêtes A et B marchent toutes les deux"
+              ],
+              "answer": 1,
+              "explanation": "La requête A provoque une erreur : les fonctions de fenêtrage sont interdites dans `WHERE`, qui s'exécute avant elles. La requête C aussi : `id` n'est ni regroupé ni agrégé, et de toute façon `MAX` ne te dirait pas *quelle* commande a le maximum. La requête B calcule le numéro dans une CTE, puis filtre : les commandes 101, 103 et 104, plus la commande invité 106 dans sa propre partition `NULL`. Ce schéma « classer dans une CTE, filtrer à l'extérieur » est la réponse standard au top N par groupe."
+            },
+            {
+              "type": "output",
+              "id": "q-out-second-biggest",
+              "concepts": [
+                "window-function"
+              ],
+              "prompt": "Avec la table `orders` ci-dessous, que renvoie cette requête ? Tape une valeur par ligne, sans l'en-tête.\n\n```\norders\n id  | customer_id | total | created_at\n-----+-------------+-------+-----------\n 101 | 1           | 40.00 | 2026-01-05\n 102 | 1           | 25.00 | 2026-02-10\n 103 | 2           | 80.00 | 2026-02-14\n 104 | 3           | 15.00 | 2026-03-01\n 105 | 2           | 50.00 | 2026-03-03\n 106 | NULL        | 30.00 | 2026-03-08\n```",
+              "language": "sql",
+              "code": "WITH ranked AS (\n  SELECT id,\n         ROW_NUMBER() OVER (PARTITION BY customer_id\n                            ORDER BY total DESC) AS rn\n  FROM orders\n)\nSELECT id FROM ranked\nWHERE rn = 2\nORDER BY id;",
+              "output": "102\n105",
+              "hint": "Numérote les commandes de chaque client de la plus grosse à la plus petite, en partant de 1 pour chaque client. Qui a une deuxième commande ?",
+              "explanation": "La numérotation recommence dans chaque partition. Client 1 : 101 (40,00) vaut 1, 102 (25,00) vaut **2**. Client 2 : 103 (80,00) vaut 1, 105 (50,00) vaut **2**. Le client 3 et la partition `NULL` ont une seule commande chacun, donc ils n'atteignent jamais 2. C'est la *deuxième plus grosse* commande de chaque client : le même schéma « classer dans une CTE, filtrer à l'extérieur », avec un autre numéro."
+            },
+            {
+              "type": "numeric",
+              "id": "q-running-per-customer",
+              "concepts": [
+                "window-function"
+              ],
+              "prompt": "Quelle valeur cette requête affiche-t-elle pour la commande **105** ?\n\n```sql\nSELECT id,\n       SUM(total) OVER (PARTITION BY customer_id\n                        ORDER BY created_at) AS running\nFROM orders;\n```\n\n```\norders\n id  | customer_id | total | created_at\n-----+-------------+-------+-----------\n 101 | 1           | 40.00 | 2026-01-05\n 102 | 1           | 25.00 | 2026-02-10\n 103 | 2           | 80.00 | 2026-02-14\n 104 | 3           | 15.00 | 2026-03-01\n 105 | 2           | 50.00 | 2026-03-03\n 106 | NULL        | 30.00 | 2026-03-08\n```",
+              "answer": 130,
+              "explanation": "La commande 105 appartient au client 2. Sa partition, par date : 103 (14/02, 80,00) puis 105 (03/03, 50,00). Le cumul à 105 vaut 80 + 50 = **130**. Les commandes des autres clients ne comptent pas : la partition remet le total à zéro.",
+              "hint": "Ne regarde que les commandes du client 2, dans l'ordre des dates."
+            }
+          ]
+        },
+        {
+          "id": "indexes-explain",
+          "title": "Les index et la lecture d'EXPLAIN",
+          "pareto": "extra",
+          "minutes": 7,
+          "takeaway": "Un index permet à la base d'aller directement aux lignes correspondantes au lieu de parcourir toute la table, mais seulement quand la requête filtre sur la valeur indexée elle-même ; vérifie avec `EXPLAIN`.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Ce qu'est un index",
+              "body": "Sans aide, trouver `WHERE customer_id = 2` oblige à lire **chaque ligne** (un *parcours séquentiel*, ou *sequential scan*). Pas de souci pour 6 lignes, pénible pour 60 millions.\n\nUn **index** est une structure séparée et triée (en général un B-tree, ou arbre B), comme l'index à la fin d'un livre : tu cherches la valeur, et tu vas directement aux lignes.\n\n```sql\nCREATE INDEX orders_customer_id_idx ON orders (customer_id);\n```\n\n- `PRIMARY KEY` et `UNIQUE` créent automatiquement un index (donc `customers.email` en a déjà un).\n- PostgreSQL n'indexe **pas** automatiquement les clés étrangères ; les colonnes sur lesquelles tu fais souvent des jointures ou des filtres sont de bonnes candidates.\n- Les index prennent de la place sur le disque et ralentissent un peu chaque `INSERT`/`UPDATE`/`DELETE`, donc n'indexe pas tout."
+            },
+            {
+              "type": "explain",
+              "title": "Ce qu'un index B-tree accélère",
+              "body": "Un index simple sur une colonne aide quand la requête compare **cette colonne elle-même** :\n\n- égalité et plages : `=`, `<`, `>`, `BETWEEN`, `IN`\n- un `ORDER BY` sur cette colonne, et les jointures sur elle\n- les motifs de préfixe comme `LIKE 'Ann%'` (dans PostgreSQL, cela peut demander un index `text_pattern_ops`, selon la collation), mais jamais `LIKE '%son'`\n\nUn index **multicolonne** sur `(customer_id, created_at)` est trié d'abord par `customer_id`, puis par date au sein de chaque client, comme un annuaire trié par nom, puis par prénom. Il est idéal pour `customer_id = 2` et pour `customer_id = 2 AND created_at >= ...`, mais peu adapté à `created_at` seul."
+            },
+            {
+              "type": "mcq",
+              "id": "q-index-usable",
+              "concepts": [
+                "index"
+              ],
+              "prompt": "Il existe un index simple sur `customers (email)`. Quelle clause `WHERE` peut l'utiliser pour trouver la ligne directement ?",
+              "choices": [
+                "`WHERE lower(email) = 'ana@example.com'`",
+                "`WHERE email LIKE '%@example.com'`",
+                "`WHERE email = 'ana@example.com'`"
+              ],
+              "answer": 2,
+              "explanation": "L'index est trié selon les valeurs brutes de `email`, donc un test d'égalité sur `email` peut y chercher la valeur. Un `%` au début veut dire que le début est inconnu : le tri n'aide pas. Et l'index contient `email`, pas `lower(email)` ; voir l'étape suivante."
+            },
+            {
+              "type": "example",
+              "title": "Pourquoi lower(email) ignore ton index",
+              "problem": "Les utilisateurs tapent leur e-mail avec n'importe quelle casse, donc la requête de connexion est :\n\n```sql\nSELECT id FROM customers WHERE lower(email) = 'ana@example.com';\n```\n\nIl existe un index sur `email`, et pourtant la requête parcourt toute la table. Pourquoi, et comment corriger ça ?",
+              "steps": [
+                "L'index est une liste triée des valeurs **stockées** : `Ana@Example.com`, `ben@shop.pt`, … Il ne contient aucune valeur `lower(email)`.",
+                "Pour comparer `lower(email)`, la base doit le calculer pour **chaque ligne**, donc elle se rabat sur un parcours séquentiel. C'est pareil avec `WHERE email || '' = ...`, `WHERE EXTRACT(YEAR FROM created_at) = 2026` ou `WHERE total * 1.23 > 100`.",
+                "Correction 1 : indexer l'expression elle-même : `CREATE INDEX customers_lower_email_idx ON customers (lower(email));`. La requête correspond maintenant exactement à l'index.",
+                "Correction 2 : réécrire pour que la colonne soit seule. Pour les dates : `WHERE created_at >= '2026-01-01' AND created_at < '2027-01-01'` utilise un index simple sur `created_at`."
+              ],
+              "answer": "Une fonction appliquée à la colonne la cache à un index simple : indexe l'expression, ou réécris la condition."
+            },
+            {
+              "type": "explain",
+              "title": "Lire EXPLAIN",
+              "body": "Mets `EXPLAIN` devant une requête pour voir le plan choisi par le planificateur, sans l'exécuter :\n\n```sql\nEXPLAIN SELECT id FROM customers WHERE lower(email) = 'ana@example.com';\n```\n\n```\nSeq Scan on customers  (cost=0.00..1.08 rows=1 width=4)\n  Filter: (lower(email) = 'ana@example.com'::text)\n```\n\nAprès avoir créé l'index sur l'expression (sur une grosse table), tu verrais plutôt `Index Scan using customers_lower_email_idx on customers`.\n\n- `Seq Scan` : lit toute la table. `Index Scan` / `Bitmap Index Scan` : utilise un index.\n- `cost` et `rows` sont des estimations. `EXPLAIN ANALYZE` **exécute** vraiment la requête et affiche les temps réels.\n- Sur de toutes petites tables, un parcours séquentiel est souvent le *bon* choix ; pas de panique."
+            },
+            {
+              "type": "numeric",
+              "id": "q-explain-analyze",
+              "concepts": [
+                "index",
+                "transaction"
+              ],
+              "prompt": "`orders` contient ses 6 lignes d'exemple et l'autocommit est activé. Tu lances ceci pour voir comment se comporterait une requête de nettoyage :\n\n```sql\nEXPLAIN ANALYZE DELETE FROM orders WHERE total < 20;\n```\n\nCombien de lignes `orders` contient-elle ensuite ?\n\n(Totaux : 40, 25, 80, 15, 50, 30.)",
+              "answer": 5,
+              "explanation": "`EXPLAIN ANALYZE` **exécute** réellement l'instruction pour la mesurer, donc la commande 104 (15,00) est supprimée et validée. Pour profiler une écriture sans risque, encadre-la : `BEGIN; EXPLAIN ANALYZE DELETE ...; ROLLBACK;`",
+              "hint": "ANALYZE veut dire que la requête s'exécute vraiment."
+            },
+            {
+              "type": "buckets",
+              "id": "q-buckets-composite-index",
+              "concepts": [
+                "index"
+              ],
+              "prompt": "`orders` a des millions de lignes et un index sur `(customer_id, created_at)`. Pour chaque clause `WHERE`, PostgreSQL peut-il utiliser l'index pour aller directement aux lignes correspondantes ?",
+              "buckets": [
+                "Va directement aux lignes",
+                "Ne peut pas sauter : doit parcourir"
+              ],
+              "items": [
+                {
+                  "text": "`customer_id = 2`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`customer_id = 2 AND created_at >= '2026-03-01'`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`created_at >= '2026-03-01' AND customer_id = 2`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`customer_id IN (1, 2)`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`customer_id = 2 AND EXTRACT(YEAR FROM created_at) = 2025`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`created_at >= '2026-03-01'`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`customer_id + 0 = 2`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`EXTRACT(YEAR FROM created_at) = 2025`",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Pense à l'annuaire trié par nom, puis par prénom. Sais-tu où l'ouvrir ? Et la condition teste-t-elle la colonne seule ?",
+              "explanation": "L'index est trié d'abord par `customer_id`, donc toute condition sur `customer_id` seul (`=`, `IN`, plus une plage de dates pour ce client) trouve directement sa place. L'ordre dans lequel tu écris les parties du `AND` n'a pas d'importance. Avec `EXTRACT(...)` à côté de `customer_id = 2`, PostgreSQL va directement aux entrées du client 2 et vérifie l'année sur ces quelques lignes. Les dates seules sont éparpillées entre tous les clients, donc `created_at` sans `customer_id` ne peut pas sauter. Lors d'un test sur 2 millions de lignes, PostgreSQL 17 a choisi un `Seq Scan` pour la plage de dates ; pour un seul jour, il a bien utilisé l'index, mais pour un coût estimé à environ 22 000, car il lit l'index *entier*, contre environ 5 pour `customer_id = 2`. `customer_id + 0` et `EXTRACT(...)` seuls cachent la colonne dans une expression, exactement comme `lower(email)`."
+            },
+            {
+              "type": "text",
+              "id": "q-expression-index",
+              "concepts": [
+                "index"
+              ],
+              "prompt": "`EXPLAIN` affiche `Seq Scan on customers` pour `WHERE lower(email) = '...'` sur une grosse table. Complète le blanc pour créer un index que la requête peut utiliser :\n\n```sql\nCREATE INDEX customers_lower_email_idx\n  ON customers (_____(email));\n```",
+              "accept": [
+                "lower",
+                "lower(email)"
+              ],
+              "explanation": "Un **index sur expression** sur `lower(email)` stocke les valeurs en minuscules, donc une condition `WHERE lower(email) = ...` y correspond exactement. L'expression de la requête doit être identique à celle de l'index."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

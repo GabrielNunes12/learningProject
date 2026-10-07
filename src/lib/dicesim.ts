@@ -1,5 +1,6 @@
 // Pure logic for the dice simulator: exact distributions, exact target probabilities, a roller and the
-// running hit-rate series. No runtime imports so it can be tested with node:test.
+// running hit-rate series. Only the pure i18n core is imported, so it can be tested with node:test.
+import { formatNumber } from '../i18n/core.ts';
 
 /**
  * Exact number of ways to reach every total when rolling `dice` fair dice with `sides` sides.
@@ -60,11 +61,11 @@ export function exactLabel(e: Exact): string {
   return `${raw}${reduced} ≈ ${pct(e.p)}`;
 }
 
-/** 0.16667 → "16.7%"; tiny non-zero values keep two decimals. */
+/** 0.16667 → "16.7%" (formatted for the active language); tiny non-zero values keep two decimals. */
 export function pct(p: number): string {
   const v = p * 100;
-  if (v !== 0 && Math.abs(v) < 1) return `${v.toFixed(2)}%`;
-  return `${v.toFixed(1)}%`;
+  const digits = v !== 0 && Math.abs(v) < 1 ? 2 : 1;
+  return formatNumber(p, undefined, { style: 'percent', minimumFractionDigits: digits, maximumFractionDigits: digits });
 }
 
 /** A function returning floats in [0, 1). */

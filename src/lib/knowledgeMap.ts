@@ -1,4 +1,5 @@
-// Logic for the 3-layer knowledge-map canvas (KnowledgeMap.tsx). Pure: no DOM, no runtime imports.
+// Logic for the 3-layer knowledge-map canvas (KnowledgeMap.tsx). Pure: no DOM; the only runtime import is the
+// translation core (feedback sentences).
 //
 // Layer 1: recall concepts from memory (forgiving matching against labels and aliases).
 // Layer 2: reveal the concepts in scope that weren't recalled ("islands").
@@ -9,6 +10,7 @@
 
 import type { Concept, ConceptLink } from '../types.ts';
 import type { KnowledgeMap } from './storage.ts';
+import { t } from '../i18n/core.ts';
 
 export const ALL = '*';
 export type Layer = 1 | 2 | 3;
@@ -392,14 +394,13 @@ export function recallScore(map: MapState, scope: Scope): RecallScore {
 
 /** Honest and encouraging: names the number, frames the gaps as the next thing to read. */
 export function recallMessage({ recalled, total, fraction }: RecallScore): string {
-  if (!total) return 'This part of the course has no concepts to recall yet.';
-  if (recalled === total) return `You recalled all ${total} ideas from memory. That is the whole map.`;
-  if (recalled === 0)
-    return 'Nothing came to mind this time, and that is a useful starting point: studies suggest that trying to recall first tends to make the next read stick better.';
-  const lead = `You recalled ${recalled} of ${total} ideas from memory`;
-  if (fraction >= 0.67) return `${lead}. That is strong recall; the few islands left are quick wins.`;
-  if (fraction >= 0.34) return `${lead}. A solid base to build on; the islands below show exactly what to read next.`;
-  return `${lead}. Every idea you pulled out got a little stronger, and the islands below are your reading list.`;
+  if (!total) return t('map.recall.msg.empty');
+  if (recalled === total) return t('map.recall.msg.all', { count: total });
+  if (recalled === 0) return t('map.recall.msg.none');
+  const params = { recalled, count: total };
+  if (fraction >= 0.67) return t('map.recall.msg.strong', params);
+  if (fraction >= 0.34) return t('map.recall.msg.solid', params);
+  return t('map.recall.msg.start', params);
 }
 
 export type LinkStatus = 'found' | 'hinted' | 'extra';
@@ -461,12 +462,12 @@ export function nextHint(result: CheckResult, map: MapState): ConceptLink | unde
 }
 
 export function linkMessage(r: CheckResult): string {
-  if (!r.total) return 'The course map has no links inside this scope yet, so every link you draw is your own.';
+  if (!r.total) return t('map.results.msg.noLinks');
   const got = r.found + r.withHint;
-  if (got === 0) return `The course map links these ideas in ${r.total} ways. Draw a few you are sure of, then check again, or take a hint.`;
-  const hints = r.withHint ? ` (${r.withHint} with a hint)` : '';
-  if (got === r.total) return `You found all ${r.total} links in the course map${hints}. Connected knowledge like this tends to be easier to use.`;
-  return `You found ${got} of ${r.total} links in the course map${hints}. Each one ties two ideas together.`;
+  if (got === 0) return t('map.results.msg.none', { count: r.total });
+  const params = { got, count: r.total, withHint: r.withHint };
+  if (got === r.total) return t(r.withHint ? 'map.results.msg.allWithHint' : 'map.results.msg.all', params);
+  return t(r.withHint ? 'map.results.msg.someWithHint' : 'map.results.msg.some', params);
 }
 
 // ---------- chunks ----------
@@ -561,7 +562,7 @@ function* spiral(): Generator<[number, number]> {
 
 /** The free grid slot nearest the centre (`around`) for a new node, so recalled ideas land in a tidy pattern. */
 export function nextSlot(taken: Pos[], around: Pos = { x: 0, y: 0 }): Pos {
-  const free = (p: Pos) => taken.every((t) => Math.abs(t.x - p.x) >= CELL_W * 0.8 || Math.abs(t.y - p.y) >= CELL_H * 0.8);
+  const free = (p: Pos) => taken.every((q) => Math.abs(q.x - p.x) >= CELL_W * 0.8 || Math.abs(q.y - p.y) >= CELL_H * 0.8);
   let i = 0;
   for (const [gx, gy] of spiral()) {
     const p = { x: around.x + gx * CELL_W, y: around.y + gy * CELL_H };

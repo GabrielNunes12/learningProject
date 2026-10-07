@@ -1,5 +1,6 @@
 // Course certificates: who has earned one, the hours on it, the name rules and the share links. Pure.
 import type { Course } from '../types.ts';
+import { getLocale, isLocale, translator, type Locale, type MessageKey, type Params } from '../i18n/core.ts';
 
 /** The part of a learner's progress certificates need (kept structural so the server can use this file too). */
 export interface CourseProgress {
@@ -28,11 +29,14 @@ export function certificateMinutes(course: Course, p: CourseProgress): number {
   return Math.max(tracked, estimated);
 }
 
-/** "45 minutes", "1 hour", "2.5 hours" (to the nearest half hour from one hour up). */
-export function formatHours(minutes: number): string {
-  if (minutes < 60) return `${Math.max(1, Math.round(minutes))} minute${Math.round(minutes) === 1 ? '' : 's'}`;
-  const h = Math.round(minutes / 30) / 2;
-  return `${h % 1 ? h.toFixed(1) : h} hour${h === 1 ? '' : 's'}`;
+/**
+ * "45 minutes", "1 hour", "2.5 hours" (to the nearest half hour from one hour up), in `locale`
+ * (default: the active language; the server passes the certificate's).
+ */
+export function formatHours(minutes: number, locale?: Locale): string {
+  const t = translator(isLocale(locale) ? locale : getLocale());
+  if (minutes < 60) return t('cert.minutes', { count: Math.max(1, Math.round(minutes)) });
+  return t('cert.hours', { count: Math.round(minutes / 30) / 2 });
 }
 
 // ---------- the name on the certificate ----------
@@ -41,19 +45,34 @@ export function formatHours(minutes: number): string {
 const WIN_ANSI_EXTRA = '€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ';
 export const canPrint = (ch: string) => {
   const c = ch.codePointAt(0)!;
+  // Narrow and thin no-break spaces (French number and date formatting) print as a no-break space.
+  if (c === 0x202f || c === 0x2009) return true;
   return (c >= 0x20 && c <= 0x7e) || (c >= 0xa0 && c <= 0xff) || WIN_ANSI_EXTRA.includes(ch);
 };
 
+export interface NameCheck {
+  name: string;
+  /** What's wrong, in `locale`; null when the name is fine. */
+  problem: string | null;
+  /** The message key and params of the problem (the server sends them so the app can show its own language). */
+  key?: MessageKey;
+  params?: Params;
+}
+
 /** Tidies a name (collapses spaces) and says what's wrong with it, if anything. */
-export function checkName(raw: string): { name: string; problem: string | null } {
+export function checkName(raw: string, locale?: Locale): NameCheck {
   const name = raw.normalize('NFC').replace(/\s+/g, ' ').trim();
-  if (name.length < 2) return { name, problem: 'Enter your name as it should appear on the certificate.' };
-  if (name.length > 60) return { name, problem: 'Keep the name to 60 characters or fewer.' };
-  if (!/\p{L}/u.test(name)) return { name, problem: 'The name needs at least one letter.' };
+  const fail = (key: MessageKey, params?: Params): NameCheck => ({
+    name,
+    problem: translator(isLocale(locale) ? locale : getLocale())(key, params),
+    key,
+    ...(params ? { params } : {}),
+  });
+  if (name.length < 2) return fail('cert.name.empty');
+  if (name.length > 60) return fail('cert.name.long');
+  if (!/\p{L}/u.test(name)) return fail('cert.name.letter');
   const bad = [...new Set([...name].filter((ch) => !canPrint(ch)))];
-  if (bad.length) {
-    return { name, problem: `The certificate font can't print “${bad.join('')}”. Use Latin letters (accents like é, ñ, ü are fine).` };
-  }
+  if (bad.length) return fail('cert.name.chars', { chars: bad.join('') });
   return { name, problem: null };
 }
 
@@ -71,9 +90,14 @@ export interface CertificateInfo {
 /** Public page for a certificate: a share card for social networks that opens the verification page. */
 export const certificateUrl = (id: string, site = SITE) => `${site}/c/${id}`;
 
-export function shareLinks(cert: CertificateInfo, site = SITE) {
+export function shareLinks(cert: CertificateInfo, site = SITE, locale: Locale = getLocale()) {
   const url = certificateUrl(cert.id, site);
-  const text = `I just completed “${cert.courseTitle}” on ${ISSUER}: ${cert.lessons} lessons, ${formatHours(cert.minutes)} of learning.`;
+  const text = translator(locale)('cert.shareText', {
+    course: cert.courseTitle,
+    issuer: ISSUER,
+    count: cert.lessons,
+    hours: formatHours(cert.minutes, locale),
+  });
   const issued = new Date(cert.issuedAt);
   const q = (o: Record<string, string | number>) => new URLSearchParams(Object.entries(o).map(([k, v]) => [k, String(v)])).toString();
   return {

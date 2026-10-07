@@ -4,26 +4,28 @@ import { Page } from './Layout';
 import { InlineMarkdown, Markdown } from './Markdown';
 import { accentStyle } from './ui';
 import { CourseIcon } from './CourseIcon';
+import { useT } from '../i18n/react';
 
 export function CheatSheet({ course }: { course: Course }) {
+  const { t } = useT();
   return (
     <Page>
       <article className="cheatsheet" style={accentStyle(course.color)}>
         <div className="no-print row between">
           <a className="back" href={href('course', course.id)}>
-            ← {course.title}
+            {t('course.cheatSheet.back', { title: course.title })}
           </a>
           <button className="btn small" onClick={() => window.print()}>
-            Print / save as PDF
+            {t('course.cheatSheet.print')}
           </button>
         </div>
         <h1>
-          <CourseIcon icon={course.icon} color={course.color} size={40} className="title-icon" /> {course.title} — cheat sheet
+          <CourseIcon icon={course.icon} color={course.color} size={40} className="title-icon" /> {t('course.cheatSheet.title', { title: course.title })}
         </h1>
-        <p className="muted">Try this first: cover the page and explain each idea out loud. Wherever you get stuck is what to review.</p>
+        <p className="muted">{t('course.cheatSheet.intro')}</p>
 
         <section className="panel key-ideas">
-          <h2>Key ideas</h2>
+          <h2>{t('course.cheatSheet.keyIdeas')}</h2>
           <ul>
             {course.keyIdeas.map((idea, i) => (
               <li key={i}>
@@ -40,7 +42,7 @@ export function CheatSheet({ course }: { course: Course }) {
               {u.lessons.map((l) => (
                 <div key={l.id}>
                   <dt>
-                    {l.title} <span className={`tag ${l.pareto}`}>{l.pareto === 'core' ? 'Core' : 'Deep dive'}</span>
+                    {l.title} <span className={`tag ${l.pareto}`}>{l.pareto === 'core' ? t('common.core') : t('common.deepDive')}</span>
                   </dt>
                   <dd>
                     <Markdown text={l.takeaway} />

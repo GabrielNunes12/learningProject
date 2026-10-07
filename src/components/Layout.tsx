@@ -5,21 +5,25 @@ import { useRoute } from '../lib/router';
 import { dueKeys, levelInfo, streak, useProgress, xpToday } from '../lib/storage';
 import { Avatar, Ring } from './ui';
 import { BrandMark, Icon, type IconName } from './icons';
+import type { MessageKey } from '../i18n/core';
+import { useT } from '../i18n/react';
+import { LanguageChip } from './LanguageSwitcher';
 
 export function useDueCount() {
   const p = useProgress();
   return dueKeys(p).filter((k) => questionByKey.has(k)).length;
 }
 
-const NAV: { id: string; label: string; icon: IconName }[] = [
-  { id: '', label: 'Home', icon: 'home' },
-  { id: 'courses', label: 'Courses', icon: 'grid' },
-  { id: 'roadmap', label: 'Roadmap', icon: 'route' },
-  { id: 'review', label: 'Review', icon: 'review' },
-  { id: 'profile', label: 'Profile', icon: 'user' },
+const NAV: { id: string; label: MessageKey; icon: IconName }[] = [
+  { id: '', label: 'nav.home', icon: 'home' },
+  { id: 'courses', label: 'nav.courses', icon: 'grid' },
+  { id: 'roadmap', label: 'nav.roadmap', icon: 'route' },
+  { id: 'review', label: 'nav.review', icon: 'review' },
+  { id: 'profile', label: 'nav.profile', icon: 'user' },
 ];
 
 export function NavBar() {
+  const { t } = useT();
   const [section] = useRoute();
   const p = useProgress();
   const { user } = useAuth();
@@ -39,32 +43,33 @@ export function NavBar() {
             <span className="brand-name">ProjectLearn</span>
           </a>
 
-          <nav className="nav-links" aria-label="Main">
+          <nav className="nav-links" aria-label={t('nav.main')}>
             {NAV.slice(0, 3).map((n) => (
               <a key={n.id} href={`#/${n.id}`} className={active(n.id) ? 'active' : ''} aria-current={active(n.id) ? 'page' : undefined}>
-                {n.label}
+                {t(n.label)}
                 {n.id === 'review' && due > 0 && <span className="badge">{due}</span>}
               </a>
             ))}
           </nav>
 
           <div className="nav-right">
-            <a className="chip tip tip-below" href="#/profile" data-tip={`${streak(p)}-day streak`}>
+            <LanguageChip />
+            <a className="chip tip tip-below" href="#/profile" data-tip={t('nav.streakTip', { count: streak(p) })}>
               <Icon name="flame" size={16} /> {streak(p)}
             </a>
-            <a className="chip tip tip-below goal-chip" href="#/profile" data-tip={`Today ${xpToday(p)} / ${p.dailyGoal} XP · Level ${lvl.level}`}>
-              <Ring value={goal} size={20} stroke={3} label="Daily goal progress" />
-              <span>{p.xp} XP</span>
+            <a className="chip tip tip-below goal-chip" href="#/profile" data-tip={t('nav.goalTip', { today: xpToday(p), goal: p.dailyGoal, level: lvl.level })}>
+              <Ring value={goal} size={20} stroke={3} label={t('nav.goalRing')} />
+              <span>{t('nav.xp', { xp: p.xp })}</span>
             </a>
             {user ? (
               <UserMenu username={user.username} />
             ) : user === null ? (
               <div className="nav-auth">
                 <a className="btn ghost small" href="#/signin">
-                  Sign in
+                  {t('common.signIn')}
                 </a>
                 <a className="btn primary small" href="#/signup">
-                  Get started
+                  {t('nav.getStarted')}
                 </a>
               </div>
             ) : null}
@@ -72,13 +77,13 @@ export function NavBar() {
         </div>
       </header>
 
-      <nav className="tabbar" aria-label="Main">
+      <nav className="tabbar" aria-label={t('nav.main')}>
         {NAV.map((n) => (
           <a key={n.id} href={`#/${n.id}`} className={active(n.id) ? 'active' : ''} aria-current={active(n.id) ? 'page' : undefined}>
             <span className="tab-icon" aria-hidden>
               <Icon name={n.icon} size={22} />
             </span>
-            {n.label}
+            {t(n.label)}
             {n.id === 'review' && due > 0 && <span className="badge">{due}</span>}
           </a>
         ))}
@@ -88,6 +93,7 @@ export function NavBar() {
 }
 
 function UserMenu({ username }: { username: string }) {
+  const { t, tx } = useT();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -106,19 +112,17 @@ function UserMenu({ username }: { username: string }) {
 
   return (
     <div className="user-menu" ref={ref}>
-      <button className="avatar-btn" onClick={() => setOpen(!open)} aria-expanded={open} aria-haspopup="menu" aria-label="Account menu">
+      <button className="avatar-btn" onClick={() => setOpen(!open)} aria-expanded={open} aria-haspopup="menu" aria-label={t('nav.accountMenu')}>
         <Avatar name={username} size={34} />
       </button>
       {open && (
         <div className="menu" role="menu">
-          <div className="menu-head">
-            Signed in as <strong>{username}</strong>
-          </div>
+          <div className="menu-head">{tx('nav.signedInAs', { name: <strong>{username}</strong> })}</div>
           <a role="menuitem" href="#/profile" onClick={() => setOpen(false)}>
-            Profile & stats
+            {t('nav.profileStats')}
           </a>
           <a role="menuitem" href="#/review" onClick={() => setOpen(false)}>
-            Review
+            {t('nav.review')}
           </a>
           <button
             role="menuitem"
@@ -128,7 +132,7 @@ function UserMenu({ username }: { username: string }) {
               window.location.hash = '#/';
             }}
           >
-            Sign out
+            {t('nav.signOut')}
           </button>
         </div>
       )}
@@ -147,20 +151,25 @@ export function Page({ children, wide }: { children: ReactNode; wide?: boolean }
 
 /** Header for full-screen lesson / quiz / review sessions. */
 export function PlayerHeader({ exitHref, done, total, right }: { exitHref: string; done: number; total: number; right?: ReactNode }) {
+  const { t } = useT();
   return (
     <header className="player-header">
       <div className="player-header-inner">
-        <a className="close" href={exitHref} aria-label="Exit">
+        <a className="close" href={exitHref} aria-label={t('nav.exit')}>
           ✕
         </a>
-        <div className="segments" role="progressbar" aria-valuenow={done} aria-valuemin={0} aria-valuemax={total} aria-label="Progress">
+        <div className="segments" role="progressbar" aria-valuenow={done} aria-valuemin={0} aria-valuemax={total} aria-label={t('common.progress')}>
           {total <= 24 ? (
             Array.from({ length: total }, (_, i) => <span key={i} className={i < done ? 'on' : i === done ? 'current' : ''} />)
           ) : (
             <span className="on" style={{ flex: `0 0 ${(done / total) * 100}%` }} />
           )}
         </div>
-        <div className="player-right">{right}</div>
+        <div className="player-right">
+          {/* Switching language mid-lesson keeps the learner's place. */}
+          <LanguageChip compact />
+          {right}
+        </div>
       </div>
     </header>
   );

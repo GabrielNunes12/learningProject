@@ -14,6 +14,8 @@ import {
   type JoinType,
 } from '../../lib/joinsim';
 import { CodeBlock } from '../Markdown';
+import type { MessageKey } from '../../i18n/core';
+import { useT } from '../../i18n/react';
 import type { SimProps } from './SimStepView';
 import './JoinSim.css';
 
@@ -27,6 +29,8 @@ export function JoinSim(props: SimProps<'join'>) {
 }
 
 function JoinPlayground({ step, onGoal }: SimProps<'join'>) {
+  // `tr` because `t` names tables and join types below.
+  const { t: tr, locale } = useT();
   const types = step.joins?.length ? JOIN_TYPES.filter((t) => step.joins!.includes(t)) : JOIN_TYPES;
   const [type, setType] = useState<JoinType>(types[0]);
   const [tried, setTried] = useState<Set<JoinType>>(() => new Set([types[0]]));
@@ -36,7 +40,8 @@ function JoinPlayground({ step, onGoal }: SimProps<'join'>) {
   const on = step.on;
 
   const result = useMemo(() => joinTables(left, right, on, type), [left, right, on, type]);
-  const summary = useMemo(() => describeJoin(left, right, on, type), [left, right, on, type]);
+  // locale: the sentences are worded in the current language.
+  const summary = useMemo(() => describeJoin(left, right, on, type), [left, right, on, type, locale]);
 
   useEffect(() => {
     if (tried.size >= 2) onGoal(true);
@@ -119,7 +124,11 @@ function JoinPlayground({ step, onGoal }: SimProps<'join'>) {
     if (matched) return 'matched';
     return keepsUnmatched(type, side) ? 'kept' : 'dropped';
   };
-  const stateText = { matched: 'has a match', kept: 'no match, kept with NULLs', dropped: 'no match, dropped' };
+  const rowAria: Record<'matched' | 'kept' | 'dropped', MessageKey> = {
+    matched: 'sims.join.rowMatched',
+    kept: 'sims.join.rowKept',
+    dropped: 'sims.join.rowDropped',
+  };
 
   const onSegKey = (e: KeyboardEvent<HTMLDivElement>) => {
     const i = types.indexOf(type);
@@ -142,10 +151,10 @@ function JoinPlayground({ step, onGoal }: SimProps<'join'>) {
       <div className={`js-src js-${side}`}>
         <div className="js-src-name">
           <span className="js-tname">{t.name}</span>
-          <span className="js-side muted small">{side === 'left' ? 'left' : 'right'}</span>
+          <span className="js-side muted small">{side === 'left' ? tr('sims.join.left') : tr('sims.join.right')}</span>
         </div>
         <div className="js-frame">
-          <table aria-label={`${t.name} (${side} table)`}>
+          <table aria-label={tr(side === 'left' ? 'sims.join.leftTable' : 'sims.join.rightTable', { name: t.name })}>
             <thead>
               <tr>
                 {t.columns.map((c, ci) => (
@@ -165,7 +174,7 @@ function JoinPlayground({ step, onGoal }: SimProps<'join'>) {
                       refs.current[i] = el;
                     }}
                     className={`js-row ${st}${lit.has(i) ? ' lit' : ''}${hl.any && !lit.has(i) ? ' faded' : ''}`}
-                    aria-label={`${t.name} row ${row.map(formatCell).join(', ')}: ${stateText[st]}`}
+                    aria-label={tr(rowAria[st], { table: t.name, values: row.map(formatCell).join(', ') })}
                     onMouseEnter={() => setFocus({ kind: side, idx: i })}
                     onMouseLeave={() => setFocus(null)}
                   >
@@ -187,7 +196,7 @@ function JoinPlayground({ step, onGoal }: SimProps<'join'>) {
   return (
     <div className="joinsim">
       {types.length > 1 && (
-        <div className="js-seg" role="radiogroup" aria-label="Join type" onKeyDown={onSegKey}>
+        <div className="js-seg" role="radiogroup" aria-label={tr('sims.join.joinType')} onKeyDown={onSegKey}>
           {types.map((t) => (
             <button
               type="button"
@@ -239,13 +248,13 @@ function JoinPlayground({ step, onGoal }: SimProps<'join'>) {
 
       <div className="js-result">
         <div className="js-result-head">
-          <span className="js-tname">Result</span>
+          <span className="js-tname">{tr('sims.join.result')}</span>
           <span className="js-count" role="status">
-            {JOIN_KEYWORD[type]}: {result.rows.length} row{result.rows.length === 1 ? '' : 's'}
+            {tr('sims.join.rowCount', { join: JOIN_KEYWORD[type], count: result.rows.length })}
           </span>
         </div>
         <div className="js-frame js-scroll">
-          <table aria-label={`Result of the ${JOIN_KEYWORD[type]}`}>
+          <table aria-label={tr('sims.join.resultTable', { join: JOIN_KEYWORD[type] })}>
             <thead>
               <tr>
                 {result.columns.map((c) => (
@@ -264,7 +273,7 @@ function JoinPlayground({ step, onGoal }: SimProps<'join'>) {
                     key={`${type}-${k}`}
                     className={`js-row${lit ? ' lit' : ''}${hl.any && !lit ? ' faded' : ''}`}
                     tabIndex={0}
-                    aria-label={`Result row ${k + 1}: ${row.values.map(formatCell).join(', ')}`}
+                    aria-label={tr('sims.join.resultRow', { number: k + 1, values: row.values.map(formatCell).join(', ') })}
                     onMouseEnter={() => setFocus({ kind: 'result', idx: k })}
                     onMouseLeave={() => setFocus(null)}
                     onFocus={() => setFocus({ kind: 'result', idx: k })}
@@ -281,9 +290,9 @@ function JoinPlayground({ step, onGoal }: SimProps<'join'>) {
               })}
             </tbody>
           </table>
-          {result.rows.length === 0 && <p className="muted small js-empty">No rows.</p>}
+          {result.rows.length === 0 && <p className="muted small js-empty">{tr('sims.join.noRows')}</p>}
         </div>
-        <p className="muted small js-note">Hover or tap a result row to see where it came from. Without ORDER BY, row order isn't guaranteed.</p>
+        <p className="muted small js-note">{tr('sims.join.note')}</p>
       </div>
     </div>
   );

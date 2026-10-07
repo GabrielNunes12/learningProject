@@ -1,0 +1,2110 @@
+{
+  "id": "git",
+  "title": "Git",
+  "icon": "logo:git",
+  "color": "#f05133",
+  "order": 15,
+  "category": "Tools",
+  "level": "Beginner",
+  "description": "Utilise Git avec assurance au quotidien : fais des commits, crée des branches, fusionne, collabore via les pull requests GitHub et annule tes erreurs sans paniquer. Les 20 % de Git qui servent dans 80 % du travail réel, avec les commandes modernes (`git switch`, `git restore`) et les anciennes écritures `checkout` que tu croiseras encore partout.",
+  "keyIdeas": [
+    "Un commit est un instantané de tout le projet avec un lien vers son parent ; les branches et `HEAD` ne sont que des pointeurs mobiles vers des commits.",
+    "Les changements passent du répertoire de travail à la zone de préparation (`git add`), puis au dépôt (`git commit`), et `git status` t'indique toujours où se trouve chaque modification.",
+    "Fais chaque morceau de travail sur sa propre branche : la fusion avance en fast-forward quand la cible n'a pas bougé, et crée un commit de fusion quand les deux côtés ont du nouveau.",
+    "`git fetch` ne fait que télécharger ; `git pull` est un fetch suivi d'une fusion (ou d'un rebase) ; `git push -u origin <branch>` publie une branche et définit son upstream.",
+    "Sur GitHub, le travail passe par les pull requests : pousse une branche, ouvre une PR, ajoute des commits pour répondre à la relecture, fusionne, supprime la branche.",
+    "Annule des commits déjà poussés avec `git revert` ; garde `git reset` et `--amend` pour l'historique local, et rappelle-toi que `git reflog` retrouve presque tous les commits « perdus »."
+  ],
+  "concepts": [
+    {
+      "id": "commit",
+      "label": "Commit",
+      "lesson": "snapshots-and-pointers",
+      "summary": "Un instantané de tous les fichiers suivis, avec un lien vers son parent, identifié par un hash de son contenu ; HEAD~n remonte de n parents.",
+      "aliases": [
+        "snapshot",
+        "instantané",
+        "hash du commit",
+        "parent",
+        "HEAD~1"
+      ]
+    },
+    {
+      "id": "branch",
+      "label": "Branche",
+      "lesson": "snapshots-and-pointers",
+      "summary": "Une branche n'est qu'une étiquette mobile qui contient l'identifiant d'un commit, pas une copie du code.",
+      "aliases": [
+        "branch",
+        "pointeur",
+        "étiquette de branche",
+        "main"
+      ]
+    },
+    {
+      "id": "head",
+      "label": "HEAD",
+      "lesson": "snapshots-and-pointers",
+      "summary": "HEAD indique où tu te trouves : il pointe normalement vers une branche, et un commit fait avancer cette branche (et elle seule).",
+      "aliases": [
+        "branche courante",
+        "branche actuelle",
+        "où suis-je"
+      ]
+    },
+    {
+      "id": "staging-area",
+      "label": "Zone de préparation",
+      "lesson": "three-areas",
+      "summary": "git add copie des changements du répertoire de travail vers la zone de préparation (l'index), le brouillon exact du prochain commit.",
+      "aliases": [
+        "staging area",
+        "index",
+        "git add",
+        "répertoire de travail",
+        "working tree",
+        "changements indexés"
+      ]
+    },
+    {
+      "id": "gitignore",
+      "label": ".gitignore",
+      "lesson": "history-messages-gitignore",
+      "summary": "Les motifs de .gitignore gardent les fichiers non suivis (résultats de build, journaux, secrets) hors de git status et de git add ; ils ne désuivent jamais des fichiers déjà commités.",
+      "aliases": [
+        "fichier d'ignore",
+        "fichiers ignorés",
+        "git rm --cached"
+      ]
+    },
+    {
+      "id": "commit-message",
+      "label": "Message de commit",
+      "lesson": "history-messages-gitignore",
+      "summary": "Une courte ligne d'objet à l'impératif qui dit pourquoi, plus un corps facultatif, pour décrire un seul changement logique par commit.",
+      "aliases": [
+        "ligne d'objet",
+        "objet du commit",
+        "mode impératif",
+        "impératif"
+      ]
+    },
+    {
+      "id": "switch",
+      "label": "Changer de branche",
+      "lesson": "branches",
+      "summary": "git switch (-c pour créer) déplace HEAD vers une autre branche ; les modifications non commitées t'accompagnent. git checkout est l'ancienne écriture.",
+      "aliases": [
+        "git switch",
+        "git checkout",
+        "switch -c",
+        "checkout -b",
+        "changer de branche"
+      ]
+    },
+    {
+      "id": "fast-forward",
+      "label": "Fast-forward",
+      "lesson": "merging",
+      "summary": "Quand la branche qui reçoit n'a aucun nouveau commit, git merge avance simplement son pointeur et ne crée aucun commit.",
+      "aliases": [
+        "ff merge",
+        "fast forward",
+        "avance rapide"
+      ]
+    },
+    {
+      "id": "merge-commit",
+      "label": "Commit de fusion",
+      "lesson": "merging",
+      "summary": "Quand les deux branches ont de nouveaux commits, git merge crée sur la branche courante un commit à deux parents ; l'autre branche ne bouge pas.",
+      "aliases": [
+        "merge commit",
+        "git merge",
+        "deux parents",
+        "fusion à trois points",
+        "--no-ff"
+      ]
+    },
+    {
+      "id": "merge-conflict",
+      "label": "Conflit de fusion",
+      "lesson": "merge-conflicts",
+      "summary": "Quand les deux côtés ont modifié les mêmes lignes, Git s'arrête et écrit les deux versions entre des marqueurs de conflit ; tu édites, tu fais git add puis un commit (ou --abort).",
+      "aliases": [
+        "merge conflict",
+        "conflit",
+        "marqueurs de conflit",
+        "<<<<<<<",
+        "merge --abort",
+        "ours vs theirs"
+      ]
+    },
+    {
+      "id": "rebase",
+      "label": "Rebase",
+      "lesson": "rebase",
+      "summary": "Le rebase rejoue tes commits par-dessus une autre branche sous forme de nouveaux commits avec de nouveaux hashs, ce qui donne un historique linéaire.",
+      "aliases": [
+        "git rebase",
+        "rejouer les commits",
+        "historique linéaire",
+        "pull --rebase"
+      ]
+    },
+    {
+      "id": "rewriting-history",
+      "label": "Réécriture d'historique",
+      "lesson": "rebase",
+      "summary": "Rebase, amend et reset remplacent des commits au lieu d'en ajouter, donc ne le fais jamais sur des commits que d'autres ont déjà récupérés (la règle d'or).",
+      "aliases": [
+        "règle d'or",
+        "réécrire l'historique",
+        "force push",
+        "--force-with-lease"
+      ]
+    },
+    {
+      "id": "stash",
+      "label": "Stash",
+      "lesson": "stash",
+      "summary": "git stash met de côté, sur une pile, les changements non commités des fichiers suivis (-u ajoute les fichiers non suivis), et pop ou apply les ramène.",
+      "aliases": [
+        "git stash",
+        "stash pop",
+        "mettre de côté",
+        "remiser",
+        "stash -u"
+      ]
+    },
+    {
+      "id": "remote",
+      "label": "Remote",
+      "lesson": "remotes",
+      "summary": "Une autre copie du dépôt (souvent origin sur GitHub) ; Git garde en mémoire son dernier état connu dans des branches de suivi en lecture seule comme origin/main.",
+      "aliases": [
+        "dépôt distant",
+        "origin",
+        "origin/main",
+        "branche de suivi",
+        "remote-tracking branch",
+        "clone"
+      ]
+    },
+    {
+      "id": "fetch-pull",
+      "label": "Fetch et pull",
+      "lesson": "remotes",
+      "summary": "git fetch télécharge seulement les commits et déplace les branches de suivi ; git pull, c'est un fetch plus l'intégration de ces commits dans ta branche.",
+      "aliases": [
+        "git fetch",
+        "git pull"
+      ]
+    },
+    {
+      "id": "push",
+      "label": "Push et upstream",
+      "lesson": "remotes",
+      "summary": "git push envoie tes commits ; push -u définit l'upstream pour que push et pull sans argument sachent où aller, et que status puisse compter l'avance et le retard.",
+      "aliases": [
+        "git push",
+        "push -u",
+        "upstream",
+        "en avance sur origin"
+      ]
+    },
+    {
+      "id": "pull-request",
+      "label": "Pull request",
+      "lesson": "pull-requests",
+      "summary": "Une demande sur GitHub pour fusionner une branche poussée dans main : elle est relue, mise à jour en poussant d'autres commits, puis fusionnée (merge, squash ou rebase).",
+      "aliases": [
+        "PR",
+        "GitHub flow",
+        "squash and merge",
+        "revue de code",
+        "code review"
+      ]
+    },
+    {
+      "id": "restore",
+      "label": "git restore",
+      "lesson": "undo-changes",
+      "summary": "git restore remplit à nouveau un fichier depuis la zone de préparation pour abandonner les modifications, et --staged retire un fichier de la zone de préparation en gardant ses modifications.",
+      "aliases": [
+        "abandonner les changements",
+        "annuler les modifications",
+        "désindexer",
+        "unstage",
+        "restore --staged",
+        "checkout --"
+      ]
+    },
+    {
+      "id": "amend",
+      "label": "Amend",
+      "lesson": "undo-changes",
+      "summary": "git commit --amend remplace le dernier commit par un nouveau construit depuis la zone de préparation, pour corriger son message ou ajouter un fichier oublié.",
+      "aliases": [
+        "commit --amend",
+        "--no-edit",
+        "corriger le dernier commit"
+      ]
+    },
+    {
+      "id": "revert",
+      "label": "Revert",
+      "lesson": "revert-vs-reset",
+      "summary": "git revert ajoute un nouveau commit qui applique l'inverse d'un commit antérieur : sans risque sur un historique déjà poussé.",
+      "aliases": [
+        "git revert",
+        "annuler un commit poussé"
+      ]
+    },
+    {
+      "id": "reset",
+      "label": "Reset",
+      "lesson": "revert-vs-reset",
+      "summary": "git reset déplace la branche courante vers un autre commit : --soft garde les changements indexés, --mixed (par défaut) les désindexe, --hard les supprime.",
+      "aliases": [
+        "git reset",
+        "reset --soft",
+        "reset --hard",
+        "décommiter"
+      ]
+    },
+    {
+      "id": "reflog",
+      "label": "Reflog",
+      "lesson": "reflog-detached-head",
+      "summary": "Un journal local de tous les endroits où HEAD est passé, qui permet de retrouver et de récupérer les commits « perdus » après un reset, un rebase ou une branche supprimée.",
+      "aliases": [
+        "git reflog",
+        "HEAD@{1}",
+        "récupérer des commits perdus"
+      ]
+    },
+    {
+      "id": "detached-head",
+      "label": "HEAD détaché",
+      "lesson": "reflog-detached-head",
+      "summary": "HEAD pointe vers un commit au lieu d'une branche : les nouveaux commits n'ont alors aucune branche pour les garder, sauf si tu en crées une avant de partir.",
+      "aliases": [
+        "detached HEAD",
+        "switch --detach",
+        "checkout d'un commit"
+      ]
+    },
+    {
+      "id": "bisect",
+      "label": "git bisect",
+      "lesson": "reflog-detached-head",
+      "summary": "git bisect fait une recherche dichotomique dans l'historique entre un bon et un mauvais commit pour trouver celui qui a introduit un bug (environ log2(n) tests).",
+      "aliases": [
+        "recherche dichotomique",
+        "dichotomie",
+        "git blame",
+        "trouver le mauvais commit"
+      ]
+    }
+  ],
+  "links": [
+    {
+      "from": "branch",
+      "to": "commit",
+      "label": "pointe vers"
+    },
+    {
+      "from": "head",
+      "to": "branch",
+      "label": "pointe vers"
+    },
+    {
+      "from": "commit",
+      "to": "staging-area",
+      "label": "est construit à partir de"
+    },
+    {
+      "from": "gitignore",
+      "to": "staging-area",
+      "label": "tient les fichiers à l'écart de"
+    },
+    {
+      "from": "commit-message",
+      "to": "commit",
+      "label": "fait partie de"
+    },
+    {
+      "from": "switch",
+      "to": "head",
+      "label": "déplace"
+    },
+    {
+      "from": "fast-forward",
+      "to": "merge-commit",
+      "label": "s'oppose à"
+    },
+    {
+      "from": "merge-commit",
+      "to": "commit",
+      "label": "est une forme de"
+    },
+    {
+      "from": "merge-commit",
+      "to": "merge-conflict",
+      "label": "peut provoquer"
+    },
+    {
+      "from": "merge-conflict",
+      "to": "staging-area",
+      "label": "nécessite"
+    },
+    {
+      "from": "rebase",
+      "to": "merge-commit",
+      "label": "s'oppose à"
+    },
+    {
+      "from": "rebase",
+      "to": "merge-conflict",
+      "label": "peut provoquer"
+    },
+    {
+      "from": "rebase",
+      "to": "rewriting-history",
+      "label": "est une forme de"
+    },
+    {
+      "from": "amend",
+      "to": "rewriting-history",
+      "label": "est une forme de"
+    },
+    {
+      "from": "reset",
+      "to": "rewriting-history",
+      "label": "est une forme de"
+    },
+    {
+      "from": "revert",
+      "to": "reset",
+      "label": "s'oppose à"
+    },
+    {
+      "from": "revert",
+      "to": "rewriting-history",
+      "label": "évite"
+    },
+    {
+      "from": "stash",
+      "to": "switch",
+      "label": "est utilisé(e) dans"
+    },
+    {
+      "from": "fetch-pull",
+      "to": "remote",
+      "label": "nécessite"
+    },
+    {
+      "from": "push",
+      "to": "remote",
+      "label": "nécessite"
+    },
+    {
+      "from": "push",
+      "to": "fetch-pull",
+      "label": "est l'inverse de"
+    },
+    {
+      "from": "fetch-pull",
+      "to": "merge-commit",
+      "label": "utilise"
+    },
+    {
+      "from": "pull-request",
+      "to": "push",
+      "label": "s'appuie sur"
+    },
+    {
+      "from": "pull-request",
+      "to": "branch",
+      "label": "nécessite"
+    },
+    {
+      "from": "restore",
+      "to": "staging-area",
+      "label": "annule"
+    },
+    {
+      "from": "amend",
+      "to": "commit",
+      "label": "remplace"
+    },
+    {
+      "from": "reset",
+      "to": "branch",
+      "label": "déplace"
+    },
+    {
+      "from": "reflog",
+      "to": "head",
+      "label": "enregistre"
+    },
+    {
+      "from": "reflog",
+      "to": "reset",
+      "label": "annule"
+    },
+    {
+      "from": "detached-head",
+      "to": "head",
+      "label": "est un cas particulier de"
+    },
+    {
+      "from": "bisect",
+      "to": "commit",
+      "label": "cherche dans"
+    },
+    {
+      "from": "detached-head",
+      "to": "branch",
+      "label": "nécessite"
+    },
+    {
+      "from": "stash",
+      "to": "commit",
+      "label": "s'oppose à"
+    },
+    {
+      "from": "restore",
+      "to": "reset",
+      "label": "s'oppose à"
+    },
+    {
+      "from": "fast-forward",
+      "to": "branch",
+      "label": "déplace"
+    }
+  ],
+  "units": [
+    {
+      "id": "mental-model",
+      "title": "Le modèle mental",
+      "description": "Ce que Git stocke vraiment, et la boucle ajouter-commiter que tu feras plusieurs fois par jour.",
+      "lessons": [
+        {
+          "id": "snapshots-and-pointers",
+          "title": "Commits, branches et HEAD",
+          "pareto": "core",
+          "minutes": 6,
+          "takeaway": "Un commit est un instantané avec un parent ; une branche est une étiquette mobile posée sur un commit, et `HEAD` pointe vers la branche où tu te trouves.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Des instantanés, pas des copies de fichiers",
+              "body": "Git est une base de données de **commits**. Chaque commit est un **instantané** de tous les fichiers suivis à un moment donné, plus des métadonnées : auteur, date, message et un lien vers son commit **parent**.\n\nChaque commit a un identifiant, un hash comme `3f9a2c1`, calculé à partir de son contenu. Change quoi que ce soit et tu obtiens un autre identifiant : l'historique ne peut donc pas être modifié en douce.\n\nComme chaque commit pointe vers son parent, l'historique forme un **graphe** (le plus ancien à gauche) :\n\n```\nA---B---C\n```\n\nLe parent de `C` est `B`, dont le parent est `A`. Les fichiers inchangés ne sont stockés qu'une fois, donc les instantanés ne coûtent presque rien."
+            },
+            {
+              "type": "explain",
+              "title": "Les branches et HEAD sont des pointeurs",
+              "body": "Une **branche** n'est ni un dossier ni une copie de ton code. C'est un minuscule fichier qui contient un identifiant de commit : une étiquette mobile.\n\n```\nA---B---C   ← main ← HEAD\n```\n\n**HEAD** répond à « où suis-je ? ». Normalement, il pointe vers une branche. Quand tu fais un commit, Git :\n\n- crée un nouveau commit dont le parent est le commit courant\n- fait avancer vers ce nouveau commit la branche vers laquelle HEAD pointe\n\nHEAD suit le mouvement parce qu'il pointe vers cette branche. Créer une branche revient à écrire une nouvelle étiquette, ce qui explique pourquoi brancher dans Git est instantané."
+            },
+            {
+              "type": "mcq",
+              "id": "q-branch-is",
+              "concepts": [
+                "branch"
+              ],
+              "prompt": "Ton dépôt compte 2 000 commits et tu lances `git branch experiment`. Que crée vraiment Git ?",
+              "choices": [
+                "Une copie complète des fichiers du projet dans un nouveau dossier",
+                "Un nouveau pointeur vers le commit où tu te trouves",
+                "Un nouveau commit vide qui marque le début de la branche",
+                "Une copie des 2 000 commits sous un nouveau nom"
+              ],
+              "answer": 1,
+              "explanation": "Une branche est une étiquette qui contient un identifiant de commit : en créer une est instantané, quelle que soit la taille du dépôt. Aucun fichier ni commit n'est copié, et aucun commit n'est créé : de nouveaux commits n'apparaissent que quand tu en fais vraiment."
+            },
+            {
+              "type": "example",
+              "title": "Regarder les pointeurs bouger",
+              "problem": "Tu es sur `main`, au commit `B`. Tu lances `git branch feature`, puis tu fais un commit. Où se retrouve chaque pointeur ?\n\n```\nA---B   ← main ← HEAD\n```",
+              "steps": [
+                "`git branch feature` crée une nouvelle étiquette sur le commit courant. `main` et `feature` pointent toutes deux vers `B`. HEAD pointe toujours vers `main` : créer une branche ne te fait pas basculer dessus.",
+                "`git commit` crée `C` avec pour parent `B`, puis déplace la branche vers laquelle HEAD pointe, c'est-à-dire `main`.",
+                "Résultat :\n\n```\nA---B---C   ← main ← HEAD\n    ↑\n    feature\n```",
+                "`feature` est restée en arrière, sur `B`. Ça surprend beaucoup de débutants : `git branch` crée une branche mais ne te place pas dessus. (Dans l'unité suivante, `git switch -c` fait les deux.)"
+              ],
+              "answer": "`feature` reste sur `B` ; `main` (et HEAD avec lui) passe au nouveau commit `C`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-commit-moves",
+              "concepts": [
+                "head",
+                "branch"
+              ],
+              "prompt": "HEAD pointe vers `bugfix`, qui pointe vers le commit `E`. `main` pointe aussi vers `E`. Tu fais le commit `F`. Qu'est-ce qui change ?",
+              "choices": [
+                "`bugfix` et `main` passent toutes deux à `F`",
+                "Seule `main` passe à `F`, parce que c'est la branche par défaut",
+                "Seule `bugfix` passe à `F` ; `main` reste sur `E`",
+                "Rien ne bouge tant que tu n'as pas lancé `git push`"
+              ],
+              "answer": 2,
+              "explanation": "Un commit ne fait avancer que la branche à laquelle HEAD est rattaché, ici `bugfix`. `main` pointe toujours vers `E`. Pousser sert à partager avec un dépôt distant et n'a rien à voir avec le déplacement de tes pointeurs locaux."
+            },
+            {
+              "type": "sim",
+              "sim": "git",
+              "title": "Déplace les pointeurs toi-même",
+              "body": "Ce dépôt contient un commit sur `main`. Tape de vraies commandes dans le terminal et observe le graphe : les cercles sont des commits, les pastilles sont des branches, et `HEAD → main` marque l'endroit où tu es.\n\n1. Lance `git branch feature`. Une nouvelle étiquette apparaît, mais HEAD bouge-t-il ?\n2. Lance `git commit -m \"Add README\"` deux fois. Quel pointeur avance à chaque commit, et lequel reste en arrière ?\n\n(Il n'y a pas de fichiers ici : chaque `git commit` enregistre simplement un nouvel instantané.)",
+              "goal": {
+                "text": "Crée une branche appelée feature avec git branch, puis fais 2 commits.",
+                "head": "main",
+                "branches": [
+                  "feature"
+                ],
+                "minCommits": {
+                  "main": 3
+                }
+              }
+            },
+            {
+              "type": "explain",
+              "title": "Désigner des commits par rapport à HEAD",
+              "body": "Tu peux désigner un commit par rapport à un autre :\n\n- `HEAD~1` (ou `HEAD~`) : le parent du commit courant\n- `HEAD~3` : trois commits en arrière, en suivant les liens de parenté\n- `main~2` : deux commits avant le sommet de `main`\n\nTu les utiliseras avec des commandes comme `git show HEAD~1` et, plus tard, pour annuler des commits. Un hash court comme `3f9a2c1` fonctionne aussi partout où un commit est attendu."
+            },
+            {
+              "type": "text",
+              "id": "q-tilde",
+              "concepts": [
+                "commit"
+              ],
+              "prompt": "Ton historique est :\n\n```\nA---B---C---D---E   ← main ← HEAD\n```\n\nQuel commit `HEAD~3` désigne-t-il ? (Juste la lettre.)",
+              "accept": [
+                "B",
+                "commit B"
+              ],
+              "hint": "`HEAD~1` est le parent de `E`. Continue à reculer.",
+              "explanation": "`HEAD` est `E`, `HEAD~1` est `D`, `HEAD~2` est `C`, et `HEAD~3` est **B**. Chaque pas suit un lien de parenté vers l'arrière."
+            }
+          ]
+        },
+        {
+          "id": "three-areas",
+          "title": "Les trois zones et la boucle du quotidien",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Modifie dans le répertoire de travail, choisis ce qui entre dans le prochain commit avec `git add`, enregistre-le avec `git commit`, et lance `git status` dès que tu as un doute.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Trois endroits où peut se trouver un changement",
+              "body": "Chaque changement traverse trois zones :\n\n- **Répertoire de travail** (*working tree*) : les fichiers que tu vois et modifies sur le disque.\n- **Zone de préparation** (*staging area*, aussi appelée **index**) : le brouillon de ton prochain commit.\n- **Dépôt** : les instantanés commités, stockés dans le dossier caché `.git`.\n\n```bash\ngit add app.js                  # working tree → staging area\ngit add .                       # stage everything in this folder\ngit commit -m \"Add login form\"   # staging area → new commit\n```\n\nLa zone de préparation te permet de commiter *une partie* de ton travail : corrige deux choses sans rapport, puis indexe-les et commite-les séparément."
+            },
+            {
+              "type": "explain",
+              "title": "git status est ton tableau de bord",
+              "body": "`git status` montre dans quelle zone se trouve chaque changement, et suggère même la commande suivante :\n\n```\nOn branch main\nChanges to be committed:\n  (use \"git restore --staged <file>...\" to unstage)\n        modified:   app.js\n\nChanges not staged for commit:\n        modified:   style.css\n\nUntracked files:\n        notes.txt\n```\n\n- **Changes to be committed** : indexés ; ils iront dans le prochain commit.\n- **Changes not staged** : des fichiers suivis que tu as modifiés sans les ajouter.\n- **Untracked** : de nouveaux fichiers que Git n'a jamais enregistrés.\n\nLance-le tout le temps. Ça ne coûte rien et ça évite les mauvaises surprises."
+            },
+            {
+              "type": "mcq",
+              "id": "q-status-after",
+              "concepts": [
+                "staging-area"
+              ],
+              "prompt": "Dans un dépôt propre, tu modifies deux fichiers suivis, `index.html` et `about.html`, puis tu lances `git add index.html`. Que montre `git status` ?",
+              "choices": [
+                "Les deux fichiers sous « Changes to be committed »",
+                "`index.html` sous « Changes to be committed » et `about.html` sous « Untracked files »",
+                "`index.html` sous « Changes to be committed » et `about.html` sous « Changes not staged for commit »",
+                "Les deux fichiers sous « Changes not staged for commit » jusqu'au commit"
+              ],
+              "answer": 2,
+              "explanation": "Seul `index.html` a été indexé. `about.html` est déjà suivi (il figure dans des commits précédents), donc sa modification est listée comme *non indexée*. « Untracked » ne concerne que les tout nouveaux fichiers que Git n'a jamais enregistrés."
+            },
+            {
+              "type": "buckets",
+              "id": "q-buckets-status-section",
+              "concepts": [
+                "staging-area"
+              ],
+              "prompt": "Chaque carte part d'un dépôt propre où `app.js`, `style.css` et `README.md` sont déjà commités. Après les commandes de la carte, dans quelle section `git status` liste-t-il le fichier ?",
+              "buckets": [
+                "Changes to be committed",
+                "Changes not staged for commit",
+                "Untracked files",
+                "Pas listé : rien à commiter"
+              ],
+              "items": [
+                {
+                  "text": "Modifier `app.js`, puis `git add app.js`",
+                  "bucket": 0
+                },
+                {
+                  "text": "Créer `todo.txt`, puis `git add todo.txt`",
+                  "bucket": 0
+                },
+                {
+                  "text": "Modifier `style.css` sans rien faire d'autre",
+                  "bucket": 1
+                },
+                {
+                  "text": "Modifier `style.css`, `git add style.css`, puis `git restore --staged style.css`",
+                  "bucket": 1
+                },
+                {
+                  "text": "Créer `notes.txt` sans rien faire d'autre",
+                  "bucket": 2
+                },
+                {
+                  "text": "Créer `draft.md`, `git add draft.md`, puis `git restore --staged draft.md`",
+                  "bucket": 2
+                },
+                {
+                  "text": "Modifier `README.md`, `git add README.md`, puis `git commit -m \"Fix typo\"`",
+                  "bucket": 3
+                },
+                {
+                  "text": "Modifier `app.js`, `git add .`, puis `git commit -m \"Tweak app\"`",
+                  "bucket": 3
+                }
+              ],
+              "hint": "`git add` déplace un changement dans la zone de préparation, `git commit` le déplace dans le dépôt, et `restore --staged` le ressort de la zone de préparation.",
+              "explanation": "`git add` place un changement sous **Changes to be committed**, que le fichier soit modifié ou tout nouveau (`git status` affiche le nouveau avec `new file:`). La modification d'un fichier suivi que tu n'as pas ajouté est **non indexée**. Un nouveau fichier que Git n'a jamais enregistré est **non suivi**. `restore --staged` n'annule que le `git add` : `style.css`, qui est suivi, redevient *non indexé*, et le nouveau `draft.md` redevient *non suivi*. Une fois un changement commité, le répertoire de travail correspond de nouveau au dernier commit, donc `git status` n'a plus rien à lister."
+            },
+            {
+              "type": "explain",
+              "title": "Voir les changements exacts avec git diff",
+              "body": "`git status` dit *quels* fichiers ont changé ; `git diff` montre *ce qui* a changé, ligne par ligne :\n\n- `git diff` : répertoire de travail contre zone de préparation, c'est-à-dire les changements que tu n'as pas encore indexés.\n- `git diff --staged` : zone de préparation contre dernier commit, c'est-à-dire exactement ce que contiendra le prochain commit. (`--cached` est un ancien synonyme.)\n\n```\n-color = blue\n+color = green\n```\n\nLes lignes qui commencent par `-` ont été supprimées, celles qui commencent par `+` ont été ajoutées. Vérifier `git diff --staged` juste avant de commiter est une excellente habitude : c'est ton dernier coup d'œil sur ce que tu t'apprêtes à enregistrer."
+            },
+            {
+              "type": "example",
+              "title": "Un commit ciblé",
+              "problem": "Tu as corrigé une coquille dans `README.md` et, séparément, commencé un refactoring inachevé dans `api.js`. Tu veux un commit propre qui ne contient que la correction de la coquille.",
+              "steps": [
+                "`git status` liste les deux fichiers sous « Changes not staged for commit ».",
+                "`git add README.md` n'indexe que la correction de la coquille. `api.js` reste tel quel dans le répertoire de travail.",
+                "`git diff --staged` confirme que le changement indexé n'est que la coquille. `git diff` montre toujours le refactoring en cours.",
+                "`git commit -m \"Fix typo in README\"` enregistre ce qui est indexé. Le refactoring n'est pas perdu : il est toujours dans ton répertoire de travail, prêt pour un prochain commit."
+              ],
+              "answer": "Indexe de façon sélective avec `git add <file>`, vérifie avec `git diff --staged`, puis commite."
+            },
+            {
+              "type": "mcq",
+              "id": "q-edit-after-add",
+              "concepts": [
+                "staging-area",
+                "commit"
+              ],
+              "prompt": "Tu lances `git add config.yml`, tu modifies encore `config.yml`, puis tu lances `git commit -m \"Update config\"`. Qu'est-ce qui est commité ?",
+              "choices": [
+                "Seulement la première modification, la version que tu as indexée ; la seconde reste non indexée",
+                "Les deux modifications, parce que le fichier a été ajouté",
+                "Rien : Git refuse de commiter un fichier qui a des modifications non indexées",
+                "Seulement la seconde modification, parce que c'est la plus récente"
+              ],
+              "answer": 0,
+              "hint": "`git add` copie le contenu du fichier *à ce moment-là* dans la zone de préparation.",
+              "explanation": "`git add` indexe un instantané du fichier tel qu'il était au moment où tu l'as lancé. Les modifications suivantes restent dans le répertoire de travail jusqu'à un nouveau `git add`. C'est pourquoi `git status` peut lister le même fichier à la fois comme indexé et comme non indexé."
+            },
+            {
+              "type": "text",
+              "id": "q-unstage",
+              "concepts": [
+                "staging-area",
+                "restore"
+              ],
+              "prompt": "Tu as indexé `secrets.env` par accident. Tu veux le désindexer tout en gardant tes modifications dans le fichier. Complète le blanc :\n\n```bash\ngit ___ secrets.env\n```",
+              "accept": [
+                "restore --staged",
+                "git restore --staged",
+                "restore --staged secrets.env",
+                "git restore --staged secrets.env",
+                "reset",
+                "reset HEAD",
+                "git reset HEAD secrets.env"
+              ],
+              "hint": "`git status` t'affiche cette commande sous « Changes to be committed ».",
+              "explanation": "`git restore --staged secrets.env` retire le fichier de la zone de préparation et laisse tes modifications du répertoire de travail tranquilles. Les anciens tutoriels écrivent `git reset HEAD secrets.env`, qui fait la même chose."
+            }
+          ]
+        },
+        {
+          "id": "history-messages-gitignore",
+          "title": "Historique, messages de commit et .gitignore",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "Lis l'historique avec `git log --oneline`, écris des messages courts à l'impératif qui expliquent pourquoi, et garde les fichiers de build et les secrets à l'écart avec `.gitignore`.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Lire l'historique",
+              "body": "`git log` liste les commits, du plus récent au plus ancien. Au quotidien, tu voudras les formes compactes :\n\n```bash\ngit log --oneline                 # one line per commit\ngit log --oneline --graph --all   # draw all branches\ngit show 3f9a2c1                  # one commit's message and diff\n```\n\n```\n9c1e2f4 (HEAD -> main) Add password reset email\n3f9a2c1 Validate email on signup\na07b3d8 Create user model\n```\n\nLes noms entre parenthèses montrent où se trouvent actuellement les pointeurs de branche et HEAD. `git log` remonte depuis HEAD en suivant les liens de parenté."
+            },
+            {
+              "type": "numeric",
+              "id": "q-log-count",
+              "concepts": [
+                "branch",
+                "commit"
+              ],
+              "prompt": "`git log --oneline` sur `main` affiche 4 commits. Tu lances `git branch backup`, puis tu fais 2 commits de plus sur `main`. Combien de lignes `git log --oneline backup` affiche-t-il ?",
+              "answer": 4,
+              "hint": "Où `backup` pointe-t-elle après les deux nouveaux commits ?",
+              "explanation": "`git log <branch>` montre les commits accessibles depuis cette branche en suivant les parents. `backup` pointe toujours vers le 4e commit, donc elle en montre **4** ; `git log --oneline main` en montrerait 6."
+            },
+            {
+              "type": "explain",
+              "title": "Des messages de commit qui aident ton futur toi",
+              "body": "Un bon message dit à un coéquipier (ou à toi, dans six mois) *pourquoi* quelque chose a changé, sans qu'il ait à lire le diff.\n\n- **Ligne d'objet** : environ 50 caractères, à l'impératif, comme si tu terminais « Ce commit va… » : `Fix crash when cart is empty`.\n- **Une ligne vide, puis un corps facultatif** qui explique pourquoi et les compromis éventuels.\n- **Un seul changement logique par commit.** « Corriger le bug de connexion, renommer utils, mettre à jour les dépendances », ça fait trois commits.\n\n```\nFix crash when cart is empty\n\nCheckout assumed at least one item and threw on\nan empty cart. Show an empty-state message instead.\n```\n\n`git commit` sans `-m` ouvre ton éditeur pour écrire des messages sur plusieurs lignes."
+            },
+            {
+              "type": "mcq",
+              "id": "q-best-message",
+              "concepts": [
+                "commit-message"
+              ],
+              "prompt": "Quel message de commit respecte le mieux les conventions ?",
+              "choices": [
+                "`Fix rounding error in invoice totals`",
+                "`fixed stuff`",
+                "`Fixed the bug where invoice totals were sometimes wrong because of rounding and also cleaned up some code`",
+                "`WIP`"
+              ],
+              "answer": 0,
+              "explanation": "Il est court, à l'impératif et dit exactement ce qui a changé. `fixed stuff` et `WIP` n'apprennent rien au lecteur ; le long message fourre un corps de texte dans la ligne d'objet et mélange un nettoyage sans rapport qui mérite son propre commit."
+            },
+            {
+              "type": "explain",
+              "title": ".gitignore garde les déchets dehors",
+              "body": "Certains fichiers ne doivent jamais être commités : résultats de build, dépendances installées, journaux, réglages d'éditeur et **secrets**. Liste des motifs dans un fichier `.gitignore` à la racine du dépôt, et commite ce fichier :\n\n```\nnode_modules/\ndist/\n*.log\n.env\n```\n\n- `node_modules/` ignore ce dossier où qu'il apparaisse\n- `*.log` ignore tous les fichiers qui se terminent par `.log`, à n'importe quelle profondeur\n- `!important.log` (un `!` au début) réintègre un fichier\n\nLes fichiers ignorés disparaissent de `git status`, et `git add .` les saute. Les modèles `gitignore` de GitHub sont un bon point de départ pour chaque langage."
+            },
+            {
+              "type": "example",
+              "title": "Ignorer un fichier déjà suivi",
+              "problem": "Tu as commité `.env` (qui contient une clé d'API) la semaine dernière. Maintenant tu ajoutes `.env` à `.gitignore`, mais `git status` continue de l'afficher comme modifié dès que tu le changes. Pourquoi, et comment le corriger ?",
+              "steps": [
+                "`.gitignore` n'agit que sur les fichiers **non suivis**. Une fois qu'un fichier est suivi, Git continue de le suivre, quoi que dise `.gitignore`.",
+                "Arrête de le suivre mais garde-le sur le disque : `git rm --cached .env`.",
+                "Commite les deux changements : `git add .gitignore`, puis `git commit -m \"Stop tracking .env\"`. À partir de maintenant, Git ignore le fichier.",
+                "La clé est toujours dans les **anciens commits**. Si ceux-ci ont déjà été poussés, considère la clé comme compromise et fais-la tourner (génères-en une nouvelle). L'effacer de l'historique demande des outils spéciaux et réécrit un historique partagé."
+              ],
+              "answer": "`git rm --cached .env`, commite, et change le secret qui a fuité."
+            },
+            {
+              "type": "buckets",
+              "id": "q-ignore-pattern",
+              "concepts": [
+                "gitignore"
+              ],
+              "prompt": "Ton `.gitignore` contient :\n\n```\nnode_modules/\n*.log\n!keep.log\nbuild/\n.env\n```\n\nTu crées chacun de ces nouveaux fichiers. Classe-les : ignoré par Git, ou toujours listé comme non suivi dans `git status` ?",
+              "buckets": [
+                "Ignoré",
+                "Apparaît toujours comme non suivi"
+              ],
+              "items": [
+                {
+                  "text": "`server.log`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`logs/error.log`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`node_modules/react/index.js`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`build/app.js`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`.env`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`keep.log`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`src/logger.js`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`src/build.js`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`.env.example`",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Un motif doit correspondre au nom complet du fichier (ou à un dossier de son chemin). Un `!` au début ramène un fichier.",
+              "explanation": "`*.log` correspond aux fichiers qui se terminent par `.log` à n'importe quelle profondeur, donc `server.log` et `logs/error.log` sont ignorés, mais `!keep.log` réintègre `keep.log`. `node_modules/` et `build/` ignorent tout ce qu'il y a dans ces dossiers. `src/build.js` est un *fichier* nommé `build.js`, pas un dossier `build`, donc il n'est pas visé, et `src/logger.js` se termine par `.js`, pas par `.log`. `.env` ne correspond qu'à un fichier nommé exactement `.env`, donc `.env.example` apparaît toujours. C'est une bonne chose, puisque c'est le modèle sans danger que tu *veux* commiter. Pour voir quel motif décide du sort d'un fichier, lance `git check-ignore -v <file>`."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "branching",
+      "title": "Branches et fusions",
+      "description": "Travaille sur plusieurs choses à la fois sans te marcher dessus, puis rassemble le travail.",
+      "lessons": [
+        {
+          "id": "branches",
+          "title": "Créer des branches et en changer",
+          "pareto": "core",
+          "minutes": 6,
+          "takeaway": "`git switch -c name` crée une branche et te place dessus ; si Git dit que tes changements seraient écrasés, commite ou mets de côté d'abord.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Une branche par tâche",
+              "body": "Une branche te permet de travailler sur une fonctionnalité ou une correction en isolation pendant que `main` reste stable. Une journée type : une branche par tâche, fusionnée quand elle est terminée.\n\n```bash\ngit branch                 # list branches (* marks the current one)\ngit switch -c login-page   # create a branch and switch to it\ngit switch main            # switch to an existing branch\ngit switch -               # jump back to the previous branch\ngit branch -d login-page   # delete a branch that's been merged\n```\n\nChanger de branche déplace HEAD vers elle et met ton répertoire de travail à jour avec son instantané. `git branch -d` refuse de supprimer du travail non fusionné ; `-D` force la suppression."
+            },
+            {
+              "type": "explain",
+              "title": "L'ancienne écriture checkout",
+              "body": "`git switch` et `git restore` sont arrivés avec Git 2.23 (2019). Avant, `git checkout` faisait les deux métiers, et tu le verras encore dans les tutoriels, les réponses de Stack Overflow et les automatismes de tes collègues :\n\n- `git checkout main` = `git switch main`\n- `git checkout -b login-page` = `git switch -c login-page`\n- `git checkout -- file.txt` = `git restore file.txt` (abandonner des modifications ; on y reviendra)\n\nLes anciennes formes marchent toujours. Les nouvelles sont plus claires parce que chaque commande n'a qu'un seul rôle, ce qui rend plus difficile de jeter du travail par accident."
+            },
+            {
+              "type": "mcq",
+              "id": "q-switch-create",
+              "concepts": [
+                "switch",
+                "branch"
+              ],
+              "prompt": "Tu es sur `main` et tu veux commencer à travailler sur une nouvelle branche appelée `dark-mode`. Quelle commande la crée **et** te place dessus ?",
+              "choices": [
+                "`git branch dark-mode`",
+                "`git switch dark-mode`",
+                "`git branch -c dark-mode`",
+                "`git switch -c dark-mode`"
+              ],
+              "answer": 3,
+              "explanation": "`-c` veut dire create (créer). `git branch dark-mode` crée la branche mais te laisse sur `main`, donc ton prochain commit atterrira sur `main`. `git switch dark-mode` tout seul échoue parce que la branche n'existe pas encore, et `git branch -c` copie la branche courante sans basculer. L'équivalent ancien est `git checkout -b dark-mode`."
+            },
+            {
+              "type": "sim",
+              "sim": "git",
+              "title": "Travailler sur une branche",
+              "body": "Commence le travail sur le mode sombre sans toucher à `main` :\n\n1. Crée la branche et bascule dessus d'un coup : `git switch -c dark-mode`.\n2. Fais deux commits. Seule `dark-mode` avance ; `main` ne bouge pas.\n3. Reviens avec `git switch main` et lance `git log --oneline`. Tes nouveaux commits ne sont pas encore dans l'historique de `main`.\n\nLes anciennes écritures marchent aussi : `git checkout -b dark-mode` et `git checkout main`.",
+              "goal": {
+                "text": "Fais 2 commits sur une nouvelle branche dark-mode, puis reviens sur main.",
+                "head": "main",
+                "branches": [
+                  "dark-mode"
+                ],
+                "minCommits": {
+                  "dark-mode": 3
+                }
+              }
+            },
+            {
+              "type": "example",
+              "title": "Changer de branche avec des changements non commités",
+              "problem": "Sur `feature`, tu as modifié `cfg.txt` sans le commiter. Tu lances `git switch main` et tu obtiens :\n\n```\nerror: Your local changes to the following files would be overwritten by checkout:\n        cfg.txt\nPlease commit your changes or stash them before you switch branches.\nAborting\n```\n\nQue se passe-t-il, et quelles sont tes options ?",
+              "steps": [
+                "`cfg.txt` est différent sur `main`. Changer de branche remplacerait ton fichier modifié par la version de `main` et détruirait ta modification, donc Git refuse. Rien n'a changé et rien n'est perdu.",
+                "Quand un changement de branche n'écraserait *rien*, Git emporte simplement tes changements non commités vers l'autre branche. Il ne t'arrête que lorsque du travail serait perdu.",
+                "Option 1 : commite le travail sur `feature` (un commit de travail en cours, c'est très bien), puis change de branche.",
+                "Option 2 : `git stash` pour mettre les changements de côté, change de branche, puis `git stash pop` quand tu reviens. (Il y a plus bas une leçon sur le stash.)"
+              ],
+              "answer": "Git protège ta modification. Commite-la ou mets-la de côté, puis change de branche."
+            },
+            {
+              "type": "mcq",
+              "id": "q-carry",
+              "concepts": [
+                "switch",
+                "staging-area"
+              ],
+              "prompt": "Sur `main`, tu modifies `notes.md` (un fichier suivi) sans le commiter. Puis tu lances `git switch -c experiment`. Où est ta modification maintenant ?",
+              "choices": [
+                "Perdue : changer de branche réinitialise le répertoire de travail",
+                "Toujours dans ton répertoire de travail, non commitée, et tu es maintenant sur `experiment`",
+                "Commitée automatiquement sur `main` avant le changement de branche",
+                "Commitée sur `experiment` comme premier commit"
+              ],
+              "answer": 1,
+              "explanation": "Les changements non commités n'appartiennent à aucune branche ; ils vivent dans le répertoire de travail. Une nouvelle branche part du même commit, donc rien ne serait écrasé et la modification vient simplement avec toi. Elle fera partie de la branche sur laquelle tu la commiteras."
+            },
+            {
+              "type": "text",
+              "id": "q-old-switch",
+              "concepts": [
+                "switch"
+              ],
+              "prompt": "Un tutoriel te dit de lancer `git checkout -b hotfix`. Quel est l'équivalent moderne ? (Tape la commande complète.)",
+              "accept": [
+                "git switch -c hotfix",
+                "switch -c hotfix",
+                "git switch --create hotfix",
+                "switch --create hotfix"
+              ],
+              "explanation": "`git checkout -b hotfix` crée une branche et bascule dessus d'un coup. Dans Git moderne, c'est `git switch -c hotfix` (`-c` est l'abréviation de `--create`)."
+            }
+          ]
+        },
+        {
+          "id": "merging",
+          "title": "Fusionner : fast-forward ou commit de fusion",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "Si la branche qui reçoit n'a pas bougé, la fusion fait simplement glisser son pointeur vers l'avant (fast-forward) ; si les deux côtés ont de nouveaux commits, Git crée un commit de fusion à deux parents.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Fusionner dans la branche où tu te trouves",
+              "body": "Pour intégrer `feature` dans `main`, place-toi sur la branche qui doit **recevoir** le travail, puis fusionne :\n\n```bash\ngit switch main\ngit merge feature\n```\n\nLis-le comme « fusionne `feature` dans la branche où je suis ». Seule la branche courante avance ; `feature` elle-même ne change pas. Ce que fait Git dépend de la forme du graphe, et il n'y a que deux cas."
+            },
+            {
+              "type": "explain",
+              "title": "Cas 1 : fast-forward",
+              "body": "Si `main` n'a **aucun nouveau commit** depuis que `feature` s'en est détachée, `main` est simplement en retard :\n\n```\nA---B           main\n     \\\n      C---D     feature\n```\n\nIl n'y a rien à combiner, donc Git avance simplement le pointeur `main` jusqu'à `D` et affiche `Fast-forward`. Aucun nouveau commit n'est créé et l'historique reste une ligne droite :\n\n```\nA---B---C---D   main, feature\n```"
+            },
+            {
+              "type": "explain",
+              "title": "Cas 2 : commit de fusion",
+              "body": "Si **les deux** branches ont de nouveaux commits, elles ont divergé :\n\n```\nA---B---E       main\n     \\\n      C---D     feature\n```\n\nGit combine les deux lignes de travail dans un nouveau **commit de fusion** `M` à **deux parents**, `E` et `D` :\n\n```\nA---B---E---M   main\n     \\     /\n      C---D     feature\n```\n\nSi les branches ont modifié des parties différentes du code, c'est automatique. Certaines équipes utilisent `git merge --no-ff feature` pour forcer un commit de fusion même quand un fast-forward est possible, de sorte que chaque fonctionnalité apparaisse comme un bloc dans l'historique."
+            },
+            {
+              "type": "mcq",
+              "id": "q-ff-or-not",
+              "concepts": [
+                "fast-forward"
+              ],
+              "prompt": "Tu as créé `fix` à partir de `main`, fait 2 commits sur `fix`, et personne n'a touché à `main` depuis. Tu lances `git switch main` puis `git merge fix`. Que se passe-t-il ?",
+              "choices": [
+                "`main` avance en fast-forward jusqu'au dernier commit de `fix` ; aucun nouveau commit n'est créé",
+                "Un commit de fusion à deux parents est créé sur `main`",
+                "Les 2 commits sont copiés sur `main` avec de nouveaux hashs",
+                "Git refuse parce que `main` est en retard"
+              ],
+              "answer": 0,
+              "explanation": "`main` n'a pas bougé depuis que `fix` s'en est détachée, donc le commit de `main` est un ancêtre de `fix`. Git n'a qu'à faire glisser le pointeur `main` vers l'avant : c'est un fast-forward. Les commits gardent leurs hashs parce que rien n'est recréé."
+            },
+            {
+              "type": "sim",
+              "sim": "git",
+              "title": "Essaie un fast-forward",
+              "setup": [
+                "git commit -m \"Add homepage\""
+              ],
+              "body": "`main` a deux commits. Crée une branche `fix`, fais-y deux commits, puis bascule sur `main` et lance `git merge fix`.\n\nRegarde ce que la fusion affiche et ce qui arrive à l'étiquette `main`. Git a-t-il créé un nouveau commit ?",
+              "goal": {
+                "text": "Crée fix, fais-y 2 commits, puis fusionne-la dans main pendant que tu es sur main.",
+                "head": "main",
+                "branches": [
+                  "fix"
+                ],
+                "merged": [
+                  {
+                    "from": "fix",
+                    "into": "main"
+                  }
+                ],
+                "minCommits": {
+                  "main": 4
+                }
+              }
+            },
+            {
+              "type": "example",
+              "title": "Compter les commits après une vraie fusion",
+              "problem": "`main` a les commits A et B. Tu crées `feature` à partir de B et tu y fais les commits C et D. De retour sur `main`, tu fais aussi un petit correctif, E. Puis tu lances `git switch main` et `git merge feature`. À quoi ressemble l'historique, et combien de lignes `git log --oneline` affiche-t-il ?",
+              "steps": [
+                "Les deux branches ont de nouveaux commits depuis B (`main` a E ; `feature` a C et D), donc un fast-forward est impossible.",
+                "Git crée un commit de fusion M à deux parents, E et D. Son message par défaut est `Merge branch 'feature'`.",
+                "`git log` suit *tous* les parents, donc sur `main` il liste M, E, D, C, B et A (les commits de fusion peuvent donner l'impression d'un ordre entremêlé).",
+                "`git log --oneline --graph` dessine les deux lignes de travail qui se rejoignent en M."
+              ],
+              "answer": "6 lignes : A, B, C, D, E et le commit de fusion M."
+            },
+            {
+              "type": "numeric",
+              "id": "q-merge-count",
+              "concepts": [
+                "fast-forward"
+              ],
+              "prompt": "`main` est `A---B---C`. Tu crées `api` à partir de C et tu y fais les commits D, E et F. Rien d'autre ne se passe sur `main`. Puis tu lances `git switch main` et `git merge api`. Combien de lignes `git log --oneline` affiche-t-il sur `main` ?",
+              "answer": 6,
+              "hint": "`main` a-t-elle reçu de nouveaux commits après le départ de `api` ?",
+              "explanation": "`main` n'avait pas bougé, donc c'est un fast-forward et aucun commit de fusion n'est créé. `main` pointe maintenant vers F, et son historique est A, B, C, D, E, F : **6**. (Avec `--no-ff`, il y aurait aussi un commit de fusion, soit 7.)"
+            },
+            {
+              "type": "mcq",
+              "id": "q-merge-direction",
+              "concepts": [
+                "merge-commit",
+                "head"
+              ],
+              "prompt": "Tu es sur ta branche `feature` et tu lances `git merge main`. Quel pointeur de branche peut bouger ?",
+              "choices": [
+                "`main`",
+                "`feature`",
+                "`main` et `feature` toutes les deux",
+                "Aucune : il faut être sur `main` pour fusionner"
+              ],
+              "answer": 1,
+              "explanation": "`git merge X` met toujours à jour la branche **courante** en y amenant les commits de X. Ici, cela rapatrie le dernier travail de `main` dans `feature`, une façon courante de garder une branche de fonctionnalité à jour. `main` n'est pas touchée."
+            },
+            {
+              "type": "sim",
+              "sim": "git",
+              "title": "Fabrique un commit de fusion",
+              "setup": [
+                "git commit -m \"Add homepage\"",
+                "git switch -c feature",
+                "git commit -m \"Add login form\"",
+                "git commit -m \"Validate password\"",
+                "git switch main",
+                "git commit -m \"Fix typo in README\""
+              ],
+              "body": "Voici l'historique de l'exemple ci-dessus : `feature` a deux nouveaux commits, et `main` a avancé depuis que `feature` s'en est détachée, donc un fast-forward est impossible.\n\nFusionne `feature` dans `main` et repère le nouveau commit à **deux parents**. Puis lance `git log --oneline` et compte les lignes.\n\nCurieux ? Appuie sur **Recommencer**, puis lance `git merge main` pendant que tu es sur `feature`. Quel pointeur bouge cette fois ?",
+              "goal": {
+                "text": "Fusionne feature dans main, pour que main contienne tous les commits.",
+                "head": "main",
+                "merged": [
+                  {
+                    "from": "feature",
+                    "into": "main"
+                  }
+                ],
+                "minCommits": {
+                  "main": 6
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "merge-conflicts",
+          "title": "Résoudre les conflits de fusion",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "Un conflit, c'est Git qui te demande de trancher : modifie le fichier jusqu'à sa forme finale, supprime les marqueurs, fais `git add`, puis `git commit` (ou reviens en arrière avec `git merge --abort`).",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Quand Git ne peut pas décider",
+              "body": "Git fusionne automatiquement quand les branches ont modifié des fichiers différents, ou des parties différentes d'un même fichier. Si les deux ont modifié **les mêmes lignes** (ou si l'une a modifié un fichier que l'autre a supprimé), Git ne peut pas savoir laquelle est la bonne, alors il s'arrête :\n\n```\nAuto-merging cfg.txt\nCONFLICT (content): Merge conflict in cfg.txt\nAutomatic merge failed; fix conflicts and then commit the result.\n```\n\nUn conflit n'est ni une erreur ni un dépôt cassé. La fusion attend simplement ta décision. `git status` liste les fichiers concernés sous **Unmerged paths** avec la mention `both modified`."
+            },
+            {
+              "type": "explain",
+              "title": "Lire les marqueurs de conflit",
+              "body": "Git écrit les deux versions dans le fichier :\n\n```\ntitle = \"Shop\"\n<<<<<<< HEAD\ncolor = red\n=======\ncolor = green\n>>>>>>> theme\n```\n\n- De `<<<<<<< HEAD` à `=======` : **ton** côté, la branche où tu te trouves.\n- De `=======` à `>>>>>>> theme` : le côté **entrant**, celui de la branche que tu fusionnes.\n- Les lignes en dehors des marqueurs ont été fusionnées sans problème.\n\nPour résoudre, modifie le fichier jusqu'à la version finale que tu veux (un côté, l'autre, ou un mélange) et **supprime les trois lignes de marqueurs**."
+            },
+            {
+              "type": "mcq",
+              "id": "q-which-side",
+              "concepts": [
+                "merge-conflict",
+                "head"
+              ],
+              "prompt": "Tu es sur `main` et tu as lancé `git merge theme`. Le fichier contient maintenant :\n\n```\n<<<<<<< HEAD\nlimit = 50\n=======\nlimit = 100\n>>>>>>> theme\n```\n\nQuelle valeur est celle de `main` ?",
+              "choices": [
+                "`limit = 100`",
+                "Aucune : la moitié du haut est l'ancêtre commun",
+                "`limit = 50`",
+                "Celle du commit le plus récent"
+              ],
+              "answer": 2,
+              "explanation": "La moitié `HEAD` est la branche où tu te trouves, `main`, donc `limit = 50` est la tienne et `limit = 100` vient de `theme`. Les dates des commits ne jouent aucun rôle dans la façon dont Git étiquette les côtés."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-leftover-marker",
+              "concepts": [
+                "merge-conflict"
+              ],
+              "prompt": "Tu as fusionné `theme` dans `main`. Les deux branches ont modifié les lignes `color` et `size`, et l'équipe a décidé de garder le `color = green` de `theme` et le `size = 14` de `main`. Voici `cfg.txt` après ta modification. Avant de l'indexer, tu lances `git diff --check`, qui signale les marqueurs de conflit oubliés. Clique sur la ligne qui est encore fausse.",
+              "language": "ini",
+              "code": "title = \"Shop\"\ncolor = green\n=======\nsize = 14\nfont = serif",
+              "error": "cfg.txt:3: leftover conflict marker",
+              "lines": [
+                3
+              ],
+              "fixes": [
+                "Laisser le fichier tel quel : `git add cfg.txt` marque le conflit comme résolu et nettoie le fichier",
+                "Changer la ligne 3 en `>>>>>>> theme`, pour que les marqueurs soient équilibrés",
+                "Supprimer la ligne 3",
+                "Supprimer les lignes 3 et 4, pour ne garder qu'un seul côté du conflit"
+              ],
+              "answer": 2,
+              "hint": "Chaque ligne qui commence par `<<<<<<<`, `=======` ou `>>>>>>>` doit disparaître.",
+              "explanation": "Les lignes `<<<<<<< HEAD` et `>>>>>>> theme` ont été supprimées, mais le séparateur `=======` de la ligne 3 a survécu. Le supprimer laisse exactement le contenu convenu. `git add` n'inspecte pas le fichier : il indexerait volontiers le marqueur, et le commit de fusion le contiendrait. Remplacer un marqueur par un autre reste un marqueur, et supprimer aussi la ligne 4 jette `size = 14`, que l'équipe voulait garder."
+            },
+            {
+              "type": "example",
+              "title": "Résoudre pas à pas",
+              "problem": "Tu fusionnes `theme` dans `main` et `cfg.txt` est en conflit sur `color` (red sur `main`, green sur `theme`). L'équipe a choisi green. Termine la fusion.",
+              "steps": [
+                "Ouvre `cfg.txt` et modifie-le jusqu'au contenu final, en supprimant chaque ligne de marqueur :\n\n```\ntitle = \"Shop\"\ncolor = green\n```",
+                "Marque-le comme résolu en l'indexant : `git add cfg.txt`. Pour un fichier en conflit, `git add` veut dire « celui-là est réglé ».",
+                "`git status` indique maintenant `All conflicts fixed but you are still merging.`",
+                "Lance `git commit`. Git pré-remplit le message `Merge branch 'theme'`, tu n'as donc qu'à l'enregistrer, et le commit de fusion est créé.",
+                "Tu as changé d'avis en cours de route ? `git merge --abort` remet tout comme avant la fusion."
+              ],
+              "answer": "Modifie le fichier → `git add` → `git commit`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-forgot-markers",
+              "concepts": [
+                "merge-conflict",
+                "staging-area"
+              ],
+              "prompt": "Tu as résolu un conflit, lancé `git add` et `git commit`, mais le fichier commité contient toujours `<<<<<<< HEAD`. Que s'est-il passé ?",
+              "choices": [
+                "La fusion a été interrompue en route, ce qui a laissé des marqueurs",
+                "Git retire les marqueurs au moment du commit, donc quelqu'un a dû modifier le fichier ensuite",
+                "Les marqueurs n'apparaissent que dans ton éditeur, pas dans le commit",
+                "Tu as indexé le fichier sans supprimer les marqueurs, et Git ne vérifie pas"
+              ],
+              "answer": 3,
+              "explanation": "`git add` est ta parole que le fichier est résolu ; Git n'inspecte pas le contenu, donc des marqueurs peuvent être commités (et casser ensuite le build). Cherche `<<<<<<<` avant d'indexer. La plupart des éditeurs mettent les conflits en évidence et proposent des boutons pour accepter le courant, l'entrant ou les deux."
+            },
+            {
+              "type": "explain",
+              "title": "Garder les conflits petits",
+              "body": "Les conflits sont normaux dans une équipe qui travaille beaucoup. Tu peux les garder petits et rares :\n\n- Fusionne souvent le dernier `main` dans ta branche, pour que les différences ne s'accumulent pas.\n- Garde des branches courtes et centrées sur une seule tâche.\n- Ne mélange pas un gros reformatage (ou des renommages en masse) avec de vrais changements dans la même branche.\n\nUn conflit sur 3 lignes se règle en une minute. Un conflit après trois semaines d'écart peut prendre un après-midi."
+            },
+            {
+              "type": "text",
+              "id": "q-abort",
+              "concepts": [
+                "merge-conflict"
+              ],
+              "prompt": "En plein milieu d'un conflit compliqué, tu décides de ne pas fusionner maintenant. Quelle commande remet tout dans l'état d'avant ton `git merge` ?",
+              "accept": [
+                "git merge --abort",
+                "merge --abort"
+              ],
+              "explanation": "`git merge --abort` abandonne la fusion en cours et remet ta branche, ta zone de préparation et ton répertoire de travail dans leur état d'avant la fusion. C'est le plus propre quand tu n'avais aucun changement non commité avant de lancer la fusion."
+            },
+            {
+              "type": "order",
+              "id": "q-order-resolve",
+              "concepts": [
+                "merge-conflict",
+                "staging-area"
+              ],
+              "prompt": "Tu es sur `main` et tu fusionnes `theme`, qui a modifié la même ligne de `cfg.txt`. Remets dans l'ordre ce qui se passe, et ce que tu fais, jusqu'à la fin de la fusion.",
+              "items": [
+                "`git merge theme` s'arrête : `CONFLICT (content): Merge conflict in cfg.txt`",
+                "`git status` liste `cfg.txt` sous Unmerged paths avec la mention `both modified`",
+                "Modifier `cfg.txt` jusqu'à sa version finale et supprimer chaque ligne de marqueur",
+                "`git add cfg.txt` pour le marquer comme résolu",
+                "`git status` indique `All conflicts fixed but you are still merging.`",
+                "`git commit` crée le commit de fusion"
+              ],
+              "hint": "Git ne peut considérer le conflit comme réglé qu'après que tu le lui as dit, et tu ne dois le lui dire que lorsque le fichier est vraiment corrigé.",
+              "explanation": "La fusion s'arrête sur le conflit et `git status` montre le fichier comme `both modified`. Tu corriges d'abord le contenu, marqueurs compris, parce que `git add` sert à *dire* à Git que le fichier est résolu ; il ne vérifie rien. Une fois tous les fichiers en conflit indexés, `git status` indique que tous les conflits sont réglés mais que la fusion est toujours en cours, et `git commit` la termine avec un commit de fusion."
+            }
+          ]
+        },
+        {
+          "id": "rebase",
+          "title": "Les bases du rebase et la règle d'or",
+          "pareto": "extra",
+          "minutes": 7,
+          "takeaway": "`git rebase main` rejoue les commits de ta branche par-dessus `main` sous forme de nouveaux commits pour un historique linéaire ; ne rebase jamais des commits que d'autres personnes ont déjà.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Rejouer des commits",
+              "body": "Le rebase est l'autre façon d'intégrer du travail. Au lieu d'un commit de fusion, il **déplace** ta branche pour qu'elle parte du sommet d'une autre :\n\n```\nBefore:  A---B---E          main\n              \\\n               C---D        feature\n\nAfter:   A---B---E          main\n                  \\\n                   C'---D'  feature\n```\n\n```bash\ngit switch feature\ngit rebase main\n```\n\nGit réapplique C puis D l'un après l'autre par-dessus E. `C'` et `D'` contiennent les mêmes changements mais ce sont de **nouveaux commits avec de nouveaux hashs**, parce que leur parent a changé."
+            },
+            {
+              "type": "explain",
+              "title": "Pourquoi rebaser ?",
+              "body": "- **Historique linéaire** : pas de commits « Merge branch 'main' into feature », donc `git log` se lit comme une histoire.\n- **Intégration propre ensuite** : après un rebase sur `main`, la fusion de `feature` dans `main` peut se faire en fast-forward.\n\nLes conflits fonctionnent comme dans une fusion, mais commit par commit : corrige le fichier, fais `git add`, puis `git rebase --continue`. `git rebase --abort` ramène ta branche là où elle avait commencé.\n\n`git pull --rebase` repose sur la même idée : il place tes commits locaux par-dessus ce que tu viens de récupérer au lieu de créer un commit de fusion."
+            },
+            {
+              "type": "mcq",
+              "id": "q-hashes",
+              "concepts": [
+                "rebase",
+                "rewriting-history"
+              ],
+              "prompt": "Après `git switch feature` et `git rebase main`, que peut-on dire de tes commits ?",
+              "choices": [
+                "Ils gardent leurs hashs mais reçoivent un nouveau parent",
+                "Ils sont remplacés par de nouveaux commits avec de nouveaux hashs",
+                "Ils sont écrasés en un seul commit (squash)",
+                "Ils sont ajoutés à `main`, donc `main` les inclut maintenant"
+              ],
+              "answer": 1,
+              "explanation": "Le hash d'un commit couvre son parent : un commit ne peut donc pas être déplacé, seulement recréé. Le rebase fabrique des copies (`C'`, `D'`) et déplace `feature` pour qu'elle pointe vers elles. `main` ne bouge pas, et rien n'est écrasé en un seul commit sauf si tu le demandes (rebase interactif, `git rebase -i`)."
+            },
+            {
+              "type": "explain",
+              "title": "La règle d'or",
+              "body": "**Ne rebase jamais des commits que d'autres ont déjà récupérés.**\n\nUn rebase remplace des commits par de nouvelles copies. Si un coéquipier a bâti son travail sur les originaux, vos historiques ne sont plus d'accord : il verra des commits en double et des conflits déroutants.\n\n- Tes propres commits **locaux, non poussés** : rebase sans crainte.\n- Ta propre branche poussée dont personne d'autre ne se sert : possible, mais tu dois alors lancer `git push --force-with-lease`, qui n'écrase la branche distante que si personne d'autre n'y a poussé entre-temps.\n- `main` ou toute branche partagée : non."
+            },
+            {
+              "type": "example",
+              "title": "Un rebase avec un conflit",
+              "problem": "Ta branche `feature` a les commits C et D. Tu lances `git rebase main`. C est rejoué sans problème, mais D est en conflit dans `app.js`.",
+              "steps": [
+                "Git s'arrête en chemin : `C'` existe déjà et D est en pause. `git status` indique qu'un rebase est en cours et liste `app.js` comme `both modified`.",
+                "Modifie `app.js` pour résoudre les marqueurs, exactement comme pour un conflit de fusion, puis `git add app.js`.",
+                "Lance `git rebase --continue` (pas `git commit`). Git crée `D'` et termine.",
+                "Si tout part de travers, `git rebase --abort` ramène `feature` à C et D comme si de rien n'était."
+              ],
+              "answer": "Résous, `git add`, puis `git rebase --continue`."
+            },
+            {
+              "type": "buckets",
+              "id": "q-golden",
+              "concepts": [
+                "rewriting-history",
+                "rebase"
+              ],
+              "prompt": "Applique la règle d'or du rebase. Peut-on rebaser ces commits sans risque, ou faut-il laisser leur historique tranquille ?",
+              "buckets": [
+                "Rebase sans risque",
+                "Ne pas rebaser"
+              ],
+              "items": [
+                {
+                  "text": "3 commits locaux que tu n'as pas poussés, sur le dernier `main`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`git pull --rebase` pour placer tes commits non poussés par-dessus ceux que tu as récupérés",
+                  "bucket": 0
+                },
+                {
+                  "text": "Ta branche brouillon personnelle, dont toi seul te sers, avant d'ouvrir une pull request",
+                  "bucket": 0
+                },
+                {
+                  "text": "Une branche créée ce matin et jamais poussée",
+                  "bucket": 0
+                },
+                {
+                  "text": "`main`, où toute l'équipe tire, pour ranger l'historique de la semaine dernière",
+                  "bucket": 1
+                },
+                {
+                  "text": "`checkout-v2`, sur laquelle toi et un coéquipier poussez tous les deux",
+                  "bucket": 1
+                },
+                {
+                  "text": "Une branche `release-2.0` sur laquelle d'autres équipes s'appuient",
+                  "bucket": 1
+                },
+                {
+                  "text": "La branche de fonctionnalité poussée d'un coéquipier que tu as récupérée pour la relire",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Pose une seule question par carte : quelqu'un d'autre pourrait-il déjà avoir ces commits ?",
+              "explanation": "Un rebase remplace des commits par de nouvelles copies. C'est sans danger quand personne d'autre n'a les originaux : des commits non poussés, `pull --rebase` (qui ne rejoue que tes commits *non poussés*), et une branche poussée dont toi seul te sers (pousse alors avec `--force-with-lease`). Les branches partagées, c'est autre chose. Tes coéquipiers et d'autres équipes ont déjà ces commits, donc réécrire `main`, `checkout-v2`, une branche de release ou la branche de quelqu'un d'autre oblige tout le monde à démêler un historique en double. Fusionne dans celles-ci à la place."
+            },
+            {
+              "type": "mcq",
+              "id": "q-merge-or-rebase",
+              "concepts": [
+                "rewriting-history",
+                "merge-commit"
+              ],
+              "prompt": "Toi et un coéquipier poussez tous les deux sur la branche `checkout-v2`. Tu veux y intégrer les derniers changements de `main`. Quel est le choix le plus sûr ?",
+              "choices": [
+                "`git rebase main`, puis `git push --force`",
+                "`git reset --hard main`",
+                "`git merge main`, puis `git push`",
+                "Supprimer `checkout-v2` et la recréer à partir de `main`"
+              ],
+              "answer": 2,
+              "explanation": "La branche est partagée, donc ne la réécris pas. Y fusionner `main` ajoute un seul nouveau commit et laisse l'historique existant intact. Rebaser puis pousser en force réécrit des commits que ton coéquipier a déjà, et `reset --hard main` ou supprimer la branche jette son travail."
+            }
+          ]
+        },
+        {
+          "id": "stash",
+          "title": "Stash : mettre du travail de côté",
+          "pareto": "extra",
+          "minutes": 5,
+          "takeaway": "`git stash` met de côté les changements non commités pour que tu puisses changer de tâche ; `git stash pop` les ramène.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Le problème de l'interruption",
+              "body": "Tu es en plein milieu d'un changement sur `feature` quand un bug urgent arrive. Le travail n'est pas prêt à être commité, et changer de branche peut être bloqué ou traîner des modifications à moitié faites.\n\n```bash\ngit stash          # shelve changes; working tree is clean again\ngit switch main    # ...fix the bug, commit...\ngit switch feature\ngit stash pop      # re-apply the changes and remove the stash entry\n```\n\nLe stash est une pile, donc tu peux en empiler plusieurs. `git stash list` affiche les entrées sous la forme `stash@{0}` (la plus récente), `stash@{1}`, et ainsi de suite."
+            },
+            {
+              "type": "explain",
+              "title": "Ce qui est mis de côté",
+              "body": "Par défaut, `git stash` sauvegarde les changements des fichiers **suivis**, qu'ils soient indexés ou non. Les fichiers **non suivis** (tout nouveaux) restent là où ils sont.\n\n- `git stash -u` met aussi de côté les fichiers non suivis.\n- `git stash push -m \"half-done nav\"` ajoute une étiquette que tu reconnaîtras dans `git stash list`.\n- `git stash apply` réapplique une entrée mais la **garde** ; `pop` l'applique et la supprime (s'il y a un conflit, `pop` garde aussi l'entrée).\n- `git stash drop` supprime une entrée sans l'appliquer."
+            },
+            {
+              "type": "mcq",
+              "id": "q-untracked",
+              "concepts": [
+                "stash"
+              ],
+              "prompt": "Tu as modifié `app.js` (suivi) et créé `new-widget.js` (jamais ajouté). Tu lances `git stash`. Que montre `git status` maintenant ?",
+              "choices": [
+                "Nothing to commit, working tree clean",
+                "Seulement `new-widget.js`, listé comme non suivi",
+                "`app.js` modifié et `new-widget.js` non suivi",
+                "Seulement `app.js`, listé comme modifié"
+              ],
+              "answer": 1,
+              "explanation": "Un simple `git stash` ne sauvegarde que les changements des fichiers suivis : la modification de `app.js` part dans le stash et `new-widget.js`, non suivi, reste dans le répertoire de travail. `git stash -u` l'aurait pris aussi."
+            },
+            {
+              "type": "order",
+              "id": "q-order-stash",
+              "concepts": [
+                "stash",
+                "switch"
+              ],
+              "prompt": "Tu es en plein milieu d'un changement sur `feature` quand un rapport de bug urgent arrive. Remets les étapes dans l'ordre, pour terminer avec ton travail inachevé de retour en place.",
+              "items": [
+                "`git stash` (le répertoire de travail est de nouveau propre)",
+                "`git switch main`",
+                "Corriger le bug, puis `git add` et `git commit`",
+                "`git switch feature`",
+                "`git stash pop`"
+              ],
+              "hint": "Mets le travail de côté avant de quitter la branche, et ne le ramène qu'une fois de retour sur la branche.",
+              "explanation": "Fais d'abord le stash, pour que les modifications inachevées ne bloquent pas le changement de branche et ne te suivent pas sur `main`. Corrige et commite sur `main`, reviens sur `feature`, et seulement alors `pop` : il réapplique les changements sur la branche où tu es et supprime l'entrée du stash."
+            },
+            {
+              "type": "example",
+              "title": "Travail commencé sur la mauvaise branche",
+              "problem": "Tu modifies des fichiers depuis une heure et tu réalises que tu es sur `main`, alors que ce travail appartient à une branche appelée `search`. Rien n'est encore commité.",
+              "steps": [
+                "Si `search` n'existe pas encore, tu n'as pas besoin du stash : `git switch -c search` emporte tes changements non commités sur la nouvelle branche. Commite là-bas.",
+                "Si `search` **existe déjà** et diffère dans les fichiers que tu as touchés, le changement de branche peut être refusé. Alors : `git stash`, `git switch search`, `git stash pop`.",
+                "Si `pop` provoque un conflit, résous-le comme un conflit de fusion. L'entrée reste dans le stash, donc fais un `git stash drop` dessus quand tout te convient."
+              ],
+              "answer": "Nouvelle branche : un simple `git switch -c search`. Branche existante : stash, switch, pop."
+            },
+            {
+              "type": "output",
+              "id": "q-stash-count",
+              "concepts": [
+                "stash"
+              ],
+              "prompt": "Sur `feature`, en partant d'un stash vide, tu lances ces commandes (en modifiant des fichiers entre chaque). Qu'affiche la dernière commande ?\n\nChaque ligne de `git stash list` ressemble à `stash@{0}: On feature: <label>`.",
+              "language": "bash",
+              "code": "git stash push -m \"nav menu\"\n# ...edit more files...\ngit stash push -m \"search box\"\n# ...edit more files...\ngit stash push -m \"footer\"\ngit stash pop\ngit stash drop\ngit stash list",
+              "output": "stash@{0}: On feature: nav menu",
+              "hint": "Le stash est une pile : `pop` et `drop` agissent tous deux sur l'entrée la plus récente, `stash@{0}`.",
+              "explanation": "Trois stashes font 3 entrées, de la plus récente à la plus ancienne : footer, search box, nav menu. `pop` applique la plus récente (footer) et la supprime. `drop` supprime la nouvelle plus récente (search box) sans l'appliquer. Il reste donc **1** entrée, `nav menu`, et comme c'est maintenant la plus récente, c'est `stash@{0}`."
+            },
+            {
+              "type": "text",
+              "id": "q-stash-u",
+              "concepts": [
+                "stash"
+              ],
+              "prompt": "Complète avec l'option qui met aussi de côté les tout nouveaux fichiers non suivis :\n\n```bash\ngit stash ___\n```",
+              "accept": [
+                "-u",
+                "--include-untracked",
+                "u",
+                "include-untracked"
+              ],
+              "explanation": "`git stash -u` (forme longue `--include-untracked`) met aussi de côté les fichiers non suivis. Les fichiers ignorés restent tranquilles, sauf si tu utilises `-a` (`--all`)."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "collaborating",
+      "title": "Collaborer",
+      "description": "Les dépôts distants, pousser et tirer, et le flux de pull requests GitHub que la plupart des équipes utilisent.",
+      "lessons": [
+        {
+          "id": "remotes",
+          "title": "Dépôts distants : clone, fetch, pull et push",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "`fetch` télécharge sans toucher à ton travail, `pull` est un fetch plus une fusion (ou un rebase), et `push -u origin <branch>` publie une branche et définit son upstream.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Ta copie et la leur",
+              "body": "Un **dépôt distant** (*remote*) est une autre copie du dépôt, en général sur GitHub. `git clone <url>` télécharge tout l'historique et nomme ce dépôt distant **`origin`**.\n\nRien ne se synchronise automatiquement. Git se souvient de ce qu'il a vu en dernier sur le dépôt distant dans des **branches de suivi** (*remote-tracking branches*) comme `origin/main` : des signets en lecture seule qui ne bougent que lorsque tu parles au dépôt distant.\n\n```bash\ngit clone https://github.com/acme/shop.git\ngit remote -v     # list remotes and their URLs\ngit branch -a     # local and remote-tracking branches\n```"
+            },
+            {
+              "type": "explain",
+              "title": "fetch ou pull",
+              "body": "- `git fetch` télécharge les nouveaux commits et met à jour `origin/main` et ses semblables. Il ne modifie **jamais** tes propres branches ni tes fichiers de travail : il est donc toujours sans risque.\n- `git pull` = `git fetch` **plus** l'intégration de la branche distante dans ta branche courante : une fusion par défaut, ou un rebase avec `git pull --rebase`.\n\nAprès un fetch, `git status` compare ta branche avec sa branche de suivi :\n\n```\nYour branch is behind 'origin/main' by 3 commits, and can be fast-forwarded.\n```\n\nSi les deux côtés ont de nouveaux commits, une installation toute neuve de Git te demande de choisir une fois entre fusion et rebase, par exemple `git config --global pull.rebase false`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-fetch-safe",
+              "concepts": [
+                "fetch-pull",
+                "remote"
+              ],
+              "prompt": "Un coéquipier a poussé sur `main`. Tu as des modifications non commitées et tu veux *regarder* ses changements avant que quoi que ce soit ne touche ta propre branche. Que lances-tu ?",
+              "choices": [
+                "`git pull`",
+                "`git push`",
+                "`git fetch`, puis inspecter `origin/main` (par exemple `git log origin/main`)",
+                "Supprimer ton dossier et refaire un `git clone` du dépôt"
+              ],
+              "answer": 2,
+              "explanation": "`fetch` ne met à jour que `origin/main` ; ta `main` et ton répertoire de travail restent intacts, tu peux donc inspecter d'abord et intégrer plus tard. `git pull` fusionnerait tout de suite dans ta branche. Re-cloner marche, mais c'est utiliser un marteau-pilon : tu perdrais aussi tes modifications non commitées."
+            },
+            {
+              "type": "explain",
+              "title": "Pousser et suivre l'upstream",
+              "body": "`git push` envoie tes commits. La première fois que tu pousses une nouvelle branche, dis où elle va et fais-le retenir :\n\n```bash\ngit switch -c search\n# ...commit...\ngit push -u origin search\n```\n\n`-u` (`--set-upstream`) fait de `origin/search` l'**upstream** de la branche. Dès lors, `git push` et `git pull` tout seuls savent où aller, et `git status` indique les écarts d'avance et de retard.\n\nSi le dépôt distant a des commits que tu n'as pas, le push est **rejeté**. C'est une protection, pas un bug : fais d'abord un pull, puis pousse à nouveau."
+            },
+            {
+              "type": "example",
+              "title": "Un push rejeté",
+              "problem": "Tu commites sur `main` et tu lances `git push`. Ça échoue :\n\n```\n ! [rejected]        main -> main (fetch first)\nerror: failed to push some refs to 'github.com:acme/shop.git'\nhint: Updates were rejected because the remote contains work that you do not\nhint: have locally.\n```",
+              "steps": [
+                "Un coéquipier a poussé avant toi. Le `main` distant a un commit que tu n'as pas, donc accepter ton push effacerait son travail. Git refuse.",
+                "`git pull` récupère son commit et l'intègre : un commit de fusion ou, avec `git pull --rebase`, ton commit rejoué par-dessus le sien.",
+                "Résous les éventuels conflits, puis refais un `git push`. Ta branche contient maintenant la sienne, donc pour le dépôt distant le push est un fast-forward et il est accepté.",
+                "Ne cède pas à la tentation de `git push --force` : il écraserait le commit de ton coéquipier sur le dépôt distant."
+              ],
+              "answer": "Fais un pull, puis pousse. Ne force jamais le push d'une branche partagée pour contourner un rejet."
+            },
+            {
+              "type": "mcq",
+              "id": "q-status-ahead",
+              "concepts": [
+                "push",
+                "remote"
+              ],
+              "prompt": "`git status` dit `Your branch is ahead of 'origin/main' by 2 commits.` Qu'est-ce que ça veut dire ?",
+              "choices": [
+                "Le dépôt distant a 2 commits que tu dois tirer",
+                "2 fichiers sont indexés mais pas encore commités",
+                "Ta branche a divergé et a besoin d'une fusion",
+                "Tu as 2 commits locaux qui ne sont pas encore sur le dépôt distant ; `git push` les enverra"
+              ],
+              "answer": 3,
+              "explanation": "« Ahead » (en avance) désigne les commits que tu as et que `origin/main` n'a pas. La comparaison utilise ce que tu as récupéré en dernier : lance donc d'abord `git fetch` si tu la veux à jour ; « behind » (en retard) voudrait dire que le dépôt distant a des commits qui te manquent."
+            },
+            {
+              "type": "numeric",
+              "id": "q-fetch-count",
+              "concepts": [
+                "fetch-pull",
+                "remote"
+              ],
+              "prompt": "`main` et `origin/main` pointent toutes deux vers C (historique A, B, C). Un coéquipier pousse D et E sur `main` sur GitHub. Tu lances `git fetch`. Combien de lignes `git log --oneline main` affiche-t-il ?",
+              "answer": 3,
+              "hint": "Quel pointeur `fetch` déplace-t-il ?",
+              "explanation": "`fetch` ne déplace que `origin/main`, maintenant sur E. Ta `main` locale pointe toujours vers C, donc elle montre **3** commits. `git pull` (ou `git merge origin/main`) la ferait avancer en fast-forward jusqu'à 5."
+            },
+            {
+              "type": "text",
+              "id": "q-push-u",
+              "concepts": [
+                "push"
+              ],
+              "prompt": "Tu as créé la branche `pricing` en local. Pousse-la vers `origin` pour la première fois, en définissant son upstream pour que `git push` tout seul fonctionne ensuite. Commande complète ?",
+              "accept": [
+                "git push -u origin pricing",
+                "push -u origin pricing",
+                "git push --set-upstream origin pricing",
+                "push --set-upstream origin pricing"
+              ],
+              "explanation": "`git push -u origin pricing` crée `pricing` sur le dépôt distant et enregistre `origin/pricing` comme son upstream, donc les prochains `git push` et `git pull` n'ont besoin d'aucun argument."
+            },
+            {
+              "type": "buckets",
+              "id": "q-buckets-fetch-pull-push",
+              "concepts": [
+                "fetch-pull",
+                "push"
+              ],
+              "prompt": "Quelle commande fait quel travail ?",
+              "buckets": [
+                "`git fetch`",
+                "`git pull`",
+                "`git push`"
+              ],
+              "items": [
+                {
+                  "text": "Télécharger les nouveaux commits de tes coéquipiers sans toucher à ta branche ni à tes fichiers",
+                  "bucket": 0
+                },
+                {
+                  "text": "Rafraîchir `origin/main` pour que les écarts d'avance et de retard de `git status` soient à jour",
+                  "bucket": 0
+                },
+                {
+                  "text": "Regarder ce qu'il y a de nouveau sur GitHub avant de décider de l'intégrer ou non",
+                  "bucket": 0
+                },
+                {
+                  "text": "Télécharger les commits de tes coéquipiers et les fusionner dans ta branche courante en une seule étape",
+                  "bucket": 1
+                },
+                {
+                  "text": "`git status` dit `Your branch is behind 'origin/main' by 3 commits, and can be fast-forwarded.` Récupérer ces commits.",
+                  "bucket": 1
+                },
+                {
+                  "text": "Ton push a été rejeté avec `(fetch first)`. La prochaine commande à lancer",
+                  "bucket": 1
+                },
+                {
+                  "text": "`git status` dit `Your branch is ahead of 'origin/main' by 2 commits.` Les partager.",
+                  "bucket": 2
+                },
+                {
+                  "text": "Publier pour la première fois la nouvelle branche locale `search` sur GitHub",
+                  "bucket": 2
+                }
+              ],
+              "hint": "fetch ne fait que télécharger, pull télécharge et intègre, push envoie.",
+              "explanation": "`git fetch` ne fait que télécharger et déplacer les branches de suivi comme `origin/main` : c'est la façon sûre de regarder d'abord, et celle de rafraîchir les écarts d'avance et de retard. `git pull` est un fetch plus l'intégration dans ta branche : utilise-le quand tu es en retard, et après un push rejeté. `git push` envoie les commits que le dépôt distant n'a pas encore. C'est ce que veut dire « ahead », et `git push -u origin search` publie une nouvelle branche."
+            }
+          ]
+        },
+        {
+          "id": "pull-requests",
+          "title": "Le flux GitHub : pull requests et rester à jour",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "Crée ta branche depuis un `main` à jour, pousse, ouvre une pull request, réponds à la relecture avec d'autres commits sur la même branche, fusionne, puis supprime la branche et tire `main`.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Le flux GitHub",
+              "body": "La plupart des équipes suivent une boucle simple :\n\n- **Mettre à jour** `main` : `git switch main`, `git pull`.\n- **Créer une branche** : `git switch -c fix-signup-email`.\n- **Commiter** de petits changements ciblés.\n- **Pousser** : `git push -u origin fix-signup-email`.\n- **Ouvrir une pull request (PR)** sur GitHub : une demande de fusion de ta branche dans `main`.\n- **Relecture** : les coéquipiers commentent ; des vérifications automatiques, comme les tests, s'exécutent.\n- **Fusionner** sur GitHub, supprimer la branche, et tirer `main` en local.\n\n`main` reste livrable à tout moment, et tout le travail se fait sur des branches."
+            },
+            {
+              "type": "explain",
+              "title": "Pull requests et relecture",
+              "body": "Une PR montre le diff, les commits, une description et un fil de discussion. Les bonnes PR sont **petites** et expliquent *quoi* et *pourquoi*, avec des captures d'écran ou des étapes de test quand c'est utile.\n\nQuand les relecteurs demandent des changements, tu n'ouvres pas une nouvelle PR : tu commites sur la même branche et tu pousses. La PR se met à jour toute seule.\n\nUne fois approuvée, GitHub propose trois boutons de fusion :\n\n- **Create a merge commit** : garde tous les commits, plus un commit de fusion.\n- **Squash and merge** : transforme toute la PR en un seul commit sur `main`.\n- **Rebase and merge** : rejoue les commits sur `main` sans commit de fusion."
+            },
+            {
+              "type": "mcq",
+              "id": "q-review-changes",
+              "concepts": [
+                "pull-request",
+                "push"
+              ],
+              "prompt": "Un relecteur te demande de renommer une fonction dans ta PR ouverte. Quelle est la façon normale de la mettre à jour ?",
+              "choices": [
+                "Fermer la PR, faire le changement sur une nouvelle branche et ouvrir une nouvelle PR",
+                "Faire le changement directement sur `main` pour que le relecteur le voie",
+                "Coller le nouveau code dans un commentaire de la PR pour que le relecteur l'applique",
+                "Commiter le changement sur la même branche et faire `git push` ; la PR se met à jour toute seule"
+              ],
+              "answer": 3,
+              "explanation": "Une PR suit une branche, pas un ensemble figé de commits. Les nouveaux commits poussés sur cette branche apparaissent dans la PR, ce qui garde toute la discussion de relecture au même endroit."
+            },
+            {
+              "type": "explain",
+              "title": "Garder ta branche à jour",
+              "body": "Tant que ta PR est ouverte, `main` continue d'avancer. Amène ses changements dans **ta branche**, pour que les conflits soient résolus là et pas sur `main` :\n\n```bash\ngit switch main\ngit pull               # update local main\ngit switch my-feature\ngit merge main         # or: git rebase main\n```\n\nRaccourci qui évite de mettre à jour `main` en local : `git fetch`, puis `git merge origin/main`.\n\nFusionner est toujours sans danger sur une branche partagée. Rebaser donne un historique plus propre mais réécrit tes commits : ne le fais que si tu es seul sur la branche, et pousse avec `git push --force-with-lease`."
+            },
+            {
+              "type": "example",
+              "title": "De l'idée à la fusion",
+              "problem": "Tu dois corriger une coquille sur la page des tarifs. Déroule tout le flux.",
+              "steps": [
+                "`git switch main` et `git pull`, pour partir du code le plus récent.",
+                "`git switch -c fix-pricing-typo`, modifie la page, puis `git add` et `git commit -m \"Fix typo on pricing page\"`.",
+                "`git push -u origin fix-pricing-typo`. GitHub affiche un lien pour ouvrir une PR ; écris une courte description et demande un relecteur.",
+                "Le relecteur repère une seconde coquille. Corrige-la, commite, `git push`. La PR se met à jour.",
+                "Approuvée, vérifications au vert : fusionne sur GitHub et clique sur **Delete branch**. En local : `git switch main`, `git pull`, `git branch -d fix-pricing-typo`."
+              ],
+              "answer": "Mettre à jour `main` → créer la branche → commiter → `push -u` → ouvrir la PR → pousser les corrections de relecture → fusionner → ranger."
+            },
+            {
+              "type": "mcq",
+              "id": "q-conflict-pr",
+              "concepts": [
+                "merge-conflict",
+                "pull-request"
+              ],
+              "prompt": "GitHub dit que ta PR « has conflicts that must be resolved » parce que quelqu'un a modifié les mêmes lignes sur `main`. Quelle est la solution habituelle ?",
+              "choices": [
+                "Tirer le dernier `main`, le fusionner dans ta branche, résoudre le conflit, commiter et pousser",
+                "Fusionner la PR quand même ; les conflits se résolvent tout seuls après la fusion",
+                "Pousser ta branche en force par-dessus `main`",
+                "Demander à l'autre auteur d'annuler son commit sur `main`"
+              ],
+              "answer": 0,
+              "explanation": "Amène `main` dans ta branche pour que le conflit soit résolu sur ta branche, là où tu comprends le changement. Pousser le résultat met la PR à jour, et elle peut alors fusionner proprement. Écraser `main` détruirait le travail de tes coéquipiers, et leur changement est probablement nécessaire."
+            },
+            {
+              "type": "mcq",
+              "id": "q-squash",
+              "concepts": [
+                "pull-request"
+              ],
+              "prompt": "Ta PR a 9 commits comme « wip », « fix test » et « oops ». L'équipe veut que `main` montre un commit par PR. Quel bouton de fusion ?",
+              "choices": [
+                "Squash and merge",
+                "Create a merge commit",
+                "Rebase and merge",
+                "N'importe lequel ; GitHub combine toujours les commits d'une PR"
+              ],
+              "answer": 0,
+              "explanation": "Squash and merge combine tous les changements de la PR en un seul nouveau commit sur `main`. Un commit de fusion garde les 9 commits (plus la fusion), et rebase-and-merge rejoue les 9 sur `main`."
+            },
+            {
+              "type": "text",
+              "id": "q-merge-origin-main",
+              "concepts": [
+                "remote",
+                "fetch-pull"
+              ],
+              "prompt": "Sur ta branche de fonctionnalité, tu veux le dernier `main` de GitHub sans mettre d'abord à jour ton `main` local. Complète le blanc :\n\n```bash\ngit fetch\ngit merge ___\n```",
+              "accept": [
+                "origin/main",
+                "origin main"
+              ],
+              "hint": "Après un fetch, la copie la plus fraîche du `main` distant vit dans une branche de suivi.",
+              "explanation": "`git fetch` met à jour `origin/main`, et `git merge origin/main` la fusionne dans ta branche courante. Ton `main` local reste où il était."
+            },
+            {
+              "type": "order",
+              "id": "q-order-github-flow",
+              "concepts": [
+                "pull-request"
+              ],
+              "prompt": "Tu corriges une coquille sur la page des tarifs. Remets le flux GitHub dans l'ordre, d'un nouveau départ jusqu'à la fusion.",
+              "items": [
+                "`git switch main`, puis `git pull`",
+                "`git switch -c fix-pricing-typo`",
+                "Modifier la page, puis `git add` et `git commit`",
+                "`git push -u origin fix-pricing-typo`",
+                "Ouvrir une pull request sur GitHub",
+                "Commiter et pousser les corrections demandées en relecture",
+                "Fusionner sur GitHub et supprimer la branche"
+              ],
+              "hint": "GitHub ne peut afficher une pull request que pour une branche qu'il possède, et les relecteurs commentent une PR ouverte.",
+              "explanation": "Mets d'abord `main` à jour, pour que la branche parte du code le plus récent. Crée la branche **avant** de commiter, sinon le commit atterrit sur `main`. Pousse, parce que GitHub ne peut ouvrir une PR que pour une branche qu'il possède. Les corrections de relecture sont de nouveaux commits sur la même branche, et les pousser met à jour la PR ouverte. La fusion et la suppression de la branche viennent en dernier, une fois la PR approuvée et les vérifications passées. Ensuite, `git switch main` et `git pull` ramènent le travail fusionné sur ta machine."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fixing-mistakes",
+      "title": "Corriger ses erreurs",
+      "description": "Un moyen d'annuler presque tout, lesquels sont sûrs une fois que tu as poussé, et comment récupérer des commits « perdus ».",
+      "lessons": [
+        {
+          "id": "undo-changes",
+          "title": "Aide-mémoire pour annuler : restore et amend",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "`git restore file` abandonne les modifications, `git restore --staged file` désindexe, et `git commit --amend` corrige le dernier commit, tant qu'il n'est pas poussé.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Choisis l'annulation selon l'endroit de l'erreur",
+              "body": "La plupart des moments « oups » correspondent à une seule commande :\n\n- Tu as modifié un fichier et tu veux retrouver la version commitée → `git restore <file>`\n- Tu as indexé quelque chose par accident → `git restore --staged <file>`\n- Le dernier commit a un mauvais message ou il manque un fichier → `git commit --amend`\n- Un commit déjà poussé doit être annulé → `git revert <commit>`\n- Des commits locaux non poussés doivent disparaître → `git reset`\n\nCette leçon couvre les trois premiers ; la suivante couvre revert contre reset."
+            },
+            {
+              "type": "explain",
+              "title": "git restore",
+              "body": "`git restore` recopie le contenu depuis un endroit sûr :\n\n```bash\ngit restore app.js            # discard unstaged edits\ngit restore --staged app.js   # unstage; your edits stay in the file\ngit restore .                 # discard all unstaged edits here\n```\n\nUn `git restore` simple remplit à nouveau le fichier depuis la zone de préparation, qui correspond au dernier commit sauf si tu as indexé quelque chose.\n\n**Attention :** abandonner est définitif. Ces modifications n'ont jamais été commitées, donc Git n'en a aucune copie. Jette d'abord un œil à `git diff`.\n\nAnciennes écritures : `git checkout -- app.js` et `git reset HEAD app.js`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-restore-staged",
+              "concepts": [
+                "restore",
+                "staging-area"
+              ],
+              "prompt": "Tu as modifié `pricing.js` et lancé `git add pricing.js`. Maintenant tu lances `git restore --staged pricing.js`. Quel est l'état ?",
+              "choices": [
+                "Les modifications ont disparu et le fichier correspond au dernier commit",
+                "Les modifications sont toujours dans le fichier, mais ne sont plus indexées",
+                "Les modifications sont commitées",
+                "Le fichier est supprimé du dépôt"
+              ],
+              "answer": 1,
+              "explanation": "`--staged` ne touche que la zone de préparation : il remet la version indexée du fichier à l'identique de HEAD. Tes modifications restent dans le répertoire de travail et apparaissent sous « Changes not staged for commit ». Pour les abandonner aussi, tu enchaînerais avec `git restore pricing.js`."
+            },
+            {
+              "type": "explain",
+              "title": "git commit --amend",
+              "body": "`--amend` **remplace** le dernier commit par un nouveau construit à partir de la zone de préparation actuelle :\n\n```bash\n# just fix the message\ngit commit --amend -m \"Fix rounding in checkout total\"\n\n# add a forgotten file, keep the message\ngit add forgotten_test.py\ngit commit --amend --no-edit\n```\n\nLe commit modifié reçoit un **nouveau hash** : amender réécrit donc l'historique. Ce n'est pas grave pour un commit qui n'existe que sur ta machine. Pour un commit poussé, il faudrait un push en force, ce qui pose problème à tous ceux qui l'ont déjà récupéré."
+            },
+            {
+              "type": "example",
+              "title": "Un fichier oublié",
+              "problem": "Tu viens de lancer `git commit -m \"Add invoice PDF export\"` mais tu as oublié d'ajouter `pdf_utils.py`. Rien n'est encore poussé.",
+              "steps": [
+                "Indexe le fichier manquant : `git add pdf_utils.py`.",
+                "`git commit --amend --no-edit` construit un nouveau commit à partir du contenu du commit précédent plus ce qui est maintenant indexé, et réutilise le message.",
+                "`git log --oneline` montre un seul commit « Add invoice PDF export » (avec un nouveau hash) qui contient les deux fichiers. Pas de commit « fichier oublié » qui encombre l'historique."
+              ],
+              "answer": "`git add pdf_utils.py`, puis `git commit --amend --no-edit`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-amend-pushed",
+              "concepts": [
+                "amend",
+                "rewriting-history"
+              ],
+              "prompt": "Quand `git commit --amend` est-il une mauvaise idée ?",
+              "choices": [
+                "Tu veux corriger une coquille dans le message du commit que tu as fait il y a une minute",
+                "Tu as oublié d'indexer un fichier dans ton dernier commit, qui n'est pas encore poussé",
+                "Le commit est déjà sur `main` sur GitHub et des coéquipiers l'ont récupéré",
+                "Tu n'as pas encore poussé ta branche du tout"
+              ],
+              "answer": 2,
+              "explanation": "Amend remplace le commit par un nouveau. Si des coéquipiers ont déjà l'original, ton historique et le leur divergent et tu devrais pousser en force. Pour un commit poussé, ajoute plutôt un nouveau commit (ou utilise `git revert`)."
+            },
+            {
+              "type": "text",
+              "id": "q-discard",
+              "concepts": [
+                "restore"
+              ],
+              "prompt": "Tu as fait des essais dans `style.css` (rien d'indexé) et tu veux jeter les modifications, pour revenir à la dernière version commitée. Quelle est la commande moderne ?",
+              "accept": [
+                "git restore style.css",
+                "restore style.css",
+                "git checkout -- style.css",
+                "git checkout style.css"
+              ],
+              "explanation": "`git restore style.css` écrase le fichier du répertoire de travail avec la version indexée, qui est la dernière version commitée puisque rien n'est indexé. Les modifications sont perdues pour de bon, parce que Git n'en a jamais eu de copie. (Ancienne écriture : `git checkout -- style.css`.)"
+            },
+            {
+              "type": "buckets",
+              "id": "q-buckets-undo",
+              "concepts": [
+                "restore",
+                "amend",
+                "revert"
+              ],
+              "prompt": "Choisis l'annulation qui convient à chaque erreur.",
+              "buckets": [
+                "`git restore <file>`",
+                "`git restore --staged <file>`",
+                "`git commit --amend`",
+                "`git revert <commit>`"
+              ],
+              "items": [
+                {
+                  "text": "Jeter tes essais dans `style.css` (rien d'indexé)",
+                  "bucket": 0
+                },
+                {
+                  "text": "Faire de nouveau correspondre `app.js` au dernier commit, en abandonnant tes modifications",
+                  "bucket": 0
+                },
+                {
+                  "text": "Tu as lancé `git add secrets.env` par erreur ; garde les modifications dans le fichier",
+                  "bucket": 1
+                },
+                {
+                  "text": "`git add .` a embarqué `debug.log` ; retire-le du prochain commit",
+                  "bucket": 1
+                },
+                {
+                  "text": "Coquille dans le message du commit que tu as fait il y a une minute (non poussé)",
+                  "bucket": 2
+                },
+                {
+                  "text": "Il manque `pdf_utils.py` dans ton dernier commit local",
+                  "bucket": 2
+                },
+                {
+                  "text": "Un commit poussé sur `main` la semaine dernière a cassé le paiement",
+                  "bucket": 3
+                },
+                {
+                  "text": "Des coéquipiers ont déjà récupéré un mauvais commit, et il faut l'annuler",
+                  "bucket": 3
+                }
+              ],
+              "hint": "Trouve où vit l'erreur : le répertoire de travail, la zone de préparation, ton dernier commit local, ou un commit que d'autres ont déjà.",
+              "explanation": "Des modifications non indexées dans le répertoire de travail → `git restore <file>` (perdues pour de bon). Quelque chose d'indexé par accident → `git restore --staged <file>`, qui ne fait que désindexer et garde tes modifications. Le dernier commit, encore local → `git commit --amend` corrige son message ou ajoute le fichier manquant. Un commit que d'autres ont déjà → `git revert`, qui ajoute un commit d'annulation au lieu de réécrire l'historique (on y revient dans la leçon suivante)."
+            }
+          ]
+        },
+        {
+          "id": "revert-vs-reset",
+          "title": "Annuler des commits : revert ou reset",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "`git revert` ajoute un nouveau commit qui annule un ancien et reste sans risque sur les branches partagées ; `git reset` ramène le pointeur de branche en arrière (`--soft` garde les changements indexés, `--mixed` non indexés, `--hard` les supprime) et ne convient qu'aux commits locaux.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "git revert : annuler en ajoutant",
+              "body": "`git revert <commit>` crée un **nouveau commit** qui applique exactement l'inverse des changements de ce commit :\n\n```\nA---B---C---R   main     (R undoes C)\n```\n\n```bash\ngit revert HEAD       # undo the latest commit\ngit revert 3f9a2c1    # undo an older one\n```\n\nRien ne disparaît : `C` reste dans l'historique, avec la trace qu'il a été annulé. Comme aucun commit existant n'est réécrit, revert est **sans risque sur les branches poussées et partagées**. C'est la façon standard de retirer un mauvais changement sur `main`."
+            },
+            {
+              "type": "explain",
+              "title": "git reset : déplacer le pointeur de branche",
+              "body": "`git reset <commit>` déplace la **branche courante** (et HEAD avec elle) vers un autre commit. Les commits suivants sortent de l'historique de la branche. Le mode décide de ce qui arrive à leurs changements :\n\n- `--soft` : ne déplace que la branche. Les changements restent **indexés**.\n- `--mixed` (le défaut) : déplace la branche et réinitialise la zone de préparation. Les changements restent dans le répertoire de travail, **non indexés**.\n- `--hard` : déplace la branche et réinitialise la zone de préparation **et** le répertoire de travail. Les changements sont **supprimés**, ainsi que toute modification non commitée des fichiers suivis.\n\n```bash\ngit reset --soft HEAD~1   # \"uncommit\", keep it all staged\n```"
+            },
+            {
+              "type": "mcq",
+              "id": "q-reset-mixed",
+              "concepts": [
+                "reset",
+                "staging-area"
+              ],
+              "prompt": "Juste après un commit local qui a modifié `cart.js`, tu lances `git reset HEAD~1` (sans option de mode). Quel est l'état ?",
+              "choices": [
+                "Le commit a disparu de la branche et les changements de `cart.js` sont dans le répertoire de travail, non indexés",
+                "Le commit a disparu et les changements de `cart.js` sont supprimés",
+                "Le commit a disparu et les changements sont indexés, prêts à être commités de nouveau",
+                "Un nouveau commit qui annule le changement est ajouté"
+              ],
+              "answer": 0,
+              "explanation": "Sans option, c'est `--mixed` : la branche recule d'un commit et la zone de préparation est réinitialisée, mais le répertoire de travail garde les changements, non indexés. `--soft` les aurait laissés indexés, `--hard` les aurait supprimés, et ajouter un commit d'annulation, c'est ce que fait `git revert`."
+            },
+            {
+              "type": "explain",
+              "title": "Lequel utiliser ?",
+              "body": "- Le commit est **poussé ou partagé** → `git revert`. Ne réinitialise jamais un historique que d'autres ont.\n- Le commit est **uniquement local** et tu veux le refaire → `git reset --soft` ou `git reset` (mixed).\n- Les commits locaux sont des déchets et doivent disparaître → `git reset --hard`, après avoir vérifié avec `git status` qu'il n'y a pas de travail non commité que tu perdrais.\n\nSi tu fais un reset sur une branche déjà poussée, ton prochain `git push` est rejeté. Le forcer réécrirait un historique que tes coéquipiers ont déjà."
+            },
+            {
+              "type": "example",
+              "title": "Commité sur main par erreur",
+              "problem": "Tu as fait un commit sur `main` qui aurait dû aller sur une nouvelle branche `feature`. Il n'est **pas poussé**, et ton répertoire de travail est propre.\n\n```\nA---B---C   ← main ← HEAD     (C belongs on feature)\n```",
+              "steps": [
+                "`git branch feature` pose un nouveau pointeur sur `C`, donc le commit est en sécurité sur `feature`.",
+                "`git reset --hard HEAD~1` ramène `main` sur `B`. Le répertoire de travail était propre et `C` est toujours retenu par `feature`, donc rien n'est perdu.",
+                "`git switch feature` et continue :\n\n```\nA---B              main\n     \\\n      C            feature ← HEAD\n```",
+                "Si `C` avait déjà été poussé sur `main`, tu créerais quand même `feature` de la même façon, mais tu annulerais ensuite `C` sur `main` avec `git revert` au lieu de réinitialiser un historique partagé."
+              ],
+              "answer": "`git branch feature`, `git reset --hard HEAD~1`, `git switch feature`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-pushed-bug",
+              "concepts": [
+                "revert",
+                "rewriting-history"
+              ],
+              "prompt": "Un commit qui a cassé la page de connexion a été poussé sur `main` hier, et des coéquipiers ont tiré depuis. Quelle commande l'annule sans risque ?",
+              "choices": [
+                "`git reset --hard HEAD~1`, puis `git push --force`",
+                "`git commit --amend`, puis `git push`",
+                "`git restore --staged .`",
+                "`git revert <hash of the bad commit>`, puis `git push`"
+              ],
+              "answer": 3,
+              "explanation": "Revert ajoute un nouveau commit qui annule le mauvais, donc tout le monde n'a qu'à le tirer. Reset plus push en force réécrit `main` sous les pieds de tes coéquipiers (et ferait aussi perdre les commits faits après le mauvais). Amend ne modifie que le dernier commit et réécrit aussi l'historique, et `restore --staged` ne fait que désindexer des fichiers."
+            },
+            {
+              "type": "numeric",
+              "id": "q-reset-count",
+              "concepts": [
+                "reset",
+                "commit"
+              ],
+              "prompt": "`git log --oneline` sur ta branche `feature` montre 7 commits ; les 3 derniers n'ont pas été poussés. Tu lances `git reset --soft HEAD~3`, puis `git commit -m \"Add search\"`. Combien de lignes `git log --oneline` affiche-t-il maintenant ?",
+              "answer": 5,
+              "hint": "`--soft` garde indexés les changements des 3 commits, donc le nouveau commit n'est pas vide.",
+              "explanation": "`reset --soft HEAD~3` ramène la branche 3 commits en arrière (7 → 4) et laisse tous leurs changements indexés. Commiter les enregistre en un seul commit : 4 + 1 = **5**. C'est une façon pratique de regrouper (squash) tes derniers commits locaux."
+            },
+            {
+              "type": "text",
+              "id": "q-uncommit",
+              "concepts": [
+                "reset"
+              ],
+              "prompt": "Tu veux annuler ton dernier commit local mais garder tous ses changements **indexés**. Tape la commande complète. (Désigne le commit parent par `HEAD~1`.)",
+              "accept": [
+                "git reset --soft HEAD~1",
+                "reset --soft HEAD~1"
+              ],
+              "explanation": "`git reset --soft HEAD~1` ramène la branche au commit parent sans toucher à la zone de préparation ni au répertoire de travail, donc tout ce qui venait de ce commit est de nouveau indexé, prêt à être recommité."
+            },
+            {
+              "type": "buckets",
+              "id": "q-buckets-revert-reset",
+              "concepts": [
+                "revert",
+                "reset"
+              ],
+              "prompt": "Quelle commande convient à chaque situation ?",
+              "buckets": [
+                "`git revert`",
+                "`git reset --soft`",
+                "`git reset` (mixed)",
+                "`git reset --hard`"
+              ],
+              "items": [
+                {
+                  "text": "Retirer un mauvais commit sur `main` que des coéquipiers ont déjà tiré",
+                  "bucket": 0
+                },
+                {
+                  "text": "Annuler un commit tout en gardant dans l'historique la trace qu'il a été annulé",
+                  "bucket": 0
+                },
+                {
+                  "text": "Décommiter ton dernier commit local, en gardant ses changements indexés",
+                  "bucket": 1
+                },
+                {
+                  "text": "Regrouper tes 3 derniers commits locaux en un seul, avec un nouveau `git commit`",
+                  "bucket": 1
+                },
+                {
+                  "text": "Décommiter ton dernier commit local, en gardant les changements dans tes fichiers mais non indexés",
+                  "bucket": 2
+                },
+                {
+                  "text": "Annuler ton dernier commit local pour pouvoir choisir à nouveau quels fichiers vont dans de nouveaux commits",
+                  "bucket": 2
+                },
+                {
+                  "text": "Supprimer entièrement 2 commits locaux inutiles et leurs changements",
+                  "bucket": 3
+                },
+                {
+                  "text": "Ramener `main` un commit en arrière après que `git branch feature` l'a sauvegardé (répertoire de travail propre)",
+                  "bucket": 3
+                }
+              ],
+              "hint": "Historique partagé → ajoute un commit. Historique local → déplace le pointeur, et choisis le mode selon l'endroit où les changements doivent finir : indexés, non indexés, ou supprimés.",
+              "explanation": "`revert` est la seule qui ajoute un commit au lieu de réécrire l'historique : c'est donc le bon choix pour tout ce qui est déjà partagé, et le commit annulé reste consigné. Les modes de reset ne diffèrent que par l'endroit où vont les changements : `--soft` les garde **indexés** (pratique pour regrouper), mixed, le défaut, les garde **non indexés**, et `--hard` les **supprime**. N'utilise `--hard` que quand les commits sont des déchets ou encore retenus par une autre branche, comme dans l'exemple « commité sur main par erreur »."
+            }
+          ]
+        },
+        {
+          "id": "reflog-detached-head",
+          "title": "Filets de sécurité : reflog, HEAD détaché et outils de détective",
+          "pareto": "extra",
+          "minutes": 8,
+          "takeaway": "`git reflog` se souvient de tous les endroits où HEAD est passé, donc un commit « perdu » peut être ressuscité à partir de son hash ; en HEAD détaché, crée une branche avant de partir si tu veux garder tes commits.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Le reflog se souvient",
+              "body": "Chaque fois que HEAD bouge (commit, switch, reset, fusion, rebase), Git le consigne dans le **reflog**, un journal local conservé pendant des semaines (30 à 90 jours par défaut) :\n\n```\nc526b1e HEAD@{0}: reset: moving to HEAD~2\n4eb933b HEAD@{1}: commit: Add search filters\n6f03855 HEAD@{2}: checkout: moving from main to search\n```\n\nUn commit que tu as « perdu » avec `reset --hard`, un rebase raté ou une branche supprimée est donc presque toujours encore là. Il te faut seulement son hash, et le reflog l'a. L'exception, ce sont les changements non commités : Git ne les a jamais sauvegardés."
+            },
+            {
+              "type": "example",
+              "title": "Défaire un reset --hard raté",
+              "problem": "Tu as lancé `git reset --hard HEAD~2` et tu réalises aussitôt que ces deux commits étaient bons.",
+              "steps": [
+                "Lance `git reflog`. L'entrée du haut, `HEAD@{0}`, est le reset ; `HEAD@{1}` est l'endroit où tu étais juste avant.",
+                "Remets la branche en place : `git reset --hard HEAD@{1}` (ou utilise le hash affiché sur cette ligne). Par excès de prudence, lance d'abord `git branch rescue HEAD@{1}` pour que les commits aient un pointeur quoi qu'il arrive.",
+                "`git log --oneline` montre de nouveau les deux commits. Rien n'a été supprimé ; seul le pointeur de branche avait bougé."
+              ],
+              "answer": "`git reflog`, puis `git reset --hard HEAD@{1}` (ou le hash que tu y trouves)."
+            },
+            {
+              "type": "mcq",
+              "id": "q-reflog-recover",
+              "concepts": [
+                "reflog",
+                "branch"
+              ],
+              "prompt": "Tu as supprimé la branche `experiment` avec `git branch -D experiment`, mais elle avait 3 commits non fusionnés dont tu as besoin. Quelle est la meilleure solution ?",
+              "choices": [
+                "Trouver le hash du dernier commit de la branche (dans `git reflog` ou dans le message de suppression) et lancer `git branch experiment <hash>`",
+                "Rien n'est possible : `-D` supprime définitivement les commits",
+                "`git revert experiment`",
+                "`git restore experiment`"
+              ],
+              "answer": 0,
+              "explanation": "Supprimer une branche ne supprime que le pointeur ; les commits existent toujours. Git affiche même le hash à la suppression (`Deleted branch experiment (was b7e2d29).`), et le reflog l'a aussi. Recréer la branche sur ce hash ramène tout."
+            },
+            {
+              "type": "explain",
+              "title": "HEAD détaché",
+              "body": "Normalement, HEAD pointe vers une branche. Si tu fais un checkout directement d'un **commit**, HEAD pointe vers ce commit : c'est le **HEAD détaché** (*detached HEAD*).\n\n```bash\ngit switch --detach 3f9a2c1   # modern\ngit checkout 3f9a2c1          # older; same result\n```\n\nC'est parfait pour explorer du vieux code ou lancer d'anciens tests. Tu peux même commiter, mais aucune branche ne bouge pour retenir ces commits : si tu repars ailleurs, ils se retrouvent sans pointeur (seul le reflog les connaît).\n\nPour garder le travail fait là, lance `git switch -c new-branch` **avant** de partir."
+            },
+            {
+              "type": "mcq",
+              "id": "q-detached-keep",
+              "concepts": [
+                "detached-head",
+                "branch"
+              ],
+              "prompt": "En HEAD détaché, tu as fait 2 commits expérimentaux qui se révèlent excellents. Que lances-tu pour les garder ?",
+              "choices": [
+                "`git switch main`",
+                "`git stash`",
+                "`git commit --amend`",
+                "`git switch -c great-experiment`"
+              ],
+              "answer": 3,
+              "explanation": "Créer une branche là où tu es donne un pointeur aux commits : ils sont en sécurité et tu pourras les fusionner plus tard. Basculer d'abord sur `main` les laisserait sans référence (récupérables seulement via le reflog). Le stash ne gère que les changements non commités."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-detached-branch",
+              "concepts": [
+                "detached-head",
+                "branch"
+              ],
+              "prompt": "Tu veux essayer une idée à partir d'un vieux commit et garder le résultat sur une nouvelle branche `fast-parser`. Mais ensuite `git log --oneline fast-parser` n'affiche pas du tout « Try faster parser ». Clique sur la ligne où ça a mal tourné.",
+              "language": "bash",
+              "code": "git switch --detach 3f9a2c1\n# ...edit parser.py...\ngit commit -am \"Try faster parser\"\ngit switch main\ngit switch -c fast-parser",
+              "error": "Warning: you are leaving 1 commit behind, not connected to\nany of your branches:\n\n  e1b2c3d Try faster parser\n\nIf you want to keep it by creating a new branch, this may be a good time\nto do so with:\n\n git branch <new-branch-name> e1b2c3d\n\nSwitched to branch 'main'\nSwitched to a new branch 'fast-parser'",
+              "lines": [
+                4,
+                5
+              ],
+              "fixes": [
+                "Changer la ligne 1 en `git checkout 3f9a2c1`",
+                "Changer la ligne 5 en `git branch fast-parser`",
+                "Changer la ligne 3 en `git commit --amend -am \"Try faster parser\"`",
+                "Échanger les lignes 4 et 5, pour que la branche soit créée avant de partir"
+              ],
+              "answer": 3,
+              "hint": "Une nouvelle branche part de l'endroit où se trouve HEAD au moment de la créer.",
+              "explanation": "En HEAD détaché, le nouveau commit n'a aucune branche qui pointe vers lui. La ligne 4 bascule d'abord sur `main` (Git t'avertit même qu'il laisse un commit derrière lui), donc la ligne 5 crée `fast-parser` à partir de `main`, pas à partir de l'expérience. Créer la branche *avant* de partir donne un pointeur au commit. `git checkout 3f9a2c1` détache HEAD exactement de la même façon, `git branch fast-parser` part toujours de `main`, et amender en HEAD détaché ne fait que créer un autre commit sans référence. Si c'est déjà arrivé, le hash de l'avertissement (ou `git reflog`) te sauve : `git branch fast-parser e1b2c3d`."
+            },
+            {
+              "type": "explain",
+              "title": "Outils de détective : blame et bisect",
+              "body": "Deux commandes pour enquêter sur les problèmes :\n\n- `git blame app.js` montre, pour chaque ligne, le commit et l'auteur qui l'ont modifiée en dernier. Utilise-le pour trouver *pourquoi* une ligne existe, puis lis ce commit avec `git show <hash>`.\n- `git bisect` fait une recherche dichotomique dans l'historique pour trouver le commit qui a introduit un bug. Lance `git bisect start`, `git bisect bad` (le commit courant est cassé) et `git bisect good v1.2` (celui-là fonctionnait). Git fait un checkout d'un commit à mi-chemin ; teste-le et marque-le `good` ou `bad`, puis recommence. Termine avec `git bisect reset`."
+            },
+            {
+              "type": "numeric",
+              "id": "q-bisect",
+              "concepts": [
+                "bisect"
+              ],
+              "prompt": "Un bug est apparu quelque part dans les 64 derniers commits. Avec `git bisect`, environ combien de commits devras-tu tester avant que Git désigne le coupable ?",
+              "answer": 6,
+              "tolerance": 1,
+              "hint": "Chaque test divise par deux le nombre de suspects.",
+              "explanation": "Chaque test divise l'intervalle par deux : 64 → 32 → 16 → 8 → 4 → 2 → 1. Ça fait environ **6** tests (log₂ 64), au lieu de jusqu'à 64 si tu vérifiais les commits un par un."
+            },
+            {
+              "type": "text",
+              "id": "q-reflog",
+              "concepts": [
+                "reflog"
+              ],
+              "prompt": "Un rebase a mal tourné et ta branche semble maintenant cassée. Quelle commande liste les endroits où HEAD est passé récemment, pour que tu retrouves le commit vers lequel ta branche pointait avant le rebase ?",
+              "accept": [
+                "git reflog",
+                "reflog",
+                "git reflog show",
+                "git log -g",
+                "git log --walk-reflogs"
+              ],
+              "explanation": "`git reflog` liste les positions récentes de HEAD. Trouve l'entrée juste avant le début du rebase et fais `git reset --hard <that hash>` pour remettre ta branche en place."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

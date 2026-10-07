@@ -7,6 +7,7 @@ import { InlineMarkdown } from '../Markdown';
 import { AnswerLine, QuestionFrame, useCheckFlow, type QuestionProps } from '../QuestionFrame';
 import './OrderGame.css';
 import { Icon } from '../icons';
+import { useT } from '../../i18n/react';
 
 interface Drag {
   item: number;
@@ -30,6 +31,7 @@ const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce
 const plain = (s: string) => s.replace(/`/g, '');
 
 export function OrderGame({ step, mode, context, onDone }: QuestionProps<OrderStep>) {
+  const { t, tx } = useT();
   const flow = useCheckFlow(mode, onDone);
   const { status } = flow;
   const n = step.items.length;
@@ -98,7 +100,7 @@ export function OrderGame({ step, mode, context, onDone }: QuestionProps<OrderSt
 
   function commit(next: number[], item: number, to: number) {
     setOrder(next);
-    setAnnounce(`${plain(step.items[item])}: now position ${to + 1} of ${n}.`);
+    setAnnounce(t('games.order.announce.moved', { text: plain(step.items[item]), pos: to + 1, total: n }));
   }
 
   function nudge(item: number, pos: number, to: number, dir?: 'up' | 'down') {
@@ -183,7 +185,7 @@ export function OrderGame({ step, mode, context, onDone }: QuestionProps<OrderSt
     setChecked(ok ? null : order);
     if (!ok) {
       const right = orderMarks(step, order).filter(Boolean).length;
-      setAnnounce(`${right} of ${n} pieces are in the right place.`);
+      setAnnounce(t('games.order.announce.checked', { count: right, total: n }));
     }
     flow.grade(ok);
   }
@@ -203,28 +205,26 @@ export function OrderGame({ step, mode, context, onDone }: QuestionProps<OrderSt
       flow={flow}
       mode={mode}
       context={context}
-      kind="Put these in order"
+      kind={t('games.order.kind')}
       canCheck={!drag}
       onCheck={check}
       onRetry={() => (nudging.current = null)}
       answer={<AnswerLine text={gameAnswerLabel(step)} />}
     >
       <div className="og-bar">
-        <span className="og-chip" aria-label={`${moves} moves`}>
-          Moves <strong>{moves}</strong>
+        <span className="og-chip" aria-label={t('games.order.movesLabel', { count: moves })}>
+          {tx('games.common.moves', { moves: <strong>{moves}</strong> })}
         </span>
         {checked && status !== 'correct' && !answerShown && (
-          <span className="og-chip og-score">
-            {inPlace}/{n} in place
-          </span>
+          <span className="og-chip og-score">{t('games.order.inPlaceCount', { done: inPlace, total: n })}</span>
         )}
-        {status === 'answering' && <span className="og-tip muted small">Drag the ⠿ handle, or use ↑ ↓</span>}
+        {status === 'answering' && <span className="og-tip muted small">{t('games.order.tip')}</span>}
       </div>
 
       <ol
         ref={listRef}
         className={`og-list${drag?.moved ? ' dragging' : ''}${status === 'correct' ? ' solved' : ''}${answerShown ? ' answer' : ''}`}
-        aria-label="Pieces in your order"
+        aria-label={t('games.order.listLabel')}
         aria-describedby={howtoId}
       >
         {shown.map((item, pos) => {
@@ -246,7 +246,10 @@ export function OrderGame({ step, mode, context, onDone }: QuestionProps<OrderSt
               className={cls}
               style={{ transform, '--i': pos } as CSSProperties}
               tabIndex={locked ? -1 : 0}
-              aria-label={`Position ${pos + 1}: ${plain(step.items[item])}${mark === 'right' ? ', in place' : mark === 'wrong' ? ', in the wrong place' : ''}`}
+              aria-label={t(
+                mark === 'right' ? 'games.order.positionInPlace' : mark === 'wrong' ? 'games.order.positionWrong' : 'games.order.position',
+                { pos: pos + 1, text: plain(step.items[item]) },
+              )}
               onKeyDown={(e) => onKeyDown(e, item, pos)}
               onPointerDown={(e) => onPointerDown(e, item, pos)}
               onPointerMove={onPointerMove}
@@ -266,7 +269,7 @@ export function OrderGame({ step, mode, context, onDone }: QuestionProps<OrderSt
                 <InlineMarkdown text={step.items[item]} />
                 {mark && status !== 'correct' && (
                   <span className={`og-mark ${mark}`} aria-hidden>
-                    {mark === 'right' ? '✓ in place' : '✗ wrong spot'}
+                    {mark === 'right' ? t('games.order.markRight') : t('games.order.markWrong')}
                   </span>
                 )}
               </span>
@@ -277,7 +280,7 @@ export function OrderGame({ step, mode, context, onDone }: QuestionProps<OrderSt
                     className="og-nudge"
                     data-dir="up"
                     tabIndex={-1}
-                    aria-label={`Move “${plain(step.items[item])}” up`}
+                    aria-label={t('games.order.moveUp', { text: plain(step.items[item]) })}
                     disabled={pos === 0}
                     onClick={() => nudge(item, pos, pos - 1, 'up')}
                   >
@@ -288,7 +291,7 @@ export function OrderGame({ step, mode, context, onDone }: QuestionProps<OrderSt
                     className="og-nudge"
                     data-dir="down"
                     tabIndex={-1}
-                    aria-label={`Move “${plain(step.items[item])}” down`}
+                    aria-label={t('games.order.moveDown', { text: plain(step.items[item]) })}
                     disabled={pos === n - 1}
                     onClick={() => nudge(item, pos, pos + 1, 'down')}
                   >
@@ -302,7 +305,7 @@ export function OrderGame({ step, mode, context, onDone }: QuestionProps<OrderSt
       </ol>
 
       <p id={howtoId} className="sr-only">
-        Focus a piece and press the up or down arrow key to move it, Home or End to send it to the top or bottom.
+        {t('games.order.howto')}
       </p>
       <p className="sr-only" aria-live="polite">
         {announce}
@@ -312,12 +315,10 @@ export function OrderGame({ step, mode, context, onDone }: QuestionProps<OrderSt
         <p className="og-result" role="status">
           {moves <= fewest ? (
             <>
-              <Icon name="target" size={16} /> Sorted in <strong>{moves}</strong> {moves === 1 ? 'move' : 'moves'}: the fewest possible!
+              <Icon name="target" size={16} /> {tx('games.order.fewest', { count: moves, moves: <strong>{moves}</strong> })}
             </>
           ) : (
-            <>
-              Sorted in <strong>{moves}</strong> moves. The fewest possible was {fewest}.
-            </>
+            tx('games.order.notFewest', { count: moves, moves: <strong>{moves}</strong>, fewest })
           )}
         </p>
       )}

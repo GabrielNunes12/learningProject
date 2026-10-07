@@ -10,6 +10,7 @@ import {
   DEFAULT_SIZE,
   type MixPlan,
   type PlannedTopic,
+  type Topic,
   type TopicStatus,
 } from '../lib/interleave';
 import { href } from '../lib/router';
@@ -20,16 +21,28 @@ import { CourseIcon } from './CourseIcon';
 import { Page, PageHeader } from './Layout';
 import { Session, type SessionResult } from './Session';
 import { Icon } from './icons';
-import { accentStyle, Notice, plural } from './ui';
+import { accentStyle, Notice } from './ui';
+import type { MessageKey } from '../i18n/core';
+import { useT } from '../i18n/react';
 import './MixedPractice.css';
 
-const INTRO =
-  'Mixed practice interleaves related ideas instead of drilling one topic at a time. It tends to feel harder while you do it, but studies suggest it improves how well you tell similar ideas apart and how long you remember them.';
-
-const STATUS_LABEL: Record<TopicStatus, string> = { weak: 'Weak', due: 'Due', new: 'New', ok: '', strong: 'Strong' };
+const STATUS_LABEL: Record<TopicStatus, MessageKey | null> = {
+  weak: 'practice.status.weak',
+  due: 'practice.status.due',
+  new: 'practice.status.new',
+  ok: null,
+  strong: 'practice.status.strong',
+};
 
 const newSeed = () => (Date.now() ^ Math.floor(Math.random() * 2 ** 31)) >>> 0;
 const minutes = (n: number) => Math.max(1, Math.round(n * 0.4));
+
+/**
+ * A topic's name read from the live course objects, so a plan built before a language switch (the running session's
+ * plan is frozen) still shows names in the current language.
+ */
+const topicLabel = (t: Topic) =>
+  t.kind === 'concept' ? (t.course.concepts?.find((c) => `${t.course.id}/${c.id}` === t.id)?.label ?? t.label) : t.lesson.title;
 
 function build(p: Progress, seed: number, size: number, courseId?: string, conceptId?: string): MixPlan {
   return planMix({ courses, questions: allQuestions, progress: p, courseId, conceptId, size, seed });
@@ -50,21 +63,26 @@ function nextLesson(p: Progress, course?: Course) {
 
 /** #/practice, #/practice/<course> and #/practice/<course>/<concept>: an interleaved session over what you've met. */
 export function MixedPractice({ courseId, conceptId }: { courseId?: string; conceptId?: string }) {
+  const { t, tx, locale } = useT();
   const course = courseId ? getCourse(courseId) : undefined;
   const p = useProgress();
   const [seed, setSeed] = useState(newSeed);
   const [size, setSize] = useState<number>(DEFAULT_SIZE);
   const [running, setRunning] = useState<{ plan: MixPlan; run: number } | null>(null);
   // While a session runs, answers change progress; the running plan stays frozen in `running`.
-  const planned = useMemo(() => (running ? null : build(p, seed, size, course?.id, conceptId)), [running, p, seed, size, course?.id, conceptId]);
+  // The plan holds course text (topic names, link sentences), so it is rebuilt on a language switch (same seed: same mix).
+  const planned = useMemo(
+    () => (running ? null : build(p, seed, size, course?.id, conceptId)),
+    [running, p, seed, size, course?.id, conceptId, locale],
+  );
 
   if (courseId && !course) {
     return (
       <Page>
         <section className="center empty-state">
-          <h1>Course not found</h1>
+          <h1>{t('practice.notFound')}</h1>
           <a className="btn primary" href="#/practice">
-            Mix all my courses
+            {t('practice.mixAll')}
           </a>
         </section>
       </Page>
@@ -72,6 +90,7 @@ export function MixedPractice({ courseId, conceptId }: { courseId?: string; conc
   }
 
   const exitHref = course ? href('course', course.id) : '#/review';
+  const title = course ? t('practice.titleCourse', { course: course.title }) : t('practice.title');
 
   if (running) {
     const again = () => {
@@ -80,10 +99,11 @@ export function MixedPractice({ courseId, conceptId }: { courseId?: string; conc
       const next = build(getProgress(), s, size, course?.id, conceptId);
       setRunning(next.picks.length ? { plan: next, run: running.run + 1 } : null);
     };
+    // Never put the locale in this key: it would restart the session. Session keys the current question by locale itself.
     return (
       <Session
         key={running.run}
-        ritual={{ kind: 'practice', title: course ? `Mixed practice: ${course.title}` : 'Mixed practice', course: course?.id }}
+        ritual={{ kind: 'practice', title, course: course?.id }}
         questions={running.plan.picks.map((x) => x.q)}
         exitHref={exitHref}
         renderEnd={(results, xp) => <MixEnd plan={running.plan} results={results} xp={xp} course={course} onAgain={again} />}
@@ -98,54 +118,56 @@ export function MixedPractice({ courseId, conceptId }: { courseId?: string; conc
   }
 
   const n = plan.picks.length;
-  const inMix = [...new Map(plan.topics.map((t) => [t.course.id, t.course])).values()];
+  const inMix = [...new Map(plan.topics.map((x) => [x.course.id, x.course])).values()];
   const started = course ? [] : courses.filter((c) => reachedLessons(allQuestions, p, [c.id]).size >= MIN_LESSONS);
 
   return (
     <Page>
       <div className="mix-start" style={accentStyle(course?.color)}>
-        <PageHeader title={course ? `Mixed practice: ${course.title}` : 'Mixed practice'} subtitle={INTRO} />
+        <PageHeader title={title} subtitle={t('practice.intro')} />
 
         {plan.focus && (
-          <p className="mix-focus">
-            Focused on <strong>{plan.focus.label}</strong> and the ideas linked to it.
-          </p>
+          <p className="mix-focus">{tx('practice.focus', { label: plan.focus.label }, { b: (c) => <strong>{c}</strong> })}</p>
         )}
-        {plan.focusFallback && (
-          <Notice>That concept doesn't have enough questions you've met yet, so this session mixes the whole course.</Notice>
-        )}
+        {plan.focusFallback && <Notice>{t('practice.focusFallback')}</Notice>}
 
         <section className="panel mix-panel" aria-labelledby="mix-title">
           <div className="panel-head">
-            <h2 id="mix-title">Your mix</h2>
+            <h2 id="mix-title">{t('practice.yourMix')}</h2>
             <span className="muted small">
-              {plural(n, 'question')} · {plural(plan.topics.length, plan.usesGraph ? 'idea' : 'lesson')}
+              {t('common.questions', { count: n })} ·{' '}
+              {plan.usesGraph ? t('practice.ideas', { count: plan.topics.length }) : t('common.lessons', { count: plan.topics.length })}
             </span>
           </div>
-          <ul className="mix-chips" aria-label={plan.usesGraph ? 'Ideas in this session' : 'Lessons in this session'}>
-            {plan.topics.map((t) => (
-              <TopicChip key={t.id} topic={t} />
+          <ul className="mix-chips" aria-label={t(plan.usesGraph ? 'practice.ideasAria' : 'practice.lessonsAria')}>
+            {plan.topics.map((x) => (
+              <TopicChip key={x.id} topic={x} />
             ))}
           </ul>
           {inMix.length > 1 && (
             <p className="mix-courses small muted">
-              From{' '}
-              {inMix.map((c, i) => (
-                <span key={c.id} className="mix-course">
-                  <CourseIcon icon={c.icon} color={c.color} size={18} /> {c.title}
-                  {i < inMix.length - 1 ? ',' : ''}
-                </span>
-              ))}
+              {tx('practice.from', {
+                courses: (
+                  <>
+                    {inMix.map((c, i) => (
+                      <span key={c.id} className="mix-course">
+                        <CourseIcon icon={c.icon} color={c.color} size={18} /> {c.title}
+                        {i < inMix.length - 1 ? ',' : ''}
+                      </span>
+                    ))}
+                  </>
+                ),
+              })}
             </p>
           )}
-          {!plan.usesGraph && <p className="small muted">These questions are mixed by lesson: this course doesn't have a concept map yet.</p>}
+          {!plan.usesGraph && <p className="small muted">{t('practice.byLesson')}</p>}
           <details className="mix-why">
-            <summary>Why these?</summary>
+            <summary>{t('practice.whyThese')}</summary>
             <ul>
-              {plan.topics.map((t) => (
-                <li key={t.id}>
-                  <strong>{t.label}</strong>
-                  <span className="muted">{t.reasons.length ? t.reasons.map(describeReason).join(' · ') : 'Part of what you have learned so far'}</span>
+              {plan.topics.map((x) => (
+                <li key={x.id}>
+                  <strong>{x.label}</strong>
+                  <span className="muted">{x.reasons.length ? x.reasons.map(describeReason).join(' · ') : t('practice.defaultReason')}</span>
                 </li>
               ))}
             </ul>
@@ -153,8 +175,8 @@ export function MixedPractice({ courseId, conceptId }: { courseId?: string; conc
         </section>
 
         <div className="mix-controls">
-          <div className="mix-sizes" role="group" aria-label="Session length">
-            <span className="muted small">Length</span>
+          <div className="mix-sizes" role="group" aria-label={t('practice.lengthAria')}>
+            <span className="muted small">{t('practice.length')}</span>
             {SESSION_SIZES.map((s) => (
               <button key={s} type="button" className={`chip-btn${s === size ? ' on' : ''}`} aria-pressed={s === size} onClick={() => setSize(s)}>
                 {s}
@@ -162,21 +184,22 @@ export function MixedPractice({ courseId, conceptId }: { courseId?: string; conc
             ))}
           </div>
           <span className="muted small" aria-live="polite">
-            {n < size ? `Only ${n} questions qualify right now · ` : ''}about {minutes(n)} min
+            {n < size ? `${t('practice.onlyQualify', { count: n })} · ` : ''}
+            {t('practice.aboutMin', { count: minutes(n) })}
           </span>
           <button type="button" className="btn primary big mix-go" onClick={() => setRunning({ plan, run: 0 })}>
-            Start mixed practice
+            {t('practice.start')}
           </button>
         </div>
 
         {course ? (
           <p className="small muted mix-scope">
-            <a href="#/practice">Mix all my courses instead</a>
+            <a href="#/practice">{t('practice.mixAllInstead')}</a>
           </p>
         ) : (
           started.length > 1 && (
             <div className="mix-scope">
-              <span className="muted small">Or practise one course:</span>
+              <span className="muted small">{t('practice.orOneCourse')}</span>
               <div className="mix-scope-links">
                 {started.map((c) => (
                   <a key={c.id} className="chip" href={href('practice', c.id)}>
@@ -192,21 +215,23 @@ export function MixedPractice({ courseId, conceptId }: { courseId?: string; conc
   );
 }
 
-function TopicChip({ topic: t }: { topic: PlannedTopic }) {
-  const status = STATUS_LABEL[t.status];
+function TopicChip({ topic: x }: { topic: PlannedTopic }) {
+  const { t } = useT();
+  const status = STATUS_LABEL[x.status];
   return (
-    <li className={`mix-chip ${t.status}`} style={accentStyle(t.course.color)} title={t.reasons.map(describeReason).join('\n')}>
+    <li className={`mix-chip ${x.status}`} style={accentStyle(x.course.color)} title={x.reasons.map(describeReason).join('\n')}>
       <span className="mix-dot" aria-hidden />
-      <span>{t.label}</span>
-      {status && <span className="mix-status">{status}</span>}
-      <span className="mix-count" aria-label={plural(t.count, 'question')}>
-        {t.count}
+      <span>{x.label}</span>
+      {status && <span className="mix-status">{t(status)}</span>}
+      <span className="mix-count" aria-label={t('common.questions', { count: x.count })}>
+        {x.count}
       </span>
     </li>
   );
 }
 
 function MixEmpty({ p, course, reached, recentOnly }: { p: Progress; course?: Course; reached: number; recentOnly: boolean }) {
+  const { t } = useT();
   const next = nextLesson(p, course);
   return (
     <Page>
@@ -216,32 +241,30 @@ function MixEmpty({ p, course, reached, recentOnly }: { p: Progress; course?: Co
         </div>
         {recentOnly ? (
           <>
-            <h1>You just practised all of it</h1>
-            <p className="lead">
-              Questions you answered right in the last 10 minutes sit out for a while, so the next round is real recall, not repetition. Try again in a
-              few minutes, or learn something new.
-            </p>
+            <h1>{t('practice.empty.recentTitle')}</h1>
+            <p className="lead">{t('practice.empty.recentLead')}</p>
           </>
         ) : (
           <>
-            <h1>Mixed practice opens after {MIN_LESSONS} lessons</h1>
+            <h1>{t('practice.empty.lockedTitle', { count: MIN_LESSONS })}</h1>
             <p className="lead">
-              Mixing needs a few ideas to tell apart. You've done {plural(reached, 'lesson')}
-              {course ? ` in ${course.title}` : ''} so far.
+              {course
+                ? t('practice.empty.lockedLeadCourse', { count: reached, course: course.title })
+                : t('practice.empty.lockedLead', { count: reached })}
             </p>
           </>
         )}
         <div className="actions center">
           <a className="btn ghost" href="#/review">
-            Review
+            {t('nav.review')}
           </a>
           {next ? (
             <a className="btn primary big" href={href('course', next.course.id, 'lesson', next.lesson.id)}>
-              Next lesson: {next.lesson.title}
+              {t('practice.empty.nextLesson', { title: next.lesson.title })}
             </a>
           ) : (
             <a className="btn primary big" href="#/courses">
-              Courses
+              {t('nav.courses')}
             </a>
           )}
         </div>
@@ -251,6 +274,7 @@ function MixEmpty({ p, course, reached, recentOnly }: { p: Progress; course?: Co
 }
 
 function MixEnd({ plan, results, xp, course, onAgain }: { plan: MixPlan; results: SessionResult[]; xp: number; course?: Course; onAgain: () => void }) {
+  const { t, n, pct } = useT();
   const rows = summarize(
     plan,
     results.map((r) => ({ key: r.ref.key, ok: r.ok })),
@@ -262,53 +286,53 @@ function MixEnd({ plan, results, xp, course, onAgain }: { plan: MixPlan; results
       <div className="celebrate" aria-hidden>
         <Icon name={right === results.length ? 'target' : 'check'} size={56} />
       </div>
-      <h1>Mixed practice done</h1>
+      <h1>{t('practice.end.title')}</h1>
       <p className="lead">
-        {right} of {results.length} right across {plural(rows.length, plan.usesGraph ? 'idea' : 'lesson')}.
+        {t(plan.usesGraph ? 'practice.end.leadIdeas' : 'practice.end.leadLessons', { right, total: results.length, count: rows.length })}
       </p>
       <div className="result-tiles">
         <div className="result-tile xp">
-          <span>XP earned</span>
-          <strong>+{xp}</strong>
+          <span>{t('practice.end.xp')}</span>
+          <strong>+{n(xp)}</strong>
         </div>
         <div className="result-tile">
-          <span>Right</span>
-          <strong>{Math.round((100 * right) / Math.max(1, results.length))}%</strong>
+          <span>{t('practice.end.right')}</span>
+          <strong>{pct(right / Math.max(1, results.length))}</strong>
         </div>
       </div>
-      <ul className="mix-results" aria-label="Results by idea">
-        {rows.map(({ topic: t, right: r, total }) => (
-          <li key={t.id} className={r === total ? 'ok' : 'miss'} style={accentStyle(t.course.color)}>
+      <ul className="mix-results" aria-label={t('practice.end.resultsAria')}>
+        {rows.map(({ topic: x, right: r, total }) => (
+          <li key={x.id} className={r === total ? 'ok' : 'miss'} style={accentStyle(x.course.color)}>
             <span className="mix-dot" aria-hidden />
             <span className="mix-result-name">
-              <strong>{t.label}</strong>
-              {multiCourse && <span className="muted small">{t.course.title}</span>}
+              <strong>{topicLabel(x)}</strong>
+              {multiCourse && <span className="muted small">{x.course.title}</span>}
             </span>
             <span className="mix-score">
               {r}/{total}
             </span>
             {r < total ? (
-              <a className="btn small" href={href('course', t.course.id, 'lesson', t.lesson.id)}>
-                Review lesson: {t.lesson.title}
+              <a className="btn small" href={href('course', x.course.id, 'lesson', x.lesson.id)}>
+                {t('practice.end.reviewLesson', { title: x.lesson.title })}
               </a>
             ) : (
-              <span className="mix-solid small">Solid</span>
+              <span className="mix-solid small">{t('practice.end.solid')}</span>
             )}
           </li>
         ))}
       </ul>
-      <p className="muted small">Misses come back in your Review queue; right answers wait longer.</p>
+      <p className="muted small">{t('practice.end.note')}</p>
       <div className="actions center">
         <a className="btn ghost" href="#/review">
-          Review overview
+          {t('review.overview')}
         </a>
         {course && (
           <a className="btn ghost" href={href('course', course.id)}>
-            Back to course
+            {t('practice.end.backToCourse')}
           </a>
         )}
         <button type="button" className="btn primary big" onClick={onAgain}>
-          Again
+          {t('practice.end.again')}
         </button>
       </div>
     </>
@@ -317,6 +341,7 @@ function MixEnd({ plan, results, xp, course, onAgain }: { plan: MixPlan; results
 
 /** Entry card for the Review page. */
 export function MixedPracticeCard() {
+  const { t } = useT();
   const p = useProgress();
   const { reached, started } = useMemo(
     () => ({
@@ -332,17 +357,13 @@ export function MixedPracticeCard() {
         <Icon name="sparkle" size={26} />
       </div>
       <div className="mix-card-text">
-        <span className="eyebrow">Mixed practice</span>
-        <h2 id="mix-card-title">Mix related ideas</h2>
-        <p className="muted">
-          {ready
-            ? 'Questions from different lessons side by side, weighted toward your weak spots, so you learn to tell similar ideas apart.'
-            : `Opens after ${MIN_LESSONS} lessons: mixing needs a few ideas to tell apart.`}
-        </p>
+        <span className="eyebrow">{t('practice.title')}</span>
+        <h2 id="mix-card-title">{t('practice.card.title')}</h2>
+        <p className="muted">{ready ? t('practice.card.ready') : t('practice.card.locked', { count: MIN_LESSONS })}</p>
         {started.length > 1 && (
           <div className="mix-scope-links">
             {started.map((c) => (
-              <a key={c.id} className="chip" href={href('practice', c.id)} aria-label={`Mixed practice: ${c.title}`}>
+              <a key={c.id} className="chip" href={href('practice', c.id)} aria-label={t('practice.titleCourse', { course: c.title })}>
                 <CourseIcon icon={c.icon} color={c.color} size={18} /> {c.title}
               </a>
             ))}
@@ -350,7 +371,7 @@ export function MixedPracticeCard() {
         )}
       </div>
       <a className={`btn big${ready ? '' : ' ghost'}`} href="#/practice">
-        {ready ? 'Start mixed practice' : 'See how it works'}
+        {ready ? t('practice.start') : t('practice.card.howItWorks')}
       </a>
     </section>
   );

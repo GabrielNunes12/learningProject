@@ -1,11 +1,13 @@
 // The learner's report: what they miss, what they struggle with, and how to improve.
-// Pure analysis over courses + progress cards. No runtime imports (type-only), so node:test can load it.
+// Pure analysis over courses + progress cards. The only runtime import is the translation core (explicit .ts),
+// so node:test can load it. Sentences are produced with t() when the report is built, in the active language.
 //
 // Everything here is derived from data the app really stores per question card: attempts (`seen`), correct
 // answers (`right`), the Leitner `box`, `due`, and — on newer cards — `hist` (recent results, oldest first) and
 // `last` (time of the latest answer). We never invent data we don't have (e.g. answer speed or per-answer dates).
 
 import type { Course, Lesson, QuestionStep, Step, Unit } from '../types';
+import { formatPercent, t, type MessageKey } from '../i18n/core.ts';
 
 // ---------- inputs ----------
 
@@ -179,40 +181,24 @@ export interface Report {
 
 // ---------- helpers ----------
 
-export const TYPE_LABELS: Record<QuestionStep['type'], string> = {
-  mcq: 'Multiple choice',
-  numeric: 'Number answers',
-  text: 'Short answers',
-  output: 'Predict the output',
-  bug: 'Bug hunts',
-  order: 'Put in order',
-  buckets: 'Sort into groups',
-  trace: 'Code traces',
-  truthtable: 'Truth tables',
-  logicgrid: 'Logic grids',
-  balance: 'Balance puzzles',
-};
+type QType = QuestionStep['type'];
+const TYPES: QType[] = ['mcq', 'numeric', 'text', 'output', 'bug', 'order', 'buckets', 'trace', 'truthtable', 'logicgrid', 'balance'];
 
+/** Title-case name of a question format ("Multiple choice"), in the active language. */
+export const typeLabel = (type: QType) => t(`insights.format.${type}` as MessageKey);
+/** The format's name as it reads inside a sentence ("multiple choice"). */
+export const typeLabelInline = (type: QType) => t(`insights.formatInline.${type}` as MessageKey);
 /** One concrete habit per format, offered when that format is clearly the weakest. */
-export const TYPE_ADVICE: Record<QuestionStep['type'], string> = {
-  mcq: 'Try to answer in your head before reading the choices, then pick the one that matches.',
-  numeric: 'Estimate the answer first so a result that is way off stands out, and check the units.',
-  text: 'Say the idea in your own words first, then name the exact term the question asks for.',
-  output: 'Trace the code on paper: write each variable after every line before you type the output.',
-  bug: 'Read the error first, then trace the variables line by line to find where they go wrong.',
-  order: 'Place the first and last pieces first, then fill in the middle.',
-  buckets: 'Name the rule behind each group before you sort the first card.',
-  trace: 'Predict what each line changes before you step forward, then compare.',
-  truthtable: 'Fill one column at a time and lean on the helper columns.',
-  logicgrid: 'Mark what each clue rules out, not only what it confirms.',
-  balance: 'Gather the unknowns on one side first, then the plain numbers on the other.',
-};
+export const typeAdvice = (type: QType) => t(`insights.formatAdvice.${type}` as MessageKey);
 
-const QUESTION_TYPES = new Set(Object.keys(TYPE_LABELS));
+/** Per-noun message keys: what items are called changes the whole sentence in most languages. */
+const byNoun = (prefix: string, noun: Report['itemNoun']) => `${prefix}.${noun}` as MessageKey;
+
+const QUESTION_TYPES = new Set<string>(TYPES);
 const isQuestion = (s: Step): s is QuestionStep => QUESTION_TYPES.has(s.type);
 const qKey = (course: string, lesson: string, id: string) => `${course}/${lesson}/${id}`;
 
-export const pct = (x: number | null) => (x === null ? '–' : `${Math.round(x * 100)}%`);
+export const pct = (x: number | null) => (x === null ? '–' : formatPercent(x));
 
 /** Rolling accuracy over a "1"/"0" string, window `w`. */
 export function rolling(results: string, w = 3): number[] {
@@ -375,7 +361,7 @@ export function buildReport(courses: Course[], p: ProgressLike, now = Date.now()
   const reports = courses.map((c) => analyzeCourse(c, p, now));
   const items = reports.flatMap((r) => r.items);
   const graphs = reports.filter((r) => r.hasGraph).length;
-  const itemNoun = graphs === reports.length && graphs ? 'concepts' : graphs === 0 ? 'lessons' : 'topics';
+  const itemNoun: Report['itemNoun'] = graphs === reports.length && graphs ? 'concepts' : graphs === 0 ? 'lessons' : 'topics';
 
   // Cards of the questions in scope, and accuracy by question format.
   const scoped: { card: CardLike; type: QuestionStep['type']; due: number }[] = [];
@@ -387,13 +373,13 @@ export function buildReport(courses: Course[], p: ProgressLike, now = Date.now()
   const totalAttempts = scoped.reduce((s, x) => s + x.card.seen, 0);
   const byType = new Map<QuestionStep['type'], { attempts: number; right: number }>();
   for (const { card, type } of scoped) {
-    const t = byType.get(type) ?? { attempts: 0, right: 0 };
-    t.attempts += card.seen;
-    t.right += card.right;
-    byType.set(type, t);
+    const s = byType.get(type) ?? { attempts: 0, right: 0 };
+    s.attempts += card.seen;
+    s.right += card.right;
+    byType.set(type, s);
   }
   const types: TypeStats[] = [...byType.entries()]
-    .map(([type, t]) => ({ type, label: TYPE_LABELS[type], attempts: t.attempts, right: t.right, accuracy: t.right / t.attempts }))
+    .map(([type, s]) => ({ type, label: typeLabel(type), attempts: s.attempts, right: s.right, accuracy: s.right / s.attempts }))
     .sort((a, b) => b.attempts - a.attempts);
 
   const dueCards = scoped.filter((x) => x.due <= now);
@@ -417,27 +403,38 @@ export function buildReport(courses: Course[], p: ProgressLike, now = Date.now()
   if (formatGap)
     patterns.push({
       id: 'formats',
-      title: `Weakest format: ${worstType!.label.toLowerCase()}`,
-      detail: `${worstType!.label} ${pct(worstType!.accuracy)} right vs ${bestType!.label.toLowerCase()} ${pct(bestType!.accuracy)} (all answers so far).`,
+      title: t('insights.pattern.formats.title', { format: typeLabelInline(worstType!.type) }),
+      detail: t('insights.pattern.formats.detail', {
+        worst: worstType!.label,
+        worstPct: pct(worstType!.accuracy),
+        best: typeLabelInline(bestType!.type),
+        bestPct: pct(bestType!.accuracy),
+      }),
     });
   if (forgotten.length)
     patterns.push({
       id: 'forgetting',
-      title: 'Right once, wrong later',
-      detail: `${list(forgotten.map((i) => i.label))}: you answered ${forgotten.length === 1 ? 'a question on it' : 'questions on these'} right at least twice, then missed ${forgotten.length === 1 ? 'it' : 'them'} on your latest try. That's normal forgetting, and the cue to review.`,
+      title: t('insights.pattern.forgetting.title'),
+      detail: t('insights.pattern.forgetting.detail', { items: list(forgotten.map((i) => i.label)), count: forgotten.length }),
     });
   if (due >= PILE_UP)
     patterns.push({
       id: 'pileup',
-      title: 'Reviews are piling up',
-      detail: `${due} reviews are due${oldestDueDays >= 1 ? `, the oldest for ${oldestDueDays} day${oldestDueDays === 1 ? '' : 's'}` : ''}.`,
+      title: t('insights.pattern.pileup.title'),
+      detail:
+        oldestDueDays >= 1
+          ? t('insights.pattern.pileup.detailOldest', { count: due, days: t('common.days', { count: oldestDueDays }) })
+          : t('insights.pattern.pileup.detail', { count: due }),
     });
   const skipped = reports.flatMap((r) => r.skippedCore.map((l) => ({ course: r.course, lesson: l })));
   if (skipped.length)
     patterns.push({
       id: 'skipped',
-      title: 'Core lessons you skipped',
-      detail: `${list(skipped.map((s) => `"${s.lesson.title}"`))} ${skipped.length === 1 ? 'is a core lesson' : 'are core lessons'} you haven't opened, though you've done later ones.`,
+      title: t('insights.pattern.skipped.title'),
+      detail: t('insights.pattern.skipped.detail', {
+        lessons: list(skipped.map((s) => t('insights.quoted', { title: s.lesson.title }))),
+        count: skipped.length,
+      }),
     });
 
   // ---------- tips: rule-based, each tied to evidence and an action ----------
@@ -447,25 +444,31 @@ export function buildReport(courses: Course[], p: ProgressLike, now = Date.now()
   if (due >= PILE_UP || (due >= 5 && oldestDueDays >= 3))
     tips.push({
       id: 'clear-reviews',
-      title: `Clear your ${due} due reviews first`,
-      evidence: `${due} reviews are due${oldestDueDays >= 1 ? `; the oldest has waited ${oldestDueDays} day${oldestDueDays === 1 ? '' : 's'}` : ''}.`,
-      advice: 'Do them before new lessons. Spaced review tends to work best when it happens close to the due date.',
-      actions: [{ label: 'Start reviews', route: reviewRoute }],
+      title: t('insights.tip.clearReviews.title', { count: due }),
+      evidence:
+        oldestDueDays >= 1
+          ? t('insights.tip.clearReviews.evidenceOldest', { count: due, days: t('common.days', { count: oldestDueDays }) })
+          : t('insights.tip.clearReviews.evidence', { count: due }),
+      advice: t('insights.tip.clearReviews.advice'),
+      actions: [{ label: t('insights.action.startReviews'), route: reviewRoute }],
     });
   for (const w of weak.slice(0, 2)) {
     tips.push({
       id: `weak-${w.key}`,
-      title: `Revisit ${name(w)}`,
+      title: t('insights.tip.weak.title', { name: name(w) }),
       evidence: missText(w),
       advice:
         w.kind === 'concept'
-          ? `Reread the lesson "${w.lessonTitle}", then do a short mixed practice: mixing it with other ideas tends to help you pick the right approach, not just repeat it.`
-          : `Redo the lesson, then a short mixed practice on ${w.courseTitle}.`,
+          ? t('insights.tip.weak.adviceConcept', { lesson: w.lessonTitle })
+          : t('insights.tip.weak.adviceLesson', { course: w.courseTitle }),
       actions: [
-        { label: w.kind === 'concept' ? `Open "${w.lessonTitle}"` : 'Redo the lesson', route: ['course', w.courseId, 'lesson', w.lessonId] },
+        {
+          label: w.kind === 'concept' ? t('insights.action.openLesson', { lesson: w.lessonTitle }) : t('insights.action.redoLesson'),
+          route: ['course', w.courseId, 'lesson', w.lessonId],
+        },
         w.kind === 'concept'
-          ? { label: `Practise ${w.label}`, route: ['practice', w.courseId, w.id] }
-          : { label: 'Mixed practice', route: ['practice', w.courseId] },
+          ? { label: t('insights.action.practiseConcept', { concept: w.label }), route: ['practice', w.courseId, w.id] }
+          : { label: t('insights.action.mixedPractice'), route: ['practice', w.courseId] },
       ],
     });
   }
@@ -474,47 +477,52 @@ export function buildReport(courses: Course[], p: ProgressLike, now = Date.now()
     const f = forgotNotWeak[0];
     tips.push({
       id: 'forgetting',
-      title: `Review ${name(f)} sooner`,
-      evidence: `You'd answered ${name(f)} right at least twice, then missed it on your latest try.`,
-      advice: 'Retrieval practice spread over several days tends to make memories last. Practise your weakest questions today and let the schedule bring them back.',
-      actions: [{ label: 'Practise weakest', route: ['review', 'weak', f.courseId] }],
+      title: t('insights.tip.forgetting.title', { name: name(f) }),
+      evidence: t('insights.tip.forgetting.evidence', { name: name(f) }),
+      advice: t('insights.tip.forgetting.advice'),
+      actions: [{ label: t('insights.action.practiseWeakest'), route: ['review', 'weak', f.courseId] }],
     });
   }
   if (formatGap)
     tips.push({
       id: `format-${worstType!.type}`,
-      title: `${worstType!.label}: try a different approach`,
-      evidence: `${pct(worstType!.accuracy)} right on ${worstType!.label.toLowerCase()} vs ${pct(bestType!.accuracy)} on ${bestType!.label.toLowerCase()}.`,
-      advice: TYPE_ADVICE[worstType!.type],
-      actions: [{ label: 'Practise weakest', route: oneCourse ? ['review', 'weak', oneCourse] : ['review', 'weak'] }],
+      title: t('insights.tip.format.title', { format: worstType!.label }),
+      evidence: t('insights.tip.format.evidence', {
+        worstPct: pct(worstType!.accuracy),
+        worst: typeLabelInline(worstType!.type),
+        bestPct: pct(bestType!.accuracy),
+        best: typeLabelInline(bestType!.type),
+      }),
+      advice: typeAdvice(worstType!.type),
+      actions: [{ label: t('insights.action.practiseWeakest'), route: oneCourse ? ['review', 'weak', oneCourse] : ['review', 'weak'] }],
     });
   if (skipped.length) {
     const s = skipped[0];
     tips.push({
       id: 'skipped',
-      title: `Do the core lesson "${s.lesson.title}"`,
-      evidence: `It's a core lesson in ${s.course.title} that you haven't opened, though you've moved past it.`,
-      advice: 'Core lessons carry most of a course; later lessons often build on them.',
-      actions: [{ label: 'Open lesson', route: ['course', s.course.id, 'lesson', s.lesson.id] }],
+      title: t('insights.tip.skipped.title', { lesson: s.lesson.title }),
+      evidence: t('insights.tip.skipped.evidence', { course: s.course.title }),
+      advice: t('insights.tip.skipped.advice'),
+      actions: [{ label: t('insights.action.openLessonPlain'), route: ['course', s.course.id, 'lesson', s.lesson.id] }],
     });
   }
   if (tips.length < 3 && strengths.length) {
     const c = reports.find((r) => r.items.some((i) => i.mastery === 'mastered'))!.course;
     tips.push({
       id: 'confirm',
-      title: 'Check what you know with a quiz',
-      evidence: `You've mastered ${strengths.length} ${strengths.length === 1 ? itemNoun.replace(/s$/, '') : itemNoun}.`,
-      advice: 'A quiz mixes questions from the whole course, a quick way to confirm it sticks and find gaps.',
-      actions: [{ label: `${c.title} quiz`, route: ['course', c.id, 'quiz'] }],
+      title: t('insights.tip.confirm.title'),
+      evidence: t(byNoun('insights.tip.confirm.evidence', itemNoun), { count: strengths.length }),
+      advice: t('insights.tip.confirm.advice'),
+      actions: [{ label: t('insights.action.courseQuiz', { course: c.title }), route: ['course', c.id, 'quiz'] }],
     });
   }
   if (tips.length < 3 && totalAttempts >= MIN_TOTAL_ATTEMPTS)
     tips.push({
       id: 'mix',
-      title: 'Mix your practice',
-      evidence: weak.length ? `${weak.length} ${itemNoun} still trip you up now and then.` : 'Nothing stands out as weak right now.',
-      advice: 'Practising several topics in one session tends to help you choose the right method, not just recall it.',
-      actions: [{ label: 'Mixed practice', route: oneCourse ? ['practice', oneCourse] : ['practice'] }],
+      title: t('insights.tip.mix.title'),
+      evidence: weak.length ? t(byNoun('insights.tip.mix.evidence', itemNoun), { count: weak.length }) : t('insights.tip.mix.evidenceNone'),
+      advice: t('insights.tip.mix.advice'),
+      actions: [{ label: t('insights.action.mixedPractice'), route: oneCourse ? ['practice', oneCourse] : ['practice'] }],
     });
 
   const cardsOnly = scoped.map((x) => x.card);
@@ -539,21 +547,20 @@ export function buildReport(courses: Course[], p: ProgressLike, now = Date.now()
 
 /** "You missed Contrapositive 4 of the last 6 times." — the evidence line for a weak item. */
 export function missText(i: ItemStats) {
-  const what = i.kind === 'concept' ? i.label : `questions in "${i.label}"`;
-  const times = `time${i.recentCount === 1 ? '' : 's'}`;
-  return i.allTime
-    ? `You've missed ${what} ${i.recentMisses} of ${i.recentCount} ${times} so far.`
-    : `You missed ${what} ${i.recentMisses} of the last ${i.recentCount} ${times}.`;
+  const params = { name: i.label, misses: i.recentMisses, count: i.recentCount };
+  if (i.kind === 'concept') return t(i.allTime ? 'insights.miss.conceptAllTime' : 'insights.miss.concept', params);
+  return t(i.allTime ? 'insights.miss.lessonAllTime' : 'insights.miss.lesson', params);
 }
 
 /** How an item is named in a sentence: concepts as is, lessons in quotes. */
-export const name = (i: ItemStats) => (i.kind === 'concept' ? i.label : `"${i.label}"`);
+export const name = (i: ItemStats) => (i.kind === 'concept' ? i.label : t('insights.quoted', { title: i.label }));
 
 /** "a", "a and b", "a, b and 2 more". */
 export function list(xs: string[], max = 3) {
   if (xs.length <= 1) return xs[0] ?? '';
-  if (xs.length <= max) return `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`;
-  return `${xs.slice(0, max).join(', ')} and ${xs.length - max} more`;
+  const sep = t('insights.list.separator');
+  if (xs.length <= max) return t('insights.list.and', { items: xs.slice(0, -1).join(sep), last: xs[xs.length - 1] });
+  return t('insights.list.more', { items: xs.slice(0, max).join(sep), count: xs.length - max });
 }
 
 /** Whether there's enough practice to show the Home "learning report" card. */

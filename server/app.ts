@@ -3,6 +3,10 @@
 import { randomBytes } from 'node:crypto';
 import express, { type Express, type NextFunction, type Request, type Response } from 'express';
 import { checkName, formatHours, ISSUER } from '../src/lib/certificate.ts';
+import { formatDate, isLocale, registerCatalog, translator, type Locale, type MessageKey, type Params } from '../src/i18n/core.ts';
+import es from '../src/i18n/es/index.ts';
+import fr from '../src/i18n/fr/index.ts';
+import ptBR from '../src/i18n/pt-BR/index.ts';
 import { appUrl, devOutbox, onVercel, RESET_MINUTES, SESSION_DAYS, VERIFY_HOURS } from './config.ts';
 import { publicUser, query, queryOne, UNIQUE_VIOLATION, type UserRow } from './db.ts';
 import { outbox, sendResetEmail, sendVerifyEmail } from './mail.ts';
@@ -30,17 +34,35 @@ app.use(express.json({ limit: '1mb' }));
 
 // ---------- helpers ----------
 
+// The server writes emails and certificate share cards in the learner's language: it loads every catalog.
+registerCatalog('pt-BR', ptBR);
+registerCatalog('es', es);
+registerCatalog('fr', fr);
+
+const en = translator('en');
+
+/**
+ * An error for the client. `key` is a message key (src/i18n/en/api.ts): the response carries the English text
+ * as `error` plus `key` and `params`, so the app can show the learner's own language.
+ */
 class HttpError extends Error {
   status: number;
+  key: MessageKey;
+  params?: Params;
   code?: string;
   extra?: object;
-  constructor(status: number, message: string, code?: string, extra?: object) {
-    super(message);
+  constructor(status: number, key: MessageKey, code?: string, extra?: object, params?: Params) {
+    super(en(key, params));
     this.status = status;
+    this.key = key;
+    this.params = params;
     this.code = code;
     this.extra = extra;
   }
 }
+
+/** The language a request asks for (sign-up, emails, certificates), English if missing or unknown. */
+const localeOf = (v: unknown): Locale => (isLocale(v) ? v : 'en');
 
 function cookies(req: Request): Record<string, string> {
   const out: Record<string, string> = {};
@@ -69,7 +91,7 @@ async function currentUser(req: Request): Promise<UserRow | null> {
 
 async function requireUser(req: Request): Promise<UserRow> {
   const user = await currentUser(req);
-  if (!user) throw new HttpError(401, 'Please sign in.');
+  if (!user) throw new HttpError(401, 'api.signIn');
   return user;
 }
 
@@ -78,14 +100,14 @@ const USERNAME = /^[a-zA-Z0-9_]{3,20}$/;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function checkPassword(password: string, username: string) {
-  if (password.length < 8) throw new HttpError(400, 'Password must be at least 8 characters.', 'password');
-  if (password.length > 128) throw new HttpError(400, 'Password is too long (max 128).', 'password');
-  if (password.toLowerCase() === username.toLowerCase()) throw new HttpError(400, "Password can't be your username.", 'password');
+  if (password.length < 8) throw new HttpError(400, 'api.passwordShort', 'password');
+  if (password.length > 128) throw new HttpError(400, 'api.passwordLong', 'password');
+  if (password.toLowerCase() === username.toLowerCase()) throw new HttpError(400, 'api.passwordIsUsername', 'password');
 }
 
 async function limit(req: Request, name: string, max: number, windowMs: number) {
   if (await rateLimited(`${name}:${req.ip}`, max, windowMs)) {
-    throw new HttpError(429, 'Too many attempts. Please wait a few minutes and try again.');
+    throw new HttpError(429, 'api.rateLimited');
   }
 }
 
@@ -103,11 +125,11 @@ app.use('/api', (_req, _res, next) => {
 // Basic CSRF defence: state-changing API calls must be JSON from our own origin.
 app.use('/api', (req, _res, next) => {
   if (req.method === 'GET' || req.method === 'HEAD') return next();
-  if (!req.is('application/json')) return next(new HttpError(415, 'Expected JSON.'));
+  if (!req.is('application/json')) return next(new HttpError(415, 'api.expectedJson'));
   const origin = req.headers.origin;
   if (origin) {
     const host = new URL(origin).host;
-    if (host !== req.headers.host && host !== new URL(appUrl).host) return next(new HttpError(403, 'Cross-origin request blocked.'));
+    if (host !== req.headers.host && host !== new URL(appUrl).host) return next(new HttpError(403, 'api.crossOrigin'));
   }
   next();
 });
@@ -120,17 +142,17 @@ app.post('/api/auth/register', async (req, res) => {
   const email = str(req.body.email).toLowerCase();
   const password = typeof req.body.password === 'string' ? req.body.password : '';
 
-  if (!USERNAME.test(username)) throw new HttpError(400, 'Username: 3–20 letters, numbers or underscores.', 'username');
-  if (!EMAIL.test(email) || email.length > 254) throw new HttpError(400, 'Please enter a valid email address.', 'email');
+  if (!USERNAME.test(username)) throw new HttpError(400, 'api.usernameFormat', 'username');
+  if (!EMAIL.test(email) || email.length > 254) throw new HttpError(400, 'api.emailInvalid', 'email');
   checkPassword(password, username);
   // An account for this email that was never confirmed can't sign in, so signing up again replaces it
   // (the new sign-up still has to be confirmed from the inbox). This also rescues sign-ups whose email failed.
   const existing = await queryOne<UserRow>('SELECT * FROM users WHERE lower(email) = $1', [email]);
   if (existing && existing.email_verified_at !== null) {
-    throw new HttpError(409, 'An account with this email already exists. Try signing in.', 'email');
+    throw new HttpError(409, 'api.emailTaken', 'email');
   }
   const nameOwner = await queryOne<{ id: number }>('SELECT id FROM users WHERE lower(username) = lower($1)', [username]);
-  if (nameOwner && nameOwner.id !== existing?.id) throw new HttpError(409, 'That username is taken.', 'username');
+  if (nameOwner && nameOwner.id !== existing?.id) throw new HttpError(409, 'api.usernameTaken', 'username');
   if (existing) await query('DELETE FROM users WHERE id = $1', [existing.id]);
 
   const hash = await hashPassword(password);
@@ -143,16 +165,16 @@ app.post('/api/auth/register', async (req, res) => {
     id = row!.id;
   } catch (err) {
     // Two sign-ups raced for the same name or email between the checks above and this insert.
-    if ((err as { code?: string }).code === UNIQUE_VIOLATION) throw new HttpError(409, 'That username or email was just taken.', 'username');
+    if ((err as { code?: string }).code === UNIQUE_VIOLATION) throw new HttpError(409, 'api.justTaken', 'username');
     throw err;
   }
   try {
-    await sendVerifyEmail(email, username, await issueToken(id, 'verify', VERIFY_HOURS * HOUR));
+    await sendVerifyEmail(email, username, await issueToken(id, 'verify', VERIFY_HOURS * HOUR), localeOf(req.body.locale));
   } catch (err) {
     // Without the email the account could never be confirmed: undo the sign-up so trying again works.
     console.error('verification email failed', err);
     await query('DELETE FROM users WHERE id = $1', [id]);
-    throw new HttpError(503, "We couldn't send the confirmation email right now. Please try again in a few minutes.");
+    throw new HttpError(503, 'api.emailFailed');
   }
   res.status(201).json({ ok: true, email });
 });
@@ -161,7 +183,7 @@ app.post('/api/auth/verify', async (req, res) => {
   await limit(req, 'verify', 30, HOUR);
   const token = str(req.body.token);
   const user = token ? await userForToken(token, 'verify') : null;
-  if (!user) throw new HttpError(400, 'This confirmation link is invalid or has expired. Request a new one.', 'token');
+  if (!user) throw new HttpError(400, 'api.verifyInvalid', 'token');
   const now = Date.now();
   await query('UPDATE users SET email_verified_at = $1 WHERE id = $2', [now, user.id]);
   await revokeAll(user.id, 'verify');
@@ -177,7 +199,7 @@ app.post('/api/auth/resend', async (req, res) => {
   if (user && user.email_verified_at === null) {
     const age = await latestTokenAge(user.id, 'verify');
     if (age === null || age > 60_000) {
-      await sendVerifyEmail(user.email, user.username, await issueToken(user.id, 'verify', VERIFY_HOURS * HOUR));
+      await sendVerifyEmail(user.email, user.username, await issueToken(user.id, 'verify', VERIFY_HOURS * HOUR), localeOf(req.body.locale));
     }
   }
   res.json({ ok: true });
@@ -189,10 +211,10 @@ app.post('/api/auth/login', async (req, res) => {
   const password = typeof req.body.password === 'string' ? req.body.password : '';
   const user = await queryOne<UserRow>('SELECT * FROM users WHERE lower(username) = lower($1) OR lower(email) = lower($1)', [login]);
   if (!user || !(await verifyPassword(password, user.password_hash))) {
-    throw new HttpError(401, 'Wrong username/email or password.');
+    throw new HttpError(401, 'api.wrongLogin');
   }
   if (user.email_verified_at === null) {
-    throw new HttpError(403, 'Please confirm your email first. Check your inbox for the link.', 'EMAIL_NOT_VERIFIED', { email: user.email });
+    throw new HttpError(403, 'api.notVerified', 'EMAIL_NOT_VERIFIED', { email: user.email });
   }
   await startSession(res, user.id);
   res.json({ user: publicUser(user) });
@@ -217,7 +239,7 @@ app.post('/api/auth/forgot', async (req, res) => {
   if (user) {
     const age = await latestTokenAge(user.id, 'reset');
     if (age === null || age > 60_000) {
-      await sendResetEmail(user.email, user.username, await issueToken(user.id, 'reset', RESET_MINUTES * 60_000));
+      await sendResetEmail(user.email, user.username, await issueToken(user.id, 'reset', RESET_MINUTES * 60_000), localeOf(req.body.locale));
     }
   }
   res.json({ ok: true });
@@ -228,7 +250,7 @@ app.post('/api/auth/reset', async (req, res) => {
   const token = str(req.body.token);
   const password = typeof req.body.password === 'string' ? req.body.password : '';
   const user = token ? await userForToken(token, 'reset') : null;
-  if (!user) throw new HttpError(400, 'This reset link is invalid or has expired. Request a new one.', 'token');
+  if (!user) throw new HttpError(400, 'api.resetInvalid', 'token');
   checkPassword(password, user.username);
   await query('UPDATE users SET password_hash = $1, email_verified_at = COALESCE(email_verified_at, $2) WHERE id = $3', [
     await hashPassword(password),
@@ -247,7 +269,7 @@ app.post('/api/account/password', async (req, res) => {
   await limit(req, 'password', 10, HOUR);
   const current = typeof req.body.current === 'string' ? req.body.current : '';
   const next = typeof req.body.next === 'string' ? req.body.next : '';
-  if (!(await verifyPassword(current, user.password_hash))) throw new HttpError(400, 'Current password is wrong.', 'current');
+  if (!(await verifyPassword(current, user.password_hash))) throw new HttpError(400, 'api.currentPasswordWrong', 'current');
   checkPassword(next, user.username);
   await query('UPDATE users SET password_hash = $1 WHERE id = $2', [await hashPassword(next), user.id]);
   await revokeAll(user.id, 'session');
@@ -258,7 +280,7 @@ app.post('/api/account/password', async (req, res) => {
 app.post('/api/account/delete', async (req, res) => {
   const user = await requireUser(req);
   const password = typeof req.body.password === 'string' ? req.body.password : '';
-  if (!(await verifyPassword(password, user.password_hash))) throw new HttpError(400, 'Password is wrong.', 'password');
+  if (!(await verifyPassword(password, user.password_hash))) throw new HttpError(400, 'api.passwordWrong', 'password');
   await query('DELETE FROM users WHERE id = $1', [user.id]);
   res.clearCookie(COOKIE, { path: '/' });
   res.json({ ok: true });
@@ -275,7 +297,7 @@ app.get('/api/progress', async (req, res) => {
 app.put('/api/progress', async (req, res) => {
   const user = await requireUser(req);
   const data = req.body.data;
-  if (typeof data !== 'object' || data === null || typeof data.cards !== 'object') throw new HttpError(400, 'Invalid progress data.');
+  if (typeof data !== 'object' || data === null || typeof data.cards !== 'object') throw new HttpError(400, 'api.badProgress');
   const now = Date.now();
   await query(
     `INSERT INTO progress (user_id, data, updated_at) VALUES ($1, $2, $3)
@@ -298,6 +320,7 @@ interface CertRow {
   lessons: number;
   issued_at: number;
   updated_at: number;
+  locale: string;
 }
 
 const publicCert = (r: CertRow) => ({
@@ -309,6 +332,7 @@ const publicCert = (r: CertRow) => ({
   minutes: r.minutes,
   lessons: r.lessons,
   issuedAt: r.issued_at,
+  locale: r.locale,
 });
 
 // Short, unambiguous ids for reading aloud or typing: no 0/O, 1/I/L.
@@ -330,24 +354,26 @@ app.post('/api/certificates', async (req, res) => {
   const color = str(req.body.color);
   const lessons = int(req.body.lessons, 1, 500);
   const minutes = int(req.body.minutes, 1, 100_000);
+  // The language it is issued in: the course title arrives in it, and the share card is written in it.
+  const locale = localeOf(req.body.locale);
   if (!/^[a-z0-9-]{1,60}$/.test(courseId) || !courseTitle || courseTitle.length > 120 || !/^#[0-9a-f]{6}$/i.test(color) || !lessons || !minutes) {
-    throw new HttpError(400, 'Invalid certificate request.');
+    throw new HttpError(400, 'api.badCertificate');
   }
-  const { name, problem } = checkName(typeof req.body.name === 'string' ? req.body.name : '');
-  if (problem) throw new HttpError(400, problem, 'name');
+  const { name, problem, key, params } = checkName(typeof req.body.name === 'string' ? req.body.name : '', 'en');
+  if (problem) throw new HttpError(400, key!, 'name', undefined, params);
 
   // The progress synced to the account must show every lesson of the course as completed.
   const progress = await queryOne<{ data: { completed?: Record<string, number> } }>('SELECT data FROM progress WHERE user_id = $1', [user.id]);
   const done = Object.keys(progress?.data?.completed ?? {}).filter((k) => k.startsWith(`${courseId}/`)).length;
   if (done < lessons) {
-    throw new HttpError(409, "Your finished lessons haven't reached the server yet. Wait a moment and try again.", 'not_finished');
+    throw new HttpError(409, 'api.notSynced', 'not_finished');
   }
 
   const now = Date.now();
   const updated = await queryOne<CertRow>(
-    `UPDATE certificates SET name = $3, course_title = $4, color = $5, minutes = $6, lessons = $7, updated_at = $8
+    `UPDATE certificates SET name = $3, course_title = $4, color = $5, minutes = $6, lessons = $7, updated_at = $8, locale = $9
      WHERE user_id = $1 AND course_id = $2 RETURNING *`,
-    [user.id, courseId, name, courseTitle, color, minutes, lessons, now],
+    [user.id, courseId, name, courseTitle, color, minutes, lessons, now, locale],
   );
   if (updated) {
     res.json({ certificate: publicCert(updated) });
@@ -356,9 +382,9 @@ app.post('/api/certificates', async (req, res) => {
   for (let attempt = 0; attempt < 5; attempt++) {
     try {
       const row = await queryOne<CertRow>(
-        `INSERT INTO certificates (id, user_id, course_id, course_title, color, name, minutes, lessons, issued_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9) RETURNING *`,
-        [newCertId(), user.id, courseId, courseTitle, color, name, minutes, lessons, now],
+        `INSERT INTO certificates (id, user_id, course_id, course_title, color, name, minutes, lessons, issued_at, updated_at, locale)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9, $10) RETURNING *`,
+        [newCertId(), user.id, courseId, courseTitle, color, name, minutes, lessons, now, locale],
       );
       res.status(201).json({ certificate: publicCert(row!) });
       return;
@@ -372,7 +398,7 @@ app.post('/api/certificates', async (req, res) => {
       }
     }
   }
-  throw new HttpError(500, 'Could not issue the certificate. Please try again.');
+  throw new HttpError(500, 'api.certFailed');
 });
 
 /** The signed-in learner's certificates. */
@@ -386,7 +412,7 @@ app.get('/api/certificates', async (req, res) => {
 app.get('/api/certificates/:id', async (req, res) => {
   const id = String(req.params.id).toUpperCase();
   const row = CERT_ID.test(id) ? await queryOne<CertRow>('SELECT * FROM certificates WHERE id = $1', [id]) : undefined;
-  if (!row) throw new HttpError(404, 'No certificate with that id.');
+  if (!row) throw new HttpError(404, 'api.certNotFound');
   res.json({ certificate: publicCert(row) });
 });
 
@@ -400,16 +426,25 @@ app.get(['/c/:id', '/api/c/:id'], async (req, res) => {
   const id = String(req.params.id).toUpperCase();
   const row = CERT_ID.test(id) ? await queryOne<CertRow>('SELECT * FROM certificates WHERE id = $1', [id]) : undefined;
   const target = row ? `/#/certificate/${row.id}` : '/';
-  const title = row ? `${row.name} completed “${row.course_title}”` : 'Certificate not found';
+  // The card speaks the language the certificate was issued in (its course title is in that language too).
+  const locale = localeOf(row?.locale);
+  const t = translator(locale);
+  const title = row ? t('cert.card.title', { name: row.name, course: row.course_title }) : t('cert.card.notFound');
   const description = row
-    ? `${row.lessons} lessons, ${formatHours(row.minutes)} of learning. Issued by ${ISSUER} on ${new Date(row.issued_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}. Certificate ID ${row.id}.`
-    : `This ${ISSUER} certificate link is not valid.`;
+    ? t('cert.card.description', {
+        count: row.lessons,
+        hours: formatHours(row.minutes, locale),
+        issuer: ISSUER,
+        date: formatDate(row.issued_at, { year: 'numeric', month: 'long', day: 'numeric' }, locale),
+        id: row.id,
+      })
+    : t('cert.card.invalid', { issuer: ISSUER });
   res
     .status(row ? 200 : 404)
     .type('html')
     .set('Cache-Control', 'public, max-age=300')
     .send(`<!doctype html>
-<html lang="en">
+<html lang="${locale}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -428,7 +463,7 @@ app.get(['/c/:id', '/api/c/:id'], async (req, res) => {
 </head>
 <body style="font-family:system-ui,sans-serif;text-align:center;padding:48px">
 <p>${html(title)}</p>
-<p><a href="${html(target)}">Open the certificate</a></p>
+<p><a href="${html(target)}">${html(t('cert.card.open'))}</a></p>
 </body>
 </html>`);
 });
@@ -448,18 +483,18 @@ if (devOutbox) {
 
 /** Adds the API 404 and the error handler. Call last, after anything else the host mounts (e.g. the static site). */
 export function finishApp(a: Express): Express {
-  a.use('/api', (_req, _res, next) => next(new HttpError(404, 'Not found.')));
+  a.use('/api', (_req, _res, next) => next(new HttpError(404, 'api.notFound')));
   a.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     if (err instanceof HttpError) {
-      res.status(err.status).json({ error: err.message, code: err.code, ...err.extra });
+      res.status(err.status).json({ error: err.message, key: err.key, ...(err.params ? { params: err.params } : {}), code: err.code, ...err.extra });
       return;
     }
     if (err && typeof err === 'object' && 'type' in err && err.type === 'entity.parse.failed') {
-      res.status(400).json({ error: 'Malformed JSON.' });
+      res.status(400).json({ error: en('api.badJson'), key: 'api.badJson' });
       return;
     }
     console.error(err);
-    res.status(500).json({ error: 'Something went wrong on the server.' });
+    res.status(500).json({ error: en('api.serverError'), key: 'api.serverError' });
   });
   return a;
 }

@@ -5,10 +5,11 @@ import { dueKeys, getProgress, useProgress, type Progress } from '../lib/storage
 import { MemoryStrength, ReviewForecast } from './charts';
 import { Page, PageHeader } from './Layout';
 import { Session } from './Session';
-import { accentStyle, plural } from './ui';
+import { accentStyle } from './ui';
 import { CourseIcon } from './CourseIcon';
 import { Icon } from './icons';
 import { MixedPracticeCard } from './MixedPractice';
+import { useT } from '../i18n/react';
 
 const SESSION_SIZE = 20;
 
@@ -24,6 +25,7 @@ function weakest(p: Progress, courseId?: string) {
 
 /** Overview page: what's due, the forecast, and memory strength. */
 export function Review() {
+  const { t, date } = useT();
   const p = useProgress();
   const due = refsFor(dueKeys(p));
   const seenKeys = Object.keys(p.cards).filter((k) => questionByKey.has(k));
@@ -35,35 +37,34 @@ export function Review() {
 
   return (
     <Page wide>
-      <PageHeader
-        title="Review"
-        subtitle="Spaced repetition brings each question back right before you'd forget it. Right answers wait longer; misses come back soon."
-      />
+      <PageHeader title={t('review.title')} subtitle={t('review.subtitle')} />
 
       <section className={`review-hero${due.length ? ' has-due' : ''}`}>
         <div>
-          <span className="eyebrow">{due.length ? 'Due now' : 'All caught up'}</span>
-          <h2>{due.length ? plural(due.length, 'question') : 'Nothing to review'}</h2>
+          <span className="eyebrow">{t(due.length ? 'review.dueNow' : 'review.allCaughtUp')}</span>
+          <h2>{due.length ? t('common.questions', { count: due.length }) : t('review.nothingToReview')}</h2>
           <p className="muted">
             {due.length
-              ? `About ${Math.max(1, Math.round(Math.min(due.length, SESSION_SIZE) * 0.4))} min. Sessions hold up to ${SESSION_SIZE} questions.`
+              ? t('review.sessionInfo', { minutes: Math.max(1, Math.round(Math.min(due.length, SESSION_SIZE) * 0.4)), size: SESSION_SIZE })
               : seenKeys.length
-                ? `Next review ${nextDue && nextDue - Date.now() < 86_400_000 ? 'later today' : `on ${new Date(nextDue!).toLocaleDateString('en-US')}`}.`
-                : 'Answer questions in a lesson — they land here automatically.'}
+                ? nextDue && nextDue - Date.now() < 86_400_000
+                  ? t('review.nextToday')
+                  : t('review.nextOn', { date: date(nextDue!, { year: 'numeric', month: 'numeric', day: 'numeric' }) })
+                : t('review.emptyHint')}
           </p>
         </div>
         <div className="review-hero-actions">
           {due.length > 0 ? (
             <a className="btn primary big" href={href('review', 'start')}>
-              Start review →
+              {t('review.start')}
             </a>
           ) : seenKeys.length > 0 ? (
             <a className="btn big" href={href('review', 'weak')}>
-              Practise weakest {Math.min(10, seenKeys.length)}
+              {t('review.practiseWeakest', { count: Math.min(10, seenKeys.length) })}
             </a>
           ) : (
             <a className="btn primary big" href="#/courses">
-              Browse courses
+              {t('review.browseCourses')}
             </a>
           )}
         </div>
@@ -75,25 +76,25 @@ export function Review() {
         <div className="review-grid">
           <section className="panel">
             <div className="panel-head">
-              <h2>Next 7 days</h2>
-              <span className="muted small">reviews due per day</span>
+              <h2>{t('review.next7Days')}</h2>
+              <span className="muted small">{t('review.duePerDay')}</span>
             </div>
             <ReviewForecast p={p} />
           </section>
           <section className="panel">
             <div className="panel-head">
-              <h2>Memory strength</h2>
-              <span className="muted small">{plural(seenKeys.length, 'question')} seen</span>
+              <h2>{t('review.memoryStrength')}</h2>
+              <span className="muted small">{t('review.seen', { count: seenKeys.length })}</span>
             </div>
             <MemoryStrength p={p} keys={seenKeys} />
-            <p className="small muted">Each correct review moves a question one level up and waits longer: 1 → 3 → 7 → 16 → 35 days.</p>
+            <p className="small muted">{t('review.levelsNote')}</p>
           </section>
         </div>
       )}
 
       {perCourse.length > 0 && (
         <section>
-          <h2 className="section-title">By course</h2>
+          <h2 className="section-title">{t('review.byCourse')}</h2>
           <div className="review-courses">
             {perCourse.map(({ course, due: d, seen }) => (
               <div key={course.id} className="review-course" style={accentStyle(course.color)}>
@@ -101,16 +102,17 @@ export function Review() {
                 <div className="grow">
                   <strong>{course.title}</strong>
                   <span className="muted small">
-                    {d ? `${d} due` : 'Nothing due'} · {seen} seen of {allQuestions.filter((q) => q.course.id === course.id).length}
+                    {t('review.courseDue', { count: d })} ·{' '}
+                    {t('review.courseSeen', { seen, total: allQuestions.filter((q) => q.course.id === course.id).length })}
                   </span>
                 </div>
                 {d > 0 ? (
                   <a className="btn small primary" href={href('review', 'start', course.id)}>
-                    Review
+                    {t('review.reviewButton')}
                   </a>
                 ) : (
                   <a className="btn small" href={href('review', 'weak', course.id)}>
-                    Practise
+                    {t('review.practiseButton')}
                   </a>
                 )}
               </div>
@@ -124,6 +126,7 @@ export function Review() {
 
 /** A review session: due questions (optionally for one course), or the weakest ones. */
 export function ReviewSession({ mode, courseId }: { mode: 'start' | 'weak'; courseId?: string }) {
+  const { t, n, pct } = useT();
   const [questions] = useState(() => {
     const p = getProgress();
     const keys = mode === 'weak' ? weakest(p, courseId) : dueKeys(p).filter((k) => !courseId || k.startsWith(`${courseId}/`));
@@ -138,14 +141,14 @@ export function ReviewSession({ mode, courseId }: { mode: 'start' | 'weak'; cour
           <div className="celebrate" aria-hidden>
             <Icon name="seedling" size={56} />
           </div>
-          <h1>Nothing to review{course ? ` in ${course.title}` : ''}</h1>
-          <p className="lead">You're all caught up. Come back later, or learn something new.</p>
+          <h1>{course ? t('review.empty.titleIn', { course: course.title }) : t('review.nothingToReview')}</h1>
+          <p className="lead">{t('review.empty.lead')}</p>
           <div className="actions center">
             <a className="btn" href="#/review">
-              Review overview
+              {t('review.overview')}
             </a>
             <a className="btn primary" href="#/courses">
-              Courses
+              {t('nav.courses')}
             </a>
           </div>
         </section>
@@ -153,9 +156,10 @@ export function ReviewSession({ mode, courseId }: { mode: 'start' | 'weak'; cour
     );
   }
 
+  // Session keys the current question by locale itself, so a language switch keeps the learner's place.
   return (
     <Session
-      ritual={{ kind: 'review', title: course ? `Review: ${course.title}` : 'Review', course: course?.id }}
+      ritual={{ kind: 'review', title: course ? t('review.ritualTitleCourse', { course: course.title }) : t('review.ritualTitle'), course: course?.id }}
       questions={questions}
       exitHref="#/review"
       renderEnd={(results, xp) => {
@@ -165,26 +169,24 @@ export function ReviewSession({ mode, courseId }: { mode: 'start' | 'weak'; cour
             <div className="celebrate" aria-hidden>
               <Icon name="check" size={56} />
             </div>
-            <h1>Review done</h1>
-            <p className="lead">
-              {right} of {results.length} remembered. Correct answers now wait longer; misses come back soon.
-            </p>
+            <h1>{t('review.done.title')}</h1>
+            <p className="lead">{t('review.done.lead', { right, total: results.length })}</p>
             <div className="result-tiles">
               <div className="result-tile xp">
-                <span>XP earned</span>
-                <strong>+{xp}</strong>
+                <span>{t('review.done.xp')}</span>
+                <strong>+{n(xp)}</strong>
               </div>
               <div className="result-tile">
-                <span>Remembered</span>
-                <strong>{Math.round((right / results.length) * 100)}%</strong>
+                <span>{t('review.done.remembered')}</span>
+                <strong>{pct(right / results.length)}</strong>
               </div>
             </div>
             <div className="actions center">
               <a className="btn ghost" href="#/review">
-                Review overview
+                {t('review.overview')}
               </a>
               <a className="btn primary big" href="#/">
-                Home
+                {t('nav.home')}
               </a>
             </div>
           </>

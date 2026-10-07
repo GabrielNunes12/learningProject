@@ -1,5 +1,6 @@
 // SQL join semantics for the JOIN playground: inner, left, right and full outer joins on one equality condition.
 // Pure and dependency-free (tested in tests/joinsim.test.ts). NULL never matches anything, not even NULL.
+import { t } from '../i18n/core.ts';
 
 export type JoinType = 'inner' | 'left' | 'right' | 'full';
 export type Cell = string | number | null;
@@ -111,17 +112,18 @@ export function describeJoin(left: JoinTable, right: JoinTable, on: [string, str
   const lines: string[] = [];
   const li = left.columns.indexOf(on[0]);
   const ri = right.columns.indexOf(on[1]);
-  const list = (t: JoinTable, idx: number[], key: string) => idx.map((i) => rowLabel(t, i, key)).join(', ');
-  lines.push(`${r.pairs.length} matching pair${r.pairs.length === 1 ? '' : 's'}, one result row each.`);
+  const list = (tb: JoinTable, idx: number[], key: string) => idx.map((i) => rowLabel(tb, i, key)).join(', ');
+  lines.push(t('sims.join.pairs', { count: r.pairs.length }));
   const repeatsL = left.rows.map((_, i) => i).filter((i) => r.pairs.filter((p) => p[0] === i).length > 1);
-  if (repeatsL.length) lines.push(`${list(left, repeatsL, on[0])} ${repeatsL.length === 1 ? 'matches' : 'match'} more than once, so ${repeatsL.length === 1 ? 'it repeats' : 'they repeat'}.`);
+  if (repeatsL.length) lines.push(t('sims.join.repeats', { count: repeatsL.length, rows: list(left, repeatsL, on[0]) }));
   const repeatsR = right.rows.map((_, j) => j).filter((j) => r.pairs.filter((p) => p[1] === j).length > 1);
-  if (repeatsR.length) lines.push(`${list(right, repeatsR, on[1])} ${repeatsR.length === 1 ? 'matches' : 'match'} more than once, so ${repeatsR.length === 1 ? 'it repeats' : 'they repeat'}.`);
-  const side = (t: JoinTable, idx: number[], key: string, keyIdx: number, s: 'left' | 'right') => {
+  if (repeatsR.length) lines.push(t('sims.join.repeats', { count: repeatsR.length, rows: list(right, repeatsR, on[1]) }));
+  const side = (tb: JoinTable, idx: number[], key: string, keyIdx: number, s: 'left' | 'right') => {
     if (!idx.length) return;
-    const nulls = idx.filter((i) => t.rows[i][keyIdx] === null);
-    const verb = keepsUnmatched(type, s) ? `kept, with NULLs for ${s === 'left' ? right.name : left.name}` : 'dropped';
-    lines.push(`No match in ${t.name}: ${list(t, idx, key)}, ${verb}.${nulls.length ? ` (NULL never equals anything, not even NULL.)` : ''}`);
+    const nulls = idx.filter((i) => tb.rows[i][keyIdx] === null);
+    const params = { table: tb.name, rows: list(tb, idx, key), other: s === 'left' ? right.name : left.name };
+    const line = t(keepsUnmatched(type, s) ? 'sims.join.noMatchKept' : 'sims.join.noMatchDropped', params);
+    lines.push(nulls.length ? t('sims.join.withNullNote', { sentence: line }) : line);
   };
   side(left, r.unmatchedLeft, on[0], li, 'left');
   side(right, r.unmatchedRight, on[1], ri, 'right');

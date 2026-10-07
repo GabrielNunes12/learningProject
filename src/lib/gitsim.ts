@@ -1,6 +1,9 @@
 // A tiny Git model for the Git playground: commits, branches, HEAD and merges, driven by typed commands.
 // Pure and dependency-free so it can be unit tested with node:test. Messages mirror what real Git prints
 // (checked against git 2.54). There are no files: every `git commit` simply records a new snapshot.
+// What Git itself prints (normal output, errors and Git's own hints) stays English, like the real program; the
+// playground's own help and hints are translated.
+import { t } from '../i18n/core.ts';
 
 export interface GitCommit {
   /** Short fake hash, e.g. "3f9a2c1". */
@@ -199,20 +202,24 @@ const REAL_BUT_UNSUPPORTED = new Set([
   'tag', 'cherry-pick', 'remote', 'rm', 'mv', 'reflog', 'bisect', 'blame', 'config',
 ]);
 
-export const HELP_LINES = [
-  'This playground understands:',
-  '  git commit -m "message"     save a new snapshot on the current branch',
-  '  git branch                  list branches (* marks the current one)',
-  '  git branch <name>           create a branch here (without switching)',
-  '  git branch -d <name>        delete a merged branch',
-  '  git switch <name>           move HEAD to another branch',
-  '  git switch -c <name>        create a branch and switch to it',
-  '  git checkout [-b] <name>    the older spelling of switch [-c]',
-  '  git merge <name>            merge a branch into the current one',
-  '  git log --oneline           list commits reachable from HEAD',
-  '  git status                  show the current branch',
-  '  clear                       clear the terminal',
-];
+const HELP_COMMANDS = [
+  ['git commit -m "message"', 'sims.git.help.commit'],
+  ['git branch', 'sims.git.help.branchList'],
+  ['git branch <name>', 'sims.git.help.branchCreate'],
+  ['git branch -d <name>', 'sims.git.help.branchDelete'],
+  ['git switch <name>', 'sims.git.help.switch'],
+  ['git switch -c <name>', 'sims.git.help.switchCreate'],
+  ['git checkout [-b] <name>', 'sims.git.help.checkout'],
+  ['git merge <name>', 'sims.git.help.merge'],
+  ['git log --oneline', 'sims.git.help.log'],
+  ['git status', 'sims.git.help.status'],
+  ['clear', 'sims.git.help.clear'],
+] as const;
+
+/** The playground's help: the commands stay as typed, their descriptions follow the learner's language. */
+export function helpLines(): string[] {
+  return [t('sims.git.help.title'), ...HELP_COMMANDS.map(([cmd, key]) => `  ${cmd.padEnd(28)}${t(key)}`)];
+}
 
 // ---------- commands ----------
 
@@ -226,15 +233,15 @@ export function runCommand(state: GitState, input: string): RunResult {
   const [first, sub, ...args] = words;
   if (first === 'clear' || first === 'cls') return { state, lines: [], failed: false, clear: true };
   if (first === 'help' || (first === 'git' && (sub === 'help' || sub === '--help'))) {
-    return { state, lines: HELP_LINES.map(out), failed: false };
+    return { state, lines: helpLines().map(out), failed: false };
   }
   if (first !== 'git') {
     if (SUPPORTED.includes(first) || REAL_BUT_UNSUPPORTED.has(first)) {
-      return fail([err(`command not found: ${first}`), hint(`Git commands start with "git", e.g. git ${words.join(' ')}`)]);
+      return fail([err(`command not found: ${first}`), hint(t('sims.git.hint.startWithGit', { command: `git ${words.join(' ')}` }))]);
     }
-    return fail([err(`command not found: ${first}`), hint('Type a Git command such as git status, or "help" to see what works here.')]);
+    return fail([err(`command not found: ${first}`), hint(t('sims.git.hint.typeCommand'))]);
   }
-  if (sub === undefined) return { state, lines: HELP_LINES.map(out), failed: false };
+  if (sub === undefined) return { state, lines: helpLines().map(out), failed: false };
 
   switch (sub) {
     case 'commit':
@@ -253,12 +260,12 @@ export function runCommand(state: GitState, input: string): RunResult {
       return ok([out(`On branch ${s.head}`), out('nothing to commit, working tree clean')]);
     default:
       if (sub === 'add') {
-        return fail([hint('There are no files in this playground: git commit saves a new snapshot straight away.')]);
+        return fail([hint(t('sims.git.hint.noFiles'))]);
       }
       if (REAL_BUT_UNSUPPORTED.has(sub)) {
-        return fail([hint(`git ${sub} is a real command, but this playground only simulates commits, branches and merges.`)]);
+        return fail([hint(t('sims.git.hint.unsupported', { command: `git ${sub}` }))]);
       }
-      return fail([err(`git: '${sub}' is not a git command. See 'git --help'.`), hint('Type "help" to see the commands this playground understands.')]);
+      return fail([err(`git: '${sub}' is not a git command. See 'git --help'.`), hint(t('sims.git.hint.typeHelp'))]);
   }
 }
 
@@ -280,7 +287,7 @@ function commit(s: GitState, args: string[], ok: Ok, fail: Fail): RunResult {
     } else if (a === '-a' || a === '--all' || a === '--allow-empty') {
       // no files here, nothing to do
     } else if (a === '--amend') {
-      return fail([hint('git commit --amend is real (see "Undo cheat sheet"), but this playground only makes new commits.')]);
+      return fail([hint(t('sims.git.hint.amend'))]);
     } else if (a.startsWith('-')) {
       return fail([err(`error: unknown option '${a.replace(/^-+/, '')}'`)]);
     } else {
@@ -288,7 +295,7 @@ function commit(s: GitState, args: string[], ok: Ok, fail: Fail): RunResult {
     }
   }
   if (rest.length) {
-    return fail([err(`error: pathspec '${rest[0]}' did not match any file(s) known to git`), hint('Put the message in quotes: git commit -m "Add login form"')]);
+    return fail([err(`error: pathspec '${rest[0]}' did not match any file(s) known to git`), hint(t('sims.git.hint.quoteMessage'))]);
   }
   if (message !== null && message.trim() === '') return fail([err('Aborting commit due to empty commit message.')]);
   const c = addCommit(s, [s.branches[s.head]], message ?? `Commit ${s.counter + 1}`);
@@ -320,7 +327,7 @@ function branch(s: GitState, args: string[], ok: Ok, fail: Fail): RunResult {
     return ok([out(`Deleted branch ${name} (was ${was}).`)]);
   }
   if (flag.startsWith('-')) {
-    return fail([hint(`git branch ${flag} isn't simulated here. Try git branch <name> or git branch -d <name>.`)]);
+    return fail([hint(t('sims.git.hint.branchFlag', { command: `git branch ${flag}` }))]);
   }
   if (extra !== undefined) return fail([err('fatal: too many arguments')]);
   let at = s.branches[s.head];
@@ -348,7 +355,7 @@ function switchCmd(s: GitState, args: string[], ok: Ok, fail: Fail): RunResult {
     moveHead(s, b);
     return ok([out(`Switched to a new branch '${b}'`)]);
   }
-  if (a === '--detach' || a === '-d') return fail([hint('Detached HEAD is covered in "Safety nets"; this playground keeps HEAD on a branch.')]);
+  if (a === '--detach' || a === '-d') return fail([hint(t('sims.git.hint.detach'))]);
   if (a.startsWith('-') && a !== '-') return fail([err(`error: unknown switch '${a.replace(/^-+/, '')}'`)]);
   const name = a === '-' ? s.prev : a;
   if (name === null) return fail([err('fatal: invalid reference: @{-1}')]);
@@ -361,7 +368,7 @@ function switchCmd(s: GitState, args: string[], ok: Ok, fail: Fail): RunResult {
   if (r) {
     return fail([err(`fatal: a branch is expected, got commit '${name}'`), hint('If you want to detach HEAD at the commit, try again with the --detach option.')]);
   }
-  return fail([err(`fatal: invalid reference: ${name}`), hint(`To create it, use git switch -c ${name}`)]);
+  return fail([err(`fatal: invalid reference: ${name}`), hint(t('sims.git.hint.createIt', { command: `git switch -c ${name}` }))]);
 }
 
 function checkout(s: GitState, args: string[], ok: Ok, fail: Fail): RunResult {
@@ -382,7 +389,7 @@ function checkout(s: GitState, args: string[], ok: Ok, fail: Fail): RunResult {
     return ok([out(`Switched to branch '${name}'`)]);
   }
   if (name !== null && resolve(s, name)) {
-    return fail([hint('Checking out a commit gives a detached HEAD (see "Safety nets"); this playground keeps HEAD on a branch.')]);
+    return fail([hint(t('sims.git.hint.checkoutCommit'))]);
   }
   return fail([err(`error: pathspec '${a}' did not match any file(s) known to git`)]);
 }
@@ -398,8 +405,8 @@ function merge(s: GitState, args: string[], ok: Ok, fail: Fail): RunResult {
     else if (a.startsWith('-')) return fail([err(`error: unknown option '${a.replace(/^-+/, '')}'`)]);
     else names.push(a);
   }
-  if (names.length === 0) return fail([err('fatal: No remote for the current branch.'), hint('Name the branch to merge into this one, e.g. git merge feature')]);
-  if (names.length > 1) return fail([hint('Merge one branch at a time here, e.g. git merge feature')]);
+  if (names.length === 0) return fail([err('fatal: No remote for the current branch.'), hint(t('sims.git.hint.mergeName'))]);
+  if (names.length > 1) return fail([hint(t('sims.git.hint.mergeOne'))]);
   const name = names[0];
   const target = resolve(s, name);
   if (!target) return fail([err(`merge: ${name} - not something we can merge`)]);
@@ -445,7 +452,7 @@ function log(s: GitState, args: string[], ok: Ok, fail: Fail): RunResult {
     const labels = branchesAt(s, c.id).map((b) => (b === s.head ? `HEAD -> ${b}` : b));
     return out(`${c.id}${labels.length ? ` (${labels.join(', ')})` : ''} ${c.message}`);
   });
-  if (!oneline) lines.push(hint('(This playground always prints the short --oneline format.)'));
+  if (!oneline) lines.push(hint(t('sims.git.hint.oneline')));
   return ok(lines);
 }
 
@@ -678,7 +685,9 @@ export function describeGraph(s: GitState): string {
   const commits = visibleCommits(s);
   const tips = Object.keys(s.branches)
     .sort()
-    .map((b) => `${b} at ${s.branches[b]}${b === s.head ? ' (HEAD)' : ''}`);
+    .map((b) => t(b === s.head ? 'sims.git.graph.tipHead' : 'sims.git.graph.tip', { branch: b, commit: s.branches[b] }));
   const merges = commits.filter((c) => c.parents.length > 1).length;
-  return `${commits.length} commit${commits.length === 1 ? '' : 's'}${merges ? `, ${merges} of them merge commit${merges === 1 ? '' : 's'}` : ''}. Branches: ${tips.join('; ')}.`;
+  const total = commits.length;
+  const counts = merges ? t('sims.git.graph.commitsWithMerges', { count: merges, total }) : t('sims.git.graph.commits', { count: total });
+  return t('sims.git.graph.summary', { commits: counts, branches: tips.join('; ') });
 }

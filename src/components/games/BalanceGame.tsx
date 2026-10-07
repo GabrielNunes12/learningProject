@@ -27,6 +27,8 @@ import type { BalanceStep } from '../../types';
 import { AnswerLine, QuestionFrame, useCheckFlow, type QuestionProps } from '../QuestionFrame';
 import './BalanceGame.css';
 import { Icon } from '../icons';
+import { t, type MessageKey } from '../../i18n/core';
+import { useT } from '../../i18n/react';
 
 interface Entry {
   eq: Equation;
@@ -34,11 +36,11 @@ interface Entry {
   move: Move | null;
 }
 
-const OPS: { op: Op; sym: string; name: string }[] = [
-  { op: '+', sym: '+', name: 'Add' },
-  { op: '-', sym: '−', name: 'Subtract' },
-  { op: '*', sym: '×', name: 'Multiply' },
-  { op: '/', sym: '÷', name: 'Divide' },
+const OPS: { op: Op; sym: string; name: MessageKey }[] = [
+  { op: '+', sym: '+', name: 'games.balance.op.add' },
+  { op: '-', sym: '−', name: 'games.balance.op.subtract' },
+  { op: '*', sym: '×', name: 'games.balance.op.multiply' },
+  { op: '/', sym: '÷', name: 'games.balance.op.divide' },
 ];
 const KEY_OPS: Record<string, Op> = { '+': '+', '-': '-', '*': '*', '/': '/' };
 const MAX_AMOUNT = 99;
@@ -54,13 +56,19 @@ const parseAmount = (s: string) => {
 const isAddSub = (op: Op) => op === '+' || op === '-';
 
 /** A pan's load in words, for screen readers: "2 x-tiles and 3 one-weights", "4 minus-one balloons", "empty". */
-function describePan(side: Side, v: string) {
+function describePan(side: Side, v: string, list: (items: string[]) => string) {
   const parts = panGroups(side).map((g) => {
-    const what = g.kind === 'x' ? `${v}-tile` : 'one-weight';
-    if (g.negative) return `${g.count} minus-${g.kind === 'x' ? v : 'one'} balloon${g.count === 1 ? '' : 's'}`;
-    return `${g.count} ${what}${g.count === 1 ? '' : 's'}`;
+    const key: MessageKey =
+      g.kind === 'x'
+        ? g.negative
+          ? 'games.balance.pan.minusXBalloons'
+          : 'games.balance.pan.xTiles'
+        : g.negative
+          ? 'games.balance.pan.minusOneBalloons'
+          : 'games.balance.pan.oneWeights';
+    return t(key, { count: g.count, v });
   });
-  return parts.length ? parts.join(' and ') : 'empty';
+  return parts.length ? list(parts) : t('games.balance.pan.empty');
 }
 
 function Piece({ group, v, hero, index }: { group: PanGroup; v: string; hero: boolean; index: number }) {
@@ -103,6 +111,7 @@ function Pan({ side, v, which, hero }: { side: Side; v: string; which: 'left' | 
 }
 
 export function BalanceGame({ step, mode, context, onDone }: QuestionProps<BalanceStep>) {
+  const { t, tx, list } = useT();
   const flow = useCheckFlow(mode, onDone);
   const { status } = flow;
   const v = step.variable ?? 'x';
@@ -174,7 +183,7 @@ export function BalanceGame({ step, mode, context, onDone }: QuestionProps<Balan
     if (locked) return;
     if (!result || !result.ok) {
       setShake((s) => s + 1);
-      setAnnounce(result ? result.reason : 'Type a whole number for the amount.');
+      setAnnounce(result ? result.reason : t('games.balance.typeWholeNumber'));
       return;
     }
     const next = result.eq;
@@ -184,10 +193,18 @@ export function BalanceGame({ step, mode, context, onDone }: QuestionProps<Balan
     setWobble((w) => w + 1);
     if (isSolved(next)) {
       setSolvedIn(used);
-      setAnnounce(`${describeMove(move, v)}. ${formatEquation(next, v)}. Solved: ${v} = ${solvedValue(next)}, in ${used} ${used === 1 ? 'move' : 'moves'}.`);
+      setAnnounce(
+        t('games.balance.announce.solved', {
+          move: describeMove(move, v),
+          equation: formatEquation(next, v),
+          v,
+          value: String(solvedValue(next)),
+          count: used,
+        }),
+      );
       later(() => finish(used), reducedMotion() ? 0 : SETTLE_MS);
     } else {
-      setAnnounce(`${describeMove(move, v)}. Now ${formatEquation(next, v)}.`);
+      setAnnounce(t('games.balance.announce.moved', { move: describeMove(move, v), equation: formatEquation(next, v) }));
     }
   }
 
@@ -196,14 +213,14 @@ export function BalanceGame({ step, mode, context, onDone }: QuestionProps<Balan
     const prev = history[history.length - 2].eq;
     setHistory((h) => h.slice(0, -1));
     setWobble((w) => w + 1);
-    setAnnounce(`Undone. Back to ${formatEquation(prev, v)}.`);
+    setAnnounce(t('games.balance.announce.undone', { equation: formatEquation(prev, v) }));
   }
 
   function restart() {
     if (locked || history.length < 2) return;
     setHistory([{ eq: start, move: null }]);
     setWobble((w) => w + 1);
-    setAnnounce(`Back to the start: ${formatEquation(start, v)}.`);
+    setAnnounce(t('games.balance.announce.restart', { equation: formatEquation(start, v) }));
   }
 
   // "Show me how": give up, then replay an optimal solution on the scale from the start.
@@ -296,11 +313,11 @@ export function BalanceGame({ step, mode, context, onDone }: QuestionProps<Balan
       flow={flow}
       mode={mode}
       context={context}
-      kind="Balance the equation"
+      kind={t('games.balance.kind')}
       canCheck={false}
       onCheck={() => {}}
       enterKey={false}
-      checkLabel={solved ? 'Solved!' : 'Solve it to continue'}
+      checkLabel={solved ? t('games.balance.solved') : t('games.balance.solveToContinue')}
       answer={
         <>
           <AnswerLine text={gameAnswerLabel(step)} />
@@ -317,13 +334,17 @@ export function BalanceGame({ step, mode, context, onDone }: QuestionProps<Balan
     >
       <div className="bal-bar">
         <span className="bal-chip">
-          Moves <strong key={moves} className={moves ? 'bal-bump' : undefined}>{moves}</strong>
+          {tx('games.common.moves', {
+            moves: (
+              <strong key={moves} className={moves ? 'bal-bump' : undefined}>
+                {moves}
+              </strong>
+            ),
+          })}
         </span>
-        <span className="bal-chip">
-          Par <strong>{par}</strong> {par === 1 ? 'move' : 'moves'}
-        </span>
+        <span className="bal-chip">{tx('games.balance.par', { count: par, par: <strong>{par}</strong> })}</span>
         {finishedHere && (
-          <span className="bal-stars" role="img" aria-label={`${stars} of 3 stars`}>
+          <span className="bal-stars" role="img" aria-label={t('games.balance.stars', { stars })}>
             {[1, 2, 3].map((s) => (
               <span key={s} className={s <= stars ? 'on' : undefined} style={{ '--i': s } as CSSProperties}>
                 ★
@@ -338,7 +359,7 @@ export function BalanceGame({ step, mode, context, onDone }: QuestionProps<Balan
           <figure
             className={scaleCls}
             style={{ '--dir': dir } as CSSProperties}
-            aria-label={`Balance scale, level. Left pan: ${describePan(current.left, v)}. Right pan: ${describePan(current.right, v)}.`}
+            aria-label={t('games.balance.scaleLabel', { left: describePan(current.left, v, list), right: describePan(current.right, v, list) })}
           >
             <div className="bal-beam" aria-hidden>
               <span className="bal-pivot" />
@@ -363,7 +384,7 @@ export function BalanceGame({ step, mode, context, onDone }: QuestionProps<Balan
           </p>
 
           {history.length > 1 && (
-            <ol className="bal-history" aria-label="Your steps">
+            <ol className="bal-history" aria-label={t('games.balance.yourSteps')}>
               {history.map((h, i) => (
                 <li key={i} className={i === history.length - 1 ? 'last' : undefined}>
                   {h.move && (
@@ -371,7 +392,7 @@ export function BalanceGame({ step, mode, context, onDone }: QuestionProps<Balan
                       <span className="bal-arrow" title={describeMove(h.move, v)} aria-hidden>
                         <small>{shortMove(h.move, v)}</small>→
                       </span>
-                      <span className="sr-only">then {describeMove(h.move, v)}: </span>
+                      <span className="sr-only">{t('games.balance.then', { move: describeMove(h.move, v) })}</span>
                     </>
                   )}
                   <span className="bal-hist-eq">{formatEquation(h.eq, v)}</span>
@@ -384,10 +405,10 @@ export function BalanceGame({ step, mode, context, onDone }: QuestionProps<Balan
         {!solved && !showAnswer && (
           <div className="bal-pad" role="group" aria-labelledby={padId}>
             <span id={padId} className="eyebrow">
-              Do the same to both sides
+              {t('games.balance.padTitle')}
             </span>
 
-            <div className="bal-ops" role="radiogroup" aria-label="Operation" onKeyDown={onOpsKey} data-enter-applies>
+            <div className="bal-ops" role="radiogroup" aria-label={t('games.balance.operation')} onKeyDown={onOpsKey} data-enter-applies>
               {OPS.map((o, i) => (
                 <button
                   key={o.op}
@@ -397,7 +418,7 @@ export function BalanceGame({ step, mode, context, onDone }: QuestionProps<Balan
                   type="button"
                   role="radio"
                   aria-checked={op === o.op}
-                  aria-label={o.name}
+                  aria-label={t(o.name)}
                   tabIndex={op === o.op ? 0 : -1}
                   className={`bal-op${op === o.op ? ' on' : ''}`}
                   disabled={locked}
@@ -409,11 +430,11 @@ export function BalanceGame({ step, mode, context, onDone }: QuestionProps<Balan
             </div>
 
             <div className="bal-amount" data-enter-applies>
-              <button type="button" className="bal-step" aria-label="Smaller amount" disabled={locked} onClick={() => nudgeAmount(-1)}>
+              <button type="button" className="bal-step" aria-label={t('games.balance.smaller')} disabled={locked} onClick={() => nudgeAmount(-1)}>
                 −
               </button>
               <label className="bal-input">
-                <span className="sr-only">Amount</span>
+                <span className="sr-only">{t('games.balance.amount')}</span>
                 <input
                   type="text"
                   inputMode="numeric"
@@ -431,7 +452,7 @@ export function BalanceGame({ step, mode, context, onDone }: QuestionProps<Balan
                 />
                 {isAddSub(op) && useX && <span className="bal-input-x" aria-hidden>{v}</span>}
               </label>
-              <button type="button" className="bal-step" aria-label="Bigger amount" disabled={locked} onClick={() => nudgeAmount(1)}>
+              <button type="button" className="bal-step" aria-label={t('games.balance.bigger')} disabled={locked} onClick={() => nudgeAmount(1)}>
                 +
               </button>
               {isAddSub(op) && (
@@ -439,8 +460,8 @@ export function BalanceGame({ step, mode, context, onDone }: QuestionProps<Balan
                   type="button"
                   className={`bal-xtoggle${useX ? ' on' : ''}`}
                   aria-pressed={useX}
-                  aria-label={`Amount is ${v}-terms`}
-                  title={`Use ${v}-terms (key ${v})`}
+                  aria-label={t('games.balance.xTermsLabel', { v })}
+                  title={t('games.balance.xTermsTip', { v })}
                   disabled={locked}
                   onClick={() => setUseX((x) => !x)}
                 >
@@ -450,7 +471,7 @@ export function BalanceGame({ step, mode, context, onDone }: QuestionProps<Balan
             </div>
 
             {quick.length > 0 && (
-              <div className="bal-quick" role="group" aria-label="Quick amounts from the scale" data-enter-applies>
+              <div className="bal-quick" role="group" aria-label={t('games.balance.quickAmounts')} data-enter-applies>
                 {quick.map((m) => {
                   const on = m.k === k && !!m.x === move.x;
                   return (
@@ -475,7 +496,7 @@ export function BalanceGame({ step, mode, context, onDone }: QuestionProps<Balan
               className={`bal-preview${result && !result.ok ? ' refused' : ''}${shake ? ' shake' : ''}`}
             >
               {!result ? (
-                <span className="muted">Type a whole number for the amount.</span>
+                <span className="muted">{t('games.balance.typeWholeNumber')}</span>
               ) : result.ok ? (
                 <>
                   <span className="bal-preview-move">{describeMove(move, v)}</span>
@@ -488,21 +509,21 @@ export function BalanceGame({ step, mode, context, onDone }: QuestionProps<Balan
             </div>
 
             <button type="button" className={`btn primary full bal-do${result?.ok ? '' : ' soft'}`} disabled={locked} onClick={apply}>
-              Do it to both sides
+              {t('games.balance.doIt')}
             </button>
 
             <div className="bal-actions">
               <button type="button" className="btn small" disabled={locked || history.length < 2} onClick={undo}>
-                ↶ Undo
+                {t('games.common.undo')}
               </button>
               <button type="button" className="btn small" disabled={locked || history.length < 2} onClick={restart}>
-                Restart
+                {t('games.balance.restart')}
               </button>
               <button type="button" className="btn ghost small bal-how" disabled={locked} onClick={showHow}>
-                Show me how
+                {t('games.balance.showHow')}
               </button>
             </div>
-            <p className="muted small bal-tip">Every move counts, even ones you undo. Enter does the move.</p>
+            <p className="muted small bal-tip">{t('games.balance.tip')}</p>
           </div>
         )}
       </div>
@@ -511,12 +532,11 @@ export function BalanceGame({ step, mode, context, onDone }: QuestionProps<Balan
         <p className="bal-result" role="status">
           {solvedIn! <= par ? (
             <>
-              <Icon name="scale" size={16} /> {v} = {value} in <strong>{solvedIn}</strong> {solvedIn === 1 ? 'move' : 'moves'}: right on par!
+              <Icon name="scale" size={16} />{' '}
+              {tx('games.balance.onPar', { count: solvedIn!, v, value: String(value), moves: <strong>{solvedIn}</strong> })}
             </>
           ) : (
-            <>
-              {v} = {value} in <strong>{solvedIn}</strong> moves. Par is {par}: can you see the shortcut?
-            </>
+            tx('games.balance.overPar', { count: solvedIn!, v, value: String(value), par, moves: <strong>{solvedIn}</strong> })
           )}
         </p>
       )}

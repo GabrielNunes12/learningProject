@@ -1,5 +1,6 @@
 // UI logic for the truth-table mini-game: cell cycling, keyboard navigation and pretty-printing expressions.
-// Pure, no runtime imports, so node:test can load it directly.
+// Pure (only the i18n core), so node:test can load it directly.
+import { t } from '../i18n/core.ts';
 
 /** A learner cell: true, false, or still empty. */
 export type TruthCell = boolean | null;
@@ -42,7 +43,8 @@ export type TruthKeyAction =
   | { kind: 'move'; to: TruthPos };
 
 /**
- * What a key press on a learner cell does. T/1 and F/0 set a value and advance to the next cell; Space cycles;
+ * What a key press on a learner cell does. T/V/1 and F/0 set a value and advance to the next cell (V is "true" in
+ * Portuguese, Spanish and French: verdadeiro, verdadero, vrai); Space cycles;
  * Backspace/Delete clear; arrows, Home and End move. Returns null for keys the game doesn't use.
  */
 export function truthKey(key: string, pos: TruthPos, rows: number, cols: number): TruthKeyAction | null {
@@ -50,6 +52,8 @@ export function truthKey(key: string, pos: TruthPos, rows: number, cols: number)
   switch (key) {
     case 't':
     case 'T':
+    case 'v':
+    case 'V':
     case '1':
       return { kind: 'set', value: true, advance: true };
     case 'f':
@@ -143,9 +147,16 @@ export function prettyLogic(expr: string): string {
   return out;
 }
 
-/** How a screen reader should hear an expression: "not (P and Q) implies R". */
+/** How a screen reader should hear an expression: "not (P and Q) implies R" (in the active language). */
 export function spokenLogic(expr: string): string {
-  const words: Record<string, string> = { '¬': 'not ', '∧': ' and ', '∨': ' or ', '⊕': ' xor ', '→': ' implies ', '↔': ' if and only if ' };
+  const words: Record<string, string> = {
+    '¬': `${t('games.truth.say.not')} `,
+    '∧': ` ${t('games.truth.say.and')} `,
+    '∨': ` ${t('games.truth.say.or')} `,
+    '⊕': ` ${t('games.truth.say.xor')} `,
+    '→': ` ${t('games.truth.say.implies')} `,
+    '↔': ` ${t('games.truth.say.iff')} `,
+  };
   return prettyLogic(expr)
     .replace(/\s*([∧∨⊕→↔])\s*/g, (_, op: string) => words[op])
     .replace(/¬/g, words['¬']);

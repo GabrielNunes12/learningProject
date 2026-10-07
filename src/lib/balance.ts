@@ -1,5 +1,6 @@
 // Pure model behind the "balance the equation" mini-game: a·x + b = c·x + d on a scale, where every move is done to
-// both sides. Moves, whole-number rules, formatting and the breadth-first "par" search. No runtime imports.
+// both sides. Moves, whole-number rules, formatting and the breadth-first "par" search. Only the pure i18n core.
+import { formatList, t } from '../i18n/core.ts';
 
 /** One side of the scale: [x-coefficient, constant], always whole numbers. */
 export type Side = readonly [number, number];
@@ -60,13 +61,13 @@ export function describeMove(m: Move, v = 'x'): string {
   const amount = bracketed(m, v);
   switch (m.op) {
     case '+':
-      return `+ ${amount} to both sides`;
+      return t('games.balance.move.add', { amount });
     case '-':
-      return `${MINUS} ${amount} from both sides`;
+      return t('games.balance.move.subtract', { amount });
     case '*':
-      return `× ${amount} on both sides`;
+      return t('games.balance.move.multiply', { amount });
     case '/':
-      return `÷ ${amount} on both sides`;
+      return t('games.balance.move.divide', { amount });
   }
 }
 
@@ -91,16 +92,16 @@ export function previewMove(eq: Equation, m: Move, v = 'x'): string {
 /** Do `m` to both sides, or explain (kindly) why that move isn't allowed here. */
 export function applyMove(eq: Equation, m: Move, v = 'x'): MoveResult {
   const { op, k } = m;
-  if (!Number.isInteger(k)) return { ok: false, reason: 'Stick to whole numbers for the amount.' };
+  if (!Number.isInteger(k)) return { ok: false, reason: t('games.balance.reason.wholeNumbers') };
   if (m.x && (op === '*' || op === '/')) {
-    return { ok: false, reason: `Multiplying or dividing by ${v} isn’t a balance move here: add or take away ${v}-terms instead.` };
+    return { ok: false, reason: t('games.balance.reason.noVarMultiply', { v }) };
   }
   let left: [number, number] = [eq.left[0], eq.left[1]];
   let right: [number, number] = [eq.right[0], eq.right[1]];
   switch (op) {
     case '+':
     case '-': {
-      if (k === 0) return { ok: false, reason: `${op === '+' ? 'Adding' : 'Taking away'} 0 changes nothing. Pick an amount.` };
+      if (k === 0) return { ok: false, reason: t(op === '+' ? 'games.balance.reason.addZero' : 'games.balance.reason.subtractZero') };
       const d = op === '+' ? k : -k;
       const i = m.x ? 0 : 1;
       left[i] += d;
@@ -108,24 +109,22 @@ export function applyMove(eq: Equation, m: Move, v = 'x'): MoveResult {
       break;
     }
     case '*': {
-      if (k === 0) return { ok: false, reason: `Multiplying by 0 turns both sides into 0: still balanced, but every clue about ${v} is gone.` };
-      if (k === 1) return { ok: false, reason: 'Multiplying by 1 changes nothing.' };
+      if (k === 0) return { ok: false, reason: t('games.balance.reason.multiplyZero', { v }) };
+      if (k === 1) return { ok: false, reason: t('games.balance.reason.multiplyOne') };
       left = [left[0] * k, left[1] * k];
       right = [right[0] * k, right[1] * k];
       break;
     }
     case '/': {
-      if (k === 0) return { ok: false, reason: 'You can’t divide by 0.' };
-      if (k === 1) return { ok: false, reason: 'Dividing by 1 changes nothing.' };
+      if (k === 0) return { ok: false, reason: t('games.balance.reason.divideZero') };
+      if (k === 1) return { ok: false, reason: t('games.balance.reason.divideOne') };
       const stuck = [left[0], left[1], right[0], right[1]].filter((n) => n % k !== 0);
       if (stuck.length) {
-        const list = [...new Set(stuck.map(Math.abs))].join(' and ');
+        const numbers = formatList([...new Set(stuck.map(Math.abs))].map(String));
         // Loose numbers sitting next to the x-term are what usually blocks a clean division.
         const looseBesideX = (left[0] !== 0 && left[1] !== 0) || (right[0] !== 0 && right[1] !== 0);
-        const advice = looseBesideX
-          ? `Move the loose numbers off the side with ${v} first, then divide.`
-          : `Try a number that goes into every number on the scale, like the number in front of ${v}.`;
-        return { ok: false, reason: `Dividing everything by ${num(k)} would break ${list} into fractions. ${advice}` };
+        const msg = looseBesideX ? 'games.balance.reason.fractionsMoveFirst' : 'games.balance.reason.fractionsTryCommon';
+        return { ok: false, reason: t(msg, { k: num(k), numbers, v }) };
       }
       left = [left[0] / k, left[1] / k];
       right = [right[0] / k, right[1] / k];
@@ -136,7 +135,7 @@ export function applyMove(eq: Equation, m: Move, v = 'x'): MoveResult {
   left = [left[0] + 0, left[1] + 0];
   right = [right[0] + 0, right[1] + 0];
   if ([...left, ...right].some((n) => Math.abs(n) > MAX_MAGNITUDE)) {
-    return { ok: false, reason: 'Those numbers would get huge. Try a move that makes things simpler.' };
+    return { ok: false, reason: t('games.balance.reason.tooBig') };
   }
   return { ok: true, eq: { left, right } };
 }

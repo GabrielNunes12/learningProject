@@ -7,37 +7,39 @@ import type { Course } from '../types';
 import { Page, PageHeader } from './Layout';
 import { accentStyle, ProgressBar } from './ui';
 import { CourseIcon } from './CourseIcon';
+import { categoryLabel, levelLabel } from '../i18n/core';
+import { useT } from '../i18n/react';
+
+/** The "all categories" filter. A logic id, never shown: the chip shows courses.filter.all. */
+const ALL = 'All';
 
 export function CourseCard({ course }: { course: Course }) {
+  const { t, pct } = useT();
   const p = useProgress();
   const s = courseStats(course, p);
   return (
     <a className="course-card" href={href('course', course.id)} style={accentStyle(course.color)}>
       <div className="course-banner">
         <CourseIcon icon={course.icon} color={course.color} size={60} />
-        {course.level && <span className="level-pill">{course.level}</span>}
+        {course.level && <span className="level-pill">{levelLabel(course.level)}</span>}
       </div>
       <div className="course-body">
         <h3>{course.title}</h3>
         <p>{course.description}</p>
         <div className="course-meta">
-          <span>{s.total} lessons</span>
-          <span>
-            {s.coreTotal} core · ~{s.coreMinutes} min
-          </span>
+          <span>{t('common.lessons', { count: s.total })}</span>
+          <span>{t('courses.card.coreMeta', { count: s.coreTotal, minutes: s.coreMinutes })}</span>
         </div>
         {s.started ? (
           <>
-            <ProgressBar value={s.total ? s.completed / s.total : 0} label={`${course.title} progress`} />
+            <ProgressBar value={s.total ? s.completed / s.total : 0} label={t('courses.card.progressLabel', { title: course.title })} />
             <div className="course-meta">
-              <span>
-                Core {s.coreDone}/{s.coreTotal}
-              </span>
-              <span>{Math.round(s.mastery * 100)}% mastered</span>
+              <span>{t('courses.card.coreDone', { done: s.coreDone, total: s.coreTotal })}</span>
+              <span>{t('courses.card.mastered', { pct: pct(s.mastery) })}</span>
             </div>
           </>
         ) : (
-          <span className="course-cta">Start course →</span>
+          <span className="course-cta">{t('courses.card.start')}</span>
         )}
       </div>
     </a>
@@ -45,34 +47,34 @@ export function CourseCard({ course }: { course: Course }) {
 }
 
 export function Courses() {
+  const { t } = useT();
   const [query, setQuery] = useState('');
-  const [category, setCategory] = useState<string>('All');
-  const q = query.trim().toLowerCase();
+  const [category, setCategory] = useState<string>(ALL);
+  // Case- and accent-insensitive, so "licao" finds "lição".
+  const fold = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const q = fold(query.trim());
   const shown = courses.filter(
     (c) =>
-      (category === 'All' || c.category === category) &&
-      (!q || `${c.title} ${c.description} ${c.keyIdeas.join(' ')} ${c.lessons.map((l) => l.title).join(' ')}`.toLowerCase().includes(q)),
+      (category === ALL || c.category === category) &&
+      (!q || fold(`${c.title} ${c.description} ${c.keyIdeas.join(' ')} ${c.lessons.map((l) => l.title).join(' ')}`).includes(q)),
   );
 
   return (
     <Page wide>
-      <PageHeader
-        title="Courses"
-        subtitle="Each course starts with the core 20% — the ideas you'll use 80% of the time. Deep dives are optional."
-      />
+      <PageHeader title={t('courses.title')} subtitle={t('courses.subtitle')} />
       <div className="filters">
         <input
           className="search"
           type="search"
-          placeholder="Search courses and lessons…"
+          placeholder={t('courses.searchPlaceholder')}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          aria-label="Search courses"
+          aria-label={t('courses.searchLabel')}
         />
-        <div className="chips" role="tablist" aria-label="Category">
-          {['All', ...categories].map((cat) => (
+        <div className="chips" role="tablist" aria-label={t('courses.filter.label')}>
+          {[ALL, ...categories].map((cat) => (
             <button key={cat} role="tab" aria-selected={category === cat} className={`chip-btn${category === cat ? ' on' : ''}`} onClick={() => setCategory(cat)}>
-              {cat}
+              {cat === ALL ? t('courses.filter.all') : categoryLabel(cat)}
             </button>
           ))}
         </div>
@@ -84,7 +86,7 @@ export function Courses() {
           ))}
         </div>
       ) : (
-        <p className="muted center">No courses match “{query}”.</p>
+        <p className="muted center">{t('courses.noMatch', { query })}</p>
       )}
     </Page>
   );

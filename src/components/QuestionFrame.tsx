@@ -6,6 +6,7 @@ import { XP } from '../lib/storage';
 import type { QuestionStep } from '../types';
 import { InlineMarkdown, Markdown } from './Markdown';
 import { Icon } from './icons';
+import { useT } from '../i18n/react';
 
 export type Status = 'answering' | 'wrong' | 'correct' | 'revealed';
 
@@ -72,7 +73,7 @@ interface FrameProps {
   answer?: ReactNode;
   /** Set to false when the step handles Enter itself. */
   enterKey?: boolean;
-  /** Label for the check button (default "Check"). */
+  /** Label for the check button (default: common.check). */
   checkLabel?: string;
   children: ReactNode;
 }
@@ -88,9 +89,10 @@ export function QuestionFrame({
   onRetry,
   answer,
   enterKey = true,
-  checkLabel = 'Check',
+  checkLabel,
   children,
 }: FrameProps) {
+  const { t, tx } = useT();
   const [showHint, setShowHint] = useState(false);
   const feedbackRef = useRef<HTMLDivElement>(null);
   const { status, first, finished, tone } = flow;
@@ -136,12 +138,12 @@ export function QuestionFrame({
 
         {mode === 'learn' && step.hint && status === 'answering' && !showHint && (
           <button className="link hint-link" onClick={() => setShowHint(true)}>
-            <Icon name="bulb" size={16} /> Need a hint?
+            <Icon name="bulb" size={16} /> {t('lesson.frame.needHint')}
           </button>
         )}
         {showHint && step.hint && status !== 'correct' && (
           <div className="hint">
-            <strong>Hint:</strong> <InlineMarkdown text={step.hint} />
+            {tx('lesson.frame.hintLine', { hint: <InlineMarkdown text={step.hint} /> }, { b: (c) => <strong>{c}</strong> })}
           </div>
         )}
 
@@ -149,7 +151,7 @@ export function QuestionFrame({
           {finished && (
             <div className={`explanation ${tone}`}>
               {status === 'revealed' && answer}
-              <span className="eyebrow">Why</span>
+              <span className="eyebrow">{t('lesson.frame.why')}</span>
               <Markdown text={step.explanation} />
             </div>
           )}
@@ -162,8 +164,8 @@ export function QuestionFrame({
             <>
               <span className="bb-icon">✓</span>
               <div>
-                <strong>{first ? 'Correct!' : 'Got it!'}</strong>
-                <span>{first ? `+${XP.correct} XP` : 'Second tries count too.'}</span>
+                <strong>{first ? t('common.correct') : t('lesson.frame.gotIt')}</strong>
+                <span>{first ? t('lesson.frame.xpGained', { xp: XP.correct }) : t('lesson.frame.secondTries')}</span>
               </div>
             </>
           )}
@@ -171,8 +173,8 @@ export function QuestionFrame({
             <>
               <span className="bb-icon">✗</span>
               <div>
-                <strong>Not quite.</strong>
-                <span>Think it through once more — retries are where learning happens.</span>
+                <strong>{t('lesson.frame.notQuite')}</strong>
+                <span>{t('lesson.frame.retryNudge')}</span>
               </div>
             </>
           )}
@@ -180,8 +182,8 @@ export function QuestionFrame({
             <>
               <span className="bb-icon">i</span>
               <div>
-                <strong>{mode === 'test' && first === false ? 'Incorrect' : 'Here’s the answer'}</strong>
-                <span>Read why, and it'll come back in your reviews.</span>
+                <strong>{mode === 'test' && first === false ? t('lesson.frame.incorrect') : t('lesson.frame.heresAnswer')}</strong>
+                <span>{t('lesson.frame.readWhy')}</span>
               </div>
             </>
           )}
@@ -189,11 +191,11 @@ export function QuestionFrame({
         <div className="bb-actions">
           {status === 'wrong' && (
             <button className="btn ghost" onClick={flow.reveal}>
-              Show answer
+              {t('lesson.frame.showAnswer')}
             </button>
           )}
           <button className="btn primary big" onClick={primary} disabled={status === 'answering' && !canCheck}>
-            {finished ? 'Continue' : status === 'wrong' ? 'Try again' : checkLabel}
+            {finished ? t('common.continue') : status === 'wrong' ? t('common.retry') : (checkLabel ?? t('common.check'))}
           </button>
         </div>
       </BottomBar>
@@ -203,9 +205,10 @@ export function QuestionFrame({
 
 /** A "Correct answer: …" line for the revealed state. */
 export function AnswerLine({ text }: { text: string }) {
+  const { tx } = useT();
   return (
     <p className="answer-line">
-      <strong>Correct answer:</strong> <InlineMarkdown text={text} />
+      {tx('lesson.frame.correctAnswer', { answer: <InlineMarkdown text={text} /> }, { b: (c) => <strong>{c}</strong> })}
     </p>
   );
 }

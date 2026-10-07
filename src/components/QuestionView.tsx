@@ -9,6 +9,8 @@ import { TraceGame } from './games/TraceGame';
 import { TruthTableGame } from './games/TruthTableGame';
 import { CodeBlock, highlightLines, InlineMarkdown } from './Markdown';
 import { AnswerLine, QuestionFrame, useCheckFlow, type QuestionProps } from './QuestionFrame';
+import type { MessageKey } from '../i18n/core';
+import { useT } from '../i18n/react';
 
 export { BottomBar } from './QuestionFrame';
 
@@ -33,15 +35,16 @@ export function QuestionView(props: QuestionProps) {
   }
 }
 
-const KIND_LABEL = {
-  mcq: 'Choose one',
-  numeric: 'Enter a number',
-  text: 'Type your answer',
-  output: 'Predict the output',
-  bug: 'Find the bug: click the broken line',
+const KIND_LABEL: Record<ClassicQuestionStep['type'], MessageKey> = {
+  mcq: 'lesson.kind.mcq',
+  numeric: 'lesson.kind.numeric',
+  text: 'lesson.kind.text',
+  output: 'lesson.kind.output',
+  bug: 'lesson.kind.bug',
 };
 
 function ClassicQuestion({ step, mode, shuffle = false, context, onDone }: QuestionProps<ClassicQuestionStep>) {
+  const { t } = useT();
   // Multiple-choice options: the choices of an mcq, or the candidate fixes of a bug hunt.
   const choices = step.type === 'mcq' ? step.choices : step.type === 'bug' ? step.fixes : null;
   const order = useMemo(() => {
@@ -107,14 +110,14 @@ function ClassicQuestion({ step, mode, shuffle = false, context, onDone }: Quest
       flow={flow}
       mode={mode}
       context={context}
-      kind={step.type === 'bug' && lineFound ? 'Now pick the fix' : KIND_LABEL[step.type]}
+      kind={t(step.type === 'bug' && lineFound ? 'lesson.kind.pickFix' : KIND_LABEL[step.type])}
       canCheck={canCheck}
       onCheck={check}
       onRetry={retry}
       answer={
         step.type === 'output' ? (
           <div className="answer-line">
-            <strong>It prints:</strong>
+            <strong>{t('lesson.question.itPrints')}</strong>
             <pre className="code">{step.output}</pre>
           </div>
         ) : (
@@ -126,7 +129,7 @@ function ClassicQuestion({ step, mode, shuffle = false, context, onDone }: Quest
 
         {step.type === 'bug' && (
           <>
-            <div className="code code-lines" role="group" aria-label="Code: pick the line with the bug">
+            <div className="code code-lines" role="group" aria-label={t('lesson.question.codeLinesAria')}>
               {codeLines.map((nodes, i) => {
                 const n = i + 1;
                 const isBug = step.lines.includes(n);
@@ -139,7 +142,7 @@ function ClassicQuestion({ step, mode, shuffle = false, context, onDone }: Quest
                     key={n}
                     className={cls}
                     aria-pressed={line === n}
-                    aria-label={`Line ${n}`}
+                    aria-label={t('lesson.question.lineAria', { line: n })}
                     disabled={!pickingLine || status !== 'answering'}
                     onClick={() => setLine(n)}
                   >
@@ -153,13 +156,13 @@ function ClassicQuestion({ step, mode, shuffle = false, context, onDone }: Quest
             </div>
             {step.error && (
               <div className="run-result">
-                <span className="eyebrow">When you run it</span>
+                <span className="eyebrow">{t('lesson.question.whenYouRun')}</span>
                 <pre className="code">{step.error}</pre>
               </div>
             )}
             {lineFound && !finished && (
               <p className="line-found" ref={fixesRef}>
-                ✓ Line {line} is the culprit. Which change fixes it?
+                {t('lesson.question.lineFound', { line: line ?? 0 })}
               </p>
             )}
           </>
@@ -193,9 +196,9 @@ function ClassicQuestion({ step, mode, shuffle = false, context, onDone }: Quest
               value={input}
               onChange={(e) => setInput(e.target.value)}
               disabled={status !== 'answering'}
-              placeholder="Type exactly what it prints"
+              placeholder={t('lesson.question.outputPlaceholder')}
               rows={Math.max(2, input.split('\n').length)}
-              aria-label="Output"
+              aria-label={t('lesson.question.outputAria')}
               autoComplete="off"
               spellCheck={false}
               autoFocus
@@ -207,7 +210,7 @@ function ClassicQuestion({ step, mode, shuffle = false, context, onDone }: Quest
               value={input}
               onChange={(e) => setInput(e.target.value)}
               disabled={status !== 'answering'}
-              placeholder={step.type === 'numeric' ? 'e.g. 0.25, 1/4 or 42' : 'Type your answer'}
+              placeholder={t(step.type === 'numeric' ? 'lesson.question.numericPlaceholder' : 'lesson.question.textPlaceholder')}
               inputMode={step.type === 'numeric' ? 'decimal' : 'text'}
               autoComplete="off"
               spellCheck={false}
@@ -217,7 +220,7 @@ function ClassicQuestion({ step, mode, shuffle = false, context, onDone }: Quest
           </div>
         ) : null}
         {step.type === 'output' && status === 'answering' && (
-          <p className="muted small kbd-tip">One line per printed line. Press Ctrl/⌘ + Enter to check.</p>
+          <p className="muted small kbd-tip">{t('lesson.question.outputTip')}</p>
         )}
 
     </QuestionFrame>

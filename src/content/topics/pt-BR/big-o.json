@@ -1,0 +1,969 @@
+{
+  "id": "big-o",
+  "title": "Pensando em Big-O",
+  "icon": "O(n)",
+  "color": "#0f9f6e",
+  "order": 3,
+  "category": "Programming",
+  "level": "Intermediate",
+  "description": "Preveja como o código fica mais lento à medida que os dados crescem — a ideia por trás da maioria das decisões de desempenho em programação.",
+  "keyIdeas": [
+    "Big-O descreve como o trabalho **cresce** à medida que a entrada cresce, e não a velocidade exata.",
+    "Descarte constantes e termos menores: 3n² + 5n + 2 é O(n²).",
+    "Um laço sobre n → O(n). Laços aninhados → O(n²). Dividir ao meio a cada passo → O(log n).",
+    "Tabelas hash transformam buscas O(n) repetidas em consultas O(1) (em média).",
+    "Ordenação eficiente é O(n log n). Otimize só onde n é realmente grande."
+  ],
+  "concepts": [
+    {
+      "id": "big-o-notation",
+      "label": "Notação Big-O",
+      "lesson": "growth",
+      "summary": "Descreve como o trabalho cresce à medida que o tamanho da entrada n fica grande, e não a velocidade exata numa determinada máquina.",
+      "aliases": [
+        "taxa de crescimento",
+        "complexidade de tempo",
+        "assintótica",
+        "complexidade",
+        "O grande"
+      ]
+    },
+    {
+      "id": "dominant-term",
+      "label": "Descarte o ruído",
+      "lesson": "growth",
+      "summary": "Fique só com o termo que cresce mais rápido e descarte os fatores constantes: 5n² + 3n + 1000 é O(n²).",
+      "aliases": [
+        "termo dominante",
+        "descartar constantes",
+        "ignorar termos menores",
+        "termos de ordem menor"
+      ]
+    },
+    {
+      "id": "linear-time",
+      "label": "Linear O(n)",
+      "lesson": "growth",
+      "summary": "O trabalho cresce em proporção a n: uma passada pelos dados, então dobre a entrada e o tempo dobra.",
+      "aliases": [
+        "O(n)",
+        "linear",
+        "uma passada"
+      ]
+    },
+    {
+      "id": "quadratic-time",
+      "label": "Quadrática O(n²)",
+      "lesson": "growth",
+      "summary": "O trabalho cresce com n²: comparar todos os pares, então dobre a entrada e o tempo mais ou menos quadruplica.",
+      "aliases": [
+        "O(n²)",
+        "O(n^2)",
+        "quadrática",
+        "todos os pares"
+      ]
+    },
+    {
+      "id": "constant-time",
+      "label": "Constante O(1)",
+      "lesson": "common-classes",
+      "summary": "O trabalho é o mesmo para qualquer tamanho de entrada, como acessar um índice de um array ou consultar uma tabela hash.",
+      "aliases": [
+        "O(1)",
+        "tempo constante",
+        "constante"
+      ]
+    },
+    {
+      "id": "logarithmic-time",
+      "label": "Logarítmica O(log n)",
+      "lesson": "common-classes",
+      "summary": "Dividir o problema ao meio a cada passo, como na busca binária: dobrar n acrescenta só um passo (cerca de 20 passos para um milhão).",
+      "aliases": [
+        "O(log n)",
+        "busca binária",
+        "dividir ao meio",
+        "log n"
+      ]
+    },
+    {
+      "id": "n-log-n",
+      "label": "Linearítmica O(n log n)",
+      "lesson": "common-classes",
+      "summary": "O custo de uma ordenação eficiente de uso geral, como o merge sort; só um pouco pior que linear.",
+      "aliases": [
+        "O(n log n)",
+        "n log n",
+        "ordenação eficiente",
+        "merge sort",
+        "ordenação por intercalação"
+      ]
+    },
+    {
+      "id": "nested-loops",
+      "label": "Laços aninhados multiplicam",
+      "lesson": "reading-code",
+      "summary": "Um laço sobre n dentro de outro laço sobre n roda n × n vezes, o que dá O(n²).",
+      "aliases": [
+        "laço dentro de laço",
+        "laços aninhados",
+        "loop aninhado",
+        "laço duplo"
+      ]
+    },
+    {
+      "id": "sequential-steps",
+      "label": "Passos em sequência somam",
+      "lesson": "reading-code",
+      "summary": "Passos que rodam um depois do outro se somam, e aí o termo dominante vence: O(n) + O(n²) = O(n²).",
+      "aliases": [
+        "laços um depois do outro",
+        "somar complexidades",
+        "laços em sequência"
+      ]
+    },
+    {
+      "id": "hidden-loops",
+      "label": "Laços escondidos",
+      "lesson": "reading-code",
+      "summary": "Funções prontas como `x in some_list`, `max` e `sum` percorrem a lista inteira, então cada uma é O(n), mesmo numa linha só.",
+      "aliases": [
+        "x in lista",
+        "varreduras embutidas",
+        "laço escondido",
+        "loop escondido"
+      ]
+    },
+    {
+      "id": "hash-map",
+      "label": "Consulta em tabela hash",
+      "lesson": "trade-offs",
+      "summary": "Uma tabela hash ou um conjunto (dict, set, Map) acha uma chave em O(1) em média, não importa o tamanho.",
+      "aliases": [
+        "dict",
+        "set",
+        "conjunto hash",
+        "tabela hash",
+        "hash map",
+        "dicionário"
+      ]
+    },
+    {
+      "id": "space-time-tradeoff",
+      "label": "Memória em troca de velocidade",
+      "lesson": "trade-offs",
+      "summary": "Gaste memória extra (muitas vezes O(n) para um set ou dict) para evitar buscas repetidas; por exemplo, o two-sum cai de O(n²) para O(n).",
+      "aliases": [
+        "troca espaço-tempo",
+        "troca tempo-memória",
+        "memória extra",
+        "cache"
+      ]
+    },
+    {
+      "id": "small-n-is-fine",
+      "label": "Otimize onde n é grande",
+      "lesson": "trade-offs",
+      "summary": "Para entradas pequenas, o código simples O(n²) serve; gaste esforço de otimização só nos caminhos que lidam com muitos dados.",
+      "aliases": [
+        "força bruta serve",
+        "otimização prematura",
+        "n pequeno",
+        "mantenha simples"
+      ]
+    }
+  ],
+  "links": [
+    {
+      "from": "dominant-term",
+      "to": "big-o-notation",
+      "label": "faz parte de"
+    },
+    {
+      "from": "constant-time",
+      "to": "logarithmic-time",
+      "label": "cresce mais devagar que"
+    },
+    {
+      "from": "logarithmic-time",
+      "to": "linear-time",
+      "label": "cresce mais devagar que"
+    },
+    {
+      "from": "linear-time",
+      "to": "n-log-n",
+      "label": "cresce mais devagar que"
+    },
+    {
+      "from": "n-log-n",
+      "to": "quadratic-time",
+      "label": "cresce mais devagar que"
+    },
+    {
+      "from": "linear-time",
+      "to": "big-o-notation",
+      "label": "é um tipo de"
+    },
+    {
+      "from": "nested-loops",
+      "to": "quadratic-time",
+      "label": "causa"
+    },
+    {
+      "from": "nested-loops",
+      "to": "linear-time",
+      "label": "se apoia em"
+    },
+    {
+      "from": "sequential-steps",
+      "to": "nested-loops",
+      "label": "contrasta com"
+    },
+    {
+      "from": "sequential-steps",
+      "to": "dominant-term",
+      "label": "precisa de"
+    },
+    {
+      "from": "hidden-loops",
+      "to": "quadratic-time",
+      "label": "causa"
+    },
+    {
+      "from": "hash-map",
+      "to": "constant-time",
+      "label": "é um tipo de"
+    },
+    {
+      "from": "hash-map",
+      "to": "hidden-loops",
+      "label": "substitui"
+    },
+    {
+      "from": "hash-map",
+      "to": "space-time-tradeoff",
+      "label": "é usada em"
+    },
+    {
+      "from": "space-time-tradeoff",
+      "to": "quadratic-time",
+      "label": "substitui"
+    },
+    {
+      "from": "small-n-is-fine",
+      "to": "space-time-tradeoff",
+      "label": "contrasta com"
+    },
+    {
+      "from": "small-n-is-fine",
+      "to": "big-o-notation",
+      "label": "se apoia em"
+    },
+    {
+      "from": "small-n-is-fine",
+      "to": "learn-anything-fast/pareto-principle",
+      "label": "se apoia em"
+    },
+    {
+      "from": "nested-loops",
+      "to": "probability/multiplication-principle",
+      "label": "se apoia em"
+    }
+  ],
+  "lessons": [
+    {
+      "id": "growth",
+      "title": "O que o Big-O mede",
+      "pareto": "core",
+      "minutes": 5,
+      "takeaway": "Big-O é o formato do crescimento: fique com o termo dominante, descarte as constantes e pergunte “o que acontece quando n dobra?”",
+      "steps": [
+        {
+          "type": "explain",
+          "title": "Crescimento, não velocidade",
+          "body": "Quando um algoritmo lida com mais dados, quanto trabalho a mais ele faz? A **notação Big-O** descreve essa *taxa de crescimento* à medida que o tamanho da entrada **n** fica grande.\n\nNão nos importam os milissegundos exatos (eles dependem da máquina). Importa o **formato**: se n dobra, o trabalho continua igual, dobra ou quadruplica?"
+        },
+        {
+          "type": "explain",
+          "title": "Descarte o ruído",
+          "body": "O Big-O fica só com o termo que cresce mais rápido e ignora fatores constantes:\n\n- 3n + 5 → **O(n)**\n- n² + 100n → **O(n²)**\n- 42 → **O(1)**\n\nPara n grande, o maior termo domina todo o resto."
+        },
+        {
+          "type": "mcq",
+          "id": "q-simplify",
+          "concepts": [
+            "dominant-term",
+            "big-o-notation"
+          ],
+          "prompt": "Simplifique **5n² + 3n + 1000** em notação Big-O.",
+          "choices": [
+            "O(1000)",
+            "O(n)",
+            "O(n²)",
+            "O(5n²)"
+          ],
+          "answer": 2,
+          "explanation": "Fique com o termo dominante (n²) e descarte o fator constante 5 → **O(n²)**."
+        },
+        {
+          "type": "example",
+          "title": "Dobrando a entrada",
+          "problem": "Um algoritmo O(n²) leva 1 segundo para 1.000 itens. Mais ou menos quanto tempo para 2.000 itens?",
+          "steps": [
+            "O trabalho cresce como n². Passar de n para 2n multiplica o trabalho por (2n)² ÷ n² = **4**.",
+            "1 segundo × 4."
+          ],
+          "answer": "Cerca de **4 segundos**. Dobrar a entrada quadruplica o tempo."
+        },
+        {
+          "type": "numeric",
+          "id": "q-tenx",
+          "concepts": [
+            "quadratic-time",
+            "big-o-notation"
+          ],
+          "prompt": "Um algoritmo O(n²) leva 2 segundos para 10 mil itens. Mais ou menos quantos **segundos** para 100 mil itens?",
+          "answer": 200,
+          "hint": "A entrada cresceu 10×. O que isso faz com n²?",
+          "explanation": "10× a entrada → 10² = 100× o trabalho: 2 × 100 = **200 segundos**."
+        },
+        {
+          "type": "mcq",
+          "id": "q-linear",
+          "concepts": [
+            "linear-time",
+            "big-o-notation"
+          ],
+          "prompt": "Um algoritmo O(n) leva 3 s com certa entrada. Se a entrada dobrar, mais ou menos quanto tempo vai levar?",
+          "choices": [
+            "3 s",
+            "6 s",
+            "9 s",
+            "12 s"
+          ],
+          "answer": 1,
+          "explanation": "Crescimento linear: dobre a entrada e o tempo dobra → **6 s**."
+        },
+        {
+          "type": "sim",
+          "sim": "growth",
+          "title": "Corrida: O(n) vs O(n²)",
+          "body": "Digamos que cada operação leve 1 microssegundo. Toque em **1.000**: O(n) precisa de 1.000 operações (1 ms) e O(n²) precisa de 1.000.000 (1 s). Os dois parecem ok.\n\nAgora toque em **1.000.000**. O(n) leva 1 segundo. O(n²) precisa de um trilhão de operações: cerca de **12 dias**. Mesma máquina, mesmos dados; só a taxa de crescimento muda.\n\nMude para a escala **Log** para caberem as duas barras na tela ao mesmo tempo.",
+          "curves": [
+            "n",
+            "n^2"
+          ],
+          "maxN": 1000000
+        }
+      ]
+    },
+    {
+      "id": "common-classes",
+      "title": "As cinco classes que você mais vai encontrar",
+      "pareto": "core",
+      "minutes": 6,
+      "takeaway": "O(1) < O(log n) < O(n) < O(n log n) < O(n²). Com um milhão de itens, é a diferença entre instantâneo e uma eternidade.",
+      "steps": [
+        {
+          "type": "explain",
+          "title": "Os suspeitos de sempre",
+          "body": "Do que cresce mais devagar para o que cresce mais rápido:\n\n- **O(1)** constante — ler um elemento de um array, consultar uma tabela hash\n- **O(log n)** logarítmica — busca binária\n- **O(n)** linear — uma passada pelos dados\n- **O(n log n)** — ordenação eficiente\n- **O(n²)** quadrática — comparar todos os pares\n\nPara n = 1.000.000: log n ≈ 20, n log n ≈ 20 milhões e n² = 1 trilhão."
+        },
+        {
+          "type": "explain",
+          "title": "Por que log n é tão pequeno",
+          "body": "A **busca binária** acha um item numa lista *ordenada* olhando o meio e descartando a metade que não pode contê-lo — de novo e de novo.\n\nQuantas divisões ao meio levam n até 1? Isso é log₂ n. Cada vez que os dados **dobram**, a busca binária precisa de só **um** passo a mais."
+        },
+        {
+          "type": "numeric",
+          "id": "q-binsearch",
+          "concepts": [
+            "logarithmic-time"
+          ],
+          "prompt": "Mais ou menos quantos passos a busca binária precisa, no pior caso, para buscar em **1.000.000** de itens ordenados? (número inteiro)",
+          "answer": 20,
+          "tolerance": 1,
+          "hint": "2¹⁰ ≈ 1.000. Então 2²⁰ ≈ ?",
+          "explanation": "2²⁰ = 1.048.576 ≥ 1.000.000, então cerca de **20** divisões ao meio."
+        },
+        {
+          "type": "trace",
+          "id": "q-trace-halving",
+          "concepts": [
+            "logarithmic-time"
+          ],
+          "prompt": "A busca binária descarta metade dos dados a cada passo. Veja `n` cair pela metade e preveja os valores quando for perguntado.",
+          "language": "python",
+          "code": "n = 16\nsteps = 0\nwhile n > 1:\n    n = n // 2\n    steps += 1\nprint(steps)",
+          "frames": [
+            {
+              "line": 1,
+              "vars": {
+                "n": "16"
+              }
+            },
+            {
+              "line": 2,
+              "vars": {
+                "n": "16",
+                "steps": "0"
+              }
+            },
+            {
+              "line": 4,
+              "vars": {
+                "n": "8",
+                "steps": "0"
+              },
+              "note": "Metade dos dados some depois de um passo."
+            },
+            {
+              "line": 5,
+              "vars": {
+                "n": "8",
+                "steps": "1"
+              }
+            },
+            {
+              "line": 4,
+              "vars": {
+                "n": "4",
+                "steps": "1"
+              },
+              "ask": "n"
+            },
+            {
+              "line": 5,
+              "vars": {
+                "n": "4",
+                "steps": "2"
+              }
+            },
+            {
+              "line": 4,
+              "vars": {
+                "n": "2",
+                "steps": "2"
+              }
+            },
+            {
+              "line": 5,
+              "vars": {
+                "n": "2",
+                "steps": "3"
+              }
+            },
+            {
+              "line": 4,
+              "vars": {
+                "n": "1",
+                "steps": "3"
+              },
+              "ask": "n"
+            },
+            {
+              "line": 5,
+              "vars": {
+                "n": "1",
+                "steps": "4"
+              },
+              "ask": "steps"
+            },
+            {
+              "line": 6,
+              "vars": {
+                "n": "1",
+                "steps": "4"
+              },
+              "out": "4",
+              "note": "n chegou a 1 depois de 4 divisões ao meio: log₂ 16 = 4."
+            }
+          ],
+          "explanation": "16 → 8 → 4 → 2 → 1 leva 4 divisões ao meio, e log₂ 16 = 4. Comece de 32 e você precisa de só **um** passo a mais. É por isso que O(log n) quase não cresce: dobrar a entrada acrescenta um único passo.",
+          "hint": "`//` divide e descarta o resto: 16 // 2 é 8."
+        },
+        {
+          "type": "sim",
+          "sim": "growth",
+          "title": "As cinco, lado a lado",
+          "body": "Arraste n até **1.000.000** e compare, a 1 µs por operação:\n\n- O(log n), busca binária: cerca de **20** passos, 20 µs. Parece instantâneo.\n- O(n log n), uma boa ordenação: cerca de 20 milhões de operações, **20 s**.\n- O(n²), comparar todos os pares: um trilhão de operações, cerca de **12 dias**.\n\nRepare como a barra de O(log n) quase não se mexe à medida que n cresce: dobrar n acrescenta só um passo.",
+          "curves": [
+            "1",
+            "log n",
+            "n",
+            "n log n",
+            "n^2"
+          ],
+          "maxN": 1000000
+        },
+        {
+          "type": "mcq",
+          "id": "q-order",
+          "concepts": [
+            "n-log-n",
+            "logarithmic-time",
+            "constant-time"
+          ],
+          "prompt": "Qual lista vai do que cresce mais devagar para o que cresce mais rápido?",
+          "choices": [
+            "O(n), O(log n), O(n²), O(1)",
+            "O(1), O(log n), O(n), O(n log n), O(n²)",
+            "O(log n), O(1), O(n), O(n²)",
+            "O(1), O(n), O(log n), O(n²)"
+          ],
+          "answer": 1,
+          "explanation": "Constante < logarítmica < linear < linearítmica < quadrática."
+        },
+        {
+          "type": "mcq",
+          "id": "q-feasible",
+          "concepts": [
+            "n-log-n",
+            "quadratic-time"
+          ],
+          "prompt": "Sua entrada tem 10 milhões de itens e você precisa de uma resposta em poucos segundos. Uma máquina comum faz mais ou menos 100 milhões de operações simples por segundo. Qual complexidade é viável?",
+          "choices": [
+            "O(n²)",
+            "O(n log n)",
+            "As duas",
+            "Nenhuma"
+          ],
+          "answer": 1,
+          "explanation": "n log n ≈ 10⁷ × 23 ≈ 2,3 × 10⁸ operações — alguns segundos. n² = 10¹⁴ operações levaria mais de uma semana."
+        },
+        {
+          "type": "text",
+          "id": "q-sorting",
+          "concepts": [
+            "n-log-n"
+          ],
+          "prompt": "Qual é o Big-O típico de um algoritmo de ordenação eficiente de uso geral (como o merge sort)? Escreva no formato O(...).",
+          "accept": [
+            "O(n log n)",
+            "n log n",
+            "O(n log(n))",
+            "n log(n)"
+          ],
+          "explanation": "**O(n log n)** — merge sort, heapsort e a ordenação embutida da maioria das linguagens. Nenhuma ordenação baseada em comparações consegue fazer melhor no caso geral."
+        },
+        {
+          "type": "sim",
+          "sim": "growth",
+          "title": "Bônus: a que você deve evitar, O(2ⁿ)",
+          "body": "Mais uma classe que vale reconhecer: **O(2ⁿ)**, exponencial. O trabalho **dobra cada vez que n cresce 1** — por exemplo, testar todos os subconjuntos de n itens.\n\nCom n = 30, são cerca de um bilhão de operações (**18 min** a 1 µs cada). Com n = 64, são cerca de **585 mil anos**, enquanto O(n²) com n = 64 são 4.096 operações: 4 ms. Algoritmos exponenciais só funcionam para entradas minúsculas.",
+          "curves": [
+            "n",
+            "n^2",
+            "2^n"
+          ],
+          "maxN": 100
+        }
+      ]
+    },
+    {
+      "id": "reading-code",
+      "title": "Lendo a complexidade no código",
+      "pareto": "core",
+      "minutes": 7,
+      "takeaway": "Conte os laços: em sequência → some; aninhados → multiplique; dividindo ao meio → log. Cuidado com laços escondidos dentro de chamadas de biblioteca.",
+      "steps": [
+        {
+          "type": "explain",
+          "title": "Siga os laços",
+          "body": "Na maioria das vezes você lê a complexidade direto nos laços:\n\n- **Um laço sobre n itens** → O(n)\n- **Um laço dentro de outro**, ambos sobre n → O(n²)\n- **Laços um depois do outro** → some: O(n) + O(n) = O(n)\n- **Dividir ao meio (ou dobrar) a cada iteração** → O(log n)"
+        },
+        {
+          "type": "mcq",
+          "id": "q-code-sum",
+          "concepts": [
+            "linear-time"
+          ],
+          "prompt": "Qual é a complexidade desta função?\n\n```\ndef total(nums):\n    s = 0\n    for x in nums:\n        s += x\n    return s\n```",
+          "choices": [
+            "O(1)",
+            "O(log n)",
+            "O(n)",
+            "O(n²)"
+          ],
+          "answer": 2,
+          "explanation": "Uma passada, trabalho constante por item → **O(n)**."
+        },
+        {
+          "type": "mcq",
+          "id": "q-code-dup",
+          "concepts": [
+            "nested-loops",
+            "quadratic-time",
+            "dominant-term"
+          ],
+          "prompt": "Qual é a complexidade desta função?\n\n```\ndef has_duplicate(nums):\n    for i in range(len(nums)):\n        for j in range(i + 1, len(nums)):\n            if nums[i] == nums[j]:\n                return True\n    return False\n```",
+          "choices": [
+            "O(n)",
+            "O(n log n)",
+            "O(n²)",
+            "O(2n)"
+          ],
+          "answer": 2,
+          "explanation": "Todos os pares são comparados: cerca de n²/2 comparações → **O(n²)**. (O /2 é uma constante, então é descartado.)"
+        },
+        {
+          "type": "trace",
+          "id": "q-trace-nested-steps",
+          "concepts": [
+            "nested-loops",
+            "quadratic-time"
+          ],
+          "prompt": "Com `n = 3`, conte quantas vezes a linha de dentro roda. Avance passo a passo e preveja `steps` quando for perguntado.",
+          "language": "python",
+          "code": "n = 3\nsteps = 0\nfor i in range(n):\n    for j in range(n):\n        steps += 1\nprint(steps)",
+          "frames": [
+            {
+              "line": 1,
+              "vars": {
+                "n": "3"
+              }
+            },
+            {
+              "line": 2,
+              "vars": {
+                "n": "3",
+                "steps": "0"
+              }
+            },
+            {
+              "line": 5,
+              "vars": {
+                "n": "3",
+                "steps": "1",
+                "i": "0",
+                "j": "0"
+              },
+              "note": "Primeira passada do laço de fora: `j` começa em 0."
+            },
+            {
+              "line": 5,
+              "vars": {
+                "n": "3",
+                "steps": "2",
+                "i": "0",
+                "j": "1"
+              }
+            },
+            {
+              "line": 5,
+              "vars": {
+                "n": "3",
+                "steps": "3",
+                "i": "0",
+                "j": "2"
+              },
+              "note": "`j` chegou ao fim de `range(3)`, então o laço de dentro terminou para `i = 0`."
+            },
+            {
+              "line": 5,
+              "vars": {
+                "n": "3",
+                "steps": "4",
+                "i": "1",
+                "j": "0"
+              },
+              "note": "`i` avançou, e o laço de dentro recomeça do `j = 0`.",
+              "ask": "steps"
+            },
+            {
+              "line": 5,
+              "vars": {
+                "n": "3",
+                "steps": "5",
+                "i": "1",
+                "j": "1"
+              }
+            },
+            {
+              "line": 5,
+              "vars": {
+                "n": "3",
+                "steps": "6",
+                "i": "1",
+                "j": "2"
+              }
+            },
+            {
+              "line": 5,
+              "vars": {
+                "n": "3",
+                "steps": "7",
+                "i": "2",
+                "j": "0"
+              }
+            },
+            {
+              "line": 5,
+              "vars": {
+                "n": "3",
+                "steps": "8",
+                "i": "2",
+                "j": "1"
+              }
+            },
+            {
+              "line": 5,
+              "vars": {
+                "n": "3",
+                "steps": "9",
+                "i": "2",
+                "j": "2"
+              },
+              "ask": "steps"
+            },
+            {
+              "line": 6,
+              "vars": {
+                "n": "3",
+                "steps": "9",
+                "i": "2",
+                "j": "2"
+              },
+              "out": "9",
+              "note": "3 passadas de fora × 3 passadas de dentro = 9 = n²."
+            }
+          ],
+          "explanation": "O laço de dentro roda todas as `n` vezes **para cada** passada do laço de fora, então o corpo roda n × n = 9 vezes. Dobre `n` para 6 e ele roda 36 vezes: quatro vezes o trabalho. Isso é O(n²).",
+          "hint": "Para cada valor de `i`, `j` passa por 0, 1, 2 de novo."
+        },
+        {
+          "type": "mcq",
+          "id": "q-code-halve",
+          "concepts": [
+            "logarithmic-time"
+          ],
+          "prompt": "Qual é a complexidade desta função?\n\n```\ndef count_halvings(n):\n    steps = 0\n    while n > 1:\n        n = n // 2\n        steps += 1\n    return steps\n```",
+          "choices": [
+            "O(1)",
+            "O(log n)",
+            "O(n)",
+            "O(n²)"
+          ],
+          "answer": 1,
+          "explanation": "n é dividido ao meio a cada iteração, então o laço roda cerca de log₂ n vezes → **O(log n)**."
+        },
+        {
+          "type": "example",
+          "title": "Laços em sequência",
+          "problem": "Qual é a complexidade total?\n\n```\nfor x in nums:          # loop A\n    print(x)\nfor x in nums:          # loop B\n    for y in nums:\n        print(x, y)\n```",
+          "steps": [
+            "Laço A: n iterações → O(n).",
+            "Laço B: n × n iterações → O(n²).",
+            "Eles rodam um depois do outro, então some: O(n) + O(n²).",
+            "Fique só com o termo dominante."
+          ],
+          "answer": "**O(n²)**"
+        },
+        {
+          "type": "mcq",
+          "id": "q-hidden-loop",
+          "concepts": [
+            "hidden-loops",
+            "quadratic-time",
+            "hash-map"
+          ],
+          "prompt": "Cuidado com laços escondidos! Em Python, `x in some_list` percorre a lista item por item. Qual é a complexidade aqui?\n\n```\nfor x in a:        # a has n items\n    if x in b:     # b is a list of n items\n        print(x)\n```",
+          "choices": [
+            "O(n)",
+            "O(n log n)",
+            "O(n²)",
+            "O(1)"
+          ],
+          "answer": 2,
+          "explanation": "`x in b` é por si só uma varredura O(n), feita n vezes → **O(n²)**. Transformar `b` em um set deixa cada verificação O(1), e o todo O(n)."
+        },
+        {
+          "type": "buckets",
+          "id": "q-buckets-complexity",
+          "concepts": [
+            "hidden-loops",
+            "constant-time",
+            "logarithmic-time"
+          ],
+          "prompt": "`nums`, `a` e `b` são listas de n itens, `sorted_nums` é uma lista ordenada, `seen` é um set e `d` é um dict. Classifique cada linha pela complexidade.",
+          "buckets": [
+            "O(1)",
+            "O(log n)",
+            "O(n)",
+            "O(n²)"
+          ],
+          "items": [
+            {
+              "text": "`nums[0] + nums[-1]`",
+              "bucket": 0
+            },
+            {
+              "text": "`d[key]`",
+              "bucket": 0
+            },
+            {
+              "text": "`x in seen`",
+              "bucket": 0
+            },
+            {
+              "text": "`while n > 1: n //= 2`",
+              "bucket": 1
+            },
+            {
+              "text": "`bisect_left(sorted_nums, x)`, uma busca binária",
+              "bucket": 1
+            },
+            {
+              "text": "`max(nums)`",
+              "bucket": 2
+            },
+            {
+              "text": "`x in nums`",
+              "bucket": 2
+            },
+            {
+              "text": "`sum(nums)`",
+              "bucket": 2
+            },
+            {
+              "text": "`[x for x in a if x in b]`",
+              "bucket": 3
+            },
+            {
+              "text": "`[(x, y) for x in nums for y in nums]`",
+              "bucket": 3
+            }
+          ],
+          "hint": "Procure laços, inclusive os escondidos: `max`, `sum` e `in` numa lista percorrem a lista inteira.",
+          "explanation": "**O(1)**: acessar um índice de lista, consultar um dict e usar `in` num set levam o mesmo tempo em qualquer tamanho. **O(log n)**: dividir `n` ao meio e a busca binária cortam o problema pela metade a cada passo. **O(n)**: `max`, `sum` e `x in nums` olham cada item uma vez; são laços escritos para você. **O(n²)**: um laço dentro de outro, incluindo o escondido em que `x in b` percorre a lista `b` para cada item de `a`. Cronometrando em Python, deixar n quatro vezes maior manteve os cinco primeiros estáveis (log n cresce só 2 passos), deixou os três do meio cerca de 4× mais lentos e os dois últimos 16× mais lentos ou mais."
+        }
+      ]
+    },
+    {
+      "id": "trade-offs",
+      "title": "Trocando memória por velocidade",
+      "pareto": "extra",
+      "minutes": 6,
+      "takeaway": "Tabelas hash compram consultas O(1) com memória extra. Otimize só onde n é grande — para entradas pequenas, o simples vence o engenhoso.",
+      "steps": [
+        {
+          "type": "explain",
+          "title": "O superpoder da tabela hash",
+          "body": "Uma **tabela hash** (um `dict` em Python, um `Map` em JavaScript) guarda pares chave → valor e acha uma chave em **O(1)** em média, não importa o tamanho.\n\nIsso faz dela a ferramenta mais comum para acelerar código: gaste O(n) de **memória** extra para evitar **buscas** O(n) repetidas."
+        },
+        {
+          "type": "example",
+          "title": "Two-sum",
+          "problem": "Dada uma lista de n números e um alvo, ache dois números que somem o alvo.",
+          "steps": [
+            "**Força bruta:** verifique todos os pares → tempo O(n²), memória extra O(1).",
+            "**Melhor:** percorra a lista uma vez. Para cada x, verifique se `target - x` já está num set com os números vistos até agora e depois adicione x ao set.",
+            "Cada verificação e inserção é O(1) em média, feita n vezes → tempo O(n), memória O(n)."
+          ],
+          "answer": "Gastar O(n) de memória transforma O(n²) em **O(n)**. Para um milhão de itens, são ~10⁶ passos em vez de ~10¹²."
+        },
+        {
+          "type": "mcq",
+          "id": "q-dedupe",
+          "concepts": [
+            "hash-map",
+            "space-time-tradeoff"
+          ],
+          "prompt": "Você precisa remover duplicatas de uma lista de n itens. Qual abordagem é O(n) em média?",
+          "choices": [
+            "Para cada item, percorrer a lista de resultado para ver se ele já está lá",
+            "Adicionar os itens a um set (conjunto hash), pulando os que já estão nele",
+            "Comparar cada item com todos os outros",
+            "Ordenar a lista e depois comparar cada item com todos os outros"
+          ],
+          "answer": 1,
+          "explanation": "Verificar se algo está num set é O(1) em média, então uma passada é **O(n)**. Percorrer a lista de resultado a cada vez é O(n²)."
+        },
+        {
+          "type": "mcq",
+          "id": "q-sort-first",
+          "concepts": [
+            "sequential-steps",
+            "dominant-term",
+            "n-log-n"
+          ],
+          "prompt": "Outra opção: ordenar a lista (O(n log n)) e depois remover duplicatas vizinhas numa passada (O(n)). Qual é o total?",
+          "choices": [
+            "O(n)",
+            "O(n log n)",
+            "O(n² log n)",
+            "O(log n)"
+          ],
+          "answer": 1,
+          "explanation": "Passos em sequência se somam, e o termo dominante vence: O(n log n) + O(n) = **O(n log n)**. Um pouco mais lento que usar hash, mas pode usar menos memória."
+        },
+        {
+          "type": "mcq",
+          "id": "q-when-fine",
+          "concepts": [
+            "small-n-is-fine"
+          ],
+          "prompt": "Quando a força bruta simples O(n²) é perfeitamente aceitável?",
+          "choices": [
+            "Nunca",
+            "Quando n é pequeno (digamos, algumas centenas de itens) e o código mais simples é mais fácil de acertar",
+            "Só em Python",
+            "Só quando a memória é ilimitada"
+          ],
+          "answer": 1,
+          "explanation": "A regra 80/20 vale para otimização também: para n pequeno, a diferença é de microssegundos. Gaste seu esforço nos caminhos do código que realmente lidam com entradas grandes."
+        },
+        {
+          "type": "buckets",
+          "id": "q-buckets-hash-worth-it",
+          "concepts": [
+            "space-time-tradeoff",
+            "small-n-is-fine",
+            "hash-map"
+          ],
+          "prompt": "Vale a pena gastar memória com um set ou dict? Classifique cada tarefa.",
+          "buckets": [
+            "Use um set ou dict: vale a memória",
+            "Uma lista comum e um laço simples bastam"
+          ],
+          "items": [
+            {
+              "text": "Conferir 1.000.000 de IDs de usuário recebidos contra 1.000.000 de IDs banidos",
+              "bucket": 0
+            },
+            {
+              "text": "Achar dois números que somam um alvo numa lista de 1.000.000",
+              "bucket": 0
+            },
+            {
+              "text": "Remover duplicatas de 5 milhões de endereços de e-mail",
+              "bucket": 0
+            },
+            {
+              "text": "Contar quantas vezes cada palavra aparece num texto de 10 milhões de palavras",
+              "bucket": 0
+            },
+            {
+              "text": "Remover duplicatas de uma lista de compras de 10 itens, uma vez",
+              "bucket": 1
+            },
+            {
+              "text": "Verificar se “admin” é um dos 3 papéis de um usuário",
+              "bucket": 1
+            },
+            {
+              "text": "Somar uma lista de 1.000.000 de preços uma vez",
+              "bucket": 1
+            },
+            {
+              "text": "Achar a maior entre 50 notas de prova",
+              "bucket": 1
+            }
+          ],
+          "hint": "Um set compensa quando você **busca repetidamente** em **muitos** dados. Sem buscas repetidas, ou com poucos dados? Mantenha simples.",
+          "explanation": "**Set ou dict:** cada uma dessas tarefas busca em muitos dados de novo e de novo. Conferir um milhão de IDs contra uma *lista* de banidos é O(n²), cerca de 10¹² comparações. Um set de IDs banidos deixa isso O(n). Cronometrando em Python com só 10 mil de cada, a lista levou cerca de 0,3 s e o set cerca de 0,3 ms, umas 1.000× mais rápido, e a diferença cresce com n. Contar palavras funciona do mesmo jeito com um dict. **Laço simples:** com 10 ou 3 itens, a força bruta leva bem menos de um microssegundo, então o código mais simples vence. Somar preços ou achar a maior nota é uma única passada O(n) sem busca nenhuma, então um set não tem nada para acelerar."
+        }
+      ]
+    }
+  ]
+}
