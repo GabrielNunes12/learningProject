@@ -122,6 +122,13 @@ async function upload() {
   }
 }
 
+/** Uploads progress right away (e.g. before asking the server for a certificate that depends on it). */
+export async function syncNow() {
+  if (timer) clearTimeout(timer);
+  timer = null;
+  await upload();
+}
+
 async function flush() {
   if (timer) {
     clearTimeout(timer);

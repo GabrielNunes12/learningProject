@@ -47,6 +47,21 @@ const SCHEMA = `
     reset_at BIGINT NOT NULL
   );
 
+  -- Course certificates. One per learner and course; re-issuing updates the name and hours but keeps the id.
+  CREATE TABLE IF NOT EXISTS certificates (
+    id           TEXT PRIMARY KEY,
+    user_id      BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    course_id    TEXT NOT NULL,
+    course_title TEXT NOT NULL,
+    color        TEXT NOT NULL,
+    name         TEXT NOT NULL,
+    minutes      INTEGER NOT NULL,
+    lessons      INTEGER NOT NULL,
+    issued_at    BIGINT NOT NULL,
+    updated_at   BIGINT NOT NULL,
+    UNIQUE (user_id, course_id)
+  );
+
   COMMIT;
 `;
 

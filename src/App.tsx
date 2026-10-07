@@ -1,5 +1,6 @@
 import { contentErrors, getCourse } from './content';
 import { CheckEmail, DevMailbox, Forgot, Reset, SignIn, SignUp, Verify } from './components/Auth';
+import { CertificatePage, PublicCertificate } from './components/Certificate';
 import { CheatSheet } from './components/CheatSheet';
 import { CoursePage } from './components/CoursePage';
 import { DevGames } from './components/DevGames';
@@ -54,6 +55,9 @@ function Route({ route }: { route: string[] }) {
       return <Review />;
     case 'profile':
       return <Profile />;
+    case 'certificate':
+      if (a) return <PublicCertificate key={a} id={a} />;
+      break;
     case 'notebook':
       return <Notebook />;
     case 'insights':
@@ -84,6 +88,7 @@ function Route({ route }: { route: string[] }) {
       if (b === 'quiz') return <Quiz key={course.id} course={course} />;
       if (b === 'cheatsheet') return <CheatSheet course={course} />;
       if (b === 'map') return <KnowledgeMap key={course.id} courseId={course.id} />;
+      if (b === 'certificate') return <CertificatePage key={course.id} course={course} />;
       const lesson = b === 'lesson' ? course.lessons.find((l) => l.id === c) : undefined;
       if (lesson) return <LessonPlayer key={`${course.id}/${lesson.id}`} course={course} lesson={lesson} />;
       break;

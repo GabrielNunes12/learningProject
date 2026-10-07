@@ -53,6 +53,7 @@ import {
 } from '../lib/knowledgeMap';
 import { href, useRoute } from '../lib/router';
 import { getProgress, saveMap, useProgress } from '../lib/storage';
+import { useStudyTimer } from './useStudyTimer';
 import type { ConceptLink, Course } from '../types';
 import { Icon } from './icons';
 import { Page } from './Layout';
@@ -147,6 +148,7 @@ function useRevealOnOpen(key: string) {
 
 /** Owns the saved map for a course (debounced auto-save) and the scope picker. */
 function MapHost({ course, scopeKey }: { course: Course; scopeKey: string }) {
+  useStudyTimer(course.id);
   const [map, setMapState] = useState<MapState>(() => normalizeMap(getProgress().maps?.[course.id] as MapState | undefined));
   const dirty = useRef(false);
   const latest = useRef(map);

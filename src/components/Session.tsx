@@ -4,6 +4,7 @@ import { getProgress, recordAnswer, saveSheet, XP } from '../lib/storage';
 import { dueSheet, finishShorter, sessionSheetKey } from '../lib/thinking';
 import type { Concept } from '../types';
 import { AgainPhase, ShorterPhase } from './paper/Ritual';
+import { useStudyTimer } from './useStudyTimer';
 import { PlayerHeader } from './Layout';
 import { QuestionView } from './QuestionView';
 import { accentStyle, useBodyAccent } from './ui';
@@ -38,6 +39,8 @@ export function Session({ ritual, questions, exitHref, onFinish, renderEnd }: Pr
   const [results, setResults] = useState<SessionResult[]>([]);
   const [thinkXp, setThinkXp] = useState(0);
   useBodyAccent(questions[Math.min(idx, questions.length - 1)]?.course.color);
+  // Study time goes to the course of the question on screen (a mixed session moves between courses).
+  useStudyTimer((phase === 'again' && againSheet?.course) || questions[Math.min(idx, questions.length - 1)]?.course.id);
   const xp = results.reduce((s, r) => s + (r.ok ? XP.correct : XP.attempt), 0) + thinkXp;
   const lead = againSheet ? 1 : 0;
   const total = questions.length + lead + 1;

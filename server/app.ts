@@ -1,6 +1,8 @@
 // The API as an Express app. server/index.ts runs it locally (and serves the built site);
 // api/index.ts exposes it as a Vercel serverless function.
+import { randomBytes } from 'node:crypto';
 import express, { type Express, type NextFunction, type Request, type Response } from 'express';
+import { checkName, formatHours, ISSUER } from '../src/lib/certificate.ts';
 import { appUrl, devOutbox, onVercel, RESET_MINUTES, SESSION_DAYS, VERIFY_HOURS } from './config.ts';
 import { publicUser, query, queryOne, UNIQUE_VIOLATION, type UserRow } from './db.ts';
 import { outbox, sendResetEmail, sendVerifyEmail } from './mail.ts';
@@ -281,6 +283,154 @@ app.put('/api/progress', async (req, res) => {
     [user.id, JSON.stringify(data), now],
   );
   res.json({ ok: true, updatedAt: now });
+});
+
+// ---------- certificates ----------
+
+interface CertRow {
+  id: string;
+  user_id: number;
+  course_id: string;
+  course_title: string;
+  color: string;
+  name: string;
+  minutes: number;
+  lessons: number;
+  issued_at: number;
+  updated_at: number;
+}
+
+const publicCert = (r: CertRow) => ({
+  id: r.id,
+  name: r.name,
+  courseId: r.course_id,
+  courseTitle: r.course_title,
+  color: r.color,
+  minutes: r.minutes,
+  lessons: r.lessons,
+  issuedAt: r.issued_at,
+});
+
+// Short, unambiguous ids for reading aloud or typing: no 0/O, 1/I/L.
+const CERT_ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
+function newCertId() {
+  const s = [...randomBytes(8)].map((b) => CERT_ALPHABET[b % CERT_ALPHABET.length]).join('');
+  return `${s.slice(0, 4)}-${s.slice(4)}`;
+}
+const CERT_ID = /^[2-9A-HJ-NP-Z]{4}-[2-9A-HJ-NP-Z]{4}$/;
+
+const int = (v: unknown, min: number, max: number) => (Number.isInteger(v) && (v as number) >= min && (v as number) <= max ? (v as number) : null);
+
+/** Issues (or updates) the signed-in learner's certificate for a course they have finished. */
+app.post('/api/certificates', async (req, res) => {
+  const user = await requireUser(req);
+  await limit(req, 'certificate', 30, HOUR);
+  const courseId = str(req.body.courseId);
+  const courseTitle = str(req.body.courseTitle);
+  const color = str(req.body.color);
+  const lessons = int(req.body.lessons, 1, 500);
+  const minutes = int(req.body.minutes, 1, 100_000);
+  if (!/^[a-z0-9-]{1,60}$/.test(courseId) || !courseTitle || courseTitle.length > 120 || !/^#[0-9a-f]{6}$/i.test(color) || !lessons || !minutes) {
+    throw new HttpError(400, 'Invalid certificate request.');
+  }
+  const { name, problem } = checkName(typeof req.body.name === 'string' ? req.body.name : '');
+  if (problem) throw new HttpError(400, problem, 'name');
+
+  // The progress synced to the account must show every lesson of the course as completed.
+  const progress = await queryOne<{ data: { completed?: Record<string, number> } }>('SELECT data FROM progress WHERE user_id = $1', [user.id]);
+  const done = Object.keys(progress?.data?.completed ?? {}).filter((k) => k.startsWith(`${courseId}/`)).length;
+  if (done < lessons) {
+    throw new HttpError(409, "Your finished lessons haven't reached the server yet. Wait a moment and try again.", 'not_finished');
+  }
+
+  const now = Date.now();
+  const updated = await queryOne<CertRow>(
+    `UPDATE certificates SET name = $3, course_title = $4, color = $5, minutes = $6, lessons = $7, updated_at = $8
+     WHERE user_id = $1 AND course_id = $2 RETURNING *`,
+    [user.id, courseId, name, courseTitle, color, minutes, lessons, now],
+  );
+  if (updated) {
+    res.json({ certificate: publicCert(updated) });
+    return;
+  }
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      const row = await queryOne<CertRow>(
+        `INSERT INTO certificates (id, user_id, course_id, course_title, color, name, minutes, lessons, issued_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9) RETURNING *`,
+        [newCertId(), user.id, courseId, courseTitle, color, name, minutes, lessons, now],
+      );
+      res.status(201).json({ certificate: publicCert(row!) });
+      return;
+    } catch (err) {
+      if ((err as { code?: string }).code !== UNIQUE_VIOLATION) throw err;
+      // Either the random id collided (try another) or a parallel request just issued this course's certificate.
+      const raced = await queryOne<CertRow>('SELECT * FROM certificates WHERE user_id = $1 AND course_id = $2', [user.id, courseId]);
+      if (raced) {
+        res.json({ certificate: publicCert(raced) });
+        return;
+      }
+    }
+  }
+  throw new HttpError(500, 'Could not issue the certificate. Please try again.');
+});
+
+/** The signed-in learner's certificates. */
+app.get('/api/certificates', async (req, res) => {
+  const user = await requireUser(req);
+  const rows = await query<CertRow>('SELECT * FROM certificates WHERE user_id = $1 ORDER BY issued_at DESC', [user.id]);
+  res.json({ certificates: rows.map(publicCert) });
+});
+
+/** Public: anyone with the id can see and verify a certificate. */
+app.get('/api/certificates/:id', async (req, res) => {
+  const id = String(req.params.id).toUpperCase();
+  const row = CERT_ID.test(id) ? await queryOne<CertRow>('SELECT * FROM certificates WHERE id = $1', [id]) : undefined;
+  if (!row) throw new HttpError(404, 'No certificate with that id.');
+  res.json({ certificate: publicCert(row) });
+});
+
+const html = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+
+/**
+ * The link people share (/c/<id>): a tiny page with Open Graph tags, so LinkedIn, X and Facebook show a
+ * proper card, that sends visitors on to the certificate page in the app. (On Vercel, /c/* is rewritten here.)
+ */
+app.get(['/c/:id', '/api/c/:id'], async (req, res) => {
+  const id = String(req.params.id).toUpperCase();
+  const row = CERT_ID.test(id) ? await queryOne<CertRow>('SELECT * FROM certificates WHERE id = $1', [id]) : undefined;
+  const target = row ? `/#/certificate/${row.id}` : '/';
+  const title = row ? `${row.name} completed “${row.course_title}”` : 'Certificate not found';
+  const description = row
+    ? `${row.lessons} lessons, ${formatHours(row.minutes)} of learning. Issued by ${ISSUER} on ${new Date(row.issued_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}. Certificate ID ${row.id}.`
+    : `This ${ISSUER} certificate link is not valid.`;
+  res
+    .status(row ? 200 : 404)
+    .type('html')
+    .set('Cache-Control', 'public, max-age=300')
+    .send(`<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${html(title)} | ${ISSUER}</title>
+<meta name="description" content="${html(description)}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="${ISSUER}">
+<meta property="og:title" content="${html(title)}">
+<meta property="og:description" content="${html(description)}">
+<meta property="og:url" content="${html(`${appUrl}/c/${id}`)}">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="${html(title)}">
+<meta name="twitter:description" content="${html(description)}">
+<link rel="canonical" href="${html(`${appUrl}/c/${id}`)}">
+<meta http-equiv="refresh" content="0; url=${html(target)}">
+</head>
+<body style="font-family:system-ui,sans-serif;text-align:center;padding:48px">
+<p>${html(title)}</p>
+<p><a href="${html(target)}">Open the certificate</a></p>
+</body>
+</html>`);
 });
 
 // ---------- dev mailbox ----------

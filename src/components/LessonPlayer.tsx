@@ -5,6 +5,8 @@ import { href } from '../lib/router';
 import { completeLesson, getProgress, openLesson, recordAnswer, saveSheet, streak, useProgress, xpToday, XP, type SheetDraft } from '../lib/storage';
 import { dueSheet, emptyDraft, finishShorter, lessonSheetKey, startLessonSheet } from '../lib/thinking';
 import { AgainPhase, ShorterPhase, WrongPhase } from './paper/Ritual';
+import { useStudyTimer } from './useStudyTimer';
+import { hasEarned } from '../lib/certificate';
 import { isQuestion, type Course, type ExampleStep, type Lesson } from '../types';
 import { PlayerHeader } from './Layout';
 import { Markdown } from './Markdown';
@@ -28,6 +30,7 @@ export function LessonPlayer({ course, lesson }: { course: Course; lesson: Lesso
   const steps = lesson.steps;
   const courseHref = href('course', course.id);
   useBodyAccent(course.color);
+  useStudyTimer(course.id);
 
   useEffect(() => openLesson(course.id, lesson.id), [course.id, lesson.id]);
   useEffect(() => {
@@ -289,6 +292,17 @@ function LessonComplete({ course, lesson, score, xp }: { course: Course; lesson:
             </span>
           </div>
         </div>
+
+        {hasEarned(course, p) && (
+          <a className="cert-callout" href={href('course', course.id, 'certificate')}>
+            <Icon name="medal" size={28} />
+            <span>
+              <strong>You finished {course.title}!</strong>
+              <span>Get your certificate: download it as a PDF and share it on LinkedIn, X or Facebook.</span>
+            </span>
+            <span aria-hidden>→</span>
+          </a>
+        )}
 
         <div className="takeaway">
           <span className="eyebrow">Key takeaway</span>

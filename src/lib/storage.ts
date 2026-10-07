@@ -115,6 +115,8 @@ export interface Progress {
   sheets: Record<string, Sheet>;
   /** Local dates on which a thinking phase was completed (the thinking streak). */
   thinkDays: string[];
+  /** Active study time per course id, in ms (lessons, sessions and the knowledge map; idle time doesn't count). */
+  studyMs: Record<string, number>;
   /** Bumped on every change; used to resolve sync conflicts. */
   updatedAt: number;
 }
@@ -140,6 +142,7 @@ export const emptyProgress = (): Progress => ({
   maps: {},
   sheets: {},
   thinkDays: [],
+  studyMs: {},
   updatedAt: 0,
 });
 
@@ -277,6 +280,13 @@ function pruneSessionSheets(sheets: Record<string, Sheet>): Record<string, Sheet
   return Object.fromEntries(Object.entries(sheets).filter(([k]) => !drop.has(k)));
 }
 
+/** Adds active study time to a course (no XP; it's what the certificate's hours are based on). */
+export function addStudyTime(courseId: string, ms: number) {
+  if (!courseId || !(ms > 0)) return;
+  const studyMs = { ...state.studyMs, [courseId]: (state.studyMs?.[courseId] ?? 0) + Math.round(ms) };
+  set({ ...state, studyMs });
+}
+
 /** Saves a course's knowledge map and returns the `updatedAt` it was stamped with. */
 export function saveMap(courseId: string, map: KnowledgeMap): number {
   const updatedAt = Date.now();
@@ -392,6 +402,10 @@ export function mergeProgress(a: Progress, b: Progress): Progress {
     maps,
     sheets,
     thinkDays: [...new Set([...(a.thinkDays ?? []), ...(b.thinkDays ?? [])])].sort().slice(-400),
+    // Each device only ever adds time, so the larger total is the most complete one.
+    studyMs: Object.fromEntries(
+      [...new Set([...Object.keys(a.studyMs ?? {}), ...Object.keys(b.studyMs ?? {})])].map((k) => [k, Math.max(a.studyMs?.[k] ?? 0, b.studyMs?.[k] ?? 0)]),
+    ),
     updatedAt: Math.max(a.updatedAt, b.updatedAt),
   };
 }
