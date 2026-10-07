@@ -121,12 +121,15 @@ app.post('/api/auth/register', async (req, res) => {
   if (!USERNAME.test(username)) throw new HttpError(400, 'Username: 3–20 letters, numbers or underscores.', 'username');
   if (!EMAIL.test(email) || email.length > 254) throw new HttpError(400, 'Please enter a valid email address.', 'email');
   checkPassword(password, username);
-  if (await queryOne('SELECT 1 FROM users WHERE lower(username) = lower($1)', [username])) {
-    throw new HttpError(409, 'That username is taken.', 'username');
-  }
-  if (await queryOne('SELECT 1 FROM users WHERE lower(email) = $1', [email])) {
+  // An account for this email that was never confirmed can't sign in, so signing up again replaces it
+  // (the new sign-up still has to be confirmed from the inbox). This also rescues sign-ups whose email failed.
+  const existing = await queryOne<UserRow>('SELECT * FROM users WHERE lower(email) = $1', [email]);
+  if (existing && existing.email_verified_at !== null) {
     throw new HttpError(409, 'An account with this email already exists. Try signing in.', 'email');
   }
+  const nameOwner = await queryOne<{ id: number }>('SELECT id FROM users WHERE lower(username) = lower($1)', [username]);
+  if (nameOwner && nameOwner.id !== existing?.id) throw new HttpError(409, 'That username is taken.', 'username');
+  if (existing) await query('DELETE FROM users WHERE id = $1', [existing.id]);
 
   const hash = await hashPassword(password);
   let id: number;
@@ -141,7 +144,14 @@ app.post('/api/auth/register', async (req, res) => {
     if ((err as { code?: string }).code === UNIQUE_VIOLATION) throw new HttpError(409, 'That username or email was just taken.', 'username');
     throw err;
   }
-  await sendVerifyEmail(email, username, await issueToken(id, 'verify', VERIFY_HOURS * HOUR));
+  try {
+    await sendVerifyEmail(email, username, await issueToken(id, 'verify', VERIFY_HOURS * HOUR));
+  } catch (err) {
+    // Without the email the account could never be confirmed: undo the sign-up so trying again works.
+    console.error('verification email failed', err);
+    await query('DELETE FROM users WHERE id = $1', [id]);
+    throw new HttpError(503, "We couldn't send the confirmation email right now. Please try again in a few minutes.");
+  }
   res.status(201).json({ ok: true, email });
 });
 
