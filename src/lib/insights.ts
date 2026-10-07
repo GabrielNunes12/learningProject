@@ -6,7 +6,7 @@
 // answers (`right`), the Leitner `box`, `due`, and — on newer cards — `hist` (recent results, oldest first) and
 // `last` (time of the latest answer). We never invent data we don't have (e.g. answer speed or per-answer dates).
 
-import type { Course, Lesson, QuestionStep, Step, Unit } from '../types';
+import type { Course, LessonInfo, QuestionStep, UnitInfo } from '../types';
 import { formatPercent, t, type MessageKey } from '../i18n/core.ts';
 
 // ---------- inputs ----------
@@ -112,11 +112,11 @@ export interface TypeStats {
 }
 
 export interface LessonGroup {
-  lesson: Lesson;
+  lesson: LessonInfo;
   items: ItemStats[];
 }
 export interface UnitGroup {
-  unit: Unit;
+  unit: UnitInfo;
   lessons: LessonGroup[];
 }
 
@@ -129,7 +129,7 @@ export interface CourseReport {
   attempts: number;
   due: number;
   /** Core lessons not done and never practised, that come before the furthest lesson you've done. */
-  skippedCore: Lesson[];
+  skippedCore: LessonInfo[];
 }
 
 export interface Window {
@@ -182,7 +182,6 @@ export interface Report {
 // ---------- helpers ----------
 
 type QType = QuestionStep['type'];
-const TYPES: QType[] = ['mcq', 'numeric', 'text', 'output', 'bug', 'order', 'buckets', 'trace', 'truthtable', 'logicgrid', 'balance'];
 
 /** Title-case name of a question format ("Multiple choice"), in the active language. */
 export const typeLabel = (type: QType) => t(`insights.format.${type}` as MessageKey);
@@ -193,9 +192,6 @@ export const typeAdvice = (type: QType) => t(`insights.formatAdvice.${type}` as 
 
 /** Per-noun message keys: what items are called changes the whole sentence in most languages. */
 const byNoun = (prefix: string, noun: Report['itemNoun']) => `${prefix}.${noun}` as MessageKey;
-
-const QUESTION_TYPES = new Set<string>(TYPES);
-const isQuestion = (s: Step): s is QuestionStep => QUESTION_TYPES.has(s.type);
 const qKey = (course: string, lesson: string, id: string) => `${course}/${lesson}/${id}`;
 
 export const pct = (x: number | null) => (x === null ? '–' : formatPercent(x));
@@ -216,13 +212,13 @@ export const hasLapse = (hist?: string) => Boolean(hist && /11+0+$/.test(hist));
 interface Q {
   key: string;
   type: QuestionStep['type'];
-  lesson: Lesson;
+  lesson: LessonInfo;
   concepts?: string[];
 }
 
 function courseQuestions(course: Course): Q[] {
   return course.lessons.flatMap((lesson) =>
-    lesson.steps.filter(isQuestion).map((s) => ({ key: qKey(course.id, lesson.id, s.id), type: s.type, lesson, concepts: s.concepts })),
+    lesson.questions.map((s) => ({ key: qKey(course.id, lesson.id, s.id), type: s.type, lesson, concepts: s.concepts })),
   );
 }
 
@@ -232,7 +228,7 @@ interface Base {
   id: string;
   label: string;
   summary?: string;
-  lesson: Lesson;
+  lesson: LessonInfo;
 }
 
 function itemStats(course: Course, base: Base, qs: Q[], p: ProgressLike, now: number): ItemStats {
@@ -323,7 +319,7 @@ export function analyzeCourse(course: Course, p: ProgressLike, now = Date.now())
     }))
     .filter((u) => u.lessons.length);
 
-  const seenLesson = (l: Lesson) =>
+  const seenLesson = (l: LessonInfo) =>
     Boolean(p.completed[`${course.id}/${l.id}`]) || qs.some((q) => q.lesson === l && (p.cards[q.key]?.seen ?? 0) > 0);
   const furthest = course.lessons.reduce((m, l, i) => (seenLesson(l) ? i : m), -1);
   const skippedCore = course.lessons.filter((l, i) => i < furthest && l.pareto === 'core' && !seenLesson(l));

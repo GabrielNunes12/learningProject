@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { href } from '../lib/router';
 import { courseStats } from '../lib/stats';
 import { useProgress } from '../lib/storage';
-import type { Course, Lesson } from '../types';
+import { preloadCourses } from '../content';
+import type { Course, LessonInfo } from '../types';
 import { CoursePath } from './CoursePath';
 import { Page } from './Layout';
 import { InlineMarkdown } from './Markdown';
@@ -56,10 +57,12 @@ export function CoursePage({ course }: { course: Course }) {
   useEffect(() => {
     loadedFor.current = course.id;
   }, [course.id]);
+  // Fetch the lessons while the learner picks one.
+  useEffect(() => preloadCourses([course.id]), [course.id]);
   const quizBest = p.quizBest[course.id];
   let n = 0;
 
-  const row = (l: Lesson) => {
+  const row = (l: LessonInfo) => {
     n++;
     const done = s.done(l);
     const isNext = s.next?.id === l.id;
@@ -71,7 +74,7 @@ export function CoursePage({ course }: { course: Course }) {
           </span>
           <span className="lesson-text">
             <strong>{l.title}</strong>
-            <small>{t(done ? 'course.lessonMetaDone' : 'course.lessonMeta', { minutes: l.minutes ?? 5, count: l.steps.length })}</small>
+            <small>{t(done ? 'course.lessonMetaDone' : 'course.lessonMeta', { minutes: l.minutes ?? 5, count: l.stepCount })}</small>
           </span>
           <span className={`tag ${l.pareto}`}>{l.pareto === 'core' ? t('common.core') : t('common.deepDive')}</span>
           {isNext && <span className="btn primary small">{t('common.start')}</span>}

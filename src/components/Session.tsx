@@ -1,15 +1,15 @@
 import { useState, type ReactNode } from 'react';
-import type { QuestionRef } from '../content';
+import { questionStep, useCourseContent, type QuestionRef } from '../content';
 import { getProgress, recordAnswer, saveSheet, XP } from '../lib/storage';
 import { dueSheet, finishShorter, sessionSheetKey } from '../lib/thinking';
 import type { Concept } from '../types';
 import { AgainPhase, ShorterPhase } from './paper/Ritual';
-import { useStudyTimer } from './useStudyTimer';
-import { PlayerHeader } from './Layout';
+import { PlayerHeader, PlayerLoading } from './Layout';
 import { QuestionView } from './QuestionView';
 import { accentStyle, useBodyAccent } from './ui';
 import { CourseIcon } from './CourseIcon';
 import { useT } from '../i18n/react';
+import { useStudyTimer } from './useStudyTimer';
 
 export interface SessionResult {
   ref: QuestionRef;
@@ -33,7 +33,15 @@ interface Props {
 }
 
 /** Runs a list of questions one at a time in test mode (quiz and review share this). */
-export function Session({ ritual, questions, exitHref, onFinish, renderEnd }: Props) {
+export function Session(props: Props) {
+  // Questions arrive as catalog refs; their steps load with their courses.
+  const status = useCourseContent(props.questions.map((q) => q.course.id));
+  if (status !== 'ready')
+    return <PlayerLoading exitHref={props.exitHref} total={props.questions.length} color={props.questions[0]?.course.color} failed={status === 'error'} />;
+  return <SessionRun {...props} />;
+}
+
+function SessionRun({ ritual, questions, exitHref, onFinish, renderEnd }: Props) {
   const { t, locale } = useT();
   const [againSheet] = useState(() => dueSheet(getProgress().sheets ?? {}));
   const [phase, setPhase] = useState<'again' | 'questions' | 'shorter' | 'end'>(againSheet ? 'again' : 'questions');
@@ -109,7 +117,7 @@ export function Session({ ritual, questions, exitHref, onFinish, renderEnd }: Pr
         {/* The locale in the key remounts the current question in the new language; idx and results are kept. */}
         <article className="step-card" key={`${idx}-${locale}`}>
           <QuestionView
-            step={q.step}
+            step={questionStep(q.key)!}
             mode="test"
             shuffle
             context={

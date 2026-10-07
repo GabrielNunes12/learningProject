@@ -1,9 +1,9 @@
 import { allQuestions, lessonKey } from '../content';
-import type { Course, Lesson } from '../types';
+import type { Course, LessonInfo } from '../types';
 import { MASTERED_BOX, type Progress } from './storage';
 
 export function courseStats(course: Course, p: Progress) {
-  const done = (l: Lesson) => Boolean(p.completed[lessonKey(course.id, l.id)]);
+  const done = (l: LessonInfo) => Boolean(p.completed[lessonKey(course.id, l.id)]);
   const core = course.lessons.filter((l) => l.pareto === 'core');
   const questions = allQuestions.filter((q) => q.course.id === course.id);
   const mastered = questions.filter((q) => (p.cards[q.key]?.box ?? 0) >= MASTERED_BOX).length;

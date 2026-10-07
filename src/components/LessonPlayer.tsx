@@ -1,25 +1,34 @@
 import { useEffect, useState } from 'react';
-import { lessonKey, questionKey, unitOf } from '../content';
+import { lessonKey, lessonSteps, questionKey, unitOf, useCourseContent } from '../content';
 import { useAuth } from '../lib/auth';
 import { href } from '../lib/router';
 import { completeLesson, getProgress, openLesson, recordAnswer, saveSheet, streak, useProgress, xpToday, XP, type SheetDraft } from '../lib/storage';
 import { dueSheet, emptyDraft, finishShorter, lessonSheetKey, startLessonSheet } from '../lib/thinking';
 import { AgainPhase, ShorterPhase, WrongPhase } from './paper/Ritual';
-import { useStudyTimer } from './useStudyTimer';
-import { hasEarned } from '../lib/certificate';
-import { isQuestion, type Course, type ExampleStep, type Lesson } from '../types';
-import { PlayerHeader } from './Layout';
+import { isQuestion, type Course, type ExampleStep, type LessonInfo, type Step } from '../types';
+import { PlayerHeader, PlayerLoading } from './Layout';
 import { Markdown } from './Markdown';
 import { BottomBar, QuestionView } from './QuestionView';
 import { SimStepView } from './sims/SimStepView';
 import { accentStyle, Ring, useBodyAccent } from './ui';
 import { CourseIcon } from './CourseIcon';
 import { Icon } from './icons';
+import { useStudyTimer } from './useStudyTimer';
+import { hasEarned } from '../lib/certificate';
+
 import { useT } from '../i18n/react';
 
 type Phase = 'again' | 'wrong' | 'steps' | 'shorter' | 'done';
 
-export function LessonPlayer({ course, lesson }: { course: Course; lesson: Lesson }) {
+export function LessonPlayer({ course, lesson }: { course: Course; lesson: LessonInfo }) {
+  const status = useCourseContent([course.id]);
+  const steps = lessonSteps(course.id, lesson.id);
+  if (status !== 'ready' || !steps)
+    return <PlayerLoading exitHref={href('course', course.id)} total={lesson.stepCount} color={course.color} failed={status === 'error'} />;
+  return <LessonRun course={course} lesson={lesson} steps={steps} />;
+}
+
+function LessonRun({ course, lesson, steps }: { course: Course; lesson: LessonInfo; steps: Step[] }) {
   const { t, locale } = useT();
   const sheetKey = lessonSheetKey(course.id, lesson.id);
   // Every lesson is a thinking session: redo an earlier sheet if one is due, guess first, squeeze at the end.
@@ -29,7 +38,6 @@ export function LessonPlayer({ course, lesson }: { course: Course; lesson: Lesso
   const [score, setScore] = useState({ right: 0, total: 0 });
   const [xp, setXp] = useState(0);
   const [firstGuesses, setFirstGuesses] = useState<SheetDraft | undefined>();
-  const steps = lesson.steps;
   const courseHref = href('course', course.id);
   useBodyAccent(course.color);
   useStudyTimer(course.id);
@@ -247,7 +255,7 @@ function ExampleView({ step, onContinue }: { step: ExampleStep; onContinue: () =
   );
 }
 
-function LessonComplete({ course, lesson, score, xp }: { course: Course; lesson: Lesson; score: { right: number; total: number }; xp: number }) {
+function LessonComplete({ course, lesson, score, xp }: { course: Course; lesson: LessonInfo; score: { right: number; total: number }; xp: number }) {
   const { t, tx, n, pct } = useT();
   const p = useProgress();
   const { user } = useAuth();

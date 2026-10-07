@@ -287,10 +287,27 @@ export interface CourseFile {
   links?: ConceptLink[];
 }
 
-/** A loaded course: always has units, plus every lesson flattened in order. */
-export interface Course extends CourseFile {
-  units: Unit[];
-  lessons: Lesson[];
+// ---------- catalog: every course without its step bodies (see src/content/catalog.ts) ----------
+
+/** A graded question without its body: enough to schedule, analyse and mix it. */
+export type QuestionInfo = Pick<QuestionStep, 'id' | 'type' | 'concepts'>;
+
+/** A lesson as the catalog lists it. Its steps load with the course (src/content/index.ts: useCourseContent). */
+export interface LessonInfo extends Omit<Lesson, 'steps'> {
+  stepCount: number;
+  /** The lesson's graded questions, in order. */
+  questions: QuestionInfo[];
+}
+
+export interface UnitInfo extends Omit<Unit, 'lessons'> {
+  lessons: LessonInfo[];
+}
+
+/** A course as the app holds it: the catalog entry, always with units, plus every lesson flattened in order. */
+export interface Course extends Omit<CourseFile, 'units' | 'lessons' | 'category'> {
+  category: string;
+  units: UnitInfo[];
+  lessons: LessonInfo[];
 }
 
 export const QUESTION_TYPES = [

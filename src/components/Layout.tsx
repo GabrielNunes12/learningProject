@@ -3,7 +3,7 @@ import { questionByKey } from '../content';
 import { signOut, useAuth } from '../lib/auth';
 import { useRoute } from '../lib/router';
 import { dueKeys, levelInfo, streak, useProgress, xpToday } from '../lib/storage';
-import { Avatar, Ring } from './ui';
+import { accentStyle, Avatar, Ring, useBodyAccent } from './ui';
 import { BrandMark, Icon, type IconName } from './icons';
 import type { MessageKey } from '../i18n/core';
 import { useT } from '../i18n/react';
@@ -172,6 +172,32 @@ export function PlayerHeader({ exitHref, done, total, right }: { exitHref: strin
         </div>
       </div>
     </header>
+  );
+}
+
+/** The player while a course's lessons download, or after the download failed. */
+export function PlayerLoading({ exitHref, total, color, failed }: { exitHref: string; total: number; color?: string; failed: boolean }) {
+  const { t } = useT();
+  useBodyAccent(color);
+  return (
+    <div className="player" style={accentStyle(color)}>
+      <PlayerHeader exitHref={exitHref} done={0} total={total} />
+      <main className="player-body">
+        {failed ? (
+          <section className="center empty-state" role="alert">
+            <h1>{t('lesson.loadFailed.title')}</h1>
+            <p className="lead">{t('lesson.loadFailed.body')}</p>
+            <button type="button" className="btn primary" onClick={() => window.location.reload()}>
+              {t('common.retry')}
+            </button>
+          </section>
+        ) : (
+          <p className="center muted player-loading" role="status">
+            {t('common.loading')}
+          </p>
+        )}
+      </main>
+    </div>
   );
 }
 

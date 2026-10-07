@@ -88,4 +88,6 @@ export default {
   'lesson.session.shorterHeading': 'Résume cette séance en ancres',
   'lesson.session.shorterIntro': "Qu'est-ce que tu retiendras, ou feras autrement la prochaine fois ? Deux ou trois ancres, quatre mots maximum chacune.",
   'lesson.session.seeResults': 'Voir les résultats',
+  'lesson.loadFailed.title': 'Impossible de charger cette leçon',
+  'lesson.loadFailed.body': 'Vérifie ta connexion et réessaie.',
 } satisfies Translation<typeof en>;

@@ -88,4 +88,6 @@ export default {
   'lesson.session.shorterHeading': 'Resuma esta sessão em âncoras',
   'lesson.session.shorterIntro': 'O que você vai lembrar ou fazer diferente da próxima vez? Duas ou três âncoras, com até quatro palavras cada.',
   'lesson.session.seeResults': 'Ver resultados',
+  'lesson.loadFailed.title': 'Não foi possível carregar esta lição',
+  'lesson.loadFailed.body': 'Verifique sua conexão e tente de novo.',
 } satisfies Translation<typeof en>;

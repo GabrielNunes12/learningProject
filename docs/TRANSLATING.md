@@ -9,7 +9,7 @@ or a course. Follow it literally: the validators enforce most of it.
 | What | English source | Translations | Loaded |
 | --- | --- | --- | --- |
 | Interface strings | `src/i18n/en/<namespace>.ts` | `src/i18n/<locale>/<namespace>.ts` | English bundled; others fetched when the language is picked |
-| Courses | `src/content/topics/<id>.json` | `src/content/topics/<locale>/<id>.json` | English bundled; each translated course is its own chunk |
+| Courses | `src/content/topics/<id>.json` | `src/content/topics/<locale>/<id>.json` | Like English, in two parts: a language's catalogs (titles, summaries, concepts) are fetched when it is picked; a course's translated steps come with its steps when it opens |
 | Roadmap tracks | `src/content/roadmap.json` | `src/content/roadmap.<locale>.json` | same as courses |
 | Emails | `src/i18n/<locale>/email.ts` | (part of the catalogs) | server-side |
 

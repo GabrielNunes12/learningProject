@@ -15,6 +15,7 @@ import {
   ROADMAP_FIELDS,
 } from '../src/content/translation.ts';
 import { validateCourse } from '../src/content/validate.ts';
+import { toCatalog } from '../src/content/catalog.ts';
 import {
   formatDate,
   formatList,
@@ -303,6 +304,8 @@ describe('translation validator', () => {
         // at 0–8%. A forgotten lesson pushes a course well past 10%.
         const { same, total } = textStats(en, tr);
         assert.ok(same / total <= 0.1, `${locale}/${f}: ${same} of ${total} text fields still identical to English`);
+        // The app checks a language's catalogs (everything but step bodies) before it has any steps.
+        assert.deepEqual(validateCourseTranslation(toCatalog(en), toCatalog(tr), f), [], `${locale}/${f} as a catalog`);
       }
     }
   });

@@ -88,4 +88,6 @@ export default {
   'lesson.session.shorterHeading': 'Resume esta sesión en anclas',
   'lesson.session.shorterIntro': '¿Qué vas a recordar o qué harás distinto la próxima vez? Dos o tres anclas, de cuatro palabras como máximo cada una.',
   'lesson.session.seeResults': 'Ver resultados',
+  'lesson.loadFailed.title': 'No se pudo cargar esta lección',
+  'lesson.loadFailed.body': 'Revisa tu conexión y vuelve a intentarlo.',
 } satisfies Translation<typeof en>;

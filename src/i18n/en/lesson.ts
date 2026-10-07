@@ -115,4 +115,9 @@ export default {
   'lesson.session.shorterIntro': 'What will you remember, or do differently next time? Two or three anchors, four words at most each.',
   // Button.
   'lesson.session.seeResults': 'See results',
+
+  // ---------- loading a course's lessons (each course downloads on demand) ----------
+  // Shown in the player when the download failed (offline, or an old page after a deploy). The button is common.retry.
+  'lesson.loadFailed.title': "Couldn't load this lesson",
+  'lesson.loadFailed.body': 'Check your connection and try again.',
 } satisfies Record<string, Message>;

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useSta
 import { layoutPath, pathThrough, placePopover } from '../lib/pathLayout';
 import { href } from '../lib/router';
 import type { courseStats } from '../lib/stats';
-import type { Course, Lesson } from '../types';
+import type { Course, LessonInfo } from '../types';
 import type { MessageKey } from '../i18n/core';
 import { useT } from '../i18n/react';
 import './CoursePath.css';
@@ -17,7 +17,7 @@ const POP_WIDTH = 272;
 const POP_HEIGHT = 190;
 
 interface Entry {
-  lesson: Lesson;
+  lesson: LessonInfo;
   /** Global index in the displayed order. */
   index: number;
   done: boolean;
@@ -221,7 +221,7 @@ export function CoursePath({
               {done && <span className="cpath-pop-done">{t('course.path.completed')}</span>}
             </div>
             <h3>{lesson.title}</h3>
-            <p className="small muted">{t('course.lessonMeta', { minutes: lesson.minutes ?? 5, count: lesson.steps.length })}</p>
+            <p className="small muted">{t('course.lessonMeta', { minutes: lesson.minutes ?? 5, count: lesson.stepCount })}</p>
             <a className="btn primary full" href={href('course', course.id, 'lesson', lesson.id)}>
               {done ? t('course.path.review') : next && s.started ? t('common.continue') : t('common.start')}
             </a>
