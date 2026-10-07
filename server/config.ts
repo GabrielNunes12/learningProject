@@ -18,6 +18,8 @@ export const appUrl = (
 export const databaseUrl = process.env.DATABASE_URL ?? process.env.POSTGRES_URL ?? '';
 export const distDir = join(root, 'dist');
 
+// Email: explicit SMTP_* settings win; otherwise the Resend integration on Vercel provides RESEND_API_KEY,
+// which works as the password for Resend's SMTP endpoint (user "resend").
 export const smtp = process.env.SMTP_HOST
   ? {
       host: process.env.SMTP_HOST,
@@ -25,7 +27,9 @@ export const smtp = process.env.SMTP_HOST
       secure: process.env.SMTP_SECURE === 'true',
       auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS ?? '' } : undefined,
     }
-  : null;
+  : process.env.RESEND_API_KEY
+    ? { host: 'smtp.resend.com', port: 465, secure: true, auth: { user: 'resend', pass: process.env.RESEND_API_KEY } }
+    : null;
 export const mailFrom = process.env.MAIL_FROM ?? 'ProjectLearn <no-reply@projectlearn.local>';
 
 /** Without SMTP in development, emails are kept in memory and shown at /api/dev/outbox. */
