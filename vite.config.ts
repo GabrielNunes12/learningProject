@@ -10,5 +10,7 @@ export default defineConfig({
   build: { chunkSizeWarningLimit: 1500 },
   server: {
     proxy: { '/api': 'http://localhost:3001' },
+    // The local Postgres (data/pg) writes constantly; Vercel's build output isn't source either.
+    watch: { ignored: ['**/data/**', '**/.vercel/**'] },
   },
 });

@@ -2,14 +2,17 @@
 
 A Brilliant-style learning site built on the **80/20 principle**: every course starts with the few ideas that carry most of the value (core lessons), taught through worked examples and exercises, then kept in memory with quizzes and spaced repetition.
 
-**Courses:** Learn Anything Fast · Probability · Big-O Thinking · Python · Java (8 → 25) · Kotlin · Unit Testing · SQL · Git · Spring Boot
+**Courses:** Learn Anything Fast · Logical Thinking · Critical Thinking · Analytical Thinking · Everyday Math · Probability · Big-O Thinking · Python · Java (8 → 25) · Kotlin · Unit Testing · SQL · Git · Spring Boot · System Design · Software Architecture
 
 ## Run it
 
 ```bash
 npm install
+npm run db:local   # starts Postgres in ./data/pg on port 5433 (needs Postgres installed, e.g. brew install postgresql@17)
 npm run dev
 ```
+
+Put `DATABASE_URL=postgres://localhost:5433/projectlearn` in `.env` (see `.env.example`). `npm run db:stop` stops the database. Without a database the site still works; only sign-in and progress sync need it.
 
 Open http://localhost:5173. This starts two processes: the website (Vite, port 5173) and the API server (Node, port 3001). The site forwards `/api` calls to the API.
 
@@ -17,14 +20,23 @@ Open http://localhost:5173. This starts two processes: the website (Vite, port 5
 
 **Real emails:** copy `.env.example` to `.env` and fill in the `SMTP_*` settings (for Gmail, use an App Password).
 
-## Production
+## Deploy to Vercel
 
-```bash
-npm run build
-npm start
-```
+The site is static files (`dist/`) and the API runs as one serverless function (`api/index.ts` wraps the Express app in `server/app.ts`). `vercel.json` holds the build settings and sends `/api/*` to the function. Accounts and synced progress live in Postgres (Neon); the tables are created on the first request.
 
-`npm start` serves the built site and the API from one Node process on `PORT` (default 3001). Set `APP_URL` to your public address so that links in emails are correct. Put the server behind HTTPS (most hosts do this for you); session cookies are marked `Secure` automatically when `APP_URL` starts with `https://`. The database is a single SQLite file in `data/` (or `DATA_DIR`). Back it up.
+1. **Import the repo:** vercel.com → Add New → Project → pick this GitHub repo. The settings come from `vercel.json`; leave them as they are.
+2. **Database:** in the project, Storage → Create Database → Neon → connect it to the project for all environments. This sets `DATABASE_URL`.
+3. **Environment variables** (Settings → Environment Variables, Production):
+   - `APP_URL` = `https://learning.mentor-hub.space` (used in email links; makes the session cookie `Secure`).
+   - `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM`: required for sign-up, since new accounts must confirm their email. Without them, emails are only written to the function logs.
+4. **Domain:** Settings → Domains → add `learning.mentor-hub.space`. The `mentor-hub.space` DNS is managed by Vercel, so the record is created for you.
+5. **Deploy:** every push to `main` deploys to production; other branches get preview URLs.
+
+Check it with `https://learning.mentor-hub.space/api/auth/me`, which should return `{"user":null}`.
+
+`npx vercel build` runs the same build locally, after `npx vercel link` (needs your Vercel login).
+
+**One server instead:** `npm run build && npm start` serves the site and API from one Node process on `PORT` (default 3001). It needs `DATABASE_URL` and `APP_URL`.
 
 ## Features
 
@@ -45,7 +57,7 @@ npm start
 - Passwords are hashed with scrypt (random salt per user). Plain-text passwords are never stored or logged.
 - Sessions, email confirmation and reset links are random tokens. The database stores only their SHA-256 hashes, and confirmation/reset tokens work once.
 - The session cookie is `HttpOnly` and `SameSite=Lax`. API calls that change data must be JSON from the site's own origin.
-- Sign-in, sign-up and email endpoints are rate-limited. "Resend" and "forgot password" don't reveal whether an email has an account.
+- Sign-in, sign-up and email endpoints are rate-limited. The counters live in Postgres, so the limits hold across serverless instances. "Resend" and "forgot password" don't reveal whether an email has an account.
 
 ## Adding a course
 
@@ -71,10 +83,13 @@ src/
   lib/storage.ts          progress, XP, levels, streak, spaced-repetition scheduling
   lib/auth.ts             session state and progress sync
 server/
-  index.ts                API: auth, account, progress, dev mailbox; serves dist/ in production
+  app.ts                  API routes: auth, account, progress, dev mailbox
+  index.ts                runs the API locally (and serves dist/ with npm start)
   security.ts             password hashing, tokens, rate limiting
   mail.ts                 email via SMTP (or dev mailbox)
-  db.ts                   SQLite schema (node:sqlite, nothing to install)
+  db.ts                   Postgres pool and schema (created on first use)
+api/index.ts              Vercel serverless entry for the same app
+vercel.json               Vercel build settings and the /api rewrite
 ```
 
 ## Credits
