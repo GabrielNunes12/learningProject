@@ -8,6 +8,35 @@ export interface Card {
   due: number;
   seen: number;
   right: number;
+  /** Recent results, oldest first: "1" right, "0" wrong (at most HIST_LEN). */
+  hist?: string;
+  /** When it was last answered (ms). */
+  last?: number;
+}
+
+export const HIST_LEN = 12;
+
+/** A learner's own knowledge map of one course (the 3-layer canvas). */
+export interface KnowledgeMap {
+  /** Furthest layer reached: 1 = recalled what I know, 2 = added what I didn't, 3 = connected the dots. */
+  layer: 1 | 2 | 3;
+  /** Concepts recalled from memory in layer 1 (course concept ids). */
+  recalled: string[];
+  /** Positions of every node on the canvas: course concept ids and own note ids. */
+  pos: Record<string, { x: number; y: number }>;
+  /** The learner's own nodes that didn't match a course concept. */
+  notes: { id: string; text: string }[];
+  /** Links the learner drew between nodes. */
+  links: { from: string; to: string; label?: string }[];
+  /** Expert links found at the last check, out of the total. */
+  score?: { found: number; total: number };
+  /** Furthest layer reached per scope ("*" for the whole course, or a unit id); `layer` is the furthest across all scopes. */
+  scopes?: Record<string, 1 | 2 | 3>;
+  /** Concepts marked "I know this now" in layer 2, kept apart from `recalled` so the recall score stays honest. */
+  learned?: string[];
+  /** Expert links revealed as hints, by pair key. */
+  hinted?: string[];
+  updatedAt: number;
 }
 
 export interface Progress {
@@ -22,6 +51,8 @@ export interface Progress {
   /** Last lesson opened, for "Continue learning". */
   last: { course: string; lesson: string; at: number } | null;
   dailyGoal: number;
+  /** Knowledge maps by course id. */
+  maps: Record<string, KnowledgeMap>;
   /** Bumped on every change; used to resolve sync conflicts. */
   updatedAt: number;
 }
@@ -44,6 +75,7 @@ export const emptyProgress = (): Progress => ({
   quizBest: {},
   last: null,
   dailyGoal: 50,
+  maps: {},
   updatedAt: 0,
 });
 
@@ -122,6 +154,8 @@ export function recordAnswer(key: string, correct: boolean) {
     due: Date.now() + INTERVAL_DAYS[box] * DAY,
     seen: (prev?.seen ?? 0) + 1,
     right: (prev?.right ?? 0) + (correct ? 1 : 0),
+    hist: ((prev?.hist ?? '') + (correct ? '1' : '0')).slice(-HIST_LEN),
+    last: Date.now(),
   };
   set(gain({ ...state, cards: { ...state.cards, [key]: card } }, correct ? XP.correct : XP.attempt));
 }
@@ -131,6 +165,13 @@ export function completeLesson(key: string): number {
   const xp = state.completed[key] ? XP.lessonRepeat : XP.lessonFirst;
   set(gain({ ...state, completed: { ...state.completed, [key]: Date.now() } }, xp));
   return xp;
+}
+
+/** Saves a course's knowledge map and returns the `updatedAt` it was stamped with. */
+export function saveMap(courseId: string, map: KnowledgeMap): number {
+  const updatedAt = Date.now();
+  set({ ...state, maps: { ...state.maps, [courseId]: { ...map, updatedAt } } });
+  return updatedAt;
 }
 
 export function openLesson(course: string, lesson: string) {
@@ -221,6 +262,9 @@ export function mergeProgress(a: Progress, b: Progress): Progress {
   const quizBest = { ...a.quizBest };
   for (const [k, v] of Object.entries(b.quizBest)) quizBest[k] = Math.max(quizBest[k] ?? 0, v);
 
+  const maps = { ...(a.maps ?? {}) };
+  for (const [k, m] of Object.entries(b.maps ?? {})) if (!maps[k] || m.updatedAt > maps[k].updatedAt) maps[k] = m;
+
   const newer = a.updatedAt >= b.updatedAt ? a : b;
   return {
     completed,
@@ -231,6 +275,7 @@ export function mergeProgress(a: Progress, b: Progress): Progress {
     quizBest,
     last: (a.last?.at ?? 0) >= (b.last?.at ?? 0) ? a.last : b.last,
     dailyGoal: newer.dailyGoal,
+    maps,
     updatedAt: Math.max(a.updatedAt, b.updatedAt),
   };
 }

@@ -24,6 +24,32 @@ interface QuestionBase {
   prompt: string;
   explanation: string;
   hint?: string;
+  /** Ids of the course concepts this question tests (see CourseFile.concepts). Powers insights and mixed practice. */
+  concepts?: string[];
+}
+
+/** One idea in a course's concept graph: the expert map learners compare their own knowledge map against. */
+export interface Concept {
+  /** kebab-case, unique within the course. */
+  id: string;
+  /** Short name as a learner would say it, e.g. "Contrapositive". */
+  label: string;
+  /** Id of the lesson that teaches it. */
+  lesson: string;
+  /** One sentence: what it is. */
+  summary?: string;
+  /** Other words learners might type for it when recalling, e.g. ["flip and negate"]. */
+  aliases?: string[];
+}
+
+/** A labelled, directed link between two concepts, e.g. "list comprehension" → "for loop" labelled "replaces". */
+export interface ConceptLink {
+  /** A concept id in this course. */
+  from: string;
+  /** A concept id in this course, or "<course id>/<concept id>" for a concept in another course. */
+  to: string;
+  /** Short verb phrase read as "from <label> to", e.g. "is a", "needs", "causes", "is the opposite of". */
+  label: string;
 }
 
 export interface McqStep extends QuestionBase {
@@ -256,6 +282,9 @@ export interface CourseFile {
   keyIdeas: string[];
   units?: Unit[];
   lessons?: Lesson[];
+  /** The course's concept graph: its key ideas (8–24) and how they connect (`links`). */
+  concepts?: Concept[];
+  links?: ConceptLink[];
 }
 
 /** A loaded course: always has units, plus every lesson flattened in order. */

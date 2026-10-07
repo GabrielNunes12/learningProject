@@ -3,6 +3,7 @@
 ## Content rules
 - **Interactive learning is the default.** Every lesson must include at least one interactive step: `output`, `bug`, `order`, `buckets`, `trace`, `truthtable`, `logicgrid`, `balance` or `sim`. The validator rejects lessons without one. Prefer interactive steps over `mcq`; keep `mcq` for judgement calls.
 - **No emoji as icons or decoration.** Course and track icons are `logo:<name>` (SVGs in `src/assets/logos/`) or a 1–5 character monogram; UI icons come from `src/components/icons.tsx`. The validator rejects emoji icons.
+- **Every course has a concept graph** (`concepts` + `links`) and every graded step lists the `concepts` it tests. These power the insights report, mixed practice and the knowledge-map canvas. `check:content` enforces 8–24 concepts, a tag on every graded step, a test for every concept and a concept in every lesson.
 - Lessons stay at 10 steps or fewer. To add practice to a full lesson, convert an `mcq` that tests the same idea and **keep its `id`** (spaced-review history is keyed on `course/lesson/question` ids).
 - Verify every code snippet, printed output, error message, bug fix and wrong fix with the real toolchain before it goes into a course. Trace frames are recorded from real runs, never written by hand.
 - Authoring guide and schemas: `docs/NEW_TOPIC_PROMPT.md`, `src/types.ts`, `src/content/validate.ts`.

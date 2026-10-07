@@ -15,6 +15,438 @@
     "Every `UPDATE` and `DELETE` needs a `WHERE`: preview with `SELECT`, run inside a transaction, check the row count, then `COMMIT`.",
     "Store each fact in one place, link tables with primary and foreign keys, and let constraints reject bad data."
   ],
+  "concepts": [
+    {
+      "id": "where-filter",
+      "label": "WHERE filter",
+      "lesson": "select-where",
+      "summary": "WHERE keeps only the rows whose condition is true; AND binds tighter than OR, and IN, BETWEEN (inclusive) and LIKE are shorthands.",
+      "aliases": [
+        "WHERE clause",
+        "AND / OR precedence",
+        "BETWEEN",
+        "LIKE"
+      ]
+    },
+    {
+      "id": "order-by-limit",
+      "label": "ORDER BY and LIMIT",
+      "lesson": "sort-limit-case",
+      "summary": "Rows have no guaranteed order without ORDER BY (ascending by default), and LIMIT keeps the first n rows after sorting.",
+      "aliases": [
+        "sorting",
+        "top N",
+        "DESC",
+        "OFFSET"
+      ]
+    },
+    {
+      "id": "case-expression",
+      "label": "CASE expression",
+      "lesson": "sort-limit-case",
+      "summary": "CASE turns values into labels by checking its WHEN branches top to bottom; the first true branch wins and no match without ELSE gives NULL.",
+      "aliases": [
+        "CASE WHEN",
+        "conditional column"
+      ]
+    },
+    {
+      "id": "null",
+      "label": "NULL",
+      "lesson": "null-values",
+      "summary": "NULL means missing or unknown, not 0 or an empty string; COALESCE swaps it for the first non-NULL fallback.",
+      "aliases": [
+        "missing value",
+        "unknown value",
+        "COALESCE",
+        "IFNULL"
+      ]
+    },
+    {
+      "id": "three-valued-logic",
+      "label": "Three-valued logic",
+      "lesson": "null-values",
+      "summary": "Any comparison with NULL is unknown rather than true or false, WHERE drops unknown rows, so NULL is tested only with IS NULL / IS NOT NULL.",
+      "aliases": [
+        "IS NULL",
+        "= NULL",
+        "unknown",
+        "true false unknown"
+      ]
+    },
+    {
+      "id": "aggregate-functions",
+      "label": "Aggregate functions",
+      "lesson": "group-by-having",
+      "summary": "COUNT, SUM, AVG, MIN and MAX turn many rows into one value; COUNT(*) counts rows while the others (and COUNT(column)) skip NULLs.",
+      "aliases": [
+        "COUNT",
+        "SUM",
+        "AVG",
+        "COUNT DISTINCT"
+      ]
+    },
+    {
+      "id": "group-by",
+      "label": "GROUP BY",
+      "lesson": "group-by-having",
+      "summary": "GROUP BY splits rows into groups that share a value and runs aggregates per group; every selected column must be grouped or aggregated.",
+      "aliases": [
+        "grouping",
+        "per group"
+      ]
+    },
+    {
+      "id": "having",
+      "label": "HAVING",
+      "lesson": "group-by-having",
+      "summary": "HAVING filters groups after aggregation, so it can use aggregates that WHERE cannot.",
+      "aliases": [
+        "filter groups",
+        "HAVING COUNT"
+      ]
+    },
+    {
+      "id": "logical-query-order",
+      "label": "Logical query order",
+      "lesson": "group-by-having",
+      "summary": "A query runs FROM, WHERE, GROUP BY, HAVING, SELECT, ORDER BY, LIMIT, which decides what each clause can see.",
+      "aliases": [
+        "execution order",
+        "order of clauses",
+        "FROM WHERE GROUP BY"
+      ]
+    },
+    {
+      "id": "foreign-key",
+      "label": "Foreign key",
+      "lesson": "inner-join",
+      "summary": "A foreign key column points to another table's primary key, and REFERENCES makes the database reject values that don't exist there.",
+      "aliases": [
+        "primary key",
+        "REFERENCES",
+        "PK",
+        "FK"
+      ]
+    },
+    {
+      "id": "inner-join",
+      "label": "INNER JOIN",
+      "lesson": "inner-join",
+      "summary": "A join returns one row per matching pair across tables; unmatched rows vanish, and a missing join condition pairs every row with every row.",
+      "aliases": [
+        "JOIN",
+        "ON clause",
+        "cross join",
+        "self-join"
+      ]
+    },
+    {
+      "id": "left-join",
+      "label": "LEFT JOIN",
+      "lesson": "left-join",
+      "summary": "LEFT JOIN keeps every row of the left table and fills the right side with NULLs where nothing matches.",
+      "aliases": [
+        "outer join",
+        "LEFT OUTER JOIN",
+        "RIGHT JOIN",
+        "FULL JOIN"
+      ]
+    },
+    {
+      "id": "anti-join",
+      "label": "Anti-join",
+      "lesson": "left-join",
+      "summary": "To find rows with no match, LEFT JOIN and keep only rows where a never-NULL right column (its key) IS NULL, or use NOT EXISTS.",
+      "aliases": [
+        "who never",
+        "LEFT JOIN IS NULL",
+        "NOT EXISTS",
+        "missing rows"
+      ]
+    },
+    {
+      "id": "filter-in-on",
+      "label": "Filter in ON",
+      "lesson": "left-join",
+      "summary": "A condition on the right table of a LEFT JOIN belongs in ON; in WHERE it drops the NULL-filled rows and turns it into an inner join.",
+      "aliases": [
+        "ON vs WHERE",
+        "WHERE undoes LEFT JOIN"
+      ]
+    },
+    {
+      "id": "subquery",
+      "label": "Subquery",
+      "lesson": "subqueries-ctes",
+      "summary": "A query inside a query: a scalar subquery returns one value, others return a list for IN or a yes/no for a correlated EXISTS.",
+      "aliases": [
+        "nested query",
+        "scalar subquery",
+        "EXISTS",
+        "correlated subquery"
+      ]
+    },
+    {
+      "id": "not-in-null-trap",
+      "label": "NOT IN NULL trap",
+      "lesson": "subqueries-ctes",
+      "summary": "NOT IN against a list that contains a NULL is never true, so it returns no rows; NOT EXISTS gives the intended answer.",
+      "aliases": [
+        "NOT IN",
+        "NOT IN with NULL"
+      ]
+    },
+    {
+      "id": "cte",
+      "label": "CTE",
+      "lesson": "subqueries-ctes",
+      "summary": "WITH name AS (...) gives a subquery a name at the top of the query so later steps can read from it like a table.",
+      "aliases": [
+        "WITH",
+        "common table expression"
+      ]
+    },
+    {
+      "id": "union",
+      "label": "UNION",
+      "lesson": "self-joins-union",
+      "summary": "UNION stacks the rows of queries with the same number of compatible columns; UNION removes duplicates, UNION ALL keeps every row and is cheaper.",
+      "aliases": [
+        "UNION ALL",
+        "set operator",
+        "stack rows"
+      ]
+    },
+    {
+      "id": "update-delete",
+      "label": "UPDATE and DELETE",
+      "lesson": "insert-update-delete",
+      "summary": "UPDATE and DELETE change exactly the rows their WHERE selects, with the same NULL rules as SELECT; without WHERE every row changes.",
+      "aliases": [
+        "INSERT",
+        "modify rows",
+        "DML"
+      ]
+    },
+    {
+      "id": "transaction",
+      "label": "Transaction",
+      "lesson": "insert-update-delete",
+      "summary": "BEGIN ... COMMIT makes statements one all-or-nothing unit that ROLLBACK can undo; without BEGIN each statement commits on its own (autocommit).",
+      "aliases": [
+        "BEGIN",
+        "COMMIT",
+        "ROLLBACK",
+        "ACID"
+      ]
+    },
+    {
+      "id": "constraints",
+      "label": "Constraint",
+      "lesson": "create-table-constraints",
+      "summary": "Column types plus PRIMARY KEY, NOT NULL, UNIQUE, CHECK and DEFAULT let the database reject bad data at the door (numeric, not float, for money).",
+      "aliases": [
+        "NOT NULL",
+        "UNIQUE",
+        "CHECK",
+        "DEFAULT"
+      ]
+    },
+    {
+      "id": "normalization",
+      "label": "Normalization",
+      "lesson": "normalization",
+      "summary": "Store each fact in exactly one place, split across tables linked by keys (with a junction table for many-to-many), to avoid update anomalies.",
+      "aliases": [
+        "one fact one place",
+        "junction table",
+        "many-to-many",
+        "update anomaly"
+      ]
+    },
+    {
+      "id": "window-function",
+      "label": "Window function",
+      "lesson": "window-functions",
+      "summary": "A function with OVER (PARTITION BY ... ORDER BY ...) computes across related rows but keeps every row, e.g. running totals and ROW_NUMBER or RANK.",
+      "aliases": [
+        "OVER",
+        "PARTITION BY",
+        "ROW_NUMBER",
+        "RANK"
+      ]
+    },
+    {
+      "id": "index",
+      "label": "Index",
+      "lesson": "indexes-explain",
+      "summary": "A sorted lookup structure that avoids a full scan, but only when the query compares the bare indexed column (or the leftmost columns); EXPLAIN shows whether it is used.",
+      "aliases": [
+        "B-tree",
+        "EXPLAIN",
+        "seq scan",
+        "composite index"
+      ]
+    }
+  ],
+  "links": [
+    {
+      "from": "null",
+      "to": "three-valued-logic",
+      "label": "causes"
+    },
+    {
+      "from": "three-valued-logic",
+      "to": "where-filter",
+      "label": "is used in"
+    },
+    {
+      "from": "having",
+      "to": "where-filter",
+      "label": "contrasts with"
+    },
+    {
+      "from": "having",
+      "to": "group-by",
+      "label": "needs"
+    },
+    {
+      "from": "aggregate-functions",
+      "to": "group-by",
+      "label": "is used in"
+    },
+    {
+      "from": "aggregate-functions",
+      "to": "null",
+      "label": "skip"
+    },
+    {
+      "from": "where-filter",
+      "to": "logical-query-order",
+      "label": "is part of"
+    },
+    {
+      "from": "having",
+      "to": "logical-query-order",
+      "label": "is part of"
+    },
+    {
+      "from": "order-by-limit",
+      "to": "logical-query-order",
+      "label": "is part of"
+    },
+    {
+      "from": "case-expression",
+      "to": "order-by-limit",
+      "label": "is used in"
+    },
+    {
+      "from": "three-valued-logic",
+      "to": "not-in-null-trap",
+      "label": "causes"
+    },
+    {
+      "from": "anti-join",
+      "to": "not-in-null-trap",
+      "label": "prevents"
+    },
+    {
+      "from": "subquery",
+      "to": "where-filter",
+      "label": "is used in"
+    },
+    {
+      "from": "cte",
+      "to": "subquery",
+      "label": "is a"
+    },
+    {
+      "from": "foreign-key",
+      "to": "inner-join",
+      "label": "is used in"
+    },
+    {
+      "from": "left-join",
+      "to": "inner-join",
+      "label": "contrasts with"
+    },
+    {
+      "from": "left-join",
+      "to": "null",
+      "label": "causes"
+    },
+    {
+      "from": "anti-join",
+      "to": "left-join",
+      "label": "builds on"
+    },
+    {
+      "from": "anti-join",
+      "to": "three-valued-logic",
+      "label": "needs"
+    },
+    {
+      "from": "filter-in-on",
+      "to": "left-join",
+      "label": "is part of"
+    },
+    {
+      "from": "filter-in-on",
+      "to": "where-filter",
+      "label": "contrasts with"
+    },
+    {
+      "from": "window-function",
+      "to": "group-by",
+      "label": "contrasts with"
+    },
+    {
+      "from": "window-function",
+      "to": "aggregate-functions",
+      "label": "builds on"
+    },
+    {
+      "from": "union",
+      "to": "inner-join",
+      "label": "contrasts with"
+    },
+    {
+      "from": "update-delete",
+      "to": "where-filter",
+      "label": "needs"
+    },
+    {
+      "from": "transaction",
+      "to": "update-delete",
+      "label": "groups"
+    },
+    {
+      "from": "foreign-key",
+      "to": "constraints",
+      "label": "is a"
+    },
+    {
+      "from": "normalization",
+      "to": "foreign-key",
+      "label": "needs"
+    },
+    {
+      "from": "constraints",
+      "to": "index",
+      "label": "creates"
+    },
+    {
+      "from": "index",
+      "to": "where-filter",
+      "label": "speeds up"
+    },
+    {
+      "from": "index",
+      "to": "inner-join",
+      "label": "speeds up"
+    }
+  ],
   "units": [
     {
       "id": "querying",
@@ -41,6 +473,7 @@
             {
               "type": "numeric",
               "id": "q-and-count",
+              "concepts": ["where-filter"],
               "prompt": "How many rows does this query return?\n\n```sql\nSELECT id\nFROM orders\nWHERE total >= 30 AND created_at < '2026-03-01';\n```\n\n```\norders\n id  | customer_id | total | created_at\n-----+-------------+-------+-----------\n 101 | 1           | 40.00 | 2026-01-05\n 102 | 1           | 25.00 | 2026-02-10\n 103 | 2           | 80.00 | 2026-02-14\n 104 | 3           | 15.00 | 2026-03-01\n 105 | 2           | 50.00 | 2026-03-03\n 106 | NULL        | 30.00 | 2026-03-08\n```",
               "answer": 2,
               "explanation": "`AND` needs **both** conditions. Totals of at least 30: 101, 103, 105, 106. Created before March: 101, 102, 103. Only **101** and **103** are in both lists.",
@@ -49,6 +482,7 @@
             {
               "type": "bug",
               "id": "q-bug-double-quotes",
+              "concepts": ["where-filter"],
               "prompt": "This should list the customers in Lisbon (Ana and Cara), but it fails. Click the line that causes the error.",
               "language": "sql",
               "code": "SELECT name\nFROM customers\nWHERE city = \"Lisbon\";",
@@ -84,6 +518,7 @@
             {
               "type": "mcq",
               "id": "q-between",
+              "concepts": ["where-filter"],
               "prompt": "Which `WHERE` clause finds orders with a total from 25 to 50, **including** 25 and 50?",
               "choices": [
                 "`WHERE total > 25 AND total < 50`",
@@ -97,6 +532,7 @@
             {
               "type": "numeric",
               "id": "q-like-underscore",
+              "concepts": ["where-filter"],
               "prompt": "How many rows does this return in PostgreSQL?\n\n```sql\nSELECT name\nFROM customers\nWHERE name LIKE '_e%';\n```\n\n```\ncustomers\n id | name | city\n----+------+--------\n  1 | Ana  | Lisbon\n  2 | Ben  | Porto\n  3 | Cara | Lisbon\n  4 | Dev  | NULL\n  5 | Eli  | Madrid\n```",
               "answer": 2,
               "explanation": "`_` matches exactly one character and `%` matches the rest, so the pattern means \"the **second** letter is `e`\". That's **Ben** and **Dev**. Eli doesn't match: his second letter is `l`.",
@@ -105,6 +541,7 @@
             {
               "type": "text",
               "id": "q-in-keyword",
+              "concepts": ["where-filter"],
               "prompt": "Fill in the missing keyword so the query returns customers in Lisbon or Madrid:\n\n```sql\nSELECT name\nFROM customers\nWHERE city ___ ('Lisbon', 'Madrid');\n```",
               "accept": [
                 "IN"
@@ -133,6 +570,7 @@
             {
               "type": "mcq",
               "id": "q-recent-two",
+              "concepts": ["order-by-limit"],
               "prompt": "Which query returns the **two most recent** orders?",
               "choices": [
                 "`SELECT id FROM orders ORDER BY created_at DESC LIMIT 2;`",
@@ -146,6 +584,7 @@
             {
               "type": "bug",
               "id": "q-bug-top-three",
+              "concepts": ["order-by-limit"],
               "prompt": "This should return the **3 biggest** orders (103, 105 and 101), but it returns the wrong ones. Click the line with the bug.\n\n(Totals: 101: 40.00, 102: 25.00, 103: 80.00, 104: 15.00, 105: 50.00, 106: 30.00.)",
               "language": "sql",
               "code": "SELECT id, total\nFROM orders\nORDER BY total\nLIMIT 3;",
@@ -169,6 +608,7 @@
             {
               "type": "numeric",
               "id": "q-distinct-null",
+              "concepts": ["null"],
               "prompt": "How many rows does this return?\n\n```sql\nSELECT DISTINCT customer_id\nFROM orders;\n```\n\n```\norders\n id  | customer_id | total | created_at\n-----+-------------+-------+-----------\n 101 | 1           | 40.00 | 2026-01-05\n 102 | 1           | 25.00 | 2026-02-10\n 103 | 2           | 80.00 | 2026-02-14\n 104 | 3           | 15.00 | 2026-03-01\n 105 | 2           | 50.00 | 2026-03-03\n 106 | NULL        | 30.00 | 2026-03-08\n```",
               "answer": 4,
               "explanation": "The distinct values are 1, 2, 3 and `NULL` (the guest order 106). `DISTINCT` keeps one copy of each, and it treats `NULL` as a value of its own, so the answer is **4**, not 3.",
@@ -194,6 +634,7 @@
             {
               "type": "numeric",
               "id": "q-case-order",
+              "concepts": ["case-expression"],
               "prompt": "Someone swapped the branches. How many orders get the label `'large'`?\n\n```sql\nSELECT id,\n       CASE\n         WHEN total > 20 THEN 'medium'\n         WHEN total > 50 THEN 'large'\n         ELSE 'small'\n       END AS size\nFROM orders;\n```\n\n(Totals: 40, 25, 80, 15, 50, 30.)",
               "answer": 0,
               "explanation": "The first matching branch wins. Every total above 50 is also above 20, so it's caught by the `'medium'` branch and never reaches `'large'`. Put the most specific condition first.",
@@ -216,6 +657,7 @@
             {
               "type": "numeric",
               "id": "q-not-lisbon",
+              "concepts": ["three-valued-logic", "null"],
               "prompt": "How many rows does this return?\n\n```sql\nSELECT name\nFROM customers\nWHERE city <> 'Lisbon';\n```\n\n(Using the `customers` table above: Ana and Cara are in Lisbon, Ben in Porto, Eli in Madrid, Dev's city is `NULL`.)",
               "answer": 2,
               "explanation": "Ben and Eli pass. For Dev, `NULL <> 'Lisbon'` is **unknown**, and `WHERE` drops unknown rows. To include him, write `WHERE city <> 'Lisbon' OR city IS NULL`.",
@@ -229,6 +671,7 @@
             {
               "type": "bug",
               "id": "q-eq-null",
+              "concepts": ["three-valued-logic"],
               "prompt": "This should list the customers whose city is unknown (that's Dev), but it returns no rows. Click the line with the bug.",
               "language": "sql",
               "code": "SELECT name\nFROM customers\nWHERE city = NULL;",
@@ -263,6 +706,7 @@
             {
               "type": "numeric",
               "id": "q-not-null-trap",
+              "concepts": ["three-valued-logic"],
               "prompt": "How many rows does this return?\n\n```sql\nSELECT id\nFROM orders\nWHERE NOT (customer_id = 1);\n```\n\n```\norders\n id  | customer_id | total | created_at\n-----+-------------+-------+-----------\n 101 | 1           | 40.00 | 2026-01-05\n 102 | 1           | 25.00 | 2026-02-10\n 103 | 2           | 80.00 | 2026-02-14\n 104 | 3           | 15.00 | 2026-03-01\n 105 | 2           | 50.00 | 2026-03-03\n 106 | NULL        | 30.00 | 2026-03-08\n```",
               "answer": 3,
               "explanation": "Orders 103, 104 and 105 have `customer_id` 2 or 3, so the condition is true. Orders 101 and 102 are false. For order 106, `customer_id = 1` is unknown, and `NOT unknown` is still **unknown**, so it's dropped too.",
@@ -271,6 +715,7 @@
             {
               "type": "text",
               "id": "q-coalesce",
+              "concepts": ["null"],
               "prompt": "Dev's city is `NULL`, so this shows `NULL` for him instead of a label:\n\n```sql\nSELECT name || ' (' || city || ')' FROM customers;\n```\n\nFill in the function so Dev shows as `Dev (unknown)`:\n\n```sql\nSELECT name || ' (' || ________(city, 'unknown') || ')' FROM customers;\n```",
               "accept": [
                 "COALESCE"
@@ -280,6 +725,7 @@
             {
               "type": "output",
               "id": "q-out-coalesce",
+              "concepts": ["null"],
               "prompt": "Using the `customers` table from this lesson (Ana and Cara in Lisbon, Ben in Porto, Dev with a `NULL` city, Eli in Madrid; ids 1 to 5 in that order), what does this return? Type one value per line, without the header.",
               "language": "sql",
               "code": "SELECT COALESCE(city, '?') AS city\nFROM customers\nWHERE city <> 'Lisbon' OR city IS NULL\nORDER BY id;",
@@ -304,6 +750,7 @@
             {
               "type": "numeric",
               "id": "q-count-distinct",
+              "concepts": ["aggregate-functions", "null"],
               "prompt": "What does this return?\n\n```sql\nSELECT COUNT(DISTINCT customer_id)\nFROM orders;\n```\n\n```\norders\n id  | customer_id | total | created_at\n-----+-------------+-------+-----------\n 101 | 1           | 40.00 | 2026-01-05\n 102 | 1           | 25.00 | 2026-02-10\n 103 | 2           | 80.00 | 2026-02-14\n 104 | 3           | 15.00 | 2026-03-01\n 105 | 2           | 50.00 | 2026-03-03\n 106 | NULL        | 30.00 | 2026-03-08\n```",
               "answer": 3,
               "explanation": "The `customer_id` values are 1, 1, 2, 3, 2, `NULL`. `DISTINCT` leaves 1, 2, 3 and `NULL`, and `COUNT(column)` never counts `NULL`, so the answer is **3**. (Compare: `COUNT(*)` is 6 and `COUNT(customer_id)` is 5.)",
@@ -333,6 +780,7 @@
             {
               "type": "numeric",
               "id": "q-where-having",
+              "concepts": ["having", "where-filter", "logical-query-order"],
               "prompt": "How many rows does this return?\n\n```sql\nSELECT customer_id\nFROM orders\nWHERE total > 30\nGROUP BY customer_id\nHAVING COUNT(*) >= 2;\n```\n\n```\norders\n id  | customer_id | total | created_at\n-----+-------------+-------+-----------\n 101 | 1           | 40.00 | 2026-01-05\n 102 | 1           | 25.00 | 2026-02-10\n 103 | 2           | 80.00 | 2026-02-14\n 104 | 3           | 15.00 | 2026-03-01\n 105 | 2           | 50.00 | 2026-03-03\n 106 | NULL        | 30.00 | 2026-03-08\n```",
               "answer": 1,
               "explanation": "`WHERE` runs first and keeps 101 (customer 1), 103 and 105 (customer 2). Now customer 1 has only **one** row left and customer 2 has two. `HAVING COUNT(*) >= 2` keeps only customer 2. (Without the `WHERE`, customers 1 and 2 would both qualify.)",
@@ -341,6 +789,7 @@
             {
               "type": "bug",
               "id": "q-agg-in-where",
+              "concepts": ["having", "logical-query-order", "aggregate-functions"],
               "prompt": "This should list the customers who spent more than 50 in total, but it fails. Click the line that causes the error.",
               "language": "sql",
               "code": "SELECT customer_id, SUM(total)\nFROM orders\nWHERE SUM(total) > 50\nGROUP BY customer_id;",
@@ -358,6 +807,7 @@
             {
               "type": "order",
               "id": "q-order-logical",
+              "concepts": ["logical-query-order"],
               "prompt": "Put the clauses of this query in the order the database **logically runs** them, not the order you write them:\n\n```sql\nSELECT customer_id, SUM(total) AS spent\nFROM orders\nWHERE total > 20\nGROUP BY customer_id\nHAVING COUNT(*) >= 2\nORDER BY spent DESC\nLIMIT 3;\n```",
               "items": [
                 "`FROM orders`",
@@ -374,6 +824,7 @@
             {
               "type": "text",
               "id": "q-having-keyword",
+              "concepts": ["having", "group-by"],
               "prompt": "Fill in the keyword to list the cities that have at least 2 customers:\n\n```sql\nSELECT city, COUNT(*)\nFROM customers\nGROUP BY city\n______ COUNT(*) >= 2;\n```",
               "accept": [
                 "HAVING"
@@ -404,6 +855,7 @@
             {
               "type": "numeric",
               "id": "q-join-count",
+              "concepts": ["inner-join"],
               "prompt": "How many rows does the join above return?\n\n```\ncustomers\n id | name | city\n----+------+--------\n  1 | Ana  | Lisbon\n  2 | Ben  | Porto\n  3 | Cara | Lisbon\n  4 | Dev  | NULL\n  5 | Eli  | Madrid\n```\n\n```\norders\n id  | customer_id | total | created_at\n-----+-------------+-------+-----------\n 101 | 1           | 40.00 | 2026-01-05\n 102 | 1           | 25.00 | 2026-02-10\n 103 | 2           | 80.00 | 2026-02-14\n 104 | 3           | 15.00 | 2026-03-01\n 105 | 2           | 50.00 | 2026-03-03\n 106 | NULL        | 30.00 | 2026-03-08\n```",
               "answer": 5,
               "explanation": "Each order is paired with the customer whose `id` equals its `customer_id`. Orders 101 to 105 all find a customer. Order 106 has `customer_id` `NULL`, and `NULL = anything` is never true, so the INNER JOIN drops it. Dev and Eli have no orders, so they don't appear either.",
@@ -511,6 +963,7 @@
             {
               "type": "numeric",
               "id": "q-cross-join",
+              "concepts": ["inner-join"],
               "prompt": "Someone forgot the join condition. How many rows does this return?\n\n```sql\nSELECT c.name, o.id\nFROM customers c, orders o;\n```\n\n(5 customers, 6 orders.)",
               "answer": 30,
               "explanation": "With no condition, every customer is paired with every order: 5 × 6 = **30** rows. This *cross join* is a classic cause of wildly inflated totals. If a joined result has suspiciously many rows, check your `ON` / `WHERE` conditions."
@@ -518,6 +971,7 @@
             {
               "type": "bug",
               "id": "q-join-bug",
+              "concepts": ["inner-join", "foreign-key"],
               "prompt": "This query should list who bought a Kettle, but one join condition is wrong. (`order_items(order_id, product_id, quantity)` lists what is in each order.) Click the line with the bug.",
               "language": "sql",
               "code": "SELECT c.name\nFROM customers c\nJOIN orders o       ON o.customer_id = c.id\nJOIN order_items oi ON oi.order_id = c.id\nJOIN products p     ON p.id = oi.product_id\nWHERE p.name = 'Kettle';",
@@ -536,6 +990,7 @@
             {
               "type": "numeric",
               "id": "q-kettle-rows",
+              "concepts": ["inner-join"],
               "prompt": "With line 4 fixed, how many rows does the query return?\n\n```sql\nSELECT c.name\nFROM customers c\nJOIN orders o       ON o.customer_id = c.id\nJOIN order_items oi ON oi.order_id = o.id\nJOIN products p     ON p.id = oi.product_id\nWHERE p.name = 'Kettle';\n```\n\nKettles appear in `order_items` for orders **101** (Ana), **103** (Ben) and **105** (Ben).",
               "answer": 3,
               "explanation": "One row per matching order item: Ana, Ben, Ben. Ben shows up twice because he bought Kettles in two orders. If you want each customer once, use `SELECT DISTINCT c.name` (2 rows).",
@@ -558,6 +1013,7 @@
             {
               "type": "numeric",
               "id": "q-left-orders",
+              "concepts": ["left-join"],
               "prompt": "Now the tables are swapped. How many rows does this return?\n\n```sql\nSELECT o.id, c.name\nFROM orders o\nLEFT JOIN customers c ON c.id = o.customer_id;\n```\n\n```\norders\n id  | customer_id | total | created_at\n-----+-------------+-------+-----------\n 101 | 1           | 40.00 | 2026-01-05\n 102 | 1           | 25.00 | 2026-02-10\n 103 | 2           | 80.00 | 2026-02-14\n 104 | 3           | 15.00 | 2026-03-01\n 105 | 2           | 50.00 | 2026-03-03\n 106 | NULL        | 30.00 | 2026-03-08\n```\n\n(Customers 1–5 exist; each order matches at most one customer.)",
               "answer": 6,
               "explanation": "`orders` is now the left table, so **every order** is kept: 101–105 with their customer's name, and guest order 106 with `name` = `NULL`. Customers without orders (Dev, Eli) don't appear: they're on the right side.",
@@ -650,6 +1106,7 @@
             {
               "type": "mcq",
               "id": "q-never-ordered",
+              "concepts": ["anti-join", "left-join"],
               "prompt": "Which query lists products that have **never** been ordered?\n\n```\nproducts\n id | name     | category | price\n----+----------+----------+------\n  1 | Pen      | Office   |  2.50\n  2 | Notebook | Office   |  6.00\n  3 | Mug      | Kitchen  |  9.00\n  4 | Kettle   | Kitchen  | 35.00\n  5 | Lamp     | Home     | 25.00\n```\n\n(`order_items(order_id, product_id, quantity)` has a row for every product in every order.)",
               "choices": [
                 "`SELECT p.name FROM products p LEFT JOIN order_items oi ON oi.product_id = p.id WHERE oi.product_id IS NULL;`",
@@ -680,6 +1137,7 @@
             {
               "type": "numeric",
               "id": "q-count-star-left",
+              "concepts": ["left-join", "aggregate-functions"],
               "prompt": "What number does this query show for **Dev**?\n\n```sql\nSELECT c.name, COUNT(*) AS orders\nFROM customers c\nLEFT JOIN orders o ON o.customer_id = c.id\nGROUP BY c.name;\n```\n\n(Dev has no orders.)",
               "answer": 1,
               "explanation": "The LEFT JOIN gives Dev **one** row (with `NULL` order columns), and `COUNT(*)` counts rows, so it reports 1. Count a right-side column instead: `COUNT(o.id)` skips the `NULL` and correctly gives 0.",
@@ -688,6 +1146,7 @@
             {
               "type": "numeric",
               "id": "q-left-where",
+              "concepts": ["filter-in-on", "three-valued-logic"],
               "prompt": "How many rows does this return?\n\n```sql\nSELECT c.name\nFROM customers c\nLEFT JOIN orders o ON o.customer_id = c.id\nWHERE o.total > 20;\n```\n\n```\norders\n id  | customer_id | total | created_at\n-----+-------------+-------+-----------\n 101 | 1           | 40.00 | 2026-01-05\n 102 | 1           | 25.00 | 2026-02-10\n 103 | 2           | 80.00 | 2026-02-14\n 104 | 3           | 15.00 | 2026-03-01\n 105 | 2           | 50.00 | 2026-03-03\n 106 | NULL        | 30.00 | 2026-03-08\n```",
               "answer": 4,
               "explanation": "After the join, `WHERE o.total > 20` keeps Ana/101 (40), Ana/102 (25), Ben/103 (80) and Ben/105 (50). Cara's only order is 15.00, and Dev and Eli have `NULL` totals, so they're all dropped. The `WHERE` on the right table made this behave like an inner join."
@@ -695,6 +1154,7 @@
             {
               "type": "bug",
               "id": "q-bug-left-where",
+              "concepts": ["filter-in-on", "left-join"],
               "prompt": "This should list **every** customer with how many orders over 20 they placed, showing 0 for customers with none. Customers without such an order are missing from the result. Click the line with the bug.",
               "language": "sql",
               "code": "SELECT c.name, COUNT(o.id) AS big_orders\nFROM customers c\nLEFT JOIN orders o ON o.customer_id = c.id\nWHERE o.total > 20\nGROUP BY c.name;",
@@ -729,6 +1189,7 @@
             {
               "type": "numeric",
               "id": "q-above-avg",
+              "concepts": ["subquery"],
               "prompt": "How many rows does the query above return?\n\n```\norders\n id  | customer_id | total | created_at\n-----+-------------+-------+-----------\n 101 | 1           | 40.00 | 2026-01-05\n 102 | 1           | 25.00 | 2026-02-10\n 103 | 2           | 80.00 | 2026-02-14\n 104 | 3           | 15.00 | 2026-03-01\n 105 | 2           | 50.00 | 2026-03-03\n 106 | NULL        | 30.00 | 2026-03-08\n```",
               "answer": 2,
               "explanation": "The average is (40 + 25 + 80 + 15 + 50 + 30) / 6 = 240 / 6 = **40**. Only 80.00 (103) and 50.00 (105) are strictly greater; order 101 is exactly 40, which doesn't count.",
@@ -742,6 +1203,7 @@
             {
               "type": "numeric",
               "id": "q-not-in-null",
+              "concepts": ["not-in-null-trap", "three-valued-logic"],
               "prompt": "How many rows does this return?\n\n```sql\nSELECT name\nFROM customers\nWHERE id NOT IN (SELECT customer_id FROM orders);\n```\n\nThe subquery returns `1, 1, 2, 3, 2, NULL` (guest order 106 has no customer).",
               "answer": 0,
               "explanation": "For Dev, `4 NOT IN (1, 2, 3, NULL)` means `4 <> 1 AND 4 <> 2 AND 4 <> 3 AND 4 <> NULL`. The last part is unknown, so the whole condition is unknown (never true), for **every** customer. One `NULL` in the list empties the result. This is one of SQL's nastiest traps.",
@@ -750,6 +1212,7 @@
             {
               "type": "mcq",
               "id": "q-not-exists-fix",
+              "concepts": ["not-in-null-trap", "subquery"],
               "prompt": "Which query correctly returns the customers who never ordered (Dev and Eli), even though `orders.customer_id` contains a NULL?",
               "choices": [
                 "`SELECT name FROM customers WHERE id NOT IN (SELECT DISTINCT customer_id FROM orders);`",
@@ -779,6 +1242,7 @@
             {
               "type": "text",
               "id": "q-with-keyword",
+              "concepts": ["cte"],
               "prompt": "Fill in the keyword that starts a CTE:\n\n```sql\n____ big_orders AS (\n  SELECT * FROM orders WHERE total >= 50\n)\nSELECT COUNT(*) FROM big_orders;\n```",
               "accept": [
                 "WITH"
@@ -788,6 +1252,7 @@
             {
               "type": "bug",
               "id": "q-bug-cte-average",
+              "concepts": ["cte", "aggregate-functions"],
               "prompt": "This should list the customers whose total spend is above the **average spend per customer**. Only Ben (130.00) should qualify, but Ana shows up too. Click the line with the bug.",
               "language": "sql",
               "code": "WITH spend AS (\n  SELECT customer_id, SUM(total) AS spent\n  FROM orders\n  WHERE customer_id IS NOT NULL\n  GROUP BY customer_id\n)\nSELECT c.name, s.spent\nFROM spend s\nJOIN customers c ON c.id = s.customer_id\nWHERE s.spent > (SELECT AVG(total) FROM orders);",
@@ -820,6 +1285,7 @@
             {
               "type": "numeric",
               "id": "q-self-pairs",
+              "concepts": ["inner-join"],
               "prompt": "Without the `a.id < b.id` condition, how many rows does this return?\n\n```sql\nSELECT a.name, b.name\nFROM customers a\nJOIN customers b ON a.city = b.city;\n```\n\n```\ncustomers\n id | name | city\n----+------+--------\n  1 | Ana  | Lisbon\n  2 | Ben  | Porto\n  3 | Cara | Lisbon\n  4 | Dev  | NULL\n  5 | Eli  | Madrid\n```",
               "answer": 6,
               "explanation": "Lisbon has 2 customers, giving 2 × 2 = 4 pairs (Ana–Ana, Ana–Cara, Cara–Ana, Cara–Cara). Porto and Madrid add Ben–Ben and Eli–Eli. Dev's city is `NULL`, and `NULL = NULL` isn't true, so he doesn't even match himself. Total: **6**.",
@@ -845,6 +1311,7 @@
             {
               "type": "numeric",
               "id": "q-union-all",
+              "concepts": ["union"],
               "prompt": "How many rows does this return?\n\n```sql\nSELECT name FROM customers WHERE city = 'Lisbon'\nUNION ALL\nSELECT name FROM customers WHERE name LIKE '%a';\n```\n\n```\ncustomers\n id | name | city\n----+------+--------\n  1 | Ana  | Lisbon\n  2 | Ben  | Porto\n  3 | Cara | Lisbon\n  4 | Dev  | NULL\n  5 | Eli  | Madrid\n```",
               "answer": 4,
               "explanation": "Lisbon gives Ana and Cara. Names ending in lowercase `a` are also Ana and Cara. `UNION ALL` keeps duplicates, so that's **4** rows. With `UNION` it would be 2."
@@ -852,6 +1319,7 @@
             {
               "type": "bug",
               "id": "q-union-error",
+              "concepts": ["union"],
               "prompt": "This should build one contact list: every customer's name and city, plus the name of every member of `staff(id, name, manager_id)`, who have no city on file. It fails. Click the line with the bug.",
               "language": "sql",
               "code": "SELECT name, city FROM customers\nUNION ALL\nSELECT name FROM staff;",
@@ -870,6 +1338,7 @@
             {
               "type": "text",
               "id": "q-union-all-choice",
+              "concepts": ["union"],
               "prompt": "You're combining this year's and last year's order tables into one report. The two can never contain the same row, and they're huge. Which set operator should you use? (two words)",
               "accept": [
                 "UNION ALL"
@@ -905,6 +1374,7 @@
             {
               "type": "numeric",
               "id": "q-update-count",
+              "concepts": ["update-delete", "three-valued-logic"],
               "prompt": "Starting from the original `customers` table, how many rows does PostgreSQL report as updated?\n\n```sql\nUPDATE customers\nSET city = 'Lisbon'\nWHERE city <> 'Porto';\n```\n\n```\ncustomers\n id | name | city\n----+------+--------\n  1 | Ana  | Lisbon\n  2 | Ben  | Porto\n  3 | Cara | Lisbon\n  4 | Dev  | NULL\n  5 | Eli  | Madrid\n```",
               "answer": 3,
               "explanation": "Ana, Cara (already Lisbon) and Eli match `city <> 'Porto'`, so PostgreSQL reports `UPDATE 3`: it counts matched rows, even if the value didn't change. Ben is in Porto, and Dev's `NULL <> 'Porto'` is unknown, so his city stays `NULL`. (MySQL reports matched and changed rows separately: 3 matched, 1 changed.)",
@@ -925,6 +1395,7 @@
             {
               "type": "bug",
               "id": "q-bug-update-or",
+              "concepts": ["update-delete", "where-filter"],
               "prompt": "Using the `products` table above: Kitchen and Home products under 30 (that's the Mug and the Lamp) should get 10% more expensive. PostgreSQL reports one row too many. Click the line with the bug.",
               "language": "sql",
               "code": "UPDATE products\nSET price = price * 1.10\nWHERE category = 'Kitchen' OR category = 'Home' AND price < 30;",
@@ -943,6 +1414,7 @@
             {
               "type": "mcq",
               "id": "q-stray-semicolon",
+              "concepts": ["transaction", "update-delete"],
               "prompt": "You type this into `psql`, which sends each statement as soon as it reaches a `;` (autocommit is on, the default). What happens?\n\n```sql\nUPDATE orders SET total = 0;\nWHERE id = 104;\n```",
               "choices": [
                 "Sets order 104's total to 0 and nothing else",
@@ -961,6 +1433,7 @@
             {
               "type": "numeric",
               "id": "q-rollback-count",
+              "concepts": ["transaction"],
               "prompt": "The `orders` table starts with 6 rows. What does the final `SELECT` return?\n\n```sql\nBEGIN;\nDELETE FROM orders WHERE customer_id = 2;\nINSERT INTO orders (id, customer_id, total, created_at)\nVALUES (107, 5, 20.00, '2026-03-09');\nROLLBACK;\nSELECT COUNT(*) FROM orders;\n```",
               "answer": 6,
               "explanation": "Inside the transaction the table briefly had 6 − 2 + 1 = 5 rows, but `ROLLBACK` undoes **everything** since `BEGIN`: both deleted orders come back and order 107 disappears. The count is back to **6**."
@@ -968,6 +1441,7 @@
             {
               "type": "text",
               "id": "q-rollback-keyword",
+              "concepts": ["transaction"],
               "prompt": "You ran an `UPDATE` inside `BEGIN`, expected it to change 1 row, and PostgreSQL printed `UPDATE 5`. Which command undoes it?",
               "accept": [
                 "ROLLBACK",
@@ -998,6 +1472,7 @@
             {
               "type": "mcq",
               "id": "q-money-type",
+              "concepts": ["constraints"],
               "prompt": "`orders.total` holds amounts like 40.00 and 2.50 euros, and reports add them up. Which column type fits best?",
               "choices": [
                 "`double precision`",
@@ -1029,6 +1504,7 @@
             {
               "type": "numeric",
               "id": "q-insert-fails",
+              "concepts": ["constraints"],
               "prompt": "Given this table, already holding the 5 sample products (ids 1–5, including a Mug):\n\n```sql\nCREATE TABLE products (\n  id       integer PRIMARY KEY,\n  name     text NOT NULL UNIQUE,\n  category text,\n  price    numeric(8, 2) NOT NULL CHECK (price > 0)\n);\n```\n\nEach line runs on its own as `INSERT INTO products (id, name, category, price) VALUES ...` with these values. How many **fail**?\n\n```\n(6, 'Stapler', 'Office', 8.00)\n(7, 'Mug', 'Kitchen', 12.00)\n(8, 'Tray', NULL, 4.00)\n(3, 'Bowl', 'Kitchen', 7.00)\n(9, 'Vase', 'Home', 0.00)\n```",
               "answer": 3,
               "explanation": "- Stapler: fine.\n- Mug: `name` is `UNIQUE` and a Mug already exists. **Fails.**\n- Tray: `category` has no `NOT NULL`, so `NULL` is allowed. Fine.\n- Bowl: id 3 is taken (Mug). **Fails** on the primary key.\n- Vase: `CHECK (price > 0)` rejects 0. **Fails.**",
@@ -1037,6 +1513,7 @@
             {
               "type": "bug",
               "id": "q-bug-missing-default",
+              "concepts": ["constraints", "null"],
               "prompt": "New orders should get today's date automatically when an `INSERT` leaves `created_at` out, but the insert fails. Click the line with the bug.",
               "language": "sql",
               "code": "CREATE TABLE orders (\n  id          integer PRIMARY KEY,\n  customer_id integer REFERENCES customers (id),\n  total       numeric(10, 2) NOT NULL CHECK (total >= 0),\n  created_at  date NOT NULL\n);\n\nINSERT INTO orders (id, customer_id, total) VALUES (107, 2, 19.99);",
@@ -1055,6 +1532,7 @@
             {
               "type": "mcq",
               "id": "q-fk-delete",
+              "concepts": ["foreign-key", "constraints"],
               "prompt": "`orders.customer_id` is declared `REFERENCES customers (id)` with no extra options. Ana (id 1) has orders 101 and 102. What happens?\n\n```sql\nDELETE FROM customers WHERE id = 1;\n```",
               "choices": [
                 "Ana is deleted and her orders are deleted with her",
@@ -1068,6 +1546,7 @@
             {
               "type": "text",
               "id": "q-references",
+              "concepts": ["foreign-key"],
               "prompt": "Fill in the keyword so the database rejects any order whose customer doesn't exist:\n\n```sql\nCREATE TABLE orders (\n  id          integer PRIMARY KEY,\n  customer_id integer __________ customers (id)\n);\n```",
               "accept": [
                 "REFERENCES"
@@ -1104,6 +1583,7 @@
             {
               "type": "numeric",
               "id": "q-update-anomaly",
+              "concepts": ["normalization"],
               "prompt": "In the flat design there's one row per order item. Ana's order 101 has 2 items and order 102 has 3. Ana moves to Faro. How many rows must you update in the flat table?",
               "answer": 5,
               "explanation": "Her city is copied onto every row of every item she bought: 2 + 3 = **5** rows, and missing any of them leaves contradictory data. In the normalized schema it's a single row in `customers`."
@@ -1116,6 +1596,7 @@
             {
               "type": "mcq",
               "id": "q-many-categories",
+              "concepts": ["normalization", "foreign-key"],
               "prompt": "Products can now belong to several categories at once (a Mug is both \"Kitchen\" and \"Gifts\"). Which design is best?",
               "choices": [
                 "A `categories` text column holding a comma-separated list, like `'Kitchen,Gifts'`",
@@ -1129,6 +1610,7 @@
             {
               "type": "mcq",
               "id": "q-price-history",
+              "concepts": ["normalization"],
               "prompt": "Our `order_items` has no price column; revenue reports multiply `quantity` by `products.price`. The Kettle's price goes from 35.00 to 39.00. What happens?",
               "choices": [
                 "Revenue for past orders silently changes, because old orders now use the new price",
@@ -1142,6 +1624,7 @@
             {
               "type": "buckets",
               "id": "q-buckets-which-table",
+              "concepts": ["normalization"],
               "prompt": "Each fact gets exactly one home. Sort these facts into the table where they belong in our schema: `customers`, `products`, `orders` and `order_items`.",
               "buckets": [
                 "`customers`",
@@ -1227,6 +1710,7 @@
             {
               "type": "numeric",
               "id": "q-row-number",
+              "concepts": ["window-function"],
               "prompt": "What is `rn` for order **102**?\n\n```sql\nSELECT id, customer_id, total,\n       ROW_NUMBER() OVER (PARTITION BY customer_id\n                          ORDER BY total DESC) AS rn\nFROM orders;\n```\n\n```\norders\n id  | customer_id | total | created_at\n-----+-------------+-------+-----------\n 101 | 1           | 40.00 | 2026-01-05\n 102 | 1           | 25.00 | 2026-02-10\n 103 | 2           | 80.00 | 2026-02-14\n 104 | 3           | 15.00 | 2026-03-01\n 105 | 2           | 50.00 | 2026-03-03\n 106 | NULL        | 30.00 | 2026-03-08\n```",
               "answer": 2,
               "explanation": "Customer 1's partition holds 101 (40.00) and 102 (25.00). Sorted by total descending, 101 is 1 and 102 is **2**. Numbering restarts for each customer, so 103 and 104 are each 1 again."
@@ -1234,6 +1718,7 @@
             {
               "type": "numeric",
               "id": "q-rank-ties",
+              "concepts": ["window-function", "group-by"],
               "prompt": "What is `rnk` for customer **3**?\n\n```sql\nSELECT customer_id, COUNT(*) AS n,\n       RANK() OVER (ORDER BY COUNT(*) DESC) AS rnk\nFROM orders\nWHERE customer_id IS NOT NULL\nGROUP BY customer_id;\n```\n\n(Customers 1 and 2 have 2 orders each; customer 3 has 1.)",
               "answer": 3,
               "explanation": "The window runs after `GROUP BY`, so it ranks the grouped rows. Customers 1 and 2 tie for rank 1, and `RANK` then **skips** to 3. With `DENSE_RANK()` customer 3 would be 2; with `ROW_NUMBER()` also 3, but the two tied customers would get 1 and 2 in no guaranteed order.",
@@ -1242,6 +1727,7 @@
             {
               "type": "mcq",
               "id": "q-top-per-group",
+              "concepts": ["window-function", "cte", "logical-query-order"],
               "prompt": "Which query returns each customer's **biggest order** (id and total)?\n\n```sql\n-- Query A\nSELECT customer_id, id, total\nFROM orders\nWHERE ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY total DESC) = 1;\n\n-- Query B\nWITH ranked AS (\n  SELECT customer_id, id, total,\n         ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY total DESC) AS rn\n  FROM orders\n)\nSELECT customer_id, id, total FROM ranked WHERE rn = 1;\n\n-- Query C\nSELECT customer_id, id, MAX(total)\nFROM orders\nGROUP BY customer_id;\n```",
               "choices": [
                 "Query A",
@@ -1255,6 +1741,7 @@
             {
               "type": "output",
               "id": "q-out-second-biggest",
+              "concepts": ["window-function"],
               "prompt": "Using the `orders` table below, what does this return? Type one value per line, without the header.\n\n```\norders\n id  | customer_id | total | created_at\n-----+-------------+-------+-----------\n 101 | 1           | 40.00 | 2026-01-05\n 102 | 1           | 25.00 | 2026-02-10\n 103 | 2           | 80.00 | 2026-02-14\n 104 | 3           | 15.00 | 2026-03-01\n 105 | 2           | 50.00 | 2026-03-03\n 106 | NULL        | 30.00 | 2026-03-08\n```",
               "language": "sql",
               "code": "WITH ranked AS (\n  SELECT id,\n         ROW_NUMBER() OVER (PARTITION BY customer_id\n                            ORDER BY total DESC) AS rn\n  FROM orders\n)\nSELECT id FROM ranked\nWHERE rn = 2\nORDER BY id;",
@@ -1265,6 +1752,7 @@
             {
               "type": "numeric",
               "id": "q-running-per-customer",
+              "concepts": ["window-function"],
               "prompt": "What value does this show for order **105**?\n\n```sql\nSELECT id,\n       SUM(total) OVER (PARTITION BY customer_id\n                        ORDER BY created_at) AS running\nFROM orders;\n```\n\n```\norders\n id  | customer_id | total | created_at\n-----+-------------+-------+-----------\n 101 | 1           | 40.00 | 2026-01-05\n 102 | 1           | 25.00 | 2026-02-10\n 103 | 2           | 80.00 | 2026-02-14\n 104 | 3           | 15.00 | 2026-03-01\n 105 | 2           | 50.00 | 2026-03-03\n 106 | NULL        | 30.00 | 2026-03-08\n```",
               "answer": 130,
               "explanation": "Order 105 is customer 2's. Their partition, by date: 103 (02-14, 80.00) then 105 (03-03, 50.00). The running sum at 105 is 80 + 50 = **130**. Other customers' orders don't count: the partition resets the total.",
@@ -1292,6 +1780,7 @@
             {
               "type": "mcq",
               "id": "q-index-usable",
+              "concepts": ["index"],
               "prompt": "There's a plain index on `customers (email)`. Which `WHERE` clause can use it to find the row directly?",
               "choices": [
                 "`WHERE lower(email) = 'ana@example.com'`",
@@ -1321,6 +1810,7 @@
             {
               "type": "numeric",
               "id": "q-explain-analyze",
+              "concepts": ["index", "transaction"],
               "prompt": "`orders` has its 6 sample rows and autocommit is on. You run this to see how a cleanup query would perform:\n\n```sql\nEXPLAIN ANALYZE DELETE FROM orders WHERE total < 20;\n```\n\nHow many rows does `orders` have afterwards?\n\n(Totals: 40, 25, 80, 15, 50, 30.)",
               "answer": 5,
               "explanation": "`EXPLAIN ANALYZE` really **executes** the statement to measure it, so order 104 (15.00) is deleted and committed. To profile a write safely, wrap it: `BEGIN; EXPLAIN ANALYZE DELETE ...; ROLLBACK;`",
@@ -1329,6 +1819,7 @@
             {
               "type": "buckets",
               "id": "q-buckets-composite-index",
+              "concepts": ["index"],
               "prompt": "`orders` has millions of rows and an index on `(customer_id, created_at)`. For each `WHERE` clause, can PostgreSQL use the index to jump straight to the matching rows?",
               "buckets": [
                 "Jumps straight to the rows",
@@ -1374,6 +1865,7 @@
             {
               "type": "text",
               "id": "q-expression-index",
+              "concepts": ["index"],
               "prompt": "`EXPLAIN` shows `Seq Scan on customers` for `WHERE lower(email) = '...'` on a big table. Fill in the blank to create an index the query can use:\n\n```sql\nCREATE INDEX customers_lower_email_idx\n  ON customers (_____(email));\n```",
               "accept": [
                 "lower",

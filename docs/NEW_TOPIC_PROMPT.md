@@ -42,6 +42,9 @@ Output ONLY valid JSON matching this schema:
   "level": "Beginner | Intermediate | Advanced",
   "description": "One sentence: what you'll be able to do.",
   "keyIdeas": ["...", "..."],
+  "concepts": [{ "id": "contrapositive", "label": "Contrapositive", "lesson": "look-alikes",
+                  "summary": "If not Q then not P: always equivalent to the original.", "aliases": ["flip and negate"] }],
+  "links": [{ "from": "contrapositive", "to": "implication", "label": "is equivalent to" }],
   "units": [
     { "id": "unit-id", "title": "Unit title", "description": "optional", "lessons": [
     {
@@ -140,6 +143,17 @@ instead of recognizing one):
 "icon": use "logo:<name>" for a technology with a logo in src/assets/logos/ (python, java, kotlin, git, spring),
 otherwise a short monogram in the subject's own notation: "P(x)", "O(n)", "∴", "%", "SQL". The app draws it as
 a tile in the course colour. Emoji are rejected: they make the app look generated. Keep emoji out of lesson text too.
+
+Concept graph (required): the course's expert knowledge map. Learners compare their own map against it,
+and it powers the insights report and mixed practice.
+- "concepts": 8–24 key ideas, each { "id": "kebab-case", "label": "1–4 words", "lesson": "<lesson id that
+  teaches it>", "summary": "one sentence", "aliases": ["other words a learner might type for it"] }.
+  Every lesson teaches at least one concept.
+- "links": how concepts connect, roughly 1.2–2× as many links as concepts: { "from": "<concept id>",
+  "to": "<concept id>" or "<other course id>/<concept id>", "label": "is a | needs | causes | replaces |
+  is the opposite of | ..." }. Read it as a sentence: "<from> <label> <to>". No duplicate pairs.
+- Every graded step lists the 1–3 concepts it tests: "concepts": ["concept-id", ...]. Every concept is
+  tested by at least one graded step.
 
 Formatting inside text fields: **bold**, *italic*, `code`, lines starting with "- " for
 bullet lists, a blank line ("\n\n") between paragraphs, and ``` fences for code blocks.

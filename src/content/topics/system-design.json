@@ -1,0 +1,1717 @@
+{
+  "id": "system-design",
+  "title": "System Design",
+  "icon": "QPS",
+  "color": "#e03131",
+  "order": 17,
+  "category": "Engineering",
+  "level": "Intermediate",
+  "description": "Design systems that serve real traffic: estimate the load, choose storage and caching, scale out safely and explain the trade-offs in an interview or design review.",
+  "keyIdeas": [
+    "Estimate first: requests per day ÷ 10⁵ ≈ requests per second, then plan for peaks a few times higher.",
+    "Keep app servers **stateless** so you can scale out behind a load balancer and lose any one of them.",
+    "Most systems are read-heavy: a cache with a high hit ratio is the cheapest big win, if you handle stale data.",
+    "Replicas **copy** data to scale reads (and lag behind); shards **split** data to scale size and writes (and need a good key).",
+    "Queues deliver at least once, so make handlers **idempotent**.",
+    "Every network call needs a timeout; retry with backoff and jitter, and use circuit breakers and rate limits to stop failures spreading."
+  ],
+  "concepts": [
+    {
+      "id": "napkin-math",
+      "label": "Napkin math",
+      "lesson": "napkin-math",
+      "summary": "Quick estimates of QPS, storage and bandwidth from round numbers: requests per day ÷ 10⁵ ≈ requests per second, times a peak factor.",
+      "aliases": [
+        "back-of-the-envelope",
+        "QPS",
+        "capacity estimate",
+        "read:write ratio"
+      ]
+    },
+    {
+      "id": "latency-numbers",
+      "label": "Latency numbers",
+      "lesson": "napkin-math",
+      "summary": "Rough orders of magnitude: RAM ~100 ns, SSD read ~100 µs, same-data-center round trip ~0.5 ms, disk seek ~10 ms, intercontinental round trip ~150 ms.",
+      "aliases": [
+        "latency ladder",
+        "numbers every programmer should know",
+        "latency"
+      ]
+    },
+    {
+      "id": "request-path",
+      "label": "Load balancer",
+      "lesson": "follow-a-click",
+      "summary": "DNS points clients at a load balancer, which spreads requests over healthy app servers in front of the database.",
+      "aliases": [
+        "request path",
+        "DNS",
+        "LB",
+        "health checks"
+      ]
+    },
+    {
+      "id": "horizontal-scaling",
+      "label": "Horizontal scaling",
+      "lesson": "follow-a-click",
+      "summary": "Add more machines behind a load balancer (scale out) instead of buying a bigger one (scale up), gaining headroom and redundancy.",
+      "aliases": [
+        "scale out",
+        "vertical scaling",
+        "scale up",
+        "N+1"
+      ]
+    },
+    {
+      "id": "stateless-servers",
+      "label": "Stateless servers",
+      "lesson": "follow-a-click",
+      "summary": "App servers keep no per-user state between requests; sessions and files live in shared stores, so any server can handle any request.",
+      "aliases": [
+        "stateless",
+        "shared session store",
+        "sticky sessions"
+      ]
+    },
+    {
+      "id": "latency-budget",
+      "label": "Latency budget",
+      "lesson": "latency-budgets",
+      "summary": "Split a response-time target across calls: sequential calls add, parallel calls cost the slowest, and fan-out makes tail latency (p99) the common case.",
+      "aliases": [
+        "tail latency",
+        "p99",
+        "percentiles",
+        "fan-out"
+      ]
+    },
+    {
+      "id": "cache-aside",
+      "label": "Cache-aside",
+      "lesson": "caching",
+      "summary": "The app checks a fast cache first and, on a miss, reads the database and stores the result for the next reader.",
+      "aliases": [
+        "caching",
+        "lazy loading",
+        "Redis",
+        "CDN"
+      ]
+    },
+    {
+      "id": "hit-ratio",
+      "label": "Hit ratio",
+      "lesson": "caching",
+      "summary": "The share of reads the cache answers; average latency = h × hit + (1 − h) × miss, and database load = (1 − h) × reads.",
+      "aliases": [
+        "hit rate",
+        "miss rate",
+        "cache hits"
+      ]
+    },
+    {
+      "id": "cache-invalidation",
+      "label": "TTL and invalidation",
+      "lesson": "caching",
+      "summary": "Bound staleness with a time to live, and delete cached keys after writing so the next read reloads fresh data.",
+      "aliases": [
+        "TTL",
+        "stale cache",
+        "cache invalidation",
+        "expiry"
+      ]
+    },
+    {
+      "id": "sql-vs-nosql",
+      "label": "SQL vs NoSQL",
+      "lesson": "pick-a-database",
+      "summary": "Relational databases give joins and transactions; key-value and wide-column stores give simple key access spread over many machines.",
+      "aliases": [
+        "relational database",
+        "key-value store",
+        "document database",
+        "ACID"
+      ]
+    },
+    {
+      "id": "sharding",
+      "label": "Sharding",
+      "lesson": "pick-a-database",
+      "summary": "Split rows across machines by a partition key that spreads load evenly and keeps common queries on one shard, avoiding hot spots.",
+      "aliases": [
+        "partitioning",
+        "shard key",
+        "partition key",
+        "hot spot"
+      ]
+    },
+    {
+      "id": "consistent-hashing",
+      "label": "Consistent hashing",
+      "lesson": "pick-a-database",
+      "summary": "Keys and shards sit on a hash ring, so adding a shard moves only about 1/N of the keys instead of most of them.",
+      "aliases": [
+        "hash ring",
+        "rebalancing",
+        "resharding"
+      ]
+    },
+    {
+      "id": "replication",
+      "label": "Read replicas",
+      "lesson": "copies-that-disagree",
+      "summary": "A leader takes writes and replicas copy its changes to serve reads and stand by for failover.",
+      "aliases": [
+        "replication",
+        "leader-follower",
+        "primary-replica",
+        "failover"
+      ]
+    },
+    {
+      "id": "eventual-consistency",
+      "label": "Eventual consistency",
+      "lesson": "copies-that-disagree",
+      "summary": "Async copies lag behind, so reads may be stale for a while but converge; read-your-writes and strong consistency are stronger guarantees.",
+      "aliases": [
+        "replication lag",
+        "stale reads",
+        "read-your-writes",
+        "strong consistency"
+      ]
+    },
+    {
+      "id": "cap-pacelc",
+      "label": "CAP and PACELC",
+      "lesson": "copies-that-disagree",
+      "summary": "During a network partition choose consistency or availability; otherwise trade latency against consistency.",
+      "aliases": [
+        "CAP theorem",
+        "network partition",
+        "consistency vs availability",
+        "PACELC"
+      ]
+    },
+    {
+      "id": "message-queue",
+      "label": "Message queue",
+      "lesson": "queues",
+      "summary": "Producers put work on a queue and workers process it in the background, so requests answer fast and spikes are absorbed.",
+      "aliases": [
+        "queue",
+        "async work",
+        "background jobs",
+        "workers"
+      ]
+    },
+    {
+      "id": "at-least-once",
+      "label": "At-least-once delivery",
+      "lesson": "queues",
+      "summary": "A message is redelivered until it is acked, so nothing is lost but the same message can be processed more than once.",
+      "aliases": [
+        "redelivery",
+        "duplicates",
+        "ack",
+        "dead-letter queue"
+      ]
+    },
+    {
+      "id": "idempotency",
+      "label": "Idempotency",
+      "lesson": "queues",
+      "summary": "Doing an operation twice has the same effect as once, usually via an idempotency key recorded with the effect.",
+      "aliases": [
+        "idempotent",
+        "idempotency key",
+        "deduplication"
+      ]
+    },
+    {
+      "id": "timeouts",
+      "label": "Timeouts",
+      "lesson": "when-things-break",
+      "summary": "Every network call stops waiting after a bound, so a hung dependency cannot exhaust your threads and cascade.",
+      "aliases": [
+        "timeout",
+        "cascading failure",
+        "Little's law",
+        "deadline"
+      ]
+    },
+    {
+      "id": "retry-backoff",
+      "label": "Retries with backoff",
+      "lesson": "when-things-break",
+      "summary": "Retry transient failures with capped, exponentially growing waits plus jitter, and only for idempotent operations.",
+      "aliases": [
+        "exponential backoff",
+        "jitter",
+        "retry storm",
+        "retries"
+      ]
+    },
+    {
+      "id": "circuit-breaker",
+      "label": "Circuit breaker",
+      "lesson": "when-things-break",
+      "summary": "After repeated failures, stop calling a dependency (open), fail fast with a fallback, then test it again (half-open).",
+      "aliases": [
+        "breaker",
+        "fail fast",
+        "fallback",
+        "half-open"
+      ]
+    },
+    {
+      "id": "rate-limiting",
+      "label": "Rate limiting",
+      "lesson": "when-things-break",
+      "summary": "Cap each client, often with a token bucket, and reject the excess with 429 Too Many Requests.",
+      "aliases": [
+        "token bucket",
+        "429",
+        "throttling",
+        "rate limiter"
+      ]
+    },
+    {
+      "id": "design-process",
+      "label": "Design process",
+      "lesson": "design-snipt",
+      "summary": "Requirements, estimates, API, data model, high-level design, then deep dives and trade-offs, in that order.",
+      "aliases": [
+        "system design interview",
+        "requirements",
+        "functional vs non-functional",
+        "trade-offs"
+      ]
+    },
+    {
+      "id": "short-codes",
+      "label": "Short code generation",
+      "lesson": "design-snipt",
+      "summary": "Size the code space with base62 (62ⁿ codes), and choose random codes with a uniqueness check or encoded ids.",
+      "aliases": [
+        "base62",
+        "ID generation",
+        "URL shortener",
+        "key space"
+      ]
+    }
+  ],
+  "links": [
+    {
+      "from": "latency-numbers",
+      "to": "napkin-math",
+      "label": "is part of"
+    },
+    {
+      "from": "latency-budget",
+      "to": "latency-numbers",
+      "label": "builds on"
+    },
+    {
+      "from": "horizontal-scaling",
+      "to": "stateless-servers",
+      "label": "needs"
+    },
+    {
+      "from": "horizontal-scaling",
+      "to": "request-path",
+      "label": "needs"
+    },
+    {
+      "from": "replication",
+      "to": "horizontal-scaling",
+      "label": "is a special case of"
+    },
+    {
+      "from": "sharding",
+      "to": "horizontal-scaling",
+      "label": "is a special case of"
+    },
+    {
+      "from": "sharding",
+      "to": "replication",
+      "label": "contrasts with"
+    },
+    {
+      "from": "replication",
+      "to": "eventual-consistency",
+      "label": "causes"
+    },
+    {
+      "from": "cap-pacelc",
+      "to": "eventual-consistency",
+      "label": "builds on"
+    },
+    {
+      "from": "cap-pacelc",
+      "to": "latency-budget",
+      "label": "builds on"
+    },
+    {
+      "from": "hit-ratio",
+      "to": "latency-numbers",
+      "label": "builds on"
+    },
+    {
+      "from": "cache-aside",
+      "to": "hit-ratio",
+      "label": "is checked by"
+    },
+    {
+      "from": "cache-invalidation",
+      "to": "cache-aside",
+      "label": "is part of"
+    },
+    {
+      "from": "cache-aside",
+      "to": "replication",
+      "label": "contrasts with"
+    },
+    {
+      "from": "cache-aside",
+      "to": "eventual-consistency",
+      "label": "causes"
+    },
+    {
+      "from": "consistent-hashing",
+      "to": "sharding",
+      "label": "is used in"
+    },
+    {
+      "from": "at-least-once",
+      "to": "message-queue",
+      "label": "is part of"
+    },
+    {
+      "from": "at-least-once",
+      "to": "idempotency",
+      "label": "needs"
+    },
+    {
+      "from": "retry-backoff",
+      "to": "idempotency",
+      "label": "needs"
+    },
+    {
+      "from": "retry-backoff",
+      "to": "timeouts",
+      "label": "needs"
+    },
+    {
+      "from": "circuit-breaker",
+      "to": "timeouts",
+      "label": "builds on"
+    },
+    {
+      "from": "circuit-breaker",
+      "to": "retry-backoff",
+      "label": "contrasts with"
+    },
+    {
+      "from": "rate-limiting",
+      "to": "circuit-breaker",
+      "label": "contrasts with"
+    },
+    {
+      "from": "rate-limiting",
+      "to": "message-queue",
+      "label": "contrasts with"
+    },
+    {
+      "from": "timeouts",
+      "to": "latency-budget",
+      "label": "builds on"
+    },
+    {
+      "from": "napkin-math",
+      "to": "design-process",
+      "label": "is part of"
+    },
+    {
+      "from": "short-codes",
+      "to": "design-process",
+      "label": "is part of"
+    },
+    {
+      "from": "short-codes",
+      "to": "napkin-math",
+      "label": "builds on"
+    },
+    {
+      "from": "sql-vs-nosql",
+      "to": "design-process",
+      "label": "is used in"
+    },
+    {
+      "from": "message-queue",
+      "to": "design-process",
+      "label": "is used in"
+    },
+    {
+      "from": "cap-pacelc",
+      "to": "design-process",
+      "label": "is used in"
+    },
+    {
+      "from": "napkin-math",
+      "to": "analytical-thinking/fermi-estimate",
+      "label": "is a special case of"
+    },
+    {
+      "from": "hit-ratio",
+      "to": "probability/expected-value",
+      "label": "builds on"
+    },
+    {
+      "from": "consistent-hashing",
+      "to": "big-o/hash-map",
+      "label": "builds on"
+    },
+    {
+      "from": "sql-vs-nosql",
+      "to": "sql/transaction",
+      "label": "builds on"
+    },
+    {
+      "from": "message-queue",
+      "to": "software-architecture/sync-call",
+      "label": "contrasts with"
+    },
+    {
+      "from": "design-process",
+      "to": "software-architecture/trade-offs",
+      "label": "builds on"
+    }
+  ],
+  "units": [
+    {
+      "id": "size-it-up",
+      "title": "Size it up",
+      "description": "Turn users into numbers, follow one request through the system, and add servers without breaking anything.",
+      "lessons": [
+        {
+          "id": "napkin-math",
+          "title": "Napkin math: how big is it?",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "Requests per day ÷ 10⁵ ≈ requests per second; multiply for peaks and reads, and size storage as items × bytes × time.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Meet Snipt",
+              "body": "Lin is launching **Snipt**, a link shortener: paste a long URL, get `snipt.example/x7Kp2`, and anyone who clicks it is redirected. Omar, who reviews her designs, asks first: *how big is this?*\n\nNapkin math answers in a minute:\n\n- A day has 86,400 seconds. Round it to **100,000 (10⁵)**.\n- **Average QPS** (queries per second) = requests per day ÷ 10⁵.\n\n50 million requests a day ÷ 10⁵ ≈ **500 QPS**. Within 2× is good enough: it tells you whether you need one server or fifty."
+            },
+            {
+              "type": "numeric",
+              "id": "q-write-qps",
+              "prompt": "Snipt expects **2 million** new links a day. On average, how many link-creation requests per second is that?",
+              "answer": 23,
+              "tolerance": 3,
+              "unit": "requests/s",
+              "hint": "Divide by the seconds in a day, or by 10⁵ for the shortcut.",
+              "explanation": "2,000,000 ÷ 86,400 ≈ **23 per second**. The 10⁵ shortcut gives 20, which is just as useful: either way, link creation is a light load.",
+              "concepts": [
+                "napkin-math"
+              ]
+            },
+            {
+              "type": "explain",
+              "title": "Peaks and reads",
+              "body": "Traffic isn't flat. Evenings, launches and one viral link all spike it, so a common starting assumption is **peak ≈ 2–3× average** (measure real traffic as soon as you have it).\n\nMost systems are also **read-heavy**. A Snipt link is created once and clicked many times, so the **read:write ratio** might be 100:1. Reads, not writes, will decide Snipt's design."
+            },
+            {
+              "type": "numeric",
+              "id": "q-peak-reads",
+              "prompt": "Use round numbers: **20** new links per second on average, each clicked **100** times for every creation (100:1), and plan for a peak of **3×** average. How many clicks per second at peak?",
+              "answer": 6000,
+              "unit": "clicks/s",
+              "hint": "Writes × ratio gives average reads; then apply the peak factor.",
+              "explanation": "20 writes/s × 100 = 2,000 clicks/s on average, × 3 for the peak = **6,000 clicks/s**. That number will follow Snipt through the whole course.",
+              "concepts": [
+                "napkin-math"
+              ]
+            },
+            {
+              "type": "example",
+              "title": "Sizing storage",
+              "problem": "How much disk do a year of Snipt links need?",
+              "steps": [
+                "Storage = new items per day × bytes per item × days kept.",
+                "A link row holds the short code, the long URL, the owner and a timestamp. Long URLs vary, so budget **500 bytes**.",
+                "2,000,000 links/day × 500 bytes × 365 days = 365,000,000,000 bytes."
+              ],
+              "answer": "About **365 GB a year**, so roughly 1.8 TB over five years. That fits on one large disk; you'd still keep copies for safety."
+            },
+            {
+              "type": "numeric",
+              "id": "q-click-log",
+              "prompt": "Snipt also logs every click for analytics: **200 million** clicks a day at about **100 bytes** each. How many gigabytes of logs per day? (1 GB = 10⁹ bytes)",
+              "answer": 20,
+              "tolerance": 0.5,
+              "unit": "GB",
+              "hint": "Multiply, then divide by 10⁹.",
+              "explanation": "200,000,000 × 100 bytes = 2 × 10¹⁰ bytes = **20 GB a day**, about 7 TB a year. The click log, not the links table, is Snipt's big data.",
+              "concepts": [
+                "napkin-math"
+              ]
+            },
+            {
+              "type": "numeric",
+              "id": "q-bandwidth",
+              "prompt": "**Bandwidth** = requests per second × bytes per response. At the peak of **6,000** clicks/s, each redirect response is about **500 bytes**. How many megabytes per second leave Snipt's servers? (1 MB = 10⁶ bytes)",
+              "answer": 3,
+              "tolerance": 0.1,
+              "unit": "MB/s",
+              "explanation": "6,000 × 500 bytes = 3,000,000 bytes/s = **3 MB/s**, or 24 Mbit/s. A single server's network card is commonly 10 Gbit/s, so bandwidth is a non-issue for redirects.",
+              "concepts": [
+                "napkin-math"
+              ]
+            },
+            {
+              "type": "order",
+              "id": "q-latency-ladder",
+              "prompt": "Engineers keep a few rough **latency numbers** in their pocket. Order these from fastest to slowest.",
+              "items": [
+                "Read a value from main memory (RAM)",
+                "Random read from an SSD",
+                "Round trip to another server in the same data center",
+                "One seek on a spinning hard disk",
+                "Round trip from California to Europe and back"
+              ],
+              "hint": "Nanoseconds, then microseconds, then milliseconds. Distance is the slowest thing of all.",
+              "explanation": "Approximate, from the widely shared *latency numbers every programmer should know* list (Jeff Dean, Peter Norvig). Hardware keeps changing, but the orders of magnitude hold:\n\n- RAM read: **~100 ns**\n- SSD random read: **~100 µs** (tens to a couple of hundred µs, by drive)\n- Same-data-center round trip: **~0.5 ms**\n- Hard-disk seek: **~10 ms**\n- California to Europe and back: **~150 ms**\n\nEach rung is roughly 5–100× the one before. Memory is about a million times faster than crossing an ocean.",
+              "concepts": [
+                "latency-numbers"
+              ]
+            },
+            {
+              "type": "mcq",
+              "id": "q-what-matters",
+              "prompt": "Omar reads Lin's napkin: **6,000** clicks/s at peak, **365 GB** of links a year, **3 MB/s** of bandwidth. What's the sensible conclusion?",
+              "choices": [
+                "Storage and bandwidth are small; the real job is answering thousands of reads per second quickly, so caching will matter",
+                "Snipt needs dozens of database shards on day one to hold the data",
+                "Bandwidth is the bottleneck, so a bigger network link comes first",
+                "Napkin numbers can't guide a design; benchmark every option before deciding"
+              ],
+              "answer": 0,
+              "explanation": "The numbers point at **reads**: 6,000/s at peak, against tiny storage and bandwidth. That's why the next lessons are about serving reads fast (load balancers, caches, replicas). Sharding for 365 GB would be premature. Benchmarks matter later, but napkin math tells you *what* to benchmark.",
+              "concepts": [
+                "napkin-math"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "follow-a-click",
+          "title": "Follow one click",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "DNS finds the load balancer, the load balancer spreads requests over stateless app servers, and state lives in shared stores so you can add or lose servers freely.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "One click, four boxes",
+              "body": "Here is the path a click on `snipt.example/x7Kp2` takes:\n\n```text\nbrowser\n   |  DNS: snipt.example -> 203.0.113.10\n   v\nload balancer        spreads requests, skips unhealthy servers\n   |\n   v\napp server (1 of N)  runs the code, keeps no state\n   |\n   v\ndatabase             the source of truth\n```\n\n**DNS** turns the name into an IP address (and is cached, so repeat visits skip it). The **load balancer** owns that IP and forwards each request to a healthy app server."
+            },
+            {
+              "type": "order",
+              "id": "q-click-path",
+              "prompt": "Put the steps of a **first-ever** click on `snipt.example/x7Kp2` in order.",
+              "items": [
+                "The browser asks DNS for the IP address of snipt.example",
+                "The browser connects to the load balancer's IP address",
+                "The load balancer forwards the request to a healthy app server",
+                "The app server looks up x7Kp2 in the database",
+                "The app server answers with a redirect to the long URL",
+                "The browser requests the long URL"
+              ],
+              "hint": "The browser needs an address before it can connect to anything.",
+              "explanation": "Name → address (DNS), address → front door (load balancer), front door → a worker (app server), worker → data (database), then back out as a redirect the browser follows. On the next click, the DNS answer is usually cached, so the first step is skipped.",
+              "concepts": [
+                "request-path"
+              ]
+            },
+            {
+              "type": "explain",
+              "title": "Scale up or scale out",
+              "body": "Lin's single server is at 80% CPU. Two ways out:\n\n- **Vertical scaling** (scale up): a bigger machine. No code changes, but there's a ceiling, and it's still one box that can fail.\n- **Horizontal scaling** (scale out): more machines behind the load balancer. Room to grow and survives losing one, but **any server must be able to handle any request**.\n\nTeams often scale up first because it's simple, then scale out when they hit the ceiling or need redundancy."
+            },
+            {
+              "type": "buckets",
+              "id": "q-up-or-out",
+              "prompt": "Sort each card: is it about scaling **up** or scaling **out**?",
+              "buckets": [
+                "Vertical: scale up",
+                "Horizontal: scale out"
+              ],
+              "items": [
+                {
+                  "text": "Move the app from 8 CPU cores to 64",
+                  "bucket": 0
+                },
+                {
+                  "text": "Give the database server 512 GB of RAM",
+                  "bucket": 0
+                },
+                {
+                  "text": "Has a hard ceiling: the biggest machine you can buy",
+                  "bucket": 0
+                },
+                {
+                  "text": "One machine failing takes the service down",
+                  "bucket": 0
+                },
+                {
+                  "text": "Add four more app servers behind the load balancer",
+                  "bucket": 1
+                },
+                {
+                  "text": "Needs a load balancer in front",
+                  "bucket": 1
+                },
+                {
+                  "text": "Needs servers that keep no user state in memory",
+                  "bucket": 1
+                },
+                {
+                  "text": "Run copies in two data centers",
+                  "bucket": 1
+                }
+              ],
+              "explanation": "**Up:** a bigger box. Simple, but it has a ceiling and stays a single point of failure. **Out:** more boxes. A load balancer spreads traffic across them, losing one is survivable, and running copies in two places protects against a whole data center going down. The price is that servers must be interchangeable, which is the next idea.",
+              "concepts": [
+                "horizontal-scaling"
+              ]
+            },
+            {
+              "type": "explain",
+              "title": "Stateless servers",
+              "body": "A server is **stateless** if it keeps nothing between requests that another server would need: no login sessions in memory, no uploads on its local disk.\n\nState goes to **shared stores**: the database, a cache like Redis, object storage for files. Then the load balancer can send any request anywhere, and you can add or remove servers at will.\n\n*Sticky sessions* (always routing a user to the same server) are a workaround, but they spread load unevenly, and a crashed server logs its users out."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-sessions",
+              "prompt": "Snipt now runs **4 app servers** behind a round-robin load balancer. Users log in fine, then get bounced back to the login page at random. Click the line with the bug.",
+              "language": "python",
+              "code": "sessions = {}  # session id -> user id, in this server's memory\n\ndef login(request):\n    user = check_password(request.form)\n    sid = new_session_id()\n    sessions[sid] = user.id\n    return set_cookie(\"sid\", sid)\n\ndef my_links(request):\n    user_id = sessions.get(request.cookies[\"sid\"])\n    if user_id is None:\n        return redirect(\"/login\")\n    return db.links_owned_by(user_id)",
+              "error": "GET /my-links -> 302 to /login on about 3 of every 4 requests",
+              "lines": [1, 6],
+              "fixes": [
+                "Change line 1 so `sessions` is a shared store every server uses (for example Redis), keeping lines 6 and 10 as they are",
+                "Change line 10 to `user_id = sessions[request.cookies[\"sid\"]]`",
+                "Change line 5 to generate a longer, more random session id",
+                "Make the load balancer pick a random server instead of round-robin"
+              ],
+              "answer": 0,
+              "hint": "Which servers can see the data stored on line 6?",
+              "explanation": "The session lives in a dict inside **one** server's memory, so only 1 request in 4 lands on the server that knows the user. Moving sessions to a shared store makes every server stateless, and any of them can answer. Indexing with `[]` just crashes instead of redirecting, a longer id doesn't help another server find it, and random routing still misses about 3 times in 4.",
+              "concepts": [
+                "stateless-servers",
+                "horizontal-scaling"
+              ]
+            },
+            {
+              "type": "numeric",
+              "id": "q-how-many-servers",
+              "prompt": "Peak traffic is **6,000** requests/s. One app server handles **1,500** requests/s with comfortable headroom. Omar wants enough servers for the peak **plus one spare** (N+1), so a crash at peak is a non-event. How many servers?",
+              "answer": 5,
+              "unit": "servers",
+              "hint": "First the servers the peak needs, then add the spare.",
+              "explanation": "6,000 ÷ 1,500 = 4 servers for the peak, plus 1 spare = **5**. With stateless servers, the spare costs nothing to wire up: the load balancer just has one more target.",
+              "concepts": [
+                "horizontal-scaling"
+              ]
+            },
+            {
+              "type": "mcq",
+              "id": "q-server-dies",
+              "prompt": "One of the 5 servers crashes at peak. Sessions live in Redis, and the load balancer health-checks every server. What happens?",
+              "choices": [
+                "The load balancer marks it unhealthy within seconds and the other 4 carry the load: 4 × 1,500 = 6,000 requests/s",
+                "Users whose requests were on that server are logged out",
+                "Every request fails until someone restarts the server",
+                "DNS has to be updated to remove the dead server's IP before traffic moves"
+              ],
+              "answer": 0,
+              "explanation": "Health checks take the dead server out of rotation, and because no state lived on it, nobody notices beyond a few retried requests. Sessions are in Redis, so nobody is logged out. DNS points at the **load balancer**, not at individual servers, so it doesn't change at all.",
+              "concepts": [
+                "request-path",
+                "stateless-servers"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "latency-budgets",
+          "title": "Where the milliseconds go",
+          "pareto": "extra",
+          "minutes": 6,
+          "takeaway": "Sequential calls add up, parallel calls cost the slowest one, and with fan-out the rare slow response becomes the common case: watch p99, not the average.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "A latency budget",
+              "body": "Snipt's dashboard should load in about **100 ms**. A **latency budget** splits that target across the calls a request makes:\n\n```text\nsequential:  [auth 20][links 30][stats 40]       = 90 ms\n\nparallel:    [auth 20]\n             [links 30]\n             [stats 40]                         = 40 ms\n```\n\nCalls **in a row add up**. Independent calls sent **in parallel** cost only the **slowest** one."
+            },
+            {
+              "type": "numeric",
+              "id": "q-dashboard-budget",
+              "prompt": "The dashboard first calls the user service (**25 ms**). Then it calls the links service (**40 ms**) and the stats service (**60 ms**) **in parallel**. Finally it renders the page (**15 ms**). How long does the dashboard take?",
+              "answer": 100,
+              "unit": "ms",
+              "hint": "For the parallel part, only the slowest call counts.",
+              "explanation": "25 ms, then the slower of the two parallel calls (60 ms), then 15 ms: 25 + 60 + 15 = **100 ms**. Making the links call faster wouldn't help at all; only the stats call is on the critical path.",
+              "concepts": [
+                "latency-budget"
+              ]
+            },
+            {
+              "type": "order",
+              "id": "q-plans",
+              "prompt": "Assume a cache hit costs about **1 ms**, a database query **10 ms**, and a call to a service on another continent **150 ms**. Order these plans from fastest to slowest.",
+              "items": [
+                "One cache hit",
+                "10 independent database queries, sent in parallel",
+                "3 database queries, one after another",
+                "10 database queries, one after another",
+                "One call to a service on another continent"
+              ],
+              "hint": "Work out each total: sequential adds, parallel takes the slowest.",
+              "explanation": "About 1 ms, ~10 ms (parallel costs the slowest), 30 ms, 100 ms and 150 ms. Two lessons: a loop that makes one query per item (the *N+1 query* problem) quietly eats the budget, and distance beats almost everything, which is why caches and CDNs put copies near users.",
+              "concepts": [
+                "latency-budget",
+                "latency-numbers"
+              ]
+            },
+            {
+              "type": "explain",
+              "title": "Averages hide the pain",
+              "body": "Latency isn't one number. Sort a minute of requests by time taken:\n\n- **p50** (the median): half are faster.\n- **p99**: 99% are faster; 1 in 100 is slower.\n\nThe slow tail is called **tail latency**, and it matters more than it looks. A page that calls **many** servers in parallel waits for the **slowest** one, so one server's rare bad moment becomes the page's frequent bad moment. Track p50, p95 and p99, not the average."
+            },
+            {
+              "type": "numeric",
+              "id": "q-fan-out",
+              "prompt": "A search fans out to **100** servers in parallel and waits for all of them. Each server, independently, is slow (over 1 s) on **1%** of requests. What percentage of searches are slow?",
+              "answer": 63,
+              "tolerance": 2,
+              "unit": "%",
+              "hint": "First find the chance that all 100 are fast: 0.99 multiplied by itself 100 times.",
+              "explanation": "A search is fast only if all 100 servers are fast: 0.99¹⁰⁰ ≈ 0.366. So 1 − 0.366 ≈ **63%** of searches are slow, from servers that are slow only 1% of the time. This example is from Google's paper *The Tail at Scale* (Dean and Barroso, 2013).",
+              "concepts": [
+                "latency-budget"
+              ]
+            },
+            {
+              "type": "mcq",
+              "id": "q-tame-tail",
+              "prompt": "Which change does the most to cut the slow tail of that 100-way search?",
+              "choices": [
+                "Hedged requests: if a server hasn't answered by its usual p95 time, send the same request to a replica and use whichever answers first",
+                "Split the data across 200 servers, so each one has less work",
+                "Raise the timeout from 2 s to 10 s so fewer searches fail",
+                "Report average latency instead of p99, since the average is much lower"
+              ],
+              "answer": 0,
+              "explanation": "Hedging attacks the cause: a slow server is usually slow for a passing reason, so a second copy of the request rarely hits the same bad luck, and it costs only a few percent more requests. Doubling the fan-out makes it worse (1 − 0.99²⁰⁰ ≈ 87% slow). A longer timeout makes slow searches slower. Changing the metric changes nothing for users.",
+              "concepts": [
+                "latency-budget",
+                "timeouts"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "data-that-keeps-up",
+      "title": "Data that keeps up",
+      "description": "Cache the hot reads, pick and split the database, and live with copies that disagree.",
+      "lessons": [
+        {
+          "id": "caching",
+          "title": "Cache me if you can",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Cache-aside keeps hot reads in memory; the hit ratio decides how much the database is spared, and TTLs plus invalidation decide how stale the answers can get.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Keep the hot stuff close",
+              "body": "A few viral links get most of Snipt's clicks, so the same lookups repeat all day. **Cache-aside** (also called lazy loading) keeps those answers in a fast in-memory store like Redis:\n\n```text\napp --1. GET x7Kp2-------> cache    (hit? done in ~1 ms)\napp --2. on a miss: SELECT --> database (~20 ms)\napp --3. SET x7Kp2, TTL 1h --> cache\n```\n\nThe app checks the cache first, and only on a **miss** reads the database and saves the answer for next time."
+            },
+            {
+              "type": "order",
+              "id": "q-cache-aside-steps",
+              "prompt": "The first click on a link that is **not** in the cache yet. Put the cache-aside steps in order.",
+              "items": [
+                "Check the cache for x7Kp2",
+                "Miss: the key isn't there",
+                "Read the long URL from the database",
+                "Write it to the cache with a TTL",
+                "The next click on x7Kp2 is served straight from the cache"
+              ],
+              "explanation": "Cache first, database only on a miss, then fill the cache so the **next** reader gets a hit. The app does all of this itself, which is what *aside* means: the cache sits beside the database, and the database knows nothing about it.",
+              "concepts": [
+                "cache-aside"
+              ]
+            },
+            {
+              "type": "explain",
+              "title": "Hit ratio math",
+              "body": "The **hit ratio** h is the share of reads the cache answers. Two formulas carry most cache decisions:\n\n- **Average latency** = h × (hit time) + (1 − h) × (miss time), where a miss pays for the cache check *and* the database.\n- **Database reads** = (1 − h) × total reads.\n\nThe second one is the surprise: going from 90% to 99% hits doesn't sound like much, but it cuts database traffic **10×**."
+            },
+            {
+              "type": "numeric",
+              "id": "q-avg-latency",
+              "prompt": "A cache hit takes **1 ms**. A miss takes 1 ms for the cache check plus **20 ms** for the database: **21 ms**. With a **90%** hit ratio, what is the average read latency?",
+              "answer": 3,
+              "tolerance": 0.05,
+              "unit": "ms",
+              "hint": "Weight each time by how often it happens.",
+              "explanation": "0.9 × 1 + 0.1 × 21 = 0.9 + 2.1 = **3 ms**, seven times faster than always going to the database. At 99% hits it's 0.99 × 1 + 0.01 × 21 = 1.2 ms.",
+              "concepts": [
+                "hit-ratio"
+              ]
+            },
+            {
+              "type": "numeric",
+              "id": "q-db-reads",
+              "prompt": "At the peak of **6,000** reads/s, Lin's cache tuning lifts the hit ratio from **90%** to **99%**. How many reads per second still reach the database?",
+              "answer": 60,
+              "unit": "reads/s",
+              "explanation": "Misses are 1% of 6,000 = **60 reads/s**, down from 10% = 600. Ten times less database load from nine points of hit ratio. That's often the cheapest scaling move there is.",
+              "concepts": [
+                "hit-ratio"
+              ]
+            },
+            {
+              "type": "output",
+              "id": "q-cache-sim",
+              "prompt": "A tiny cache-aside simulation. What does it print?",
+              "language": "python",
+              "code": "DB = {\"a\": \"https://example.com/1\", \"b\": \"https://example.com/2\"}\ncache = {}\ndb_reads = 0\n\ndef get_url(code):\n    global db_reads\n    if code in cache:\n        return cache[code]\n    db_reads += 1\n    url = DB[code]\n    cache[code] = url\n    return url\n\nfor code in [\"a\", \"b\", \"a\", \"a\", \"b\", \"a\"]:\n    get_url(code)\nprint(db_reads)\nprint(f\"hit ratio: {(6 - db_reads) / 6:.0%}\")",
+              "output": "2\nhit ratio: 67%",
+              "hint": "Count how many different codes appear: each one misses once, then it's cached.",
+              "explanation": "Only the **first** read of each code misses: `a` and `b` each go to the database once, so `db_reads` is 2. The other 4 of 6 reads are hits: 4/6 ≈ **67%**. In real traffic, the more often popular keys repeat, the higher the hit ratio climbs.",
+              "concepts": [
+                "cache-aside",
+                "hit-ratio"
+              ]
+            },
+            {
+              "type": "explain",
+              "title": "Stale answers: TTL and invalidation",
+              "body": "A cached copy goes **stale** when the database changes. Two tools bound the damage:\n\n- **TTL** (time to live): entries expire after, say, an hour. Staleness can never exceed the TTL.\n- **Invalidation**: when you write, **delete** the cached key, so the next read reloads it.\n\nCaches also live at other layers: the browser, and a **CDN**, a network of caches in cities near users that serves files that are the same for everyone."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-stale",
+              "prompt": "Lin changes where `x7Kp2` points. The database has the new URL, but clicks keep going to the old page for days. Click the line with the bug.",
+              "language": "python",
+              "code": "def get_url(code):\n    url = cache.get(code)\n    if url is None:\n        url = db.query_one(\"SELECT long_url FROM links WHERE code = %s\", code)\n        cache.set(code, url)  # no TTL: kept until evicted\n    return url\n\ndef update_url(code, new_url):\n    db.execute(\"UPDATE links SET long_url = %s WHERE code = %s\", new_url, code)\n    return \"ok\"",
+              "error": "Database: x7Kp2 -> new page. Clicks: x7Kp2 -> old page (still, three days later).",
+              "lines": [9],
+              "fixes": [
+                "After line 9, add `cache.delete(code)` so the next read reloads the new URL",
+                "Before line 9, add `cache.delete(code)`",
+                "Change line 5 to `cache.set(code, url, ttl=timedelta(days=365))`",
+                "Change line 2 to read the database first, and use the cache only when the database is down"
+              ],
+              "answer": 0,
+              "hint": "Which function changes data, and what does it forget to tell the cache?",
+              "explanation": "The write on line 9 updates the database but leaves the old answer in the cache, and with no TTL it stays until evicted. Deleting the key **after** the write makes the next read reload it. Deleting **before** the write leaves a gap: a read in between reloads the old URL, and it sticks forever. A year-long TTL still serves the old page for up to a year. Reading the database first throws the cache away. Teams usually add a modest TTL too, as a safety net for rare races.",
+              "concepts": [
+                "cache-invalidation",
+                "cache-aside"
+              ]
+            },
+            {
+              "type": "buckets",
+              "id": "q-where-to-cache",
+              "prompt": "Where should each piece of data be cached, if anywhere?",
+              "buckets": [
+                "CDN or browser: static files, same for everyone",
+                "Shared cache (Redis): hot data that may be a little stale",
+                "Don't cache: must be exact and up to date"
+              ],
+              "items": [
+                {
+                  "text": "Snipt's logo, CSS and JavaScript files",
+                  "bucket": 0
+                },
+                {
+                  "text": "Product photos on a shop page",
+                  "bucket": 0
+                },
+                {
+                  "text": "Short code → long URL for popular links",
+                  "bucket": 1
+                },
+                {
+                  "text": "Yesterday's click totals on the dashboard",
+                  "bucket": 1
+                },
+                {
+                  "text": "The user name shown in the header of every page",
+                  "bucket": 1
+                },
+                {
+                  "text": "Seats left at the moment of a concert-ticket checkout",
+                  "bucket": 2
+                },
+                {
+                  "text": "Whether a payment has gone through",
+                  "bucket": 2
+                }
+              ],
+              "hint": "Ask two questions: is it the same for everyone, and what breaks if it is a minute old?",
+              "explanation": "**CDN or browser:** static files never differ between users, so copies near the user win, and new versions get new file names. **Shared cache:** read constantly, changed rarely, and a few seconds or minutes of staleness hurts nobody. **Don't cache:** a stale seat count sells the same seat twice, and a stale payment status charges or ships wrongly. Read those from the source of truth.",
+              "concepts": [
+                "cache-invalidation",
+                "cache-aside"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "pick-a-database",
+          "title": "Pick and split the database",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Choose storage by access pattern, and when one machine is not enough, shard by a key that spreads load evenly and keeps each query on one shard.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Relational or not?",
+              "body": "**Relational (SQL)** databases like PostgreSQL and MySQL give you tables, joins, flexible queries and multi-row **transactions**. They scale up well; scaling writes out takes real work.\n\n**NoSQL** is a family: **key-value** (DynamoDB, Redis), **document** (MongoDB), **wide-column** (Cassandra). Most are built around access by key and spread data across many machines, with joins and cross-item transactions limited or absent.\n\nEither way, lookups need an **index**: a B-tree finds one row among a billion in about 4 page reads."
+            },
+            {
+              "type": "buckets",
+              "id": "q-sql-or-nosql",
+              "prompt": "Which fits each workload better?",
+              "buckets": [
+                "Relational (SQL): joins and transactions matter",
+                "NoSQL key-value / wide-column: simple key access at huge scale"
+              ],
+              "items": [
+                {
+                  "text": "Move money between two accounts: both changes or neither",
+                  "bucket": 0
+                },
+                {
+                  "text": "Ad-hoc reports joining orders, customers and products",
+                  "bucket": 0
+                },
+                {
+                  "text": "Place an order: reserve the stock and record the payment together",
+                  "bucket": 0
+                },
+                {
+                  "text": "Look up a short code and get a URL: billions of rows, no joins",
+                  "bucket": 1
+                },
+                {
+                  "text": "Store session data by session id",
+                  "bucket": 1
+                },
+                {
+                  "text": "Sensor readings: huge write volume, read back by device and time range",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Does the workload need joins or all-or-nothing changes across rows?",
+              "explanation": "**SQL** wins when data is related and changes must be all-or-nothing: transfers, orders, and reports that join tables in ways nobody planned. **NoSQL** shines when every access is *get or put by key* at large scale: Snipt's code lookups, sessions, time-series by device. The lines blur (Postgres stores JSON, DynamoDB has transactions), so start from the access patterns, not the label.",
+              "concepts": [
+                "sql-vs-nosql"
+              ]
+            },
+            {
+              "type": "explain",
+              "title": "Sharding: split by a key",
+              "body": "When one machine can't hold the data or take the writes, split rows across **shards** by a **partition key** (shard key):\n\n```text\nhash(code) mod 4\n   0 --> shard A\n   1 --> shard B\n   2 --> shard C\n   3 --> shard D\n```\n\nA good key **spreads load evenly** and lets each common query go to **one** shard. A bad key creates a **hot spot** (one shard doing most of the work) or forces queries to ask every shard."
+            },
+            {
+              "type": "mcq",
+              "id": "q-snipt-shard-key",
+              "prompt": "Omar asks Lin to plan for sharding Snipt's `links` table. The hottest query by far is the redirect: *given a code, find the long URL*. Which shard key?",
+              "choices": [
+                "The short code, hashed",
+                "The creation date",
+                "The creator's country",
+                "The owner's user id"
+              ],
+              "answer": 0,
+              "hint": "Which value does the redirect request actually carry?",
+              "explanation": "Hashing the **code** spreads links evenly, and each redirect, which only knows the code, goes straight to one shard. By **date**, every new link lands on today's shard: a write hot spot. By **country**, a few big countries overload their shards. By **owner**, a redirect can't tell which shard to ask without asking all of them, and power users with millions of links make their shard hot.",
+              "concepts": [
+                "sharding"
+              ]
+            },
+            {
+              "type": "buckets",
+              "id": "q-hot-or-even",
+              "prompt": "Will each partitioning scheme spread load evenly, or create a hot spot?",
+              "buckets": [
+                "Spreads load evenly",
+                "Creates a hot spot"
+              ],
+              "items": [
+                {
+                  "text": "Orders, by hash of the order id",
+                  "bucket": 0
+                },
+                {
+                  "text": "Users, by hash of the user id",
+                  "bucket": 0
+                },
+                {
+                  "text": "Sensor readings, by hash of the device id",
+                  "bucket": 0
+                },
+                {
+                  "text": "Click events, by the current hour: all of this hour's events on one shard",
+                  "bucket": 1
+                },
+                {
+                  "text": "Users, by country",
+                  "bucket": 1
+                },
+                {
+                  "text": "Usernames, by first letter: A–F, G–L, M–R, S–Z",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Will new traffic land on many shards at once, or pile onto one?",
+              "explanation": "Hashing a key with **many** distinct values spreads rows like shuffling cards. **By hour**, every new event goes to the same shard while the others idle. **Country** and **first letter** are uneven by nature: a few countries hold most users, and far more names start with S than with X.",
+              "concepts": [
+                "sharding"
+              ]
+            },
+            {
+              "type": "mcq",
+              "id": "q-celebrity-link",
+              "prompt": "A celebrity posts a Snipt link, and now **30%** of all clicks are for that one code. Its shard is overloaded while the others are fine. What's the best fix?",
+              "choices": [
+                "Serve that code from a cache in front of the database, so its clicks rarely reach the shard",
+                "Switch to a better hash function so the code lands on a quieter shard",
+                "Double the number of shards so each holds less data",
+                "Re-shard every link by its creation date"
+              ],
+              "answer": 0,
+              "explanation": "One key always lives on one shard, so no hashing trick or extra shard can split it: rehashing just moves the hot spot, and more shards leave that key where it is. A **cache** (or extra read copies of that key) soaks up a hot key cheaply. Sharding by date would add a write hot spot on top.",
+              "concepts": [
+                "sharding",
+                "cache-aside"
+              ]
+            },
+            {
+              "type": "explain",
+              "title": "Adding a shard without moving everything",
+              "body": "With `hash mod N`, adding a shard changes N, so **most** keys suddenly map to a different shard, and their data has to move.\n\n**Consistent hashing** places shards and keys on a ring; each key belongs to the next shard clockwise:\n\n```text\n     A\n  .     .\n D       B      a new shard E between A and B\n  .     .       takes over only part of B's arc\n     C\n```\n\nAdding a shard moves only about **1/N** of the keys. Dynamo-style stores like Cassandra use it."
+            },
+            {
+              "type": "numeric",
+              "id": "q-mod-n-moves",
+              "prompt": "Snipt grows from **4** to **5** shards using plain `hash(key) mod N`. What percentage of keys end up on a **different** shard?",
+              "answer": 80,
+              "tolerance": 3,
+              "unit": "%",
+              "hint": "Try hash values 0 to 19 and count where h mod 4 equals h mod 5.",
+              "explanation": "A key stays put only if `h mod 4` equals `h mod 5`. In every run of 20 consecutive hash values, that's true for just 4 (0, 1, 2 and 3), so **80%** of keys move. Checked over a million keys in Python: exactly 80%. With consistent hashing, only about 1/5 = 20% move: the slice the new shard takes over.",
+              "concepts": [
+                "consistent-hashing",
+                "sharding"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "copies-that-disagree",
+          "title": "Copies that disagree",
+          "pareto": "extra",
+          "minutes": 7,
+          "takeaway": "Replicas multiply read capacity but lag behind the leader; choose per feature between eventual, read-your-writes and strong consistency, and remember CAP and PACELC trade-offs.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Read replicas",
+              "body": "Snipt's reads are 100× its writes, so Lin adds **read replicas**:\n\n```text\n         writes\napp ------------> leader\n  \\                  |  change log, copied asynchronously\n   \\  reads          v\n    -----------> replica 1, replica 2, replica 3\n```\n\nThe **leader** takes every write; **replicas** replay its changes and serve reads. Three replicas roughly quadruple read capacity, and one can be promoted if the leader dies. The catch: replicas run behind by milliseconds normally and seconds under load. That's **replication lag**."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-lag",
+              "prompt": "Right after creating a link, some users see **404 Not Found** for it. Refreshing a second later works. Click the line with the bug.",
+              "language": "python",
+              "code": "def create_link(user, long_url):\n    code = new_code()\n    leader.execute(\"INSERT INTO links (code, long_url, owner) VALUES (%s, %s, %s)\",\n                   code, long_url, user.id)\n    return redirect(f\"/links/{code}\")\n\ndef show_link(code):\n    row = replica.query_one(\"SELECT * FROM links WHERE code = %s\", code)\n    if row is None:\n        return not_found()\n    return render(row)",
+              "error": "POST /links -> 302 /links/k3Zp9 -> 404 Not Found (works after a refresh)",
+              "lines": [8],
+              "fixes": [
+                "Change line 8 to read from `leader` for a user's requests in the first few seconds after they write (read-your-writes)",
+                "Add `time.sleep(1)` after line 4",
+                "Change line 3 to insert into the replica as well as the leader",
+                "Change line 9 to retry the replica query in a loop until the row appears"
+              ],
+              "answer": 0,
+              "hint": "Where was the row written, and where is it read back from?",
+              "explanation": "The write goes to the leader, the redirect lands instantly on `show_link`, and line 8 asks a replica that hasn't replayed the insert yet. Reading **your own recent writes from the leader** guarantees *read-your-writes* and keeps the replicas for everyone else. Sleeping guesses at the lag and slows every request. Replicas only take changes from the leader. A retry loop hammers a replica for as long as the lag lasts.",
+              "concepts": [
+                "eventual-consistency",
+                "replication"
+              ]
+            },
+            {
+              "type": "explain",
+              "title": "Eventual consistency",
+              "body": "Async replicas are **eventually consistent**: stop writing and they all catch up and agree, but a read right now may be stale. Common guarantees, from weakest to strongest:\n\n- **Eventual**: you may see old data for a while.\n- **Read-your-writes**: *you* always see your own changes; others may lag.\n- **Strong**: every read sees the latest write, as if there were one copy.\n\nStronger costs more: more waiting, more coordination."
+            },
+            {
+              "type": "buckets",
+              "id": "q-how-consistent",
+              "prompt": "Pick the weakest guarantee each feature can live with.",
+              "buckets": [
+                "Eventual is fine",
+                "Read-your-writes is enough",
+                "Needs strong consistency"
+              ],
+              "items": [
+                {
+                  "text": "The like count on a post",
+                  "bucket": 0
+                },
+                {
+                  "text": "The follower count on someone else's profile",
+                  "bucket": 0
+                },
+                {
+                  "text": "Search results missing a post from 10 seconds ago",
+                  "bucket": 0
+                },
+                {
+                  "text": "Your edited bio, shown right after you press Save",
+                  "bucket": 1
+                },
+                {
+                  "text": "Your new link appearing on your own dashboard",
+                  "bucket": 1
+                },
+                {
+                  "text": "Selling the last ticket for a concert",
+                  "bucket": 2
+                },
+                {
+                  "text": "Making sure no two users get the same username",
+                  "bucket": 2
+                },
+                {
+                  "text": "Moving money between two accounts",
+                  "bucket": 2
+                }
+              ],
+              "hint": "Ask: who is hurt by a stale read? Nobody, only the writer, or everyone involved?",
+              "explanation": "**Eventual:** nobody is harmed if a count or a search index is a few seconds behind. **Read-your-writes:** the person who made a change must see it, or they'll think it failed and try again; other people can lag. **Strong:** two buyers, two sign-ups or two withdrawals racing on stale copies would sell one ticket twice, create duplicate usernames or overdraw an account.",
+              "concepts": [
+                "eventual-consistency"
+              ]
+            },
+            {
+              "type": "explain",
+              "title": "CAP and PACELC in plain words",
+              "body": "If the network **partitions** (replicas can't reach each other), each side must choose:\n\n- stay **available** and answer, maybe with stale data, or\n- stay **consistent** and refuse until it can check with the others.\n\nThat's **CAP**: during a partition, pick C or A. Partitions will happen, so it is not *pick two of three*.\n\n**PACELC** adds the everyday case: **E**lse, with no partition, you still trade **L**atency against **C**onsistency, because waiting for replicas to confirm a write takes time."
+            },
+            {
+              "type": "mcq",
+              "id": "q-partition",
+              "prompt": "Snipt's leader is in the US, with replicas in the US and the EU. The link between regions fails for 20 minutes. EU users keep clicking links, almost all created days ago. What should EU redirects do?",
+              "choices": [
+                "Keep serving from the EU replica: links rarely change, so stale is almost always right, and redirects stay up",
+                "Return errors until the regions reconnect, because the data might be stale",
+                "Nothing special: CAP only applies when a replica crashes, not the network",
+                "Promote the EU replica to a second leader so both sides accept new links, then merge later"
+              ],
+              "answer": 0,
+              "explanation": "For redirects, **availability** wins: a link's target almost never changes, so the replica's answer is nearly always correct, and an outage is worse than a rare stale redirect. Refusing would be the right call for a bank balance, not here. A partition is exactly the case CAP describes. Two leaders accepting writes is *split brain*: both sides could hand out the same code for different URLs.",
+              "concepts": [
+                "cap-pacelc",
+                "eventual-consistency"
+              ]
+            },
+            {
+              "type": "numeric",
+              "id": "q-sync-write",
+              "prompt": "PACELC's *else* case: there's no partition, and Lin makes each write wait until **both** replicas confirm. The requests go out in parallel: the US replica answers in about **1 ms**, the EU replica in about **90 ms**. Roughly how long does each write wait for confirmations?",
+              "answer": 90,
+              "unit": "ms",
+              "hint": "Both confirmations are needed, and they travel at the same time.",
+              "explanation": "Parallel waits cost the slowest: about **90 ms** per write, against about 1 ms if Lin waited only for the US replica. That's the PACELC trade in numbers: synchronous cross-region copies buy consistency with latency. Many systems confirm locally and copy across regions asynchronously.",
+              "concepts": [
+                "cap-pacelc",
+                "latency-budget"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "survive-real-traffic",
+      "title": "Survive real traffic",
+      "description": "Push slow work onto queues, contain failures, and put it all together in a full design.",
+      "lessons": [
+        {
+          "id": "queues",
+          "title": "Do it later: queues and idempotency",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Put slow work on a queue to answer fast and absorb spikes; delivery is at least once, so make every handler idempotent.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Not everything must happen now",
+              "body": "When a link is created, Snipt also wants a preview image, a malware scan of the target and an analytics event. Doing all that inside the request makes users wait, and one failure fails the whole request.\n\nInstead, the app puts a **message** on a **queue** and answers right away. **Workers** take messages off and do the work in the background:\n\n```text\napp --\"scan k3Zp9\"--> [ m3 m2 m1 ] --> worker 1\n                                  --> worker 2\n```\n\nA spike just makes the queue longer for a while."
+            },
+            {
+              "type": "buckets",
+              "id": "q-now-or-later",
+              "prompt": "Should each task run inside the request, or go on a queue?",
+              "buckets": [
+                "In the request: the user needs the result now",
+                "On a queue: it can finish a bit later"
+              ],
+              "items": [
+                {
+                  "text": "Check the password at login",
+                  "bucket": 0
+                },
+                {
+                  "text": "Return the new short code to the person who made it",
+                  "bucket": 0
+                },
+                {
+                  "text": "Reject a long URL that isn't a valid URL",
+                  "bucket": 0
+                },
+                {
+                  "text": "Send the welcome email",
+                  "bucket": 1
+                },
+                {
+                  "text": "Generate a preview image of the target page",
+                  "bucket": 1
+                },
+                {
+                  "text": "Scan the target page for malware",
+                  "bucket": 1
+                },
+                {
+                  "text": "Add the click to the daily analytics report",
+                  "bucket": 1
+                },
+                {
+                  "text": "Resize an uploaded profile photo",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Would the user notice if this finished 30 seconds later?",
+              "explanation": "**In the request:** the response depends on it. Login can't succeed before the password check, and the user is waiting for the code. **On a queue:** nobody is waiting on these, they can be slow or flaky, and retrying them later is fine. A malware scan can run seconds after creation and disable the link if it finds something.",
+              "concepts": [
+                "message-queue"
+              ]
+            },
+            {
+              "type": "numeric",
+              "id": "q-backlog",
+              "prompt": "A link goes viral: click events arrive at **6,000/s** for **10 minutes**, but the analytics workers process only **4,000/s**. How many messages are waiting in the queue when the spike ends?",
+              "answer": 1200000,
+              "unit": "messages",
+              "hint": "Net growth per second × seconds in 10 minutes.",
+              "explanation": "The queue grows by 6,000 − 4,000 = 2,000 messages a second for 600 seconds: **1,200,000** messages. Nothing was lost; the queue simply absorbed the spike. If arrivals then drop to 1,000/s, workers drain 3,000/s net and clear the backlog in 400 s, about 7 minutes.",
+              "concepts": [
+                "message-queue"
+              ]
+            },
+            {
+              "type": "explain",
+              "title": "At-least-once delivery",
+              "body": "A worker takes a message, does the work, then **acks** it so the queue deletes it. If the worker crashes before the ack, or the ack gets lost, the queue can't tell whether the work happened, so it delivers the message **again**.\n\nMany queues (Amazon SQS standard queues, typical Kafka consumers, RabbitMQ with acks) therefore guarantee **at-least-once** delivery: nothing is lost, but **duplicates happen**. Messages that keep failing are usually moved to a *dead-letter queue* for a human to inspect."
+            },
+            {
+              "type": "order",
+              "id": "q-duplicate",
+              "prompt": "How does a customer get charged twice? Put the events in order.",
+              "items": [
+                "Worker 1 receives \"charge order 42\"",
+                "Worker 1 charges the card",
+                "Worker 1 crashes before it acks the message",
+                "The queue sees no ack in time and makes the message visible again",
+                "Worker 2 receives the same \"charge order 42\"",
+                "Worker 2 charges the card a second time"
+              ],
+              "hint": "The crash happens after the charge, not before it.",
+              "explanation": "The work succeeded, but the queue never heard about it, so redelivery is the correct, safe behaviour for the queue. The bug is a handler that can't tell it has already done the job. That's what idempotency fixes.",
+              "concepts": [
+                "at-least-once",
+                "idempotency"
+              ]
+            },
+            {
+              "type": "explain",
+              "title": "Idempotency keys",
+              "body": "An operation is **idempotent** if doing it twice has the same effect as doing it once. *Set status to shipped* is; *add 1 to the counter* is not.\n\nTo make a handler idempotent, give each operation a unique **idempotency key** (the message id, or an `Idempotency-Key` header, as Stripe's payments API uses). Record the key **in the same transaction** as the effect, with a unique constraint. A duplicate then finds its key already there and does nothing."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-double-count",
+              "prompt": "Snipt's click counter is fed from a queue with at-least-once delivery. Click the line with the bug.",
+              "language": "python",
+              "code": "def handle_click(msg):\n    # msg looks like {\"id\": \"m-981\", \"code\": \"x7Kp2\"}\n    db.execute(\"UPDATE links SET clicks = clicks + 1 WHERE code = %s\",\n               msg[\"code\"])\n    queue.ack(msg)",
+              "error": "Dashboard: x7Kp2 has 1,032 clicks. Click log: 1,000 distinct message ids.",
+              "lines": [3, 4],
+              "fixes": [
+                "Replace lines 3–4 with one transaction that inserts `msg[\"id\"]` into a `processed_messages` table with a UNIQUE constraint, and adds 1 only if that insert succeeds",
+                "Move line 5 above line 3, so the message is acked before the update",
+                "Wrap lines 3–4 in a loop that retries the update up to 3 times",
+                "Before line 3, skip the message if `msg[\"code\"]` is in an in-memory set of codes this worker has seen"
+              ],
+              "answer": 0,
+              "hint": "What happens when the same message arrives twice?",
+              "explanation": "`clicks + 1` runs again for every redelivered message: 32 duplicates, 32 extra clicks. Recording the message id in the **same transaction**, under a unique constraint, makes a duplicate a no-op. Acking first swaps duplicates for **lost** clicks whenever a worker crashes (at-most-once). Retrying the update adds even more duplicates. Skipping by **code** would drop every later click on that link, and another worker's memory knows nothing about it anyway.",
+              "concepts": [
+                "idempotency",
+                "at-least-once"
+              ]
+            },
+            {
+              "type": "mcq",
+              "id": "q-naturally-idempotent",
+              "prompt": "Which operation is already idempotent: safe to repeat without any extra key?",
+              "choices": [
+                "`UPDATE orders SET status = 'shipped' WHERE id = 42`",
+                "`UPDATE accounts SET balance = balance - 10 WHERE id = 7`",
+                "`INSERT INTO payments (amount) VALUES (10)` with an auto-increment id",
+                "Send the customer a \"your order shipped\" email"
+              ],
+              "answer": 0,
+              "explanation": "Setting a field to a fixed value lands in the same state however many times it runs. Subtracting 10 subtracts again on every repeat, an auto-increment insert creates a new payment each time, and an email can't be unsent. Those need an idempotency key.",
+              "concepts": [
+                "idempotency"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "when-things-break",
+          "title": "When things break",
+          "pareto": "core",
+          "minutes": 9,
+          "takeaway": "Put a timeout on every call, retry only idempotent work with capped exponential backoff and jitter, open a circuit breaker when a dependency is down, and rate-limit clients.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Fail fast, not forever",
+              "body": "Dependencies get slow before they fall over. A call with **no timeout** holds a thread until the dependency answers, and if it never does, threads run out, requests queue up, and *your* service goes down too. That's a **cascading failure**.\n\nSo every network call gets a **timeout**, sized from the dependency's normal p99 and your latency budget. A fast, clear failure beats a slow one."
+            },
+            {
+              "type": "numeric",
+              "id": "q-littles-law",
+              "prompt": "Each Snipt server receives **1,000** requests/s, and every request calls the analytics service, which has just hung. A rule called **Little's law** says *requests in flight ≈ arrival rate × time each one waits*. With a **0.1 s** timeout, how many requests are stuck waiting at any moment?",
+              "answer": 100,
+              "unit": "requests",
+              "hint": "Multiply the rate by the wait.",
+              "explanation": "1,000/s × 0.1 s = **100** waiting requests, which a server with 200 threads survives. With a 30 s timeout, it's 1,000 × 30 = 30,000, so all 200 threads are stuck within about 0.2 s and the server stops answering anything. The timeout decides whether a dependency's outage becomes your outage.",
+              "concepts": [
+                "timeouts"
+              ]
+            },
+            {
+              "type": "explain",
+              "title": "Retry, but back off",
+              "body": "Many failures are **transient**: a dropped connection, a node restarting. A retry often works. But if every client retries at once, a struggling service gets 2–3× its normal load exactly when it can least take it: a **retry storm**.\n\nRetry well:\n\n- Retry only **idempotent** operations.\n- Cap the attempts.\n- Wait **exponentially** longer each time: 0.1 s, 0.2 s, 0.4 s…\n- Add **jitter** (randomness) so clients don't retry in sync."
+            },
+            {
+              "type": "output",
+              "id": "q-backoff",
+              "prompt": "Exponential backoff with a cap. What does it print? (attempt number, then seconds to wait)",
+              "language": "python",
+              "code": "base, cap = 0.1, 2.0\nfor attempt in range(1, 7):\n    delay = min(cap, base * 2 ** (attempt - 1))\n    print(attempt, delay)",
+              "output": "1 0.1\n2 0.2\n3 0.4\n4 0.8\n5 1.6\n6 2.0",
+              "hint": "`base * 2 ** (attempt - 1)` doubles each time, and `min` keeps it at most `cap`.",
+              "explanation": "Each wait doubles: 0.1, 0.2, 0.4, 0.8, 1.6, and then 3.2 is capped at **2.0**. The cap stops waits from growing absurdly long. In production you'd also add jitter, for example waiting a random time between 0 and that delay (*full jitter*), so a thousand clients don't all retry at the same instant.",
+              "concepts": [
+                "retry-backoff"
+              ]
+            },
+            {
+              "type": "explain",
+              "title": "Circuit breakers",
+              "body": "If a dependency is clearly down, stop calling it for a while. A **circuit breaker** wraps the calls:\n\n```text\nclosed --too many failures--> open --cool-down--> half-open\n  ^                                                  |\n  +-------------- trial call succeeds ---------------+\n           (a failed trial call opens it again)\n```\n\nWhile **open**, calls fail instantly, often with a fallback (a page without recommendations, say). That saves your threads and gives the dependency room to recover."
+            },
+            {
+              "type": "order",
+              "id": "q-breaker",
+              "prompt": "Snipt's link page shows *related links* from a recommendations service. Put the circuit breaker's story in order.",
+              "items": [
+                "Closed: calls to recommendations go through normally",
+                "The recommendations service starts timing out",
+                "The failure rate passes the threshold, and the breaker opens",
+                "Calls fail fast and the page renders without related links",
+                "The cool-down ends; the breaker is half-open and lets one trial call through",
+                "The trial call succeeds, and the breaker closes"
+              ],
+              "hint": "The breaker only opens after failures, and only closes after a successful test.",
+              "explanation": "Closed → failures pile up → **open** (fail fast, serve the fallback) → cool-down → **half-open** (one careful trial) → closed again. Timeouts are what turn a hung dependency into countable failures, so the breaker builds on them.",
+              "concepts": [
+                "circuit-breaker",
+                "timeouts"
+              ]
+            },
+            {
+              "type": "explain",
+              "title": "Rate limiting",
+              "body": "Some overload comes from one client: a buggy script, a scraper. A **rate limiter** caps each client, often with a **token bucket**:\n\n- The bucket holds up to **B** tokens and refills at **r** tokens per second.\n- Each request spends one token.\n- An empty bucket means **429 Too Many Requests**.\n\nClients can burst up to B requests at once, but over time they average at most r per second."
+            },
+            {
+              "type": "numeric",
+              "id": "q-token-bucket",
+              "prompt": "Snipt's API gives each key a token bucket of capacity **10**, refilling **2 tokens/s**, starting full. A script sends a request every **0.1 s** (10 per second). Roughly how many of its requests succeed in the first **5 seconds**?",
+              "answer": 19,
+              "tolerance": 1,
+              "unit": "requests",
+              "hint": "The initial burst, plus whatever refills in 5 seconds.",
+              "explanation": "About **10 + 2 × 5 = 20**: the full bucket covers a burst of 10, then refills allow 2 per second. Simulated exactly (50 requests at t = 0, 0.1, … 4.9 s), 19 succeed and 31 get a 429. The script averages 10/s, but the limiter holds it to about 2/s.",
+              "concepts": [
+                "rate-limiting"
+              ]
+            },
+            {
+              "type": "buckets",
+              "id": "q-which-tool",
+              "prompt": "Which tool fixes each problem?",
+              "buckets": [
+                "Timeout",
+                "Retry with backoff",
+                "Circuit breaker",
+                "Rate limit"
+              ],
+              "items": [
+                {
+                  "text": "A geolocation API sometimes hangs for 60 s, and requests wait with it",
+                  "bucket": 0
+                },
+                {
+                  "text": "Requests pile up behind a database query stuck on a lock",
+                  "bucket": 0
+                },
+                {
+                  "text": "About 1 call in 1,000 fails with a dropped connection and works on a second try",
+                  "bucket": 1
+                },
+                {
+                  "text": "A rolling deploy briefly refuses connections on one node",
+                  "bucket": 1
+                },
+                {
+                  "text": "The email provider has been down for 10 minutes, and every call still waits, then fails",
+                  "bucket": 2
+                },
+                {
+                  "text": "A payments partner returns errors on every call during its outage",
+                  "bucket": 2
+                },
+                {
+                  "text": "One customer's script sends 5,000 requests a second",
+                  "bucket": 3
+                },
+                {
+                  "text": "A scraper hammers the sign-up page",
+                  "bucket": 3
+                }
+              ],
+              "hint": "Is the problem slowness, a blip, a sustained outage, or one greedy client?",
+              "explanation": "**Timeout:** stop waiting on something that may never answer. **Retry:** rare, brief failures usually succeed a moment later. **Circuit breaker:** a dependency that is *clearly* down shouldn't be called at all for a while; retrying it just adds load. **Rate limit:** one noisy client must not crowd out everyone else.",
+              "concepts": [
+                "timeouts",
+                "retry-backoff",
+                "circuit-breaker"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "design-snipt",
+          "title": "Design Snipt end to end",
+          "pareto": "core",
+          "minutes": 10,
+          "takeaway": "Requirements, estimates, API, data model, diagram, then deep dives: a clear order of work turns a vague prompt into a design you can defend.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "The design review",
+              "body": "A year on, Snipt creates **100 million** links a month, clicks outnumber creations **100:1**, and links are kept **10 years**. Omar wants a full design, the way an interview or design review expects it:\n\n- Clarify **requirements**: what it does, and how fast and reliable it must be.\n- **Estimate** the scale.\n- Define the **API** and the **data model**.\n- Draw the **high-level design**.\n- **Deep-dive** the hard parts and say the trade-offs out loud."
+            },
+            {
+              "type": "order",
+              "id": "q-design-order",
+              "prompt": "Put the design steps in the order you would work through them.",
+              "items": [
+                "Clarify requirements: what must it do, how fast, how reliable?",
+                "Estimate scale: QPS, storage, bandwidth",
+                "Define the API: POST /links and GET /{code}",
+                "Sketch the data model: links(code, long_url, owner_id, created_at)",
+                "Draw the high-level design: load balancer, app servers, cache, database",
+                "Deep-dive the bottlenecks and state the trade-offs"
+              ],
+              "hint": "You cannot size a system before you know what it must do.",
+              "explanation": "Each step feeds the next: requirements decide what to estimate, estimates decide what's hard, the API and data model pin down what the boxes must do, and the deep dives go where the numbers say the pressure is. Starting with the diagram is the classic mistake: boxes with no numbers behind them.",
+              "concepts": [
+                "design-process"
+              ]
+            },
+            {
+              "type": "buckets",
+              "id": "q-func-nonfunc",
+              "prompt": "Sort the requirements: what Snipt does, or how well it must do it?",
+              "buckets": [
+                "Functional: what it does",
+                "Non-functional: how well"
+              ],
+              "items": [
+                {
+                  "text": "Create a short link for a long URL",
+                  "bucket": 0
+                },
+                {
+                  "text": "Visiting a short link redirects to the long URL",
+                  "bucket": 0
+                },
+                {
+                  "text": "Link owners can see click counts",
+                  "bucket": 0
+                },
+                {
+                  "text": "Links can optionally expire on a chosen date",
+                  "bucket": 0
+                },
+                {
+                  "text": "99% of redirects finish in under 50 ms",
+                  "bucket": 1
+                },
+                {
+                  "text": "Redirects stay up 99.99% of the time",
+                  "bucket": 1
+                },
+                {
+                  "text": "Handles 12,000 redirects per second at peak",
+                  "bucket": 1
+                },
+                {
+                  "text": "Short codes can't be guessed by counting upwards",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Could you demo it as a feature, or is it a property you would measure?",
+              "explanation": "**Functional** requirements are features: things a user can do. **Non-functional** ones are qualities: latency, availability, scale, security. The non-functional list drives most of the architecture. 99.99% availability alone rules out a single database server with no replica.",
+              "concepts": [
+                "design-process"
+              ]
+            },
+            {
+              "type": "example",
+              "title": "Estimates in five lines",
+              "problem": "Size Snipt at 100 million new links a month, 100:1 reads, 10 years of links at about 500 bytes each.",
+              "steps": [
+                "Writes: 100,000,000 ÷ (30 × 86,400 s) ≈ **40 per second**.",
+                "Reads: 40 × 100 ≈ **4,000 per second**; plan for a peak of 3× ≈ **12,000 per second**.",
+                "Links in 10 years: 100 million × 12 × 10 = **12 billion**.",
+                "Storage: 12 billion × 500 bytes = **6 TB**, plus replicas.",
+                "Peak bandwidth: 12,000 × 500 bytes = **6 MB/s**."
+              ],
+              "answer": "A read-heavy system with modest data: cache the hot links, add replicas for reads, and keep sharding as an option for the 6 TB."
+            },
+            {
+              "type": "numeric",
+              "id": "q-code-length",
+              "prompt": "Short codes use **base62**: the digits 0–9, a–z and A–Z, so each character has 62 options. What is the **shortest** code length that gives each of the **12 billion** links its own code?",
+              "answer": 6,
+              "unit": "characters",
+              "hint": "Try powers of 62: how big is 62⁵? And 62⁶?",
+              "explanation": "62⁵ ≈ 916 million: too few. 62⁶ ≈ 56.8 billion: enough, with about 4.7× headroom. So **6** characters is the minimum; many designs pick 7 (62⁷ ≈ 3.5 trillion) so codes stay sparse and hard to guess.",
+              "concepts": [
+                "short-codes",
+                "napkin-math"
+              ]
+            },
+            {
+              "type": "output",
+              "id": "q-base62",
+              "prompt": "If codes come from a numeric id, base62 turns the number into a short string. What does this print?",
+              "language": "python",
+              "code": "ALPHABET = \"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ\"\n\ndef base62(n):\n    s = \"\"\n    while n > 0:\n        n, r = divmod(n, 62)\n        s = ALPHABET[r] + s\n    return s or \"0\"\n\nprint(base62(61))\nprint(base62(62))\nprint(base62(125))",
+              "output": "Z\n10\n21",
+              "hint": "`divmod(n, 62)` splits n into the 62s and the remainder, and the remainder picks the last character.",
+              "explanation": "Base62 works like base 10, with 62 digits. 61 is the last single digit, `Z`. 62 is one 62 and nothing left over: `10`. 125 = 2 × 62 + 1: `21`. An id counter never collides, but consecutive ids give guessable codes, so designs either use random codes with a uniqueness check or hand each server its own block of ids and shuffle them.",
+              "concepts": [
+                "short-codes"
+              ]
+            },
+            {
+              "type": "explain",
+              "title": "The whole picture",
+              "body": "Lin's design:\n\n```text\n   DNS --> load balancer\n              |\n     app   app   app        stateless, N+1\n       \\    |    /\n      Redis cache            hot codes, TTL\n            | miss\n      links DB               leader + replicas,\n                             sharded by code later\n\n   app --click event--> queue --> analytics workers\n```\n\nCodes: **7 random base62 characters**, inserted under a unique constraint; on the rare collision, generate a new code and retry. Clicks go on a queue, so redirects never wait for analytics."
+            },
+            {
+              "type": "numeric",
+              "id": "q-cache-size",
+              "prompt": "Clicks are very uneven, so Lin caches the **10 million** most-clicked links at about **500 bytes** each (code, URL and overhead). How many gigabytes of cache memory is that? (1 GB = 10⁹ bytes)",
+              "answer": 5,
+              "unit": "GB",
+              "explanation": "10,000,000 × 500 bytes = 5 × 10⁹ bytes = **5 GB**. That fits comfortably in the memory of a single Redis server, and it covers the hottest links, so most of the 12,000 peak reads/s never touch the database.",
+              "concepts": [
+                "cache-aside",
+                "napkin-math"
+              ]
+            },
+            {
+              "type": "mcq",
+              "id": "q-301-302",
+              "prompt": "Snipt sells click analytics to link owners, so it must count clicks. Which redirect status should it send?",
+              "choices": [
+                "302 Found (temporary): browsers ask Snipt again on every click, so every click can be counted",
+                "301 Moved Permanently: browsers cache it, so repeat clicks are faster and Snipt gets less load",
+                "200 OK with the long URL in the page body",
+                "Either 301 or 302; browsers treat them the same"
+              ],
+              "answer": 0,
+              "explanation": "Browsers cache a **301** and skip Snipt on repeat clicks: less load, but those clicks are invisible. A **302** isn't cached by default, so every click passes through Snipt and gets counted. That's a classic trade-off to say out loud: 301 for load, 302 for analytics. A 200 page isn't a redirect at all.",
+              "concepts": [
+                "design-process",
+                "cache-aside"
+              ]
+            },
+            {
+              "type": "mcq",
+              "id": "q-leader-fails",
+              "prompt": "Omar's last question: the database leader dies at 3 a.m. What keeps Snipt's redirects working?",
+              "choices": [
+                "Redirects read from the cache and the replicas, which still work; a replica is promoted to leader, and link creation fails or retries for the minute that takes",
+                "Nothing: every request needs the leader, so the site is down until it is repaired",
+                "The load balancer sends the database traffic to an app server instead",
+                "The queue takes over and serves redirects from its stored messages"
+              ],
+              "answer": 0,
+              "explanation": "Reads never depended on the leader: the cache and the replicas keep serving redirects, the 100:1 majority of traffic. Writes pause until a replica is promoted, which is why creation should retry with backoff (safely, because the insert is protected by a unique code). Load balancers route to app servers, not databases, and the queue only carries click events.",
+              "concepts": [
+                "replication",
+                "design-process"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

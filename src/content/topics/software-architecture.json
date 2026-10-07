@@ -1,0 +1,1737 @@
+{
+  "id": "software-architecture",
+  "title": "Software Architecture",
+  "icon": "SOLID",
+  "color": "#1864ab",
+  "order": 18,
+  "category": "Engineering",
+  "level": "Intermediate",
+  "description": "Structure code and systems so they stay easy to change: spot coupling, draw good boundaries, pick an architecture style that fits the situation, and record why.",
+  "keyIdeas": [
+    "Architecture is the set of decisions that are **expensive to change**: spend your care there, and name the trade-offs out loud.",
+    "Pick the few **quality attributes** that matter most for this system right now, and accept known costs on the rest.",
+    "Aim for **low coupling and high cohesion**: keep together what changes together, and let parts talk through small interfaces.",
+    "Point **dependencies inward**: business rules own the interfaces, while databases, frameworks and vendors plug in as adapters.",
+    "Start with a **modular monolith**; extract services when a concrete need such as team independence or separate scaling pays for the network.",
+    "Treat messages and APIs as **contracts**, record big decisions in **ADRs**, and guard them with automated fitness functions."
+  ],
+  "concepts": [
+    {
+      "id": "architecture",
+      "label": "Architecture",
+      "lesson": "hard-to-change",
+      "summary": "The set of design decisions that are expensive to change later: how the system is split, how parts talk, where data lives.",
+      "aliases": [
+        "software architecture",
+        "architectural decisions",
+        "expensive decisions"
+      ]
+    },
+    {
+      "id": "quality-attributes",
+      "label": "Quality attributes",
+      "lesson": "hard-to-change",
+      "summary": "Measurable properties such as performance, availability, security and modifiability that describe how well a system works, and that drive its architecture.",
+      "aliases": [
+        "-ilities",
+        "non-functional requirements",
+        "NFRs",
+        "quality requirements"
+      ]
+    },
+    {
+      "id": "trade-offs",
+      "label": "Trade-offs",
+      "lesson": "hard-to-change",
+      "summary": "Improving one quality attribute usually costs another, so architecture means choosing the few that matter and accepting the costs.",
+      "aliases": [
+        "it depends",
+        "trade-off",
+        "compromise"
+      ]
+    },
+    {
+      "id": "coupling",
+      "label": "Coupling",
+      "lesson": "coupling-cohesion",
+      "summary": "How much one part depends on the details of another, and so how often they must change together.",
+      "aliases": [
+        "dependency",
+        "tight coupling",
+        "ripple effect",
+        "Law of Demeter"
+      ]
+    },
+    {
+      "id": "cohesion",
+      "label": "Cohesion",
+      "lesson": "coupling-cohesion",
+      "summary": "How strongly the things inside one module belong together: things that change for the same reason should live together.",
+      "aliases": [
+        "high cohesion",
+        "change together"
+      ]
+    },
+    {
+      "id": "single-responsibility",
+      "label": "Single responsibility",
+      "lesson": "solid-honestly",
+      "summary": "A module should have one reason to change: one group of people whose requests would change it.",
+      "aliases": [
+        "SRP",
+        "one reason to change",
+        "S in SOLID"
+      ]
+    },
+    {
+      "id": "dependency-inversion",
+      "label": "Dependency inversion",
+      "lesson": "solid-honestly",
+      "summary": "High-level policy depends on abstractions it owns, and low-level details implement them, so details can be swapped or faked.",
+      "aliases": [
+        "DIP",
+        "dependency injection",
+        "D in SOLID",
+        "program to an interface"
+      ]
+    },
+    {
+      "id": "over-engineering",
+      "label": "Over-engineering",
+      "lesson": "solid-honestly",
+      "summary": "Adding abstractions, layers or services before a real need exists, which costs indirection and reading time for no benefit yet.",
+      "aliases": [
+        "YAGNI",
+        "speculative generality",
+        "gold plating"
+      ]
+    },
+    {
+      "id": "layered-architecture",
+      "label": "Layered architecture",
+      "lesson": "layers-and-ports",
+      "summary": "Code stacked into layers (UI, application, domain, data access) where each layer calls only the one below, which leaves the domain depending on data access.",
+      "aliases": [
+        "layers",
+        "n-tier",
+        "three-tier"
+      ]
+    },
+    {
+      "id": "ports-and-adapters",
+      "label": "Ports and adapters",
+      "lesson": "layers-and-ports",
+      "summary": "The domain sits at the centre and defines ports (interfaces it needs); adapters for HTTP, databases, vendors and tests plug into them.",
+      "aliases": [
+        "hexagonal architecture",
+        "clean architecture",
+        "onion architecture",
+        "hexagon"
+      ]
+    },
+    {
+      "id": "dependency-rule",
+      "label": "Dependency rule",
+      "lesson": "layers-and-ports",
+      "summary": "Source-code dependencies point inward: business rules never import frameworks, drivers or adapters.",
+      "aliases": [
+        "dependencies point inward",
+        "dependency direction",
+        "inward dependencies"
+      ]
+    },
+    {
+      "id": "modular-monolith",
+      "label": "Modular monolith",
+      "lesson": "modules-or-services",
+      "summary": "One deployable app split into modules with clear public interfaces that never reach into each other's internals or tables.",
+      "aliases": [
+        "monolith",
+        "modulith",
+        "single deployable"
+      ]
+    },
+    {
+      "id": "microservices",
+      "label": "Microservices",
+      "lesson": "modules-or-services",
+      "summary": "Independently deployable services that each own their data and talk over the network, buying independence at the price of distributed-system complexity.",
+      "aliases": [
+        "services",
+        "microservice architecture",
+        "service-oriented"
+      ]
+    },
+    {
+      "id": "distributed-monolith",
+      "label": "Distributed monolith",
+      "lesson": "modules-or-services",
+      "summary": "Services that must still change, deploy or fail together, often because of a shared database or chatty call chains: network costs with no independence.",
+      "aliases": [
+        "shared database",
+        "lockstep deploys",
+        "microservices done wrong"
+      ]
+    },
+    {
+      "id": "bounded-context",
+      "label": "Bounded context",
+      "lesson": "domain-language",
+      "summary": "A boundary inside which a word has one precise meaning and one model, often a good module or service boundary.",
+      "aliases": [
+        "context",
+        "ubiquitous language",
+        "DDD context"
+      ]
+    },
+    {
+      "id": "aggregate",
+      "label": "Aggregate",
+      "lesson": "domain-language",
+      "summary": "A cluster of objects changed as one unit through a single root that enforces its rules (invariants).",
+      "aliases": [
+        "aggregate root",
+        "consistency boundary",
+        "invariant"
+      ]
+    },
+    {
+      "id": "sync-call",
+      "label": "Synchronous call",
+      "lesson": "talking-between-parts",
+      "summary": "Request and response, such as HTTP or gRPC: the caller waits for an answer and fails if the other side is down.",
+      "aliases": [
+        "request-response",
+        "REST call",
+        "RPC",
+        "API call"
+      ]
+    },
+    {
+      "id": "domain-event",
+      "label": "Domain event",
+      "lesson": "talking-between-parts",
+      "summary": "A message announcing that something happened; subscribers react in their own time without the publisher knowing them.",
+      "aliases": [
+        "event",
+        "publish-subscribe",
+        "pub/sub",
+        "message queue"
+      ]
+    },
+    {
+      "id": "api-contract",
+      "label": "API contract",
+      "lesson": "talking-between-parts",
+      "summary": "The agreed shape and meaning of messages between parts; changes must be backward compatible or rolled out by expand and contract.",
+      "aliases": [
+        "contract",
+        "versioning",
+        "backward compatibility",
+        "expand and contract"
+      ]
+    },
+    {
+      "id": "adr",
+      "label": "Decision record",
+      "lesson": "decision-records",
+      "summary": "A short, numbered file recording one architectural decision with its context and consequences; superseded, never rewritten.",
+      "aliases": [
+        "ADR",
+        "architecture decision record"
+      ]
+    },
+    {
+      "id": "fitness-function",
+      "label": "Fitness function",
+      "lesson": "decision-records",
+      "summary": "An automated check, run on every build, that an architectural property such as a dependency rule or latency budget still holds.",
+      "aliases": [
+        "architecture test",
+        "ArchUnit",
+        "import-linter"
+      ]
+    },
+    {
+      "id": "big-ball-of-mud",
+      "label": "Big ball of mud",
+      "lesson": "rescue-the-mud",
+      "summary": "A system with no visible structure where everything depends on everything, often with god classes and a shared database.",
+      "aliases": [
+        "spaghetti code",
+        "god class",
+        "legacy mess"
+      ]
+    },
+    {
+      "id": "strangler-fig",
+      "label": "Strangler fig",
+      "lesson": "rescue-the-mud",
+      "summary": "Replace a legacy system piece by piece behind a router, moving one capability at a time instead of a big rewrite.",
+      "aliases": [
+        "strangler pattern",
+        "incremental migration",
+        "seam"
+      ]
+    }
+  ],
+  "links": [
+    {
+      "from": "architecture",
+      "to": "quality-attributes",
+      "label": "needs"
+    },
+    {
+      "from": "quality-attributes",
+      "to": "trade-offs",
+      "label": "causes"
+    },
+    {
+      "from": "trade-offs",
+      "to": "architecture",
+      "label": "is part of"
+    },
+    {
+      "from": "coupling",
+      "to": "cohesion",
+      "label": "contrasts with"
+    },
+    {
+      "from": "coupling",
+      "to": "big-ball-of-mud",
+      "label": "causes"
+    },
+    {
+      "from": "single-responsibility",
+      "to": "cohesion",
+      "label": "builds on"
+    },
+    {
+      "from": "dependency-inversion",
+      "to": "coupling",
+      "label": "reduces"
+    },
+    {
+      "from": "dependency-inversion",
+      "to": "over-engineering",
+      "label": "can lead to"
+    },
+    {
+      "from": "ports-and-adapters",
+      "to": "dependency-inversion",
+      "label": "builds on"
+    },
+    {
+      "from": "dependency-rule",
+      "to": "ports-and-adapters",
+      "label": "is part of"
+    },
+    {
+      "from": "layered-architecture",
+      "to": "ports-and-adapters",
+      "label": "contrasts with"
+    },
+    {
+      "from": "dependency-rule",
+      "to": "fitness-function",
+      "label": "is checked by"
+    },
+    {
+      "from": "modular-monolith",
+      "to": "microservices",
+      "label": "contrasts with"
+    },
+    {
+      "from": "microservices",
+      "to": "distributed-monolith",
+      "label": "can lead to"
+    },
+    {
+      "from": "coupling",
+      "to": "distributed-monolith",
+      "label": "causes"
+    },
+    {
+      "from": "microservices",
+      "to": "over-engineering",
+      "label": "can lead to"
+    },
+    {
+      "from": "bounded-context",
+      "to": "modular-monolith",
+      "label": "is used in"
+    },
+    {
+      "from": "bounded-context",
+      "to": "microservices",
+      "label": "is used in"
+    },
+    {
+      "from": "aggregate",
+      "to": "bounded-context",
+      "label": "is part of"
+    },
+    {
+      "from": "aggregate",
+      "to": "cohesion",
+      "label": "builds on"
+    },
+    {
+      "from": "sync-call",
+      "to": "domain-event",
+      "label": "contrasts with"
+    },
+    {
+      "from": "domain-event",
+      "to": "coupling",
+      "label": "reduces"
+    },
+    {
+      "from": "sync-call",
+      "to": "distributed-monolith",
+      "label": "can lead to"
+    },
+    {
+      "from": "domain-event",
+      "to": "api-contract",
+      "label": "needs"
+    },
+    {
+      "from": "sync-call",
+      "to": "api-contract",
+      "label": "needs"
+    },
+    {
+      "from": "api-contract",
+      "to": "architecture",
+      "label": "is part of"
+    },
+    {
+      "from": "adr",
+      "to": "architecture",
+      "label": "is used in"
+    },
+    {
+      "from": "adr",
+      "to": "fitness-function",
+      "label": "is checked by"
+    },
+    {
+      "from": "quality-attributes",
+      "to": "fitness-function",
+      "label": "is checked by"
+    },
+    {
+      "from": "strangler-fig",
+      "to": "big-ball-of-mud",
+      "label": "replaces"
+    },
+    {
+      "from": "big-ball-of-mud",
+      "to": "modular-monolith",
+      "label": "is the opposite of"
+    },
+    {
+      "from": "strangler-fig",
+      "to": "dependency-inversion",
+      "label": "needs"
+    },
+    {
+      "from": "layered-architecture",
+      "to": "dependency-rule",
+      "label": "contrasts with"
+    },
+    {
+      "from": "single-responsibility",
+      "to": "over-engineering",
+      "label": "can lead to"
+    },
+    {
+      "from": "dependency-inversion",
+      "to": "spring-boot/constructor-injection",
+      "label": "is used in"
+    },
+    {
+      "from": "dependency-inversion",
+      "to": "unit-testing/test-double",
+      "label": "is used in"
+    },
+    {
+      "from": "ports-and-adapters",
+      "to": "spring-boot/repository",
+      "label": "is used in"
+    },
+    {
+      "from": "fitness-function",
+      "to": "unit-testing/unit-test",
+      "label": "builds on"
+    },
+    {
+      "from": "aggregate",
+      "to": "sql/transaction",
+      "label": "needs"
+    }
+  ],
+  "units": [
+    {
+      "id": "why-it-gets-hard",
+      "title": "Why code gets hard to change",
+      "description": "What architecture is for, and the two forces (coupling and cohesion) that decide how painful change will be.",
+      "lessons": [
+        {
+          "id": "hard-to-change",
+          "title": "The decisions you can't easily undo",
+          "pareto": "core",
+          "minutes": 6,
+          "takeaway": "Architecture is the handful of decisions that are expensive to change, made to serve the few quality attributes that matter most, at a known cost to the others.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Meet Crumb",
+              "body": "**Crumb** is a neighbourhood bakery building an ordering app. **Ines** owns the bakery and changes her mind often. **Maya** is the tech lead. **Theo** just joined and has read every architecture blog there is.\n\nArchitecture isn't boxes on a whiteboard. It's the set of decisions that are **expensive to change later**: how the parts are split, how they talk, where data lives, what outsiders depend on.\n\nOne question sorts them: *if we got this wrong, what would it cost to undo?*"
+            },
+            {
+              "type": "order",
+              "id": "q-undo-cost",
+              "concepts": [
+                "architecture"
+              ],
+              "prompt": "Put these Crumb changes in order, from **cheapest** to **most expensive** to undo.",
+              "items": [
+                "Rename a local variable inside one function",
+                "Change a function that three places in the same module call",
+                "Rename a column in the live `orders` table",
+                "Change the JSON shape of the public API that delivery partners call"
+              ],
+              "hint": "Ask who else has to change with you: nobody, your own module, everything that reads the data, or other companies.",
+              "explanation": "The cost grows with **how much depends on the decision and how much of it you control**. A local variable affects one function. A function with three callers means three edits, all yours. A live column touches every query, report and migration that reads it. A public API is the worst: delivery partners built their code on it, and you can't edit *their* code.\n\nThat's why architecture is about the bottom of this list."
+            },
+            {
+              "type": "explain",
+              "title": "How well, not just what",
+              "body": "Features say **what** the app does: order a croissant, pay, track the courier. **Quality attributes** (the *-ilities*) say **how well**: performance, availability, scalability, security, modifiability, testability, cost.\n\nThey shape architecture more than features do. A to-do app for 10 users and one for 10 million have the same features and very different designs.\n\nMake them concrete and measurable: *\"the menu loads in under 1 second on a phone\"* beats *\"it should be fast\"*."
+            },
+            {
+              "type": "buckets",
+              "id": "q-ilities",
+              "concepts": [
+                "quality-attributes"
+              ],
+              "prompt": "Ines wrote Crumb's wish list. Sort each requirement under the quality attribute it describes.",
+              "buckets": [
+                "Performance",
+                "Availability",
+                "Modifiability",
+                "Security"
+              ],
+              "items": [
+                {
+                  "text": "The menu page loads in under 1 second on a phone",
+                  "bucket": 0
+                },
+                {
+                  "text": "Checkout answers within 300 ms at the Saturday-morning rush",
+                  "bucket": 0
+                },
+                {
+                  "text": "If one server dies, customers can still place orders",
+                  "bucket": 1
+                },
+                {
+                  "text": "The app is up 99.9% of every month",
+                  "bucket": 1
+                },
+                {
+                  "text": "Adding a new payment method takes a developer under two days",
+                  "bucket": 2
+                },
+                {
+                  "text": "A second bakery location can be added without rewriting the order code",
+                  "bucket": 2
+                },
+                {
+                  "text": "Only staff can see customers' phone numbers",
+                  "bucket": 3
+                },
+                {
+                  "text": "Card numbers never touch Crumb's own servers",
+                  "bucket": 3
+                }
+              ],
+              "hint": "Speed under load is performance; staying up is availability; ease of change is modifiability; who may see or do what is security.",
+              "explanation": "**Performance** is about speed under a given load. **Availability** is about still working when things fail. **Modifiability** is how cheaply the system absorbs change, the attribute this whole course is about. **Security** is about who can see or do what.\n\nEach one is written as a scenario you could test, which is what makes it useful for design decisions."
+            },
+            {
+              "type": "numeric",
+              "id": "q-nines",
+              "concepts": [
+                "quality-attributes",
+                "trade-offs"
+              ],
+              "prompt": "Ines asks for \"99.9% uptime\". In a 30-day month, how many **minutes** of downtime does that allow?",
+              "answer": 43.2,
+              "tolerance": 0.1,
+              "unit": "minutes",
+              "hint": "A 30-day month has 30 × 24 × 60 minutes. You may be down 0.1% of them.",
+              "explanation": "30 × 24 × 60 = 43,200 minutes, and 0.1% of that is **43.2 minutes**. One more nine (99.99%) leaves only about 4.3 minutes a month, which usually means redundant servers, automatic failover and someone on call. Each extra nine costs far more than the last, so *\"as available as possible\"* is never a free requirement."
+            },
+            {
+              "type": "explain",
+              "title": "Every -ility costs another",
+              "body": "You can't max out everything. A cache makes the menu fast but can show yesterday's price. Splitting into services lets parts scale on their own but adds network failures and operational work. Encrypting more adds latency.\n\nSo the architect's job is to pick the **two or three attributes that matter most for this system right now**, design for those, and accept known costs on the rest. *\"It depends\"* is the honest answer, as long as you say **on what**."
+            },
+            {
+              "type": "mcq",
+              "id": "q-everything",
+              "concepts": [
+                "trade-offs",
+                "quality-attributes"
+              ],
+              "prompt": "Theo, on day one: *\"Let's make Crumb infinitely scalable, five-nines available and fully pluggable, and ship by Friday.\"* What's the best reply from Maya?",
+              "choices": [
+                "Ask which two or three qualities matter most for Crumb right now, and design for those",
+                "Agree: good architecture maximises every quality attribute at once",
+                "Pick the newest technologies, since they handle all of these automatically",
+                "Ignore quality attributes until launch: architecture only matters at scale"
+              ],
+              "answer": 0,
+              "hint": "Each of those wishes has a price. Which ones is a small bakery actually willing to pay for?",
+              "explanation": "Every quality attribute has a cost, and the costs compete: five nines and *ship by Friday* pull in opposite directions. Choosing the few that matter (perhaps modifiability and a fast menu, for a bakery still finding its product) is the real decision. New tools don't remove trade-offs, and ignoring qualities until later means making expensive decisions by accident."
+            }
+          ]
+        },
+        {
+          "id": "coupling-cohesion",
+          "title": "Tangled and scattered",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "Aim for low coupling between modules and high cohesion inside them: keep together what changes together, and talk through small interfaces.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Two words that predict pain",
+              "body": "**Coupling** is how much one part has to know about another, and so how often they must change together. **Cohesion** is how strongly the things *inside* one part belong together.\n\nThe goal is **low coupling, high cohesion**: each module is about one thing, and others use it through a small, stable surface.\n\n- Coupling smell: Kitchen code reads a private field inside Billing.\n- Cohesion smell: `helpers.py` holds date formatting, loyalty maths and an SMS sender."
+            },
+            {
+              "type": "buckets",
+              "id": "q-which-smell",
+              "concepts": [
+                "coupling",
+                "cohesion"
+              ],
+              "prompt": "Sort each thing Maya found in the Crumb codebase.",
+              "buckets": [
+                "Tight coupling (between parts)",
+                "Low cohesion (inside one part)"
+              ],
+              "items": [
+                {
+                  "text": "Kitchen code reads Billing's private `_discount_cache` dictionary",
+                  "bucket": 0
+                },
+                {
+                  "text": "Delivery can't be tested without starting the real payment client",
+                  "bucket": 0
+                },
+                {
+                  "text": "Billing breaks whenever Kitchen renames a column in its own table",
+                  "bucket": 0
+                },
+                {
+                  "text": "`helpers.py` holds date formatting, loyalty-point maths and an SMS sender",
+                  "bucket": 1
+                },
+                {
+                  "text": "The `Order` class also renders the HTML for the admin page",
+                  "bucket": 1
+                },
+                {
+                  "text": "A module called `misc` that every team adds \"just one function\" to",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Is the problem one part leaning on the insides of another, or one part holding things that have nothing to do with each other?",
+              "explanation": "**Coupling** is about the lines *between* parts: reading another module's private data, needing another part running to test yours, breaking when someone else changes their internals. **Cohesion** is about what's *inside* one part: a grab-bag file, a class doing a second unrelated job, a dumping-ground module. The two often go together: low-cohesion grab-bags get imported by everyone, which couples everything to everything."
+            },
+            {
+              "type": "bug",
+              "id": "q-reach-through",
+              "concepts": [
+                "coupling"
+              ],
+              "prompt": "It works today. But Crumb is about to replace the `Wallet` with gift cards and store credit, and Maya wants that change to stay inside `Customer`. Click the line that couples `place_order` to details it shouldn't know.",
+              "language": "python",
+              "code": "class Wallet:\n    def __init__(self, balance):\n        self.balance = balance\n\nclass Customer:\n    def __init__(self, name, wallet):\n        self.name = name\n        self.wallet = wallet\n\n    def can_afford(self, amount):\n        return self.wallet.balance >= amount\n\ndef place_order(customer, total):\n    if customer.wallet.balance >= total:\n        return f\"Order placed for {customer.name}\"\n    return \"Not enough funds\"\n\nana = Customer(\"Ana\", Wallet(12))\nprint(place_order(ana, 9))",
+              "lines": [
+                14
+              ],
+              "fixes": [
+                "Change line 14 to `if customer.can_afford(total):`, so only `Customer` knows how money is stored",
+                "Rename `wallet` to `_wallet` on line 8 and read `customer._wallet.balance` on line 14",
+                "Wrap line 14 in `try/except AttributeError` in case the wallet changes",
+                "Copy the balance into a global variable that `place_order` reads"
+              ],
+              "answer": 0,
+              "hint": "Count the dots. How many objects does `place_order` reach through to get its answer?",
+              "explanation": "`customer.wallet.balance` reaches **through** `Customer` into its wallet, so `place_order` now depends on how customers store money. When gift cards arrive, it breaks. Asking `customer.can_afford(total)` keeps that knowledge in one place (*\"tell, don't ask\"*, sometimes called the Law of Demeter). Renaming to `_wallet` hides nothing if you still read it, `try/except` hides the break instead of preventing it, and a global adds coupling."
+            },
+            {
+              "type": "explain",
+              "title": "Follow the ripple",
+              "body": "Here's a quick way to *see* coupling: when you change a module, everything that uses it, **directly or through others**, might break and needs retesting.\n\nEach line below says which modules a module uses:\n\n```text\nweb      uses  checkout, admin\ncheckout uses  pricing, loyalty\nadmin    uses  reports\nreports  uses  pricing\nloyalty  uses  pricing\nemail    uses  templates\n```"
+            },
+            {
+              "type": "numeric",
+              "id": "q-ripple",
+              "concepts": [
+                "coupling"
+              ],
+              "prompt": "Ines changes how `pricing` rounds prices. Using the list above, how many **other** modules could be affected, directly or indirectly?",
+              "answer": 5,
+              "hint": "Start with the modules that use `pricing` directly, then add whatever uses *those*.",
+              "explanation": "Directly: `checkout`, `reports` and `loyalty` use `pricing`. Indirectly: `web` uses `checkout`, and `admin` uses `reports`. That's **5** of the 7 other modules. Only `email` and `templates` are safe. A module that many others depend on should have a small, very stable interface, or every change to it becomes a release-wide event."
+            },
+            {
+              "type": "explain",
+              "title": "Keep together what changes together",
+              "body": "A practical cohesion test: **things that change for the same reason belong in the same module; things that change for different reasons belong apart.**\n\nDelivery fees and delivery zones change when the delivery rules change, so they live together. SMS sending changes when you switch SMS vendors, which has nothing to do with delivery."
+            },
+            {
+              "type": "buckets",
+              "id": "q-split-helpers",
+              "concepts": [
+                "cohesion"
+              ],
+              "prompt": "Maya is breaking up `helpers.py`. Move each function into the module that changes for the same reason.",
+              "buckets": [
+                "pricing",
+                "notifications",
+                "delivery"
+              ],
+              "items": [
+                {
+                  "text": "`apply_loyalty_discount(total, points)`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`round_to_cents(amount)`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`send_sms(phone, text)`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`render_order_email(order)`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`delivery_fee_for_zone(zone)`",
+                  "bucket": 2
+                },
+                {
+                  "text": "`is_address_in_zone(address, zone)`",
+                  "bucket": 2
+                },
+                {
+                  "text": "`estimate_arrival(distance_km)`",
+                  "bucket": 2
+                }
+              ],
+              "hint": "For each function, ask: who would ask for it to change? The person setting prices, the person choosing how we contact customers, or the person running deliveries?",
+              "explanation": "Grouping by **reason to change** gives each module one job. A new discount rule touches only `pricing`; switching from SMS to app notifications touches only `notifications`; a new delivery zone touches only `delivery`. In the old `helpers.py`, every one of those changes landed in the same file that everyone imports."
+            }
+          ]
+        },
+        {
+          "id": "solid-honestly",
+          "title": "SOLID, minus the sermon",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Give each module one reason to change, make policy depend on abstractions it owns rather than on vendors and databases, and add an abstraction only when something real needs it.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Two letters do most of the work",
+              "body": "**SOLID** names five design principles: **S**ingle responsibility, **O**pen/closed, **L**iskov substitution, **I**nterface segregation, **D**ependency inversion. Day to day, **S** and **D** carry most of the value.\n\n**Single responsibility** doesn't mean *\"one method\"*. It means **one reason to change**: one group of people whose requests would change this code. A class that the accountant, the designer *and* the database admin all need changed is doing three jobs. Taken to the extreme, that's a **god class**."
+            },
+            {
+              "type": "bug",
+              "id": "q-two-reasons",
+              "concepts": [
+                "single-responsibility",
+                "cohesion"
+              ],
+              "prompt": "The accountant asks for tax changes. The web designer asks for table layout changes. Both land in this class. Click the line that starts the second responsibility.",
+              "language": "python",
+              "code": "class Invoice:\n    def __init__(self, lines):\n        self.lines = lines\n\n    def total(self):\n        return sum(qty * price for qty, price in self.lines)\n\n    def to_html(self):\n        rows = \"\".join(f\"<tr><td>{q}</td><td>{p:.2f}</td></tr>\" for q, p in self.lines)\n        return f\"<table>{rows}</table>\"\n\n    def total_with_tax(self, rate):\n        return round(self.total() * (1 + rate), 2)\n\ninv = Invoice([(2, 3.50), (1, 4.25)])\nprint(inv.total_with_tax(0.1))",
+              "lines": [
+                8,
+                9,
+                10
+              ],
+              "fixes": [
+                "Move `to_html` (lines 8–10) into a separate `InvoiceHtmlView` that takes an `Invoice` and renders it",
+                "Move `total_with_tax` into its own `TaxCalculator` class and leave `to_html` where it is",
+                "Rename `to_html` on line 8 to `render` so it sounds like part of the invoice",
+                "Make `to_html` a `@staticmethod` on line 8"
+              ],
+              "answer": 0,
+              "hint": "Which method would change if the website got a redesign, while the invoice maths stayed the same?",
+              "explanation": "`total` and `total_with_tax` change when **money rules** change. `to_html` changes when the **page design** changes. Moving the HTML into its own view gives each piece one reason to change, and the invoice maths no longer knows HTML exists. Splitting out the tax method splits the wrong seam: tax is still invoice maths. Renaming or making it static leaves both jobs in one class."
+            },
+            {
+              "type": "explain",
+              "title": "Dependency inversion",
+              "body": "Crumb's **policy** (*place an order, tell the customer*) shouldn't depend on **details** like a specific SMS vendor or database. Instead, the policy defines the small abstraction it needs, and the details plug into it.\n\n```text\nBefore:  OrderService ---> TwilioSms\nAfter:   OrderService ---> Notifier <--- SmsNotifier\n                                    <--- FakeNotifier (tests)\n```\n\nIn Python the abstraction can be as light as *\"anything with a `send(to, text)` method\"*, passed in from outside."
+            },
+            {
+              "type": "output",
+              "id": "q-inject",
+              "concepts": [
+                "dependency-inversion"
+              ],
+              "prompt": "`OrderService` gets its notifier from outside. What does this print?",
+              "language": "python",
+              "code": "class SmsNotifier:\n    def send(self, to, text):\n        print(f\"SMS to {to}: {text}\")\n\nclass FakeNotifier:\n    def __init__(self):\n        self.sent = []\n\n    def send(self, to, text):\n        self.sent.append((to, text))\n\nclass OrderService:\n    def __init__(self, notifier):\n        self.notifier = notifier\n\n    def place(self, customer, item):\n        self.notifier.send(customer, f\"{item} is in the oven\")\n        return \"ok\"\n\nfake = FakeNotifier()\nprint(OrderService(fake).place(\"Ana\", \"Croissant\"))\nprint(len(fake.sent), fake.sent[0][1])\nOrderService(SmsNotifier()).place(\"Ben\", \"Bagel\")",
+              "output": "ok\n1 Croissant is in the oven\nSMS to Ben: Bagel is in the oven",
+              "hint": "`FakeNotifier` records messages instead of printing them. Only the last line uses the real SMS one.",
+              "explanation": "The same `OrderService` runs with two different notifiers. With the fake, nothing is printed by the notifier: the message is stored, so a test can check it (`1` message, text `Croissant is in the oven`). With `SmsNotifier`, the message is printed. `OrderService` never changed, because it depends only on *something that can `send`*."
+            },
+            {
+              "type": "bug",
+              "id": "q-hardwired",
+              "concepts": [
+                "dependency-inversion",
+                "coupling"
+              ],
+              "prompt": "This Kotlin `OrderService` can't be unit-tested without texting a real phone. Click the line that hard-wires the dependency.",
+              "language": "kotlin",
+              "code": "class SmsGateway {\n    fun send(to: String, text: String) = println(\"REAL SMS to $to: $text\")\n}\n\nclass OrderService {\n    private val sms = SmsGateway()\n\n    fun place(customer: String, item: String): String {\n        sms.send(customer, \"$item is in the oven\")\n        return \"ok\"\n    }\n}\n\nfun main() {\n    // A unit test wants to check place() without texting anyone\n    println(OrderService().place(\"test-user\", \"Croissant\"))\n}",
+              "error": "REAL SMS to test-user: Croissant is in the oven\nok",
+              "lines": [
+                6
+              ],
+              "fixes": [
+                "Replace line 6 with a constructor parameter, `class OrderService(private val notifier: Notifier)`, and make `SmsGateway` implement a `Notifier` interface",
+                "Turn `SmsGateway` into a Kotlin `object` (a singleton) so there is only one gateway",
+                "Wrap line 9 in `try/catch` so a failed SMS doesn't break the test",
+                "Add `if (customer.startsWith(\"test\")) return \"ok\"` before line 9"
+              ],
+              "answer": 0,
+              "hint": "Where does `OrderService` get its gateway from, and could a test hand it a different one?",
+              "explanation": "Line 6 builds a **concrete** `SmsGateway` inside the class, so every caller, tests included, gets the real one. Taking a `Notifier` in the constructor inverts that: production passes the SMS gateway, tests pass a fake. A singleton is still hard-wired, `try/catch` still sends the SMS, and a `test` check puts test logic into production code."
+            },
+            {
+              "type": "explain",
+              "title": "When SOLID hurts",
+              "body": "Over-applied, SOLID produces a different mess: an interface for every class that has one implementation, twelve tiny classes for a 30-line feature, factories that build factories. Every abstraction costs files, indirection and reading time.\n\nA useful rule: add an abstraction when you have **a second real implementation, a test that needs a fake, or a boundary to the outside world** (database, network, vendor). Otherwise keep it concrete and refactor when the need shows up. That's *YAGNI*: you aren't gonna need it."
+            },
+            {
+              "type": "buckets",
+              "id": "q-abstract-now",
+              "concepts": [
+                "over-engineering",
+                "dependency-inversion"
+              ],
+              "prompt": "Theo wants an interface in front of everything. Sort each case.",
+              "buckets": [
+                "Worth an abstraction now",
+                "Keep it concrete for now"
+              ],
+              "items": [
+                {
+                  "text": "The payment client, now that Crumb is adding a second payment provider",
+                  "bucket": 0
+                },
+                {
+                  "text": "The SMS vendor client, which unit tests must never call",
+                  "bucket": 0
+                },
+                {
+                  "text": "Saving orders to the database from the order logic",
+                  "bucket": 0
+                },
+                {
+                  "text": "A `format_price` helper with exactly one caller",
+                  "bucket": 1
+                },
+                {
+                  "text": "An `IMenuItem` interface for the single `MenuItem` class",
+                  "bucket": 1
+                },
+                {
+                  "text": "A plugin system for pastry types nobody has asked for",
+                  "bucket": 1
+                },
+                {
+                  "text": "A strategy interface for the one tax rule Crumb has",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Look for one of the three triggers: a second real implementation, a test that needs a fake, or a boundary to the outside world.",
+              "explanation": "The first three each hit a trigger: a **second implementation** (two payment providers), a **test that needs a fake** (SMS), a **boundary to the outside world** (the database). The rest are speculative: one implementation, one caller, or a future nobody asked for. They can get an abstraction later, when a real second case appears, and by then you'll know what shape it needs."
+            },
+            {
+              "type": "mcq",
+              "id": "q-srp-meaning",
+              "concepts": [
+                "single-responsibility"
+              ],
+              "prompt": "What does \"single responsibility\" mean in practice?",
+              "choices": [
+                "A module has one reason to change: one group whose requests would change it",
+                "Every class has exactly one method",
+                "No function is longer than ten lines",
+                "Each module is owned and edited by exactly one developer"
+              ],
+              "answer": 0,
+              "explanation": "It's about **reasons to change**, which usually map to people or roles: the accountant, the designer, the operations team. A class can have many methods and still have one responsibility (an `Invoice` with several money calculations), and a tiny class can mix two. Function length and code ownership are separate questions."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "drawing-boundaries",
+      "title": "Drawing boundaries",
+      "description": "Point dependencies the right way, choose between modules and services, and cut along the language of the business.",
+      "lessons": [
+        {
+          "id": "layers-and-ports",
+          "title": "Which way do the arrows point?",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Keep business rules at the centre and point every source-code dependency inward: the core defines ports, and databases, frameworks and vendors plug in as adapters.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Layers, and their trap",
+              "body": "The classic **layered architecture** stacks the code, and each layer only calls the one below:\n\n```text\n[ Web / UI        ]   routes, pages, JSON\n        |\n[ Application     ]   use cases: place order\n        |\n[ Domain          ]   rules: free delivery over $50\n        |\n[ Data access     ]   SQL, database driver\n```\n\nIt's simple and familiar. The trap is at the bottom: the **domain depends on the data layer**, so Crumb's business rules quietly import database code."
+            },
+            {
+              "type": "bug",
+              "id": "q-wrong-way",
+              "concepts": [
+                "dependency-rule",
+                "layered-architecture"
+              ],
+              "prompt": "Theo runs the domain tests on a laptop with no database driver, and they won't even start. Click the line that points a dependency the wrong way.",
+              "language": "python",
+              "code": "# domain/order.py\nfrom adapters.postgres import PostgresOrderRepository\n\nclass Order:\n    def __init__(self, items):\n        self.items = items\n\n    def total(self):\n        return sum(price for _, price in self.items)\n\n    def free_delivery(self):\n        return self.total() >= 50\n\n    def save(self):\n        PostgresOrderRepository().save(self)",
+              "error": "Traceback (most recent call last):\n  ...\nModuleNotFoundError: No module named 'psycopg'",
+              "lines": [
+                2,
+                15
+              ],
+              "fixes": [
+                "Delete line 2 and `save` (lines 14–15). The domain defines an `OrderRepository` interface; the Postgres code implements it, and the application layer calls it",
+                "Install the Postgres driver on every laptop and CI machine so the import on line 2 always works",
+                "Move the import on line 2 inside `save()` so it only runs when saving",
+                "Move `adapters/postgres.py` into the `domain` folder so the import stays inside the domain"
+              ],
+              "answer": 0,
+              "hint": "Should the free-delivery rule need a database driver to be tested?",
+              "explanation": "The rule *\"free delivery over $50\"* has nothing to do with Postgres, yet importing `Order` drags in the driver. The fix **inverts** the dependency: the domain owns an `OrderRepository` interface, and the Postgres adapter depends on the domain, not the other way round. Installing the driver, moving the import or moving the file all hide the symptom while the domain still depends on the database."
+            },
+            {
+              "type": "explain",
+              "title": "Ports and adapters",
+              "body": "**Hexagonal architecture** (ports and adapters) flips the bottom of the stack. The domain sits in the middle and defines **ports**: interfaces it needs, like `OrderRepository` or `Notifier`. **Adapters** outside implement them (Postgres, SMS) or drive the app (HTTP, a CLI, tests).\n\n```text\n HTTP adapter --->+---------------------+<--- Postgres adapter\n                  |  ports    DOMAIN    |\n test driver  --->+---------------------+<--- fake repository\n```\n\n*Clean* and *onion* architecture are the same idea with more rings. The one rule: **source-code dependencies point inward.**"
+            },
+            {
+              "type": "buckets",
+              "id": "q-inside-outside",
+              "concepts": [
+                "ports-and-adapters",
+                "dependency-rule"
+              ],
+              "prompt": "Sort Crumb's code: does it belong in the core, or is it an adapter on the outside?",
+              "buckets": [
+                "Core (domain and ports)",
+                "Adapter (outside)"
+              ],
+              "items": [
+                {
+                  "text": "Rule: orders over $50 get free delivery",
+                  "bucket": 0
+                },
+                {
+                  "text": "Calculating loyalty points from an order",
+                  "bucket": 0
+                },
+                {
+                  "text": "`OrderRepository` interface with `save(order)`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`Notifier` interface with `send(to, text)`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`PostgresOrderRepository`, which runs the SQL",
+                  "bucket": 1
+                },
+                {
+                  "text": "The Flask route `POST /orders` that parses JSON",
+                  "bucket": 1
+                },
+                {
+                  "text": "The Stripe payment client",
+                  "bucket": 1
+                },
+                {
+                  "text": "An in-memory repository used by the tests",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Interfaces the core *needs* live in the core. Anything that knows about a specific technology lives outside.",
+              "explanation": "Business rules and the **ports** they need (the interfaces) live in the core, written in plain code with no framework imports. Everything that knows a specific technology (SQL, HTTP, Stripe, even the test double) is an **adapter**. Notice the in-memory repository: tests are just another adapter plugged into the same port."
+            },
+            {
+              "type": "order",
+              "id": "q-trip",
+              "concepts": [
+                "ports-and-adapters"
+              ],
+              "prompt": "A customer taps **Order**. Put the trip through Crumb's hexagon in order.",
+              "items": [
+                "The HTTP adapter parses the JSON request",
+                "The application service `place_order` is called with plain values",
+                "The domain `Order` checks the rules and computes the total",
+                "The service calls the `OrderRepository` port to save it",
+                "The Postgres adapter runs the INSERT",
+                "The HTTP adapter turns the result into a 201 response"
+              ],
+              "hint": "The request comes in through one adapter, goes to the centre, goes out through a port to another adapter, and the answer comes back the way it came.",
+              "explanation": "**In** through a driving adapter (HTTP), to the application service, which uses the **domain** for the rules, then **out** through a port to a driven adapter (Postgres), and back to HTTP for the response. The domain never sees JSON or SQL, so you could swap Flask for a CLI or Postgres for another database without touching the rules."
+            },
+            {
+              "type": "output",
+              "id": "q-plug-in",
+              "concepts": [
+                "ports-and-adapters",
+                "dependency-inversion"
+              ],
+              "prompt": "`place_order` only knows the `OrderRepository` port. Here it runs with an in-memory adapter. What does this print?",
+              "language": "python",
+              "code": "from typing import Protocol\n\nclass OrderRepository(Protocol):\n    def save(self, order: dict) -> int: ...\n\nclass InMemoryOrders:\n    def __init__(self):\n        self.rows = []\n\n    def save(self, order):\n        self.rows.append(order)\n        return len(self.rows)\n\ndef place_order(repo: OrderRepository, items):\n    total = sum(items.values())\n    order_id = repo.save({\"items\": items, \"total\": total})\n    return f\"#{order_id}: {total}\"\n\nrepo = InMemoryOrders()\nprint(place_order(repo, {\"croissant\": 3, \"latte\": 4}))\nprint(place_order(repo, {\"bagel\": 2}))\nprint(len(repo.rows))",
+              "output": "#1: 7\n#2: 2\n2",
+              "hint": "`save` returns the new length of `rows`, which becomes the order id.",
+              "explanation": "The first order totals 3 + 4 = 7 and is row 1; the second totals 2 and is row 2; two rows are stored. `place_order` would run unchanged with a Postgres adapter that has the same `save` method. That's the point of the port: the use case is tested in milliseconds, no database needed."
+            },
+            {
+              "type": "mcq",
+              "id": "q-layer-vs-hex",
+              "concepts": [
+                "layered-architecture",
+                "ports-and-adapters",
+                "dependency-rule"
+              ],
+              "prompt": "What is the key difference between classic layering and ports and adapters?",
+              "choices": [
+                "In ports and adapters the domain owns the interfaces and the database code depends on it; in classic layering the domain depends on the data layer",
+                "Ports and adapters has exactly six layers, one per side of the hexagon",
+                "Classic layering can't have a user interface",
+                "Ports and adapters puts the database at the centre so every part can reach it"
+              ],
+              "answer": 0,
+              "explanation": "Both separate concerns; the difference is the **direction of the arrows**. In classic layering the rules sit on top of the data layer and depend on it. In ports and adapters the rules are at the centre and everything technical depends inward on them. The hexagon's six sides mean nothing: it's just a shape with room for many adapters."
+            },
+            {
+              "type": "mcq",
+              "id": "q-not-worth-it",
+              "concepts": [
+                "ports-and-adapters",
+                "over-engineering"
+              ],
+              "prompt": "Theo wants ports and adapters everywhere. Where is it most likely **not** worth it?",
+              "choices": [
+                "A one-off script that reads a CSV of last month's sales and prints a summary",
+                "Crumb's ordering core, which talks to a database, a payment provider and SMS",
+                "A pricing engine whose rules must be tested without a database",
+                "A service whose database vendor is being replaced next year"
+              ],
+              "answer": 0,
+              "hint": "Ports pay off when there is real logic to protect and real outside things to swap or fake.",
+              "explanation": "Ports and adapters pays for itself where there are **valuable rules** and **outside systems** to swap, fake or replace: all three other options. A throwaway script has little logic, one input and no future; adding ports there is ceremony. Matching the structure to the stakes is part of the job."
+            }
+          ]
+        },
+        {
+          "id": "modules-or-services",
+          "title": "One app or twelve?",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Start with a modular monolith with firm module boundaries; extract a service only when a concrete need such as team independence, separate scaling or isolation pays for the network.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Same boundaries, different glue",
+              "body": "**Microservices** are independently deployable services, each owning its own data and talking over the network.\n\nA **modular monolith** is one deployable app, split inside into modules with clear public interfaces. Modules don't reach into each other's internals or tables.\n\nBoth are about **boundaries**. The difference is whether crossing one is a function call or a network call, and whether parts can be deployed on their own."
+            },
+            {
+              "type": "buckets",
+              "id": "q-which-style",
+              "concepts": [
+                "modular-monolith",
+                "microservices"
+              ],
+              "prompt": "Sort each situation by the style it favours.",
+              "buckets": [
+                "Favours a modular monolith",
+                "Favours microservices"
+              ],
+              "items": [
+                {
+                  "text": "One team of five developers",
+                  "bucket": 0
+                },
+                {
+                  "text": "The domain still changes every month as Crumb learns what customers want",
+                  "bucket": 0
+                },
+                {
+                  "text": "Orders and payments must be updated together in one transaction",
+                  "bucket": 0
+                },
+                {
+                  "text": "Simple local debugging and one deploy pipeline matter most",
+                  "bucket": 0
+                },
+                {
+                  "text": "Eight teams keep blocking each other's releases",
+                  "bucket": 1
+                },
+                {
+                  "text": "Image resizing needs 50 times the compute of everything else at peak",
+                  "bucket": 1
+                },
+                {
+                  "text": "Regulators require the payment part to run fully isolated",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Microservices buy independence (deploying, scaling, isolating) at the price of network and operational complexity. Who needs to buy that?",
+              "explanation": "Microservices pay off when you need **independence**: many teams releasing separately, one part scaling very differently, or hard isolation. A small team with a still-changing domain gains little and pays a lot: moving a boundary inside a monolith is a refactor, while moving one between services is a migration. Transactions across services are much harder too."
+            },
+            {
+              "type": "explain",
+              "title": "The network isn't free",
+              "body": "Every network hop can be slow, fail or time out. You need retries, timeouts, monitoring across services, versioned APIs and a plan for data that lives in two places.\n\nFailures also multiply. If a request needs several services and each is up most of the time, the request needs **all** of them up at once."
+            },
+            {
+              "type": "numeric",
+              "id": "q-chain",
+              "concepts": [
+                "microservices",
+                "trade-offs"
+              ],
+              "prompt": "Theo's design: checkout calls **5** services in a chain, each available **99.9%** of the time, independently. What percentage of checkout requests find all five up?",
+              "answer": 99.5,
+              "tolerance": 0.01,
+              "unit": "%",
+              "hint": "All five must be up: multiply 0.999 by itself five times.",
+              "explanation": "0.999⁵ ≈ 0.995, so about **99.5%**. Each service meets its 99.9% target, but checkout as a whole is down about five times as often (0.5% vs 0.1%), roughly 3.6 hours a month instead of 43 minutes. Long synchronous chains spend your availability budget fast."
+            },
+            {
+              "type": "explain",
+              "title": "The worst of both: a distributed monolith",
+              "body": "A **distributed monolith** is split into services but still behaves like one tangled app: services must be deployed together, share one database, or call each other in long chains for every request.\n\nYou pay all the network costs and get none of the independence. A **shared database** is the classic cause: once three services read the same tables, none of them can change those tables alone."
+            },
+            {
+              "type": "buckets",
+              "id": "q-dm-smells",
+              "concepts": [
+                "distributed-monolith",
+                "coupling"
+              ],
+              "prompt": "Crumb's second attempt has three services: Orders, Kitchen and Billing. Sort what the team reports.",
+              "buckets": [
+                "Distributed-monolith smell",
+                "Healthy service boundary"
+              ],
+              "items": [
+                {
+                  "text": "Releasing Orders means releasing Kitchen and Billing the same evening",
+                  "bucket": 0
+                },
+                {
+                  "text": "Billing reads the `orders` table straight out of Orders' database",
+                  "bucket": 0
+                },
+                {
+                  "text": "Showing one menu page makes 14 calls between services",
+                  "bucket": 0
+                },
+                {
+                  "text": "Renaming a column needs sign-off from all three teams",
+                  "bucket": 0
+                },
+                {
+                  "text": "Kitchen keeps its own copy of the order details it needs, updated from events",
+                  "bucket": 1
+                },
+                {
+                  "text": "Each service can be deployed on its own, any day",
+                  "bucket": 1
+                },
+                {
+                  "text": "Services agree on versioned APIs, not on each other's tables",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Ask of each: can this service change and ship without the others?",
+              "explanation": "Lockstep releases, shared tables, chatty call chains and cross-team sign-off for a column all mean the services are **still coupled**, now with a network in the middle. Healthy services own their data, share it through APIs or events, and deploy independently. If yours can't, merging them back into a modular monolith is a legitimate fix."
+            },
+            {
+              "type": "bug",
+              "id": "q-module-boundary",
+              "concepts": [
+                "modular-monolith",
+                "coupling"
+              ],
+              "prompt": "Crumb is a modular monolith. Billing just tidied up its internal code, and now the Kitchen module crashes on startup. Click the line that crosses the module boundary.",
+              "language": "python",
+              "code": "# kitchen/tickets.py  (the Kitchen module)\nfrom billing import api as billing\nfrom billing.models import _PRICE_CACHE\n\ndef make_ticket(order_id, items):\n    paid = billing.is_paid(order_id)\n    prices = [_PRICE_CACHE[item] for item in items]\n    return {\"order\": order_id, \"paid\": paid, \"total\": sum(prices)}",
+              "error": "Traceback (most recent call last):\n  ...\nImportError: cannot import name '_PRICE_CACHE' from 'billing.models' (...)",
+              "lines": [
+                3,
+                7
+              ],
+              "fixes": [
+                "Add `price_of(item)` to Billing's public `billing/api.py`, delete line 3, and call `billing.price_of(item)` on line 7",
+                "Change line 3 to import `_price_cache`, the new name",
+                "Copy Billing's price table into the Kitchen module as a constant",
+                "Move the import on line 3 inside `make_ticket` so it only runs when needed"
+              ],
+              "answer": 0,
+              "hint": "In Python, a leading underscore means *private: not for use outside this module*.",
+              "explanation": "Kitchen imports a **private** name (the leading underscore says so) from Billing's internals, so any internal tidy-up in Billing breaks Kitchen. Going through Billing's public API keeps the boundary: Billing can rename its cache freely. Importing the new private name breaks again next time, a copied price table goes stale, and a lazy import only delays the crash."
+            },
+            {
+              "type": "mcq",
+              "id": "q-twelve",
+              "concepts": [
+                "microservices",
+                "modular-monolith",
+                "over-engineering"
+              ],
+              "prompt": "Theo proposes splitting Crumb (five developers, one app, a few hundred orders a day) into 12 microservices \"so we're ready to scale\". What's the best response?",
+              "choices": [
+                "Keep a modular monolith with firm module boundaries, and extract a service when a specific need appears",
+                "Agree: microservices are the modern default for any new system",
+                "Refuse for good: microservices never work in practice",
+                "Split by technical layer instead: a UI service, a logic service and a database service"
+              ],
+              "answer": 0,
+              "hint": "What concrete problem would the 12 services solve for Crumb today?",
+              "explanation": "Nothing in Crumb's situation needs microservices yet: one team, modest load, a domain still changing. Firm module boundaries keep the option open: a well-separated module can be extracted later when a real need appears. Microservices aren't a default, but they aren't always wrong either. Splitting by technical layer is a classic distributed-monolith recipe: every feature touches all three."
+            }
+          ]
+        },
+        {
+          "id": "domain-language",
+          "title": "Speak the bakery's language",
+          "pareto": "extra",
+          "minutes": 7,
+          "takeaway": "Model each part of the business in its own words inside a bounded context, and let an aggregate's root be the only way to change what must stay consistent.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "One word, three meanings",
+              "body": "Use the business's own words in the code: if the bakers say *batch*, don't call it `ProductionUnit`. Every translation is a place for bugs to hide. Domain-driven design calls a shared, precise vocabulary the **ubiquitous language**.\n\nBut one word can mean different things in different parts of the business. To the kitchen an *order* is a list of things to bake by 7:00. To billing it's money owed. To delivery it's a parcel and an address."
+            },
+            {
+              "type": "buckets",
+              "id": "q-whose-order",
+              "concepts": [
+                "bounded-context"
+              ],
+              "prompt": "Every sentence uses the word *order*. Which part of Crumb is talking?",
+              "buckets": [
+                "Kitchen",
+                "Billing",
+                "Delivery"
+              ],
+              "items": [
+                {
+                  "text": "The order needs 12 croissants out of the oven by 7:00",
+                  "bucket": 0
+                },
+                {
+                  "text": "The order's sourdough needs 18 hours to prove",
+                  "bucket": 0
+                },
+                {
+                  "text": "The order is still unpaid after 30 days",
+                  "bucket": 1
+                },
+                {
+                  "text": "The order's refund went back to the card",
+                  "bucket": 1
+                },
+                {
+                  "text": "The order goes to Flat 4B, ring twice",
+                  "bucket": 2
+                },
+                {
+                  "text": "The courier picked up the order at 7:40",
+                  "bucket": 2
+                }
+              ],
+              "hint": "Is the sentence about baking, money, or getting something to a door?",
+              "explanation": "Same word, three models. The kitchen cares about items and timing, billing about amounts and payment status, delivery about addresses and couriers. Each needs different fields and different rules, which is a strong hint that each deserves its own model."
+            },
+            {
+              "type": "explain",
+              "title": "Bounded contexts",
+              "body": "A **bounded context** is a boundary inside which a word has one precise meaning and one model. Kitchen's `Order`, Billing's `Invoice` and Delivery's `Parcel` can share an order id while being separate classes with separate rules.\n\nThe alternative, one giant `Order` for everyone, grows into a 60-field god class that every team fights over. Bounded contexts are also excellent candidates for **module or service boundaries**."
+            },
+            {
+              "type": "mcq",
+              "id": "q-one-customer",
+              "concepts": [
+                "bounded-context",
+                "coupling"
+              ],
+              "prompt": "Theo wants one shared `Customer` class, used by Marketing, Billing and Delivery, with every field anyone needs. What's the likely result?",
+              "choices": [
+                "A bloated class every team must coordinate on; better that each context keeps its own customer model with the fields it needs, linked by an id",
+                "Less code and no downsides, since there is only one class to maintain",
+                "It is required: domain-driven design says each concept must exist in exactly one class",
+                "Better performance, because all customer data is loaded at once"
+              ],
+              "answer": 0,
+              "hint": "What happens when Marketing needs a new field and Billing's rules depend on the same class?",
+              "explanation": "A shared model **couples** every context to every other: a Marketing change risks Billing, and nobody can simplify anything. Separate models per context (Marketing's *contact preferences*, Billing's *payment details*, Delivery's *addresses*) linked by a customer id keep each one small. DDD recommends the opposite of one class per concept across the whole business."
+            },
+            {
+              "type": "explain",
+              "title": "Aggregates guard the rules",
+              "body": "An **aggregate** is a cluster of objects changed as one unit, with one **root** that guards its rules (*invariants*). Outside code changes the aggregate **only through the root**.\n\nCrumb's `Order` is a root with order lines inside. Its rules: at most 20 items, and a paid order can't change. If code can append to `order.lines` directly, the rules can be skipped without anyone noticing."
+            },
+            {
+              "type": "bug",
+              "id": "q-bypass",
+              "concepts": [
+                "aggregate"
+              ],
+              "prompt": "Crumb's rules: at most 20 items, and no changes after payment. Yet this prints `42 True`. Click the line that slips past the rules.",
+              "language": "python",
+              "code": "class Order:\n    MAX_ITEMS = 20\n\n    def __init__(self):\n        self.lines = []\n        self.paid = False\n\n    def add(self, item, qty):\n        if self.paid:\n            raise ValueError(\"order already paid\")\n        if self.count() + qty > self.MAX_ITEMS:\n            raise ValueError(\"too many items\")\n        self.lines.append((item, qty))\n\n    def pay(self):\n        self.paid = True\n\n    def count(self):\n        return sum(qty for _, qty in self.lines)\n\norder = Order()\norder.add(\"croissant\", 12)\norder.pay()\norder.lines.append((\"bagel\", 30))\nprint(order.count(), order.paid)",
+              "error": "42 True",
+              "lines": [
+                24
+              ],
+              "fixes": [
+                "Change line 24 to `order.add(\"bagel\", 30)` so the root checks the rules, and rename `lines` to `_lines` so the list isn't meant to be touched from outside",
+                "Raise `MAX_ITEMS` on line 2 to 50 so the order fits",
+                "Print a warning after line 24 if `order.count()` is over 20",
+                "Append a copy of the tuple on line 24, so the original list isn't shared"
+              ],
+              "answer": 0,
+              "hint": "Which line changes the order without going through `add`?",
+              "explanation": "Line 24 appends to the inner list directly, so neither check in `add` runs: a paid order gains 30 bagels. Routing every change through the root (`order.add`) makes the rules impossible to skip; here it would raise `order already paid`. Raising the limit changes the business rule, a warning arrives after the damage, and copying the tuple changes nothing."
+            },
+            {
+              "type": "output",
+              "id": "q-guarded",
+              "concepts": [
+                "aggregate"
+              ],
+              "prompt": "Now the lines are private and every change goes through `add`. What does this print?",
+              "language": "python",
+              "code": "class Order:\n    MAX_ITEMS = 20\n\n    def __init__(self):\n        self._lines = []\n\n    def add(self, item, qty):\n        if self.count() + qty > self.MAX_ITEMS:\n            raise ValueError(\"too many items\")\n        self._lines.append((item, qty))\n\n    def count(self):\n        return sum(qty for _, qty in self._lines)\n\norder = Order()\norder.add(\"croissant\", 12)\nfor item, qty in [(\"bagel\", 10), (\"muffin\", 8)]:\n    try:\n        order.add(item, qty)\n        print(\"added\", item)\n    except ValueError as e:\n        print(\"rejected\", item, \"-\", e)\nprint(order.count())",
+              "output": "rejected bagel - too many items\nadded muffin\n20",
+              "hint": "Keep a running count: 12 croissants first. Does 10 more fit under 20? Does 8?",
+              "explanation": "12 + 10 = 22 is over the limit, so the root rejects the bagels and the order is unchanged. 12 + 8 = 20 is allowed, so the muffins go in, leaving **20** items. The rule lives in one place, the root, and every path into the order passes through it."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "keeping-it-changeable",
+      "title": "Keeping it changeable",
+      "description": "How parts talk without breaking each other, how to record and guard decisions, and how to rescue a system that has turned to mud.",
+      "lessons": [
+        {
+          "id": "talking-between-parts",
+          "title": "Call now, or tell everyone later",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Call synchronously when you need an answer now, publish events when others just need to know, and treat every message shape as a contract you change in backward-compatible steps.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Two ways to talk",
+              "body": "A **synchronous call** (HTTP, gRPC) is request and response: *\"Billing, charge this card now and tell me if it worked.\"* Simple and immediate, but the caller waits, and fails if the other side is down.\n\nAn **event** is a message saying something happened: *\"OrderPlaced.\"* The publisher doesn't know who listens; subscribers react in their own time. Parts are decoupled in time and knowledge, but data is only *eventually* consistent and flows are harder to trace."
+            },
+            {
+              "type": "buckets",
+              "id": "q-call-or-event",
+              "concepts": [
+                "sync-call",
+                "domain-event"
+              ],
+              "prompt": "Sort each Crumb interaction by the better fit.",
+              "buckets": [
+                "Synchronous call",
+                "Publish an event"
+              ],
+              "items": [
+                {
+                  "text": "Checkout must know whether the card was charged before showing \"Thank you\"",
+                  "bucket": 0
+                },
+                {
+                  "text": "Check a discount code while the customer is still on the payment page",
+                  "bucket": 0
+                },
+                {
+                  "text": "Fetch today's menu to show on the home screen",
+                  "bucket": 0
+                },
+                {
+                  "text": "When an order is placed, Kitchen, Loyalty and the sales dashboard all react",
+                  "bucket": 1
+                },
+                {
+                  "text": "Text \"your order is ready\"; a few seconds' delay is fine",
+                  "bucket": 1
+                },
+                {
+                  "text": "Add a new fraud-check step later without changing Checkout",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Does the caller need the answer right now to carry on? Or does it just need to announce that something happened?",
+              "explanation": "Use a **call** when the caller needs the answer to continue: the payment result, a valid code, the menu to display. Use an **event** when the producer only needs to announce a fact and others react: several consumers, delay is fine, and new consumers can subscribe without the producer changing. Many systems use both, for different interactions."
+            },
+            {
+              "type": "output",
+              "id": "q-subscribers",
+              "concepts": [
+                "domain-event"
+              ],
+              "prompt": "A tiny in-process event bus. Orders publishes; it doesn't know Loyalty or Kitchen exist. What does this print?",
+              "language": "python",
+              "code": "subscribers = {}\n\ndef subscribe(event, handler):\n    subscribers.setdefault(event, []).append(handler)\n\ndef publish(event, data):\n    for handler in subscribers.get(event, []):\n        handler(data)\n\npoints = {}\ntickets = []\n\ndef add_points(order):\n    points[order[\"customer\"]] = points.get(order[\"customer\"], 0) + order[\"total\"]\n\ndef make_ticket(order):\n    tickets.append(order[\"id\"])\n\nsubscribe(\"OrderPlaced\", add_points)\nsubscribe(\"OrderPlaced\", make_ticket)\npublish(\"OrderPlaced\", {\"id\": 7, \"customer\": \"Ana\", \"total\": 9})\npublish(\"OrderPlaced\", {\"id\": 8, \"customer\": \"Ana\", \"total\": 4})\nprint(points, tickets)",
+              "output": "{'Ana': 13} [7, 8]",
+              "hint": "Each `publish` runs both subscribed handlers, in the order they subscribed.",
+              "explanation": "Each publish runs both handlers. Ana earns 9 then 4 points (13 in total), and the kitchen gets tickets for orders 7 and 8. The publishing code would stay the same if a third subscriber were added. In production the bus would be a broker such as Kafka or RabbitMQ, but the shape is the same."
+            },
+            {
+              "type": "explain",
+              "title": "The shape is a contract",
+              "body": "Whichever style you use, the message shape is a **contract**: field names, types and meanings that other teams build on. Once others depend on it, changing it is an architecture decision.\n\n- **Backward compatible:** add an optional field; accept fields you don't know.\n- **Breaking:** rename or remove a field, or change its type or meaning.\n\nConsumers help by being *tolerant readers*: read only the fields they need and ignore the rest."
+            },
+            {
+              "type": "bug",
+              "id": "q-renamed",
+              "concepts": [
+                "api-contract",
+                "domain-event"
+              ],
+              "prompt": "Three other teams also consume `OrderPlaced`, and they deploy on their own schedules. After the Orders team shipped version 2, Loyalty crashes. Click the line that broke the contract.",
+              "language": "python",
+              "code": "import json\n\n# Orders team: version 2 of the OrderPlaced event\ndef order_placed_event(order_id, customer, total):\n    return json.dumps({\"id\": order_id, \"customer_name\": customer, \"total\": total})\n\n# Loyalty team: consumer written against version 1\ndef on_order_placed(message):\n    event = json.loads(message)\n    return f\"{event['customer']} earns {event['total']} points\"\n\nprint(on_order_placed(order_placed_event(7, \"Ana\", 9)))",
+              "error": "Traceback (most recent call last):\n  ...\nKeyError: 'customer'",
+              "lines": [
+                5
+              ],
+              "fixes": [
+                "On line 5, send both `customer` and `customer_name` for now; drop `customer` only once no consumer reads it",
+                "Change line 10 to read `event['customer_name']`",
+                "Wrap line 10 in `try/except KeyError` and return an empty string",
+                "Rename `total` to `amount` on line 5 too, so version 2 is consistent"
+              ],
+              "answer": 0,
+              "hint": "Which side changed? The consumer was written against version 1 and has not changed.",
+              "explanation": "The producer **renamed** a field: a breaking change. Sending both names keeps every consumer working while each migrates on its own schedule. Fixing only Loyalty's line leaves the other three teams broken; swallowing the `KeyError` hides lost points; renaming another field breaks things further."
+            },
+            {
+              "type": "order",
+              "id": "q-expand-contract",
+              "concepts": [
+                "api-contract"
+              ],
+              "prompt": "Rename `customer` to `customer_name` without breaking anyone. Put the steps in order.",
+              "items": [
+                "Producer starts sending both `customer` and `customer_name`",
+                "Each consumer switches to reading `customer_name`, at its own pace",
+                "Confirm no consumer still reads `customer` (logs, contract tests)",
+                "Producer stops sending `customer`"
+              ],
+              "hint": "Expand first, contract last.",
+              "explanation": "This is **expand and contract** (also called *parallel change*): first widen the contract so old and new both work, migrate consumers one by one, check, then narrow it. Every step is safe to deploy alone. Versioned endpoints or topics (`/v2/...`) are the heavier alternative when a change can't be made additive."
+            },
+            {
+              "type": "mcq",
+              "id": "q-compatible",
+              "concepts": [
+                "api-contract"
+              ],
+              "prompt": "Which change to the public `GET /orders/{id}` response is backward compatible?",
+              "choices": [
+                "Adding a new optional field `eta_minutes`",
+                "Renaming `total` to `amount`",
+                "Changing `total` from dollars (`12.5`) to cents (`1250`)",
+                "Removing `status`, since Crumb's own app no longer uses it"
+              ],
+              "answer": 0,
+              "hint": "A change is compatible if every existing client keeps working without being touched.",
+              "explanation": "Adding an optional field leaves existing clients working, as long as they ignore fields they don't know. Renaming or removing breaks anyone who reads the field, and *your* app not using `status` says nothing about partners' apps. The dollars-to-cents change is the sneakiest: same name, same type, different **meaning**, so nothing crashes and every total is 100 times off."
+            }
+          ]
+        },
+        {
+          "id": "decision-records",
+          "title": "Write it down, then guard it",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "Record each significant decision in a short ADR with its context and consequences, and turn the rules that matter into automated fitness functions that run on every build.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Architecture decision records",
+              "body": "In two years, nobody will remember *why* Crumb is a modular monolith. An **architecture decision record (ADR)** is a short text file kept next to the code that says what was decided, what was known at the time and what was traded away.\n\n```text\nADR 007: Keep Crumb a modular monolith\nStatus:       Accepted, 2026-03-02\nContext:      5 developers, one product, domain still changing.\nDecision:     One deployable; modules talk only through public APIs.\nConsequences: + one pipeline, simple debugging\n              - module boundaries need a check in CI\n```\n\nOne decision per file, numbered. Accepted ADRs aren't rewritten; a new ADR **supersedes** an old one."
+            },
+            {
+              "type": "order",
+              "id": "q-adr-parts",
+              "concepts": [
+                "adr"
+              ],
+              "prompt": "Maya is writing ADR 012. Put its parts in the usual order.",
+              "items": [
+                "Title: ADR 012: Publish OrderPlaced events",
+                "Status: Accepted",
+                "Context: Kitchen, Loyalty and the dashboard each poll Orders every 5 seconds",
+                "Decision: Orders publishes an OrderPlaced event; the others subscribe",
+                "Consequences: consumers no longer depend on Orders being up; we now run a broker and must handle duplicate events"
+              ],
+              "hint": "Name it, say whether it stands, explain the situation, state the choice, then what follows from it.",
+              "explanation": "**Title, Status, Context, Decision, Consequences** is the common format, from Michael Nygard's original ADR template. Context comes before the decision so a future reader sees the forces at play. Consequences list the costs as well as the benefits; a record that only lists benefits hides the trade-off that the next team needs to know about."
+            },
+            {
+              "type": "buckets",
+              "id": "q-adr-worthy",
+              "concepts": [
+                "adr",
+                "architecture"
+              ],
+              "prompt": "Which of these deserve an ADR?",
+              "buckets": [
+                "Write an ADR",
+                "No ADR needed"
+              ],
+              "items": [
+                {
+                  "text": "Choosing a message broker for events",
+                  "bucket": 0
+                },
+                {
+                  "text": "Ruling that modules may never read each other's tables",
+                  "bucket": 0
+                },
+                {
+                  "text": "Switching from REST to gRPC between services",
+                  "bucket": 0
+                },
+                {
+                  "text": "Picking PostgreSQL as the main database",
+                  "bucket": 0
+                },
+                {
+                  "text": "Renaming a private helper function",
+                  "bucket": 1
+                },
+                {
+                  "text": "Fixing a typo in an error message",
+                  "bucket": 1
+                },
+                {
+                  "text": "Updating a library to its next patch release",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Use the test from the first lesson: would it be expensive to undo, or would a future developer ask *why on earth did they do this?*",
+              "explanation": "ADRs are for **architecturally significant** decisions: hard to reverse, affecting many parts, or likely to puzzle a future reader. Broker, boundaries, protocols and databases all qualify. Small, easily reversed changes are covered by the commit message. If every change got an ADR, nobody would read them."
+            },
+            {
+              "type": "explain",
+              "title": "Fitness functions",
+              "body": "A rule written down can still be quietly broken next Tuesday. A **fitness function** is an automated check that an architectural property still holds, run on every build:\n\n- a test that fails if `domain` imports the database driver,\n- a load test that fails if the menu's 95th-percentile response time goes over 300 ms,\n- a check that no module imports another module's private code.\n\nIt turns *\"please remember\"* into a failing build."
+            },
+            {
+              "type": "output",
+              "id": "q-import-rule",
+              "concepts": [
+                "fitness-function",
+                "dependency-rule"
+              ],
+              "prompt": "A fitness function for \"the domain never imports infrastructure\". It scans each file's imports. What does it print?",
+              "language": "python",
+              "code": "import ast\n\nsources = {\n    \"domain/order.py\": \"from decimal import Decimal\\n\",\n    \"domain/pricing.py\": \"import psycopg\\nfrom domain.order import Order\\n\",\n    \"adapters/db.py\": \"import psycopg\\nfrom domain.order import Order\\n\",\n}\n\nFORBIDDEN = {\"psycopg\", \"flask\", \"adapters\"}\n\ndef imported_roots(code):\n    for node in ast.walk(ast.parse(code)):\n        if isinstance(node, ast.Import):\n            yield from (a.name.split(\".\")[0] for a in node.names)\n        elif isinstance(node, ast.ImportFrom):\n            yield node.module.split(\".\")[0]\n\nfor path, code in sources.items():\n    if path.startswith(\"domain/\"):\n        bad = sorted(set(imported_roots(code)) & FORBIDDEN)\n        print(path, \"FAIL\" if bad else \"ok\", bad)",
+              "output": "domain/order.py ok []\ndomain/pricing.py FAIL ['psycopg']",
+              "hint": "Only files under `domain/` are checked. Which forbidden names does each import?",
+              "explanation": "`domain/order.py` only imports `decimal`, so it's fine. `domain/pricing.py` imports `psycopg`, a database driver, so it fails. `adapters/db.py` is skipped: adapters are *allowed* to depend on the domain and the driver. Real projects use tools like import-linter (Python) or ArchUnit (Java), but they do this same check."
+            },
+            {
+              "type": "mcq",
+              "id": "q-guard-latency",
+              "concepts": [
+                "fitness-function",
+                "quality-attributes"
+              ],
+              "prompt": "ADR 009 says: *\"The menu page responds in under 300 ms at the 95th percentile.\"* Which of these is a fitness function for it?",
+              "choices": [
+                "A CI load test that requests the menu 1,000 times and fails the build if the 95th percentile is over 300 ms",
+                "A line in the README reminding developers to keep the menu fast",
+                "Reviewing performance once a year at the planning meeting",
+                "Adding servers whenever customers complain that the menu is slow"
+              ],
+              "answer": 0,
+              "explanation": "A fitness function is **automated, objective and frequent**: it measures the property and fails loudly when it slips. A README note isn't checked, a yearly review is far too late, and waiting for complaints means customers are your test suite."
+            },
+            {
+              "type": "mcq",
+              "id": "q-supersede",
+              "concepts": [
+                "adr"
+              ],
+              "prompt": "Two years on, Crumb moves payments into its own service, which goes against ADR 007 (*\"keep a modular monolith\"*). What should happen to ADR 007?",
+              "choices": [
+                "Write ADR 015 for the new decision, and mark 007 as \"Superseded by ADR 015\"",
+                "Edit ADR 007 so it describes the new decision",
+                "Delete ADR 007 so nobody is confused",
+                "Leave both marked \"Accepted\""
+              ],
+              "answer": 0,
+              "hint": "An ADR records what was decided *at the time*, and why.",
+              "explanation": "The value of ADRs is the **history**: why the monolith made sense then, and what changed. Superseding keeps both records and links them. Editing or deleting the old one erases the reasoning, and two contradicting *Accepted* records leave readers guessing which one holds."
+            }
+          ]
+        },
+        {
+          "id": "rescue-the-mud",
+          "title": "Rescuing the big ball of mud",
+          "pareto": "extra",
+          "minutes": 7,
+          "takeaway": "Don't rewrite a big ball of mud from scratch: cut seams, put a router in front, and strangle it one capability at a time in small, reversible steps.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "How systems turn to mud",
+              "body": "A **big ball of mud** is a system with no visible structure: everything depends on everything, and a fix in one place breaks something far away. It's rarely caused by bad developers. It's what years of urgent fixes do when nobody guards the boundaries.\n\nIts usual companions: **god classes** (a 4,000-line `OrderManager`) and a **shared database** that every part reads and writes."
+            },
+            {
+              "type": "buckets",
+              "id": "q-anti-patterns",
+              "concepts": [
+                "big-ball-of-mud",
+                "cohesion",
+                "coupling"
+              ],
+              "prompt": "Crumb bought a rival bakery's six-year-old app. Name the anti-pattern behind each complaint.",
+              "buckets": [
+                "God class",
+                "Shared database",
+                "Big ball of mud"
+              ],
+              "items": [
+                {
+                  "text": "`OrderManager.py` has 4,000 lines: pricing, emails, PDF invoices and stock",
+                  "bucket": 0
+                },
+                {
+                  "text": "Every feature adds \"just one more method\" to `BakeryService`",
+                  "bucket": 0
+                },
+                {
+                  "text": "Kitchen, Billing and Reports all read and write the same `orders` table",
+                  "bucket": 1
+                },
+                {
+                  "text": "Renaming one column needs four teams to agree",
+                  "bucket": 1
+                },
+                {
+                  "text": "Nobody can draw how the modules depend on each other",
+                  "bucket": 2
+                },
+                {
+                  "text": "Fixing the receipt printer broke the loyalty points",
+                  "bucket": 2
+                }
+              ],
+              "hint": "One class doing everything; one set of tables everyone touches; or no structure at all.",
+              "explanation": "A **god class** is cohesion at its worst: one class with dozens of reasons to change. A **shared database** couples every part through its tables, so the schema can't change without everyone. A **big ball of mud** is the system-wide version: no boundaries you can name, and changes ripple unpredictably. They feed each other."
+            },
+            {
+              "type": "explain",
+              "title": "The strangler fig",
+              "body": "The tempting fix is the **big rewrite**. It's riskier than it looks: the old system keeps needing changes while you rewrite, and its undocumented behaviour *is* the real specification.\n\nThe **strangler fig** pattern (named after a vine that slowly grows around a tree) replaces it piece by piece. Put a router in front, build one capability new, send its traffic there, repeat:\n\n```text\n                 +--> new Menu module    (/menu)\nclient --> router\n                 +--> old Crumb app      (everything else)\n```"
+            },
+            {
+              "type": "order",
+              "id": "q-strangle-menu",
+              "concepts": [
+                "strangler-fig"
+              ],
+              "prompt": "Put the strangler-fig migration of the menu feature in order.",
+              "items": [
+                "Put a router in front of the old app that sends all traffic to it, unchanged",
+                "Build the new menu module and test it against the old app's behaviour",
+                "Send a small share of `/menu` traffic to the new module and compare results",
+                "Send all `/menu` traffic to the new module",
+                "Delete the old menu code"
+              ],
+              "hint": "Each step should be safe to ship on its own, and easy to roll back.",
+              "explanation": "The router comes first and changes nothing, which makes it safe. Then build, then shift traffic **gradually**, so a problem affects a few requests and rolling back is just a routing change. Only when the new path has carried everything for a while do you delete the old code. Repeat per capability until the old app has nothing left to do."
+            },
+            {
+              "type": "explain",
+              "title": "Seams: a way in",
+              "body": "Before you can move or test legacy code you need a **seam**: a place where you can change behaviour without editing the code around it (Michael Feathers' term).\n\nThe old happy-hour check called `datetime.now()` deep inside, so no test could control the time. Maya's first refactor adds a parameter whose default keeps the old behaviour. Nothing changes for callers, but tests can now pass in any time they like."
+            },
+            {
+              "type": "output",
+              "id": "q-seam",
+              "concepts": [
+                "dependency-inversion",
+                "strangler-fig"
+              ],
+              "prompt": "Happy hour runs from 15:00 until 17:00. What does this test print?",
+              "language": "python",
+              "code": "import datetime\n\ndef is_happy_hour(now=None):\n    now = now or datetime.datetime.now()\n    return 15 <= now.hour < 17\n\ndef at(hour, minute=0):\n    return datetime.datetime(2026, 10, 6, hour, minute)\n\nprint(is_happy_hour(at(16, 30)), is_happy_hour(at(17)), is_happy_hour(at(14, 59)))",
+              "output": "True False False",
+              "hint": "The check is `15 <= hour < 17`. Look at the hour of each time passed in, not the minutes.",
+              "explanation": "16:30 has hour 16: inside. 17:00 has hour 17, and the upper bound is exclusive: outside. 14:59 has hour 14: outside. Because `now` can be passed in, the test is repeatable at any time of day. Seams like this are how you get tests around legacy code before moving it."
+            },
+            {
+              "type": "mcq",
+              "id": "q-rewrite",
+              "concepts": [
+                "strangler-fig",
+                "big-ball-of-mud"
+              ],
+              "prompt": "Theo wants to freeze features for a year and rewrite the acquired app from scratch with a clean design. What is the main risk?",
+              "choices": [
+                "The old app's undocumented behaviour is the real spec, and the business still needs changes during that year; a strangler-fig migration delivers in small, reversible steps instead",
+                "There is little risk: a rewrite is faster because the new code is cleaner",
+                "There is no risk as long as the new version uses microservices",
+                "The only real risk is the cost of the new servers"
+              ],
+              "answer": 0,
+              "hint": "What happens to Ines's new requests during the freeze, and who knows everything the old app does?",
+              "explanation": "Big rewrites often run long because the old system does many things nobody wrote down, and the business can't stop for a year. Meanwhile the old app still needs fixes, so you maintain two systems. Strangling it ships value early, and every step can be rolled back. A new architecture style doesn't remove the risk; it often adds some."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

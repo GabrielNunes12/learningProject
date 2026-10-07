@@ -63,6 +63,100 @@ export function validateCourse(t: any, where: string): string[] {
     }
     u.lessons.forEach((l: any, li: number) => validateLesson(l, `lesson "${l?.id ?? li + 1}"`, lessonIds, req, errs, where));
   });
+  validateConcepts(t, units, lessonIds, req);
+  return errs;
+}
+
+const KEBAB = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+
+/** The concept graph and the concept tags on questions. Cross-course link targets are checked by validateConceptRefs. */
+function validateConcepts(t: any, units: any[], lessonIds: Set<string>, req: (ok: boolean, msg: string) => void) {
+  const steps = units.flatMap((u) => (Array.isArray(u?.lessons) ? u.lessons : [])).flatMap((l: any) =>
+    Array.isArray(l?.steps) ? l.steps.map((s: any) => ({ s, where: `lesson "${l?.id}", question "${s?.id}"` })) : [],
+  );
+  const tagged = steps.filter(({ s }) => s?.concepts !== undefined);
+  if (t?.concepts === undefined) {
+    req(t?.links === undefined, '"links" needs a "concepts" list');
+    req(tagged.length === 0, 'questions are tagged with "concepts" but the course has no "concepts" list');
+    return;
+  }
+  const concepts: any[] = Array.isArray(t.concepts) ? t.concepts : [];
+  req(Array.isArray(t.concepts) && concepts.length > 0, '"concepts" must be a non-empty list');
+  const ids = new Set<string>();
+  concepts.forEach((c, i) => {
+    const cw = `concept "${c?.id ?? i + 1}"`;
+    req(isStr(c?.id) && KEBAB.test(c.id), `${cw}: "id" must be kebab-case`);
+    req(!ids.has(c?.id), `${cw}: duplicate concept id`);
+    ids.add(c?.id);
+    req(isStr(c?.label), `${cw}: missing "label"`);
+    req(lessonIds.has(c?.lesson), `${cw}: "lesson" must be a lesson id in this course`);
+    req(c?.summary === undefined || isStr(c.summary), `${cw}: "summary" must be a string`);
+    req(c?.aliases === undefined || (Array.isArray(c.aliases) && c.aliases.every(isStr)), `${cw}: "aliases" must be a list of strings`);
+  });
+  const links: any[] = t.links === undefined ? [] : Array.isArray(t.links) ? t.links : [];
+  req(t.links === undefined || Array.isArray(t.links), '"links" must be a list');
+  const pairs = new Set<string>();
+  links.forEach((l, i) => {
+    const lw = `link ${i + 1} (${l?.from} → ${l?.to})`;
+    req(ids.has(l?.from), `${lw}: "from" must be a concept id in this course`);
+    const external = typeof l?.to === 'string' && l.to.includes('/');
+    req(
+      external ? /^[a-z0-9-]+\/[a-z0-9-]+$/.test(l.to) && !l.to.startsWith(`${t.id}/`) : ids.has(l?.to),
+      `${lw}: "to" must be a concept id in this course or "<course id>/<concept id>"`,
+    );
+    req(l?.from !== l?.to, `${lw}: a concept can't link to itself`);
+    req(isStr(l?.label), `${lw}: needs a "label" like "is a" or "needs"`);
+    const key = [l?.from, l?.to].sort().join('|');
+    req(!pairs.has(key), `${lw}: these two concepts are already linked`);
+    pairs.add(key);
+  });
+  tagged.forEach(({ s, where }) =>
+    req(
+      Array.isArray(s.concepts) && s.concepts.length > 0 && s.concepts.every((c: unknown) => ids.has(c as string)),
+      `${where}: "concepts" must list concept ids from this course`,
+    ),
+  );
+}
+
+/** Checks links that point into other courses ("<course>/<concept>") once every course is loaded. */
+export function validateConceptRefs(courses: any[]): string[] {
+  const known = new Set(courses.flatMap((c) => (Array.isArray(c?.concepts) ? c.concepts.map((k: any) => `${c.id}/${k.id}`) : [])));
+  return courses.flatMap((c) =>
+    (Array.isArray(c?.links) ? c.links : [])
+      .filter((l: any) => typeof l?.to === 'string' && l.to.includes('/') && !known.has(l.to))
+      .map((l: any) => `${c.id}.json: link ${l.from} → ${l.to}: no such concept in that course`),
+  );
+}
+
+/** Concept counts every real course must stay within: enough to map, few enough to hold in your head. */
+export const CONCEPT_RANGE = [8, 24] as const;
+const UNGRADED = ['explain', 'example', 'sim'];
+
+/**
+ * Coverage rules for shipped courses (kept apart from validateCourse so small test fixtures need no graph):
+ * the course has a concept graph, every graded step is tagged, every concept is tested and every lesson teaches one.
+ */
+export function validateConceptCoverage(t: any, where: string): string[] {
+  const errs: string[] = [];
+  const req = (ok: boolean, msg: string) => {
+    if (!ok) errs.push(`${where}: ${msg}`);
+  };
+  const concepts: any[] = Array.isArray(t?.concepts) ? t.concepts : [];
+  const [min, max] = CONCEPT_RANGE;
+  req(concepts.length >= min && concepts.length <= max, `needs a concept graph of ${min}–${max} "concepts" (has ${concepts.length})`);
+  if (!concepts.length) return errs;
+
+  const lessons: any[] = (Array.isArray(t?.units) ? t.units.flatMap((u: any) => u?.lessons ?? []) : (t?.lessons ?? [])).filter(Boolean);
+  const tested = new Set<string>();
+  for (const l of lessons) {
+    for (const s of Array.isArray(l?.steps) ? l.steps : []) {
+      if (UNGRADED.includes(s?.type)) continue;
+      req(Array.isArray(s?.concepts) && s.concepts.length > 0, `lesson "${l.id}", question "${s?.id}": list the "concepts" it tests`);
+      (Array.isArray(s?.concepts) ? s.concepts : []).forEach((c: string) => tested.add(c));
+    }
+    req(concepts.some((c) => c?.lesson === l?.id), `lesson "${l?.id}": no concept is taught here (set a concept's "lesson" to it)`);
+  }
+  concepts.forEach((c) => req(tested.has(c?.id), `concept "${c?.id}": no graded step tests it (tag one with it, or merge it into a neighbour)`));
   return errs;
 }
 

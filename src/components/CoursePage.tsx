@@ -201,6 +201,16 @@ export function CoursePage({ course }: { course: Course }) {
                 <strong>Quiz</strong>
                 <span>{Math.min(12, s.questionCount)} mixed questions — find your gaps</span>
               </a>
+              <a href={href('course', course.id, 'map')}>
+                <strong>Knowledge map</strong>
+                <span>
+                  {course.concepts?.length
+                    ? p.maps?.[course.id]?.recalled.length
+                      ? `${p.maps[course.id].recalled.length}/${course.concepts.length} ideas recalled so far — keep mapping`
+                      : 'Map what you know from memory, then connect the dots'
+                    : 'Recall the key ideas from memory'}
+                </span>
+              </a>
               <a href={href('review', 'start', course.id)}>
                 <strong>Review this course</strong>
                 <span>Practise what's due from {course.title}</span>

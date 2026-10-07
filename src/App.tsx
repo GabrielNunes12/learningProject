@@ -5,8 +5,11 @@ import { CoursePage } from './components/CoursePage';
 import { DevGames } from './components/DevGames';
 import { Courses } from './components/Courses';
 import { Home } from './components/Home';
+import { Insights } from './components/Insights';
+import { KnowledgeMap } from './components/KnowledgeMap';
 import { Page } from './components/Layout';
 import { LessonPlayer } from './components/LessonPlayer';
+import { MixedPractice } from './components/MixedPractice';
 import { Profile } from './components/Profile';
 import { Quiz } from './components/Quiz';
 import { Review, ReviewSession } from './components/Review';
@@ -50,6 +53,10 @@ function Route({ route }: { route: string[] }) {
       return <Review />;
     case 'profile':
       return <Profile />;
+    case 'insights':
+      return <Insights courseId={a} />;
+    case 'practice':
+      return <MixedPractice key={route.join('/')} courseId={a} conceptId={b} />;
     case 'signin':
       return user ? <Redirect to="#/" /> : <SignIn />;
     case 'signup':
@@ -73,6 +80,7 @@ function Route({ route }: { route: string[] }) {
       if (!b) return <CoursePage course={course} />;
       if (b === 'quiz') return <Quiz key={course.id} course={course} />;
       if (b === 'cheatsheet') return <CheatSheet course={course} />;
+      if (b === 'map') return <KnowledgeMap key={course.id} courseId={course.id} />;
       const lesson = b === 'lesson' ? course.lessons.find((l) => l.id === c) : undefined;
       if (lesson) return <LessonPlayer key={`${course.id}/${lesson.id}`} course={course} lesson={lesson} />;
       break;

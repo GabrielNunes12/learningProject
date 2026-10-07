@@ -8,6 +8,7 @@ import { Session } from './Session';
 import { accentStyle, plural } from './ui';
 import { CourseIcon } from './CourseIcon';
 import { Icon } from './icons';
+import { MixedPracticeCard } from './MixedPractice';
 
 const SESSION_SIZE = 20;
 
@@ -67,6 +68,8 @@ export function Review() {
           )}
         </div>
       </section>
+
+      <MixedPracticeCard />
 
       {seenKeys.length > 0 && (
         <div className="review-grid">

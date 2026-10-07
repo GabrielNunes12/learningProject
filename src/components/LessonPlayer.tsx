@@ -158,6 +158,14 @@ function LessonComplete({ course, lesson, score, xp }: { course: Course; lesson:
   const nextLesson =
     course.lessons.slice(pos + 1).find((l) => l.pareto === 'core' && !p.completed[lessonKey(course.id, l.id)]) ?? course.lessons[pos + 1];
   const today = xpToday(p);
+  // Finishing a unit's last lesson invites a unit checkpoint on the knowledge map.
+  const unit = unitOf(course, lesson);
+  const checkpoint =
+    unit.lessons[unit.lessons.length - 1]?.id === lesson.id && course.concepts?.some((c) => unit.lessons.some((l) => l.id === c.lesson))
+      ? course.units.length > 1
+        ? href('course', course.id, 'map', unit.id)
+        : href('course', course.id, 'map')
+      : undefined;
 
   return (
     <div className="player" style={accentStyle(course.color)}>
@@ -196,6 +204,14 @@ function LessonComplete({ course, lesson, score, xp }: { course: Course; lesson:
           <span className="eyebrow">Key takeaway</span>
           <Markdown text={lesson.takeaway} />
         </div>
+
+        {checkpoint && (
+          <p>
+            <a className="btn" href={checkpoint}>
+              <Icon name="target" size={18} /> Unit checkpoint: map what you know
+            </a>
+          </p>
+        )}
 
         {!user && (
           <p className="small muted">

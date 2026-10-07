@@ -1,6 +1,6 @@
 import { isQuestion, type Course, type CourseFile, type Lesson, type QuestionStep, type Unit } from '../types';
 import roadmapData from './roadmap.json';
-import { validateCourse, validateRoadmap } from './validate';
+import { validateConceptCoverage, validateConceptRefs, validateCourse, validateRoadmap } from './validate';
 
 // Every JSON file in ./topics becomes a course. Add a file, refresh, done.
 const modules = import.meta.glob<unknown>('./topics/*.json', { eager: true, import: 'default' });
@@ -15,6 +15,8 @@ for (const [file, data] of Object.entries(modules)) {
     contentErrors.push(...errs);
     continue;
   }
+  // Coverage gaps are reported in the banner but don't hide the course.
+  contentErrors.push(...validateConceptCoverage(data, name));
   const raw = data as CourseFile;
   if (loaded.some((c) => c.id === raw.id)) {
     contentErrors.push(`${name}: course id "${raw.id}" is already used by another file`);
@@ -27,6 +29,8 @@ for (const [file, data] of Object.entries(modules)) {
 export const courses: Course[] = loaded.sort(
   (a, b) => (a.order ?? 999) - (b.order ?? 999) || a.title.localeCompare(b.title),
 );
+
+contentErrors.push(...validateConceptRefs(loaded));
 
 export const categories = [...new Set(courses.map((c) => c.category!))];
 

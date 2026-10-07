@@ -115,7 +115,12 @@ export function Profile() {
       </div>
 
       <section className="panel">
-        <h2>Course progress</h2>
+        <div className="panel-head">
+          <h2>Course progress</h2>
+          <a className="small" href={href('insights')}>
+            Your learning report →
+          </a>
+        </div>
         {started.length === 0 ? (
           <p className="muted">
             No courses started yet. <a href="#/courses">Pick one →</a>
