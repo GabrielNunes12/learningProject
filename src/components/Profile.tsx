@@ -117,9 +117,14 @@ export function Profile() {
       <section className="panel">
         <div className="panel-head">
           <h2>Course progress</h2>
-          <a className="small" href={href('insights')}>
-            Your learning report →
-          </a>
+          <span className="row wrap">
+            <a className="small" href={href('notebook')}>
+              Notebook →
+            </a>
+            <a className="small" href={href('insights')}>
+              Your learning report →
+            </a>
+          </span>
         </div>
         {started.length === 0 ? (
           <p className="muted">

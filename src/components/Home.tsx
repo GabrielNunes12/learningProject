@@ -12,6 +12,7 @@ import { accentStyle, ProgressBar, Ring } from './ui';
 import { CourseIcon } from './CourseIcon';
 import { Icon } from './icons';
 import { InsightsTeaser } from './Insights';
+import { ThinkingTeaser } from './Notebook';
 
 function greeting() {
   const h = new Date().getHours();
@@ -178,6 +179,7 @@ export function Home() {
       </div>
 
       <ContinueCard p={p} />
+      <ThinkingTeaser />
       <InsightsTeaser />
       <RoadmapTeaser />
 

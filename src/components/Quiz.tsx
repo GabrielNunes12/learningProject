@@ -31,6 +31,7 @@ function QuizRun({ course, onRetake }: { course: Course; onRetake: () => void })
 
   return (
     <Session
+      ritual={{ kind: 'quiz', title: `Quiz: ${course.title}`, course: course.id }}
       questions={questions}
       exitHref={courseHref}
       onFinish={(results) => recordQuiz(course.id, Math.round((100 * results.filter((r) => r.ok).length) / results.length))}

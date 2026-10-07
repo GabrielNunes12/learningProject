@@ -83,6 +83,7 @@ export function MixedPractice({ courseId, conceptId }: { courseId?: string; conc
     return (
       <Session
         key={running.run}
+        ritual={{ kind: 'practice', title: course ? `Mixed practice: ${course.title}` : 'Mixed practice', course: course?.id }}
         questions={running.plan.picks.map((x) => x.q)}
         exitHref={exitHref}
         renderEnd={(results, xp) => <MixEnd plan={running.plan} results={results} xp={xp} course={course} onAgain={again} />}

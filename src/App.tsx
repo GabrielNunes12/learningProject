@@ -10,6 +10,7 @@ import { KnowledgeMap } from './components/KnowledgeMap';
 import { Page } from './components/Layout';
 import { LessonPlayer } from './components/LessonPlayer';
 import { MixedPractice } from './components/MixedPractice';
+import { Notebook } from './components/Notebook';
 import { Profile } from './components/Profile';
 import { Quiz } from './components/Quiz';
 import { Review, ReviewSession } from './components/Review';
@@ -53,6 +54,8 @@ function Route({ route }: { route: string[] }) {
       return <Review />;
     case 'profile':
       return <Profile />;
+    case 'notebook':
+      return <Notebook />;
     case 'insights':
       return <Insights courseId={a} />;
     case 'practice':

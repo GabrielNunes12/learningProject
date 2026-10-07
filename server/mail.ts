@@ -18,7 +18,7 @@ async function send(to: string, subject: string, intro: string, buttonLabel: str
   const text = `${intro}\n\n${buttonLabel}: ${link}\n\n${outro}`;
   const html = `
     <div style="font-family:system-ui,sans-serif;max-width:480px;margin:auto;padding:24px;color:#1d1d1f">
-      <h2 style="margin:0 0 12px">🧠 ProjectLearn</h2>
+      <h2 style="margin:0 0 12px">ProjectLearn</h2>
       <p>${intro}</p>
       <p style="margin:28px 0"><a href="${link}" style="background:#5b5bd6;color:#fff;padding:12px 22px;border-radius:999px;text-decoration:none;font-weight:600">${buttonLabel}</a></p>
       <p style="color:#6b6b70;font-size:14px">${outro}</p>
@@ -29,7 +29,7 @@ async function send(to: string, subject: string, intro: string, buttonLabel: str
     await transport.sendMail({ from: mailFrom, to, subject, text, html });
     return;
   }
-  console.log(`\n✉️  Email to ${to}: ${subject}\n   ${link}\n`);
+  console.log(`\nEmail to ${to}: ${subject}\n   ${link}\n`);
   if (devOutbox) {
     outbox.unshift({ to, subject, text, link, sentAt: Date.now() });
     outbox.length = Math.min(outbox.length, 50);
