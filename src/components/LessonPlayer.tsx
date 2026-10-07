@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { lessonKey, questionKey, unitOf } from '../content';
 import { useAuth } from '../lib/auth';
 import { href } from '../lib/router';
-import { completeLesson, openLesson, recordAnswer, streak, useProgress, xpToday, XP } from '../lib/storage';
+import { completeLesson, getProgress, openLesson, recordAnswer, saveSheet, streak, useProgress, xpToday, XP, type SheetDraft } from '../lib/storage';
+import { dueSheet, emptyDraft, finishShorter, lessonSheetKey, startLessonSheet } from '../lib/thinking';
+import { AgainPhase, ShorterPhase, WrongPhase } from './paper/Ritual';
 import { isQuestion, type Course, type ExampleStep, type Lesson } from '../types';
 import { PlayerHeader } from './Layout';
 import { Markdown } from './Markdown';
@@ -12,34 +14,45 @@ import { accentStyle, Ring, useBodyAccent } from './ui';
 import { CourseIcon } from './CourseIcon';
 import { Icon } from './icons';
 
+type Phase = 'again' | 'wrong' | 'steps' | 'shorter' | 'done';
+
 export function LessonPlayer({ course, lesson }: { course: Course; lesson: Lesson }) {
+  const sheetKey = lessonSheetKey(course.id, lesson.id);
+  // Every lesson is a thinking session: redo an earlier sheet if one is due, guess first, squeeze at the end.
+  const [againSheet] = useState(() => dueSheet(getProgress().sheets ?? {}, Date.now(), sheetKey));
+  const [phase, setPhase] = useState<Phase>(againSheet ? 'again' : 'wrong');
   const [index, setIndex] = useState(0);
   const [score, setScore] = useState({ right: 0, total: 0 });
   const [xp, setXp] = useState(0);
+  const [firstGuesses, setFirstGuesses] = useState<SheetDraft | undefined>();
   const steps = lesson.steps;
-  const done = index >= steps.length;
   const courseHref = href('course', course.id);
   useBodyAccent(course.color);
 
   useEffect(() => openLesson(course.id, lesson.id), [course.id, lesson.id]);
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, [index]);
+  }, [index, phase]);
 
   const next = () => {
-    if (index + 1 === steps.length) setXp((x) => x + completeLesson(lessonKey(course.id, lesson.id)));
-    setIndex(index + 1);
+    if (index + 1 === steps.length) setPhase('shorter');
+    else setIndex(index + 1);
   };
 
-  if (done) return <LessonComplete course={course} lesson={lesson} score={score} xp={xp} />;
+  if (phase === 'done') return <LessonComplete course={course} lesson={lesson} score={score} xp={xp} />;
 
+  // Progress bar: [again] + wrong + steps + shorter.
+  const lead = againSheet ? 2 : 1;
+  const total = steps.length + lead + 1;
+  const done = phase === 'again' ? 0 : phase === 'wrong' ? lead - 1 : phase === 'steps' ? lead + index : total - 1;
   const step = steps[index];
+
   return (
     <div className="player" style={accentStyle(course.color)}>
       <PlayerHeader
         exitHref={courseHref}
-        done={index}
-        total={steps.length}
+        done={done}
+        total={total}
         right={
           <span className="xp-pill" aria-label={`${xp} XP earned this lesson`}>
             <Icon name="star" size={15} className="star" /> {xp}
@@ -51,7 +64,47 @@ export function LessonPlayer({ course, lesson }: { course: Course; lesson: Lesso
           <CourseIcon icon={course.icon} color={course.color} size={20} /> {unitOf(course, lesson).title} · <strong>{lesson.title}</strong>
         </div>
 
-        {step.type === 'explain' && (
+        {phase === 'again' && againSheet && (
+          <AgainPhase
+            sheet={againSheet}
+            onDone={(gained) => {
+              setXp((x) => x + gained);
+              setPhase('wrong');
+            }}
+          />
+        )}
+
+        {phase === 'wrong' && (
+          <WrongPhase
+            topic={lesson.title}
+            onDone={(draft) => {
+              setFirstGuesses(draft);
+              const prev = getProgress().sheets?.[sheetKey];
+              setXp((x) => x + saveSheet(startLessonSheet(prev, course.id, lesson.id, lesson.title, draft)));
+              setPhase('steps');
+            }}
+          />
+        )}
+
+        {phase === 'shorter' && (
+          <ShorterPhase
+            heading={`Squeeze “${lesson.title}” into anchors`}
+            intro="Two or three anchors, four words at most each: the cues that will bring this lesson back to you. Fragments beat full sentences."
+            concepts={course.concepts ?? []}
+            lessonId={lesson.id}
+            firstGuesses={firstGuesses}
+            doneLabel="Finish the lesson"
+            onDone={(anchors) => {
+              const sheet = getProgress().sheets?.[sheetKey];
+              const base = sheet ?? startLessonSheet(undefined, course.id, lesson.id, lesson.title, firstGuesses ?? emptyDraft());
+              const gained = saveSheet(finishShorter(base, anchors));
+              setXp((x) => x + gained + completeLesson(lessonKey(course.id, lesson.id)));
+              setPhase('done');
+            }}
+          />
+        )}
+
+        {phase === 'steps' && step.type === 'explain' && (
           <>
             <article className="step-card" key={index}>
               {step.title && <h2>{step.title}</h2>}
@@ -68,11 +121,11 @@ export function LessonPlayer({ course, lesson }: { course: Course; lesson: Lesso
           </>
         )}
 
-        {step.type === 'example' && <ExampleView key={index} step={step} onContinue={next} />}
+        {phase === 'steps' && step.type === 'example' && <ExampleView key={index} step={step} onContinue={next} />}
 
-        {step.type === 'sim' && <SimStepView key={index} step={step} onContinue={next} />}
+        {phase === 'steps' && step.type === 'sim' && <SimStepView key={index} step={step} onContinue={next} />}
 
-        {isQuestion(step) && (
+        {phase === 'steps' && isQuestion(step) && (
           <article className="step-card" key={index}>
             <QuestionView
               step={step}
@@ -91,11 +144,18 @@ export function LessonPlayer({ course, lesson }: { course: Course; lesson: Lesso
   );
 }
 
+/**
+ * A worked example the learner has to attempt: they write their own answer first, then reveal the
+ * solution one step at a time, and finally compare their answer with the worked one.
+ */
 function ExampleView({ step, onContinue }: { step: ExampleStep; onContinue: () => void }) {
+  const [attempt, setAttempt] = useState('');
+  const [locked, setLocked] = useState(false);
   const [shown, setShown] = useState(0);
   const total = step.steps.length + (step.answer ? 1 : 0);
   const all = shown >= total;
   const label = shown === 0 ? 'Show first step' : shown < step.steps.length ? 'Next step' : 'Show answer';
+  const lock = () => attempt.trim() && setLocked(true);
 
   return (
     <>
@@ -103,9 +163,33 @@ function ExampleView({ step, onContinue }: { step: ExampleStep; onContinue: () =
         <span className="eyebrow">Worked example</span>
         {step.title && <h2>{step.title}</h2>}
         <Markdown text={step.problem} />
-        {shown === 0 && <p className="try-first">
-            <Icon name="pencil" size={16} /> Try it yourself first, then reveal the solution one step at a time.
-          </p>}
+        {!locked ? (
+          <div className="attempt">
+            <label htmlFor="example-attempt" className="attempt-label">
+              <Icon name="pencil" size={16} /> Your answer first. A rough guess counts; the steps unlock after you commit to one.
+            </label>
+            <textarea
+              id="example-attempt"
+              rows={2}
+              value={attempt}
+              maxLength={300}
+              placeholder="Work it out and write your answer"
+              autoFocus
+              onChange={(e) => setAttempt(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                  e.preventDefault();
+                  lock();
+                }
+              }}
+            />
+          </div>
+        ) : (
+          <p className="attempt-locked">
+            <span className="eyebrow">Your answer</span>
+            {attempt.trim()}
+          </p>
+        )}
         {shown > 0 && (
           <ol className="solution">
             {step.steps.slice(0, shown).map((s, i) => (
@@ -120,29 +204,35 @@ function ExampleView({ step, onContinue }: { step: ExampleStep; onContinue: () =
             <Markdown text={step.answer} />
           </div>
         )}
+        {all && <p className="small muted">Compare it with your answer above. Where did your reasoning go a different way?</p>}
       </article>
       <BottomBar>
         <div className="bb-status">
-          {!all && (
+          {locked && !all && (
             <span className="muted small">
               Step {shown} of {step.steps.length}
             </span>
           )}
+          {!locked && <span className="muted small">{attempt.trim() ? 'Ready when you are.' : 'Write your answer to unlock the steps.'}</span>}
         </div>
         <div className="bb-actions">
-          {!all ? (
+          {!locked ? (
+            <button className="btn primary big" disabled={!attempt.trim()} onClick={lock}>
+              Lock in my answer
+            </button>
+          ) : !all ? (
+            <button className="btn primary big" onClick={() => setShown(shown + 1)} autoFocus>
+              {label}
+            </button>
+          ) : (
             <>
-              <button className="btn ghost" onClick={onContinue}>
-                Skip
+              <button className="btn big" onClick={onContinue}>
+                Not quite
               </button>
-              <button className="btn primary big" onClick={() => setShown(shown + 1)} autoFocus>
-                {label}
+              <button className="btn primary big" onClick={onContinue} autoFocus>
+                I had it
               </button>
             </>
-          ) : (
-            <button className="btn primary big" onClick={onContinue} autoFocus>
-              Continue
-            </button>
           )}
         </div>
       </BottomBar>

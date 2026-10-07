@@ -39,6 +39,64 @@ export interface KnowledgeMap {
   updatedAt: number;
 }
 
+/** A keyword on a thinking sheet. Positions are in sheet units (SHEET_W × SHEET_H). */
+export interface SheetChip {
+  id: string;
+  text: string;
+  x: number;
+  y: number;
+  /** Index of the pile (column) it sits in; undefined while still in the tray. */
+  pile?: number;
+  /** Set in "Make it again" when an old keyword turned out wrong and was corrected. */
+  fixedFrom?: string;
+}
+
+/** One pen stroke, as flat [x0, y0, x1, y1, ...] in sheet units (simplified, rounded). */
+export interface SheetStroke {
+  points: number[];
+}
+
+/** What is on the paper at one moment: keywords, piles and ink. */
+export interface SheetDraft {
+  chips: SheetChip[];
+  strokes: SheetStroke[];
+  /** Pile names, one per column. */
+  piles: string[];
+  at: number;
+}
+
+/** A redo from memory ("Make it again"). */
+export interface SheetAgain {
+  at: number;
+  /** Keywords written from a blank page, before seeing the old sheet. */
+  recalled: string[];
+  /** Old keywords and anchors remembered, out of how many. */
+  remembered: number;
+  total: number;
+  /** Old keywords the learner corrected. */
+  fixed: number;
+}
+
+/**
+ * Thinking on paper for one lesson (key "course/lesson") or one review/practice/quiz session
+ * (key "session/<kind>/<time>"). Make it wrong → `wrong`, make it shorter → `anchors`,
+ * make it again → `again` (the latest clean redo replaces `clean`).
+ */
+export interface Sheet {
+  key: string;
+  course?: string;
+  lesson?: string;
+  title: string;
+  wrong?: SheetDraft;
+  anchors?: string[];
+  clean?: SheetDraft;
+  again: SheetAgain[];
+  /** When the next "make it again" is due; undefined for session sheets (they are not redone). */
+  due?: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
 export interface Progress {
   completed: Record<string, number>;
   cards: Record<string, Card>;
@@ -53,6 +111,10 @@ export interface Progress {
   dailyGoal: number;
   /** Knowledge maps by course id. */
   maps: Record<string, KnowledgeMap>;
+  /** Thinking sheets by key ("course/lesson" or "session/<kind>/<time>"). */
+  sheets: Record<string, Sheet>;
+  /** Local dates on which a thinking phase was completed (the thinking streak). */
+  thinkDays: string[];
   /** Bumped on every change; used to resolve sync conflicts. */
   updatedAt: number;
 }
@@ -76,6 +138,8 @@ export const emptyProgress = (): Progress => ({
   last: null,
   dailyGoal: 50,
   maps: {},
+  sheets: {},
+  thinkDays: [],
   updatedAt: 0,
 });
 
@@ -111,6 +175,23 @@ function write(next: Progress, fromUser: boolean) {
 
 const set = (next: Progress) => write({ ...next, updatedAt: Date.now() }, true);
 
+/**
+ * Another tab saved progress. Each tab keeps progress in memory and saves it on every change, so without this
+ * two open tabs overwrite each other's work. Merge the other tab's save into memory; it is persisted on this
+ * tab's next change (writing it back now could ping-pong between tabs).
+ */
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (e.key !== KEY || !e.newValue) return;
+    try {
+      state = mergeProgress(state, { ...emptyProgress(), ...JSON.parse(e.newValue) });
+      listeners.forEach((l) => l());
+    } catch {
+      /* unreadable save from another tab: keep ours */
+    }
+  });
+}
+
 const subscribe = (cb: () => void) => {
   listeners.add(cb);
   return () => {
@@ -144,7 +225,7 @@ function gain(p: Progress, xp: number): Progress {
   };
 }
 
-export const XP = { correct: 5, attempt: 1, lessonFirst: 20, lessonRepeat: 5, quizPerfect: 15 };
+export const XP = { correct: 5, attempt: 1, lessonFirst: 20, lessonRepeat: 5, quizPerfect: 15, think: 5 };
 
 export function recordAnswer(key: string, correct: boolean) {
   const prev = state.cards[key];
@@ -165,6 +246,35 @@ export function completeLesson(key: string): number {
   const xp = state.completed[key] ? XP.lessonRepeat : XP.lessonFirst;
   set(gain({ ...state, completed: { ...state.completed, [key]: Date.now() } }, xp));
   return xp;
+}
+
+/**
+ * Saves a thinking sheet after a completed phase, awards XP.think and marks today as a thinking day.
+ * Returns the XP awarded.
+ */
+export function saveSheet(sheet: Sheet): number {
+  const d = dayString();
+  const now = Date.now();
+  const sheets = { ...state.sheets, [sheet.key]: { ...sheet, updatedAt: now } };
+  set({
+    ...gain({ ...state, sheets: pruneSessionSheets(sheets) }, XP.think),
+    thinkDays: state.thinkDays.includes(d) ? state.thinkDays : [...state.thinkDays, d].slice(-400),
+  });
+  return XP.think;
+}
+
+/** Session sheets (review, practice, quiz) pile up fast; keep the newest MAX_SESSION_SHEETS. Lesson sheets are kept. */
+export const MAX_SESSION_SHEETS = 60;
+function pruneSessionSheets(sheets: Record<string, Sheet>): Record<string, Sheet> {
+  const sessions = Object.values(sheets).filter((x) => x.key.startsWith('session/'));
+  if (sessions.length <= MAX_SESSION_SHEETS) return sheets;
+  const drop = new Set(
+    sessions
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .slice(MAX_SESSION_SHEETS)
+      .map((x) => x.key),
+  );
+  return Object.fromEntries(Object.entries(sheets).filter(([k]) => !drop.has(k)));
 }
 
 /** Saves a course's knowledge map and returns the `updatedAt` it was stamped with. */
@@ -199,8 +309,8 @@ export function clearLocal() {
 
 // ---------- derived ----------
 
-function runs(p: Progress) {
-  const days = new Set(p.days);
+function runs(dayList: string[]) {
+  const days = new Set(dayList);
   const step = (d: Date) => d.setDate(d.getDate() - 1);
   const d = new Date();
   if (!days.has(dayString(d))) step(d);
@@ -222,8 +332,10 @@ function runs(p: Progress) {
   return { current, best };
 }
 
-export const streak = (p: Progress) => runs(p).current;
-export const bestStreak = (p: Progress) => runs(p).best;
+export const streak = (p: Progress) => runs(p.days).current;
+export const bestStreak = (p: Progress) => runs(p.days).best;
+/** Consecutive days with at least one thinking phase (make it wrong / shorter / again). */
+export const thinkingStreak = (p: Progress) => runs(p.thinkDays ?? []).current;
 export const xpToday = (p: Progress) => p.xpByDay[dayString()] ?? 0;
 
 export function dueKeys(p: Progress, now = Date.now()): string[] {
@@ -264,6 +376,8 @@ export function mergeProgress(a: Progress, b: Progress): Progress {
 
   const maps = { ...(a.maps ?? {}) };
   for (const [k, m] of Object.entries(b.maps ?? {})) if (!maps[k] || m.updatedAt > maps[k].updatedAt) maps[k] = m;
+  const sheets = { ...(a.sheets ?? {}) };
+  for (const [k, x] of Object.entries(b.sheets ?? {})) if (!sheets[k] || x.updatedAt > sheets[k].updatedAt) sheets[k] = x;
 
   const newer = a.updatedAt >= b.updatedAt ? a : b;
   return {
@@ -276,6 +390,8 @@ export function mergeProgress(a: Progress, b: Progress): Progress {
     last: (a.last?.at ?? 0) >= (b.last?.at ?? 0) ? a.last : b.last,
     dailyGoal: newer.dailyGoal,
     maps,
+    sheets,
+    thinkDays: [...new Set([...(a.thinkDays ?? []), ...(b.thinkDays ?? [])])].sort().slice(-400),
     updatedAt: Math.max(a.updatedAt, b.updatedAt),
   };
 }

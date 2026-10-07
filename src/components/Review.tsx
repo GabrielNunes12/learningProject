@@ -155,6 +155,7 @@ export function ReviewSession({ mode, courseId }: { mode: 'start' | 'weak'; cour
 
   return (
     <Session
+      ritual={{ kind: 'review', title: course ? `Review: ${course.title}` : 'Review', course: course?.id }}
       questions={questions}
       exitHref="#/review"
       renderEnd={(results, xp) => {
