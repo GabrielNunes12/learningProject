@@ -25,7 +25,7 @@ Open http://localhost:5173. This starts two processes: the website (Vite, port 5
 The site is static files (`dist/`) and the API runs as one serverless function (`api/index.ts` wraps the Express app in `server/app.ts`). `vercel.json` holds the build settings and sends `/api/*` to the function. Accounts and synced progress live in Postgres (Neon); the tables are created on the first request.
 
 1. **Import the repo:** vercel.com → Add New → Project → pick this GitHub repo. The settings come from `vercel.json`; leave them as they are.
-2. **Database:** in the project, Storage → Create Database → Neon → connect it to the project for all environments. This sets `DATABASE_URL`.
+2. **Database:** in the project, Storage → Create Database → Neon (turn off Neon "Auth"; the app has its own accounts) → connect it to the project with **Custom Prefix `DATABASE`**, so the variable is `DATABASE_URL`. The app also accepts `POSTGRES_URL`; any other prefix won't be found.
 3. **Environment variables** (Settings → Environment Variables, Production):
    - `APP_URL` = `https://learning.mentor-hub.space` (used in email links; makes the session cookie `Secure`).
    - `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM`: required for sign-up, since new accounts must confirm their email. Without them, emails are only written to the function logs.
