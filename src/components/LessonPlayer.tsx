@@ -13,6 +13,8 @@ import { SimStepView } from './sims/SimStepView';
 import { accentStyle, Ring, useBodyAccent } from './ui';
 import { CourseIcon } from './CourseIcon';
 import { Icon } from './icons';
+import { useStudyTimer } from './useStudyTimer';
+import { hasEarned } from '../lib/certificate';
 
 type Phase = 'again' | 'wrong' | 'steps' | 'shorter' | 'done';
 

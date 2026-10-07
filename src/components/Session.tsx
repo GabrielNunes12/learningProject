@@ -8,6 +8,7 @@ import { PlayerHeader, PlayerLoading } from './Layout';
 import { QuestionView } from './QuestionView';
 import { accentStyle, useBodyAccent } from './ui';
 import { CourseIcon } from './CourseIcon';
+import { useStudyTimer } from './useStudyTimer';
 
 export interface SessionResult {
   ref: QuestionRef;
