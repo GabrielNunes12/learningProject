@@ -35,6 +35,7 @@ function LessonRun({ course, lesson, steps }: { course: Course; lesson: LessonIn
   const [firstGuesses, setFirstGuesses] = useState<SheetDraft | undefined>();
   const courseHref = href('course', course.id);
   useBodyAccent(course.color);
+  useStudyTimer(course.id);
 
   useEffect(() => openLesson(course.id, lesson.id), [course.id, lesson.id]);
   useEffect(() => {
@@ -296,6 +297,17 @@ function LessonComplete({ course, lesson, score, xp }: { course: Course; lesson:
             </span>
           </div>
         </div>
+
+        {hasEarned(course, p) && (
+          <a className="cert-callout" href={href('course', course.id, 'certificate')}>
+            <Icon name="medal" size={28} />
+            <span>
+              <strong>You finished {course.title}!</strong>
+              <span>Get your certificate: download it as a PDF and share it on LinkedIn, X or Facebook.</span>
+            </span>
+            <span aria-hidden>→</span>
+          </a>
+        )}
 
         <div className="takeaway">
           <span className="eyebrow">Key takeaway</span>

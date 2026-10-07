@@ -32,7 +32,8 @@ export default defineConfig({
   // The main chunk carries only the course catalog; each course's lessons are a chunk of their own.
   build: { chunkSizeWarningLimit: 1500 },
   server: {
-    proxy: { '/api': 'http://localhost:3001' },
+    // /c/<id> is the shareable certificate link, served by the API (a card for social networks).
+    proxy: { '/api': 'http://localhost:3001', '^/c/[^/]+$': 'http://localhost:3001' },
     // The local Postgres (data/pg) writes constantly; Vercel's build output isn't source either.
     watch: { ignored: ['**/data/**', '**/.vercel/**'] },
   },

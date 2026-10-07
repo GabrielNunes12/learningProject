@@ -46,6 +46,8 @@ function SessionRun({ ritual, questions, exitHref, onFinish, renderEnd }: Props)
   const [results, setResults] = useState<SessionResult[]>([]);
   const [thinkXp, setThinkXp] = useState(0);
   useBodyAccent(questions[Math.min(idx, questions.length - 1)]?.course.color);
+  // Study time goes to the course of the question on screen (a mixed session moves between courses).
+  useStudyTimer((phase === 'again' && againSheet?.course) || questions[Math.min(idx, questions.length - 1)]?.course.id);
   const xp = results.reduce((s, r) => s + (r.ok ? XP.correct : XP.attempt), 0) + thinkXp;
   const lead = againSheet ? 1 : 0;
   const total = questions.length + lead + 1;

@@ -9,6 +9,7 @@ import { Page } from './Layout';
 import { InlineMarkdown } from './Markdown';
 import { accentStyle, plural, ProgressBar, Ring } from './ui';
 import { CourseIcon } from './CourseIcon';
+import { CertificatePanel } from './Certificate';
 
 const FAST_KEY = 'projectlearn:fasttrack';
 const VIEW_KEY = 'projectlearn:pathview';
@@ -187,6 +188,8 @@ export function CoursePage({ course }: { course: Course }) {
               <ProgressBar value={s.mastery} thin label="Mastery" />
               <p className="small muted">Mastered = remembered across several spaced reviews.</p>
             </div>
+
+            <CertificatePanel course={course} />
 
             <div className="panel key-ideas">
               <h2>The 20% that matters</h2>
