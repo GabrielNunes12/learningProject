@@ -1,4 +1,5 @@
-import { courses, getCourse, unitOf } from '../content';
+import { useEffect } from 'react';
+import { courses, getCourse, preloadCourses, unitOf } from '../content';
 import { useAuth } from '../lib/auth';
 import { href } from '../lib/router';
 import { courseStats } from '../lib/stats';
@@ -36,6 +37,10 @@ function ContinueCard({ p }: { p: Progress }) {
   // The course you touched last; otherwise the first course you started; otherwise the first course.
   const lastCourse = p.last ? getCourse(p.last.course) : undefined;
   const course = lastCourse ?? courses.find((c) => courseStats(c, p).started) ?? courses[0];
+  // The Continue button opens a lesson: fetch its course ahead of the click.
+  useEffect(() => {
+    if (course) preloadCourses([course.id]);
+  }, [course]);
   if (!course) return null;
   const s = courseStats(course, p);
   const lesson = s.next;

@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { href } from '../lib/router';
 import { courseStats } from '../lib/stats';
 import { useProgress } from '../lib/storage';
-import type { Course, Lesson } from '../types';
+import { preloadCourses } from '../content';
+import type { Course, LessonInfo } from '../types';
 import { CoursePath } from './CoursePath';
 import { Page } from './Layout';
 import { InlineMarkdown } from './Markdown';
@@ -52,10 +53,12 @@ export function CoursePage({ course }: { course: Course }) {
   useEffect(() => {
     loadedFor.current = course.id;
   }, [course.id]);
+  // Fetch the lessons while the learner picks one.
+  useEffect(() => preloadCourses([course.id]), [course.id]);
   const quizBest = p.quizBest[course.id];
   let n = 0;
 
-  const row = (l: Lesson) => {
+  const row = (l: LessonInfo) => {
     n++;
     const done = s.done(l);
     const isNext = s.next?.id === l.id;
@@ -68,7 +71,7 @@ export function CoursePage({ course }: { course: Course }) {
           <span className="lesson-text">
             <strong>{l.title}</strong>
             <small>
-              {l.minutes ?? 5} min · {plural(l.steps.length, 'step')}
+              {l.minutes ?? 5} min · {plural(l.stepCount, 'step')}
               {done && ' · completed'}
             </small>
           </span>

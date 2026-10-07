@@ -2,7 +2,7 @@ import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useSta
 import { layoutPath, pathThrough, placePopover } from '../lib/pathLayout';
 import { href } from '../lib/router';
 import type { courseStats } from '../lib/stats';
-import type { Course, Lesson } from '../types';
+import type { Course, LessonInfo } from '../types';
 import { plural } from './ui';
 import './CoursePath.css';
 
@@ -16,7 +16,7 @@ const POP_WIDTH = 272;
 const POP_HEIGHT = 190;
 
 interface Entry {
-  lesson: Lesson;
+  lesson: LessonInfo;
   /** Global index in the displayed order. */
   index: number;
   done: boolean;
@@ -214,7 +214,7 @@ export function CoursePath({
             </div>
             <h3>{lesson.title}</h3>
             <p className="small muted">
-              {lesson.minutes ?? 5} min · {plural(lesson.steps.length, 'step')}
+              {lesson.minutes ?? 5} min · {plural(lesson.stepCount, 'step')}
             </p>
             <a className="btn primary full" href={href('course', course.id, 'lesson', lesson.id)}>
               {done ? 'Review' : next && s.started ? 'Continue' : 'Start'}

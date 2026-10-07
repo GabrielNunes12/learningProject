@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 import { analyzeCourse, buildReport, hasEnoughForReport, isStarted, list, missText, rolling, type CardLike, type ProgressLike } from '../src/lib/insights.ts';
+import { toCatalog, withLessons } from '../src/content/catalog.ts';
 import type { Course, Lesson } from '../src/types.ts';
 
 const NOW = Date.UTC(2026, 9, 6, 12);
@@ -21,15 +22,15 @@ const bug = (id: string, concepts?: string[]) => ({
 });
 const lesson = (id: string, steps: Lesson['steps'], pareto: 'core' | 'extra' = 'core'): Lesson => ({ id, title: `Lesson ${id}`, pareto, takeaway: 'T.', steps });
 
+/** A course as the app holds it: written like a course file, then turned into its catalog entry. */
 function makeCourse(id: string, lessons: Lesson[], graph = true): Course {
-  return {
+  return withLessons(toCatalog({
     id,
     title: `Course ${id}`,
     icon: 'C',
     description: 'D.',
     keyIdeas: ['I.'],
     units: [{ id: 'u1', title: 'Unit one', lessons }],
-    lessons,
     ...(graph
       ? {
           concepts: [
@@ -41,14 +42,15 @@ function makeCourse(id: string, lessons: Lesson[], graph = true): Course {
           links: [],
         }
       : {}),
-  };
+  }));
 }
 
-const logic = makeCourse('logic', [
+const logicLessons = [
   lesson('l1', [mcq('q1', ['contra']), mcq('q2', ['contra', 'conv']), bug('q3', ['conv'])]),
   lesson('l2', [bug('q4', ['loops']), mcq('q5', ['loops'])]),
   lesson('l3', [mcq('q6')]),
-]);
+];
+const logic = makeCourse('logic', logicLessons);
 
 /** A card from a hist string, answered `daysAgo` days ago. */
 function card(hist: string, daysAgo = 1, box?: number, dueInDays = 1): CardLike {
@@ -134,7 +136,7 @@ describe('per-concept stats', () => {
   });
 
   test('falls back to lessons for a course without a concept graph', () => {
-    const plain = makeCourse('plain', logic.lessons.map((l) => ({ ...l, steps: l.steps })), false);
+    const plain = makeCourse('plain', logicLessons, false);
     const r = analyzeCourse(plain, progress({ 'plain/l2/q4': card('0101', 1) }), NOW);
     assert.equal(r.hasGraph, false);
     assert.deepEqual(r.items.map((i) => i.id), ['l1', 'l2', 'l3']);

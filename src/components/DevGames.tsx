@@ -1,5 +1,6 @@
 // Development-only page (#/dev/games): open any mini-game or simulator step directly, in learn or test mode.
-import { courses } from '../content';
+import { useMemo } from 'react';
+import { courses, lessonSteps, useCourseContent } from '../content';
 import { href } from '../lib/router';
 import { isQuestion, type Step } from '../types';
 import { Page } from './Layout';
@@ -9,17 +10,38 @@ import { accentStyle } from './ui';
 
 const VISUAL = new Set(['order', 'buckets', 'trace', 'sim', 'truthtable', 'logicgrid', 'balance']);
 
-const entries = courses.flatMap((course) =>
-  course.lessons.flatMap((lesson) =>
-    lesson.steps
-      .map((step, i) => ({ course, lesson, step, i }))
-      .filter((e) => VISUAL.has(e.step.type)),
-  ),
-);
+const visualSteps = () =>
+  courses.flatMap((course) =>
+    course.lessons.flatMap((lesson) =>
+      (lessonSteps(course.id, lesson.id) ?? [])
+        .map((step, i) => ({ course, lesson, step, i }))
+        .filter((e) => VISUAL.has(e.step.type)),
+    ),
+  );
 
 const label = (s: Step) => (s.type === 'sim' ? `sim: ${s.sim}` : s.type);
 
-export function DevGames({ index, mode }: { index?: string; mode?: string }) {
+export function DevGames(props: { index?: string; mode?: string }) {
+  const status = useCourseContent(courses.map((c) => c.id));
+  if (status !== 'ready') {
+    return (
+      <Page>
+        <h1>Mini-games & simulators</h1>
+        {status === 'error' ? (
+          <button type="button" className="btn" onClick={() => window.location.reload()}>
+            Loading failed. Try again
+          </button>
+        ) : (
+          <p className="muted">Loading every course…</p>
+        )}
+      </Page>
+    );
+  }
+  return <DevGameList {...props} />;
+}
+
+function DevGameList({ index, mode }: { index?: string; mode?: string }) {
+  const entries = useMemo(visualSteps, []);
   const n = index === undefined ? -1 : Number(index);
   const entry = entries[n];
   const testMode = mode === 'test';

@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { lessonKey, questionKey, unitOf } from '../content';
+import { lessonKey, lessonSteps, questionKey, unitOf, useCourseContent } from '../content';
 import { useAuth } from '../lib/auth';
 import { href } from '../lib/router';
 import { completeLesson, openLesson, recordAnswer, streak, useProgress, xpToday, XP } from '../lib/storage';
-import { isQuestion, type Course, type ExampleStep, type Lesson } from '../types';
-import { PlayerHeader } from './Layout';
+import { isQuestion, type Course, type ExampleStep, type LessonInfo, type Step } from '../types';
+import { PlayerHeader, PlayerLoading } from './Layout';
 import { Markdown } from './Markdown';
 import { BottomBar, QuestionView } from './QuestionView';
 import { SimStepView } from './sims/SimStepView';
@@ -12,11 +12,18 @@ import { accentStyle, Ring, useBodyAccent } from './ui';
 import { CourseIcon } from './CourseIcon';
 import { Icon } from './icons';
 
-export function LessonPlayer({ course, lesson }: { course: Course; lesson: Lesson }) {
+export function LessonPlayer({ course, lesson }: { course: Course; lesson: LessonInfo }) {
+  const status = useCourseContent([course.id]);
+  const steps = lessonSteps(course.id, lesson.id);
+  if (status !== 'ready' || !steps)
+    return <PlayerLoading exitHref={href('course', course.id)} total={lesson.stepCount} color={course.color} failed={status === 'error'} />;
+  return <LessonRun course={course} lesson={lesson} steps={steps} />;
+}
+
+function LessonRun({ course, lesson, steps }: { course: Course; lesson: LessonInfo; steps: Step[] }) {
   const [index, setIndex] = useState(0);
   const [score, setScore] = useState({ right: 0, total: 0 });
   const [xp, setXp] = useState(0);
-  const steps = lesson.steps;
   const done = index >= steps.length;
   const courseHref = href('course', course.id);
   useBodyAccent(course.color);
@@ -150,7 +157,7 @@ function ExampleView({ step, onContinue }: { step: ExampleStep; onContinue: () =
   );
 }
 
-function LessonComplete({ course, lesson, score, xp }: { course: Course; lesson: Lesson; score: { right: number; total: number }; xp: number }) {
+function LessonComplete({ course, lesson, score, xp }: { course: Course; lesson: LessonInfo; score: { right: number; total: number }; xp: number }) {
   const p = useProgress();
   const { user } = useAuth();
   const pos = course.lessons.findIndex((l) => l.id === lesson.id);

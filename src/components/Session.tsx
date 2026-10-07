@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
-import type { QuestionRef } from '../content';
+import { questionStep, useCourseContent, type QuestionRef } from '../content';
 import { recordAnswer, XP } from '../lib/storage';
-import { PlayerHeader } from './Layout';
+import { PlayerHeader, PlayerLoading } from './Layout';
 import { QuestionView } from './QuestionView';
 import { accentStyle, useBodyAccent } from './ui';
 import { CourseIcon } from './CourseIcon';
@@ -19,7 +19,15 @@ interface Props {
 }
 
 /** Runs a list of questions one at a time in test mode (quiz and review share this). */
-export function Session({ questions, exitHref, onFinish, renderEnd }: Props) {
+export function Session(props: Props) {
+  // Questions arrive as catalog refs; their steps load with their courses.
+  const status = useCourseContent(props.questions.map((q) => q.course.id));
+  if (status !== 'ready')
+    return <PlayerLoading exitHref={props.exitHref} total={props.questions.length} color={props.questions[0]?.course.color} failed={status === 'error'} />;
+  return <SessionRun {...props} />;
+}
+
+function SessionRun({ questions, exitHref, onFinish, renderEnd }: Props) {
   const [idx, setIdx] = useState(0);
   const [results, setResults] = useState<SessionResult[]>([]);
   useBodyAccent(questions[Math.min(idx, questions.length - 1)]?.course.color);
@@ -51,7 +59,7 @@ export function Session({ questions, exitHref, onFinish, renderEnd }: Props) {
       <main className="player-body">
         <article className="step-card" key={idx}>
           <QuestionView
-            step={q.step}
+            step={questionStep(q.key)!}
             mode="test"
             shuffle
             context={
