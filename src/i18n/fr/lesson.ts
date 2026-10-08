@@ -73,6 +73,12 @@ export default {
   'lesson.frame.heresAnswer': 'Voici la réponse',
   'lesson.frame.readWhy': "Lis l'explication : cette question reviendra dans tes révisions.",
   'lesson.frame.showAnswer': 'Voir la réponse',
+  'lesson.frame.guessing': 'Je devine',
+  'lesson.frame.guessingTip': 'Pas sûr ? Coche-le. Une bonne réponse au hasard ne compte pas comme un acquis, alors la question revient plus tôt.',
+  'lesson.frame.guessedRight': 'Juste, mais au hasard',
+  'lesson.frame.guessedRightNote': "Bien vu d'être honnête. Elle revient demain pour que tu l'apprennes vraiment.",
+  'lesson.frame.honestMiss': 'Bien vu : pas de hasard',
+  'lesson.frame.dontKnow': 'Je ne sais pas',
   'lesson.frame.correctAnswer': '<b>Bonne réponse :</b> {answer}',
 
   // ---------- correct-answer texts ----------
@@ -88,6 +94,7 @@ export default {
   'lesson.session.shorterHeading': 'Résume cette séance en ancres',
   'lesson.session.shorterIntro': "Qu'est-ce que tu retiendras, ou feras autrement la prochaine fois ? Deux ou trois ancres, quatre mots maximum chacune.",
   'lesson.session.seeResults': 'Voir les résultats',
+  'lesson.session.harder': 'Plus difficile : tu connais déjà la plus facile',
   'lesson.loadFailed.title': 'Impossible de charger cette leçon',
   'lesson.loadFailed.body': 'Vérifie ta connexion et réessaie.',
 } satisfies Translation<typeof en>;

@@ -168,7 +168,8 @@ export function cardStrength(c: Card): number {
   return 0.6 * acc + 0.4 * box;
 }
 
-const lastMissed = (c: Card | undefined) => Boolean(c?.hist && c.hist.endsWith('0'));
+/** The latest answer was wrong, or right but guessed (a guess isn't knowing it). */
+const lastMissed = (c: Card | undefined) => Boolean(c?.hist && /[0g]$/.test(c.hist));
 
 /** The topics a question belongs to: its concept tags, or its lesson when its course has no usable tags. */
 export function topicsOf(q: PracticeQuestion): string[] {

@@ -238,6 +238,7 @@ export default {
   'insights.spark.empty': 'sin historial',
   'insights.spark.right': 'acierto',
   'insights.spark.wrong': 'fallo',
+  'insights.spark.guessed': 'adivinada',
   'insights.spark.label': {
     one: 'Última {count} respuesta, de la más antigua a la más reciente: {results}',
     other: 'Últimas {count} respuestas, de la más antigua a la más reciente: {results}',

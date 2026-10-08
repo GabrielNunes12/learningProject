@@ -94,6 +94,15 @@ export default {
   'lesson.frame.readWhy': "Read why, and it'll come back in your reviews.",
   // Button.
   'lesson.frame.showAnswer': 'Show answer',
+
+  // Honest confidence. A toggle before the first attempt, and the bottom-bar messages for a right guess and for "I don't know" (quizzes and reviews).
+  'lesson.frame.guessing': "I'm guessing",
+  'lesson.frame.guessingTip': "Not sure? Mark it. A lucky right answer won't count as knowing it, so the question comes back sooner.",
+  'lesson.frame.guessedRight': 'Right, but a guess',
+  'lesson.frame.guessedRightNote': 'Honest call. It comes back tomorrow so you can learn it for real.',
+  'lesson.frame.honestMiss': 'Good call: no guessing',
+  'lesson.frame.dontKnow': "I don't know",
+
   // {answer} is the correct answer; <b>…</b> is bold.
   'lesson.frame.correctAnswer': '<b>Correct answer:</b> {answer}',
 
@@ -115,6 +124,9 @@ export default {
   'lesson.session.shorterIntro': 'What will you remember, or do differently next time? Two or three anchors, four words at most each.',
   // Button.
   'lesson.session.seeResults': 'See results',
+
+  // Chip on a review question asked in place of an easier one the learner already knows.
+  'lesson.session.harder': 'Harder: you know the easier one',
 
   // ---------- loading a course's lessons (each course downloads on demand) ----------
   // Shown in the player when the download failed (offline, or an old page after a deploy). The button is common.retry.

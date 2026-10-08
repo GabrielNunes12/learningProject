@@ -73,7 +73,7 @@ export interface ItemStats {
   right: number;
   /** All-time accuracy, or null with no attempts. */
   accuracy: number | null;
-  /** Latest answers across its questions, oldest first ("1" right, "0" wrong). Order across questions is by each question's last answer. */
+  /** Latest answers across its questions, oldest first ("1" right, "g" right but guessed, "0" wrong). Order across questions is by each question's last answer. */
   recent: string;
   /** Accuracy over the last RECENT answers (falls back to all-time when cards predate `hist`). */
   recentAccuracy: number | null;
@@ -196,7 +196,7 @@ const qKey = (course: string, lesson: string, id: string) => `${course}/${lesson
 
 export const pct = (x: number | null) => (x === null ? '–' : formatPercent(x));
 
-/** Rolling accuracy over a "1"/"0" string, window `w`. */
+/** Rolling accuracy over a history string ("1" right; "g" guessed and "0" wrong count as not known), window `w`. */
 export function rolling(results: string, w = 3): number[] {
   const out: number[] = [];
   for (let i = 0; i < results.length; i++) {

@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { allQuestions } from '../content';
-import { shuffled } from '../lib/answers';
+import { questionByKey, type QuestionRef } from '../content';
+import { levelQuizPlan, levelResult, shouldStopLevel, type LevelQuestion } from '../lib/mastery';
 import { href } from '../lib/router';
 import { recordQuiz, XP } from '../lib/storage';
 import type { Course } from '../types';
@@ -9,17 +9,19 @@ import { Session, type SessionResult } from './Session';
 import { Icon } from './icons';
 import { useT } from '../i18n/react';
 
-const QUIZ_SIZE = 12;
-
 export function Quiz({ course }: { course: Course }) {
   const [run, setRun] = useState(0);
   return <QuizRun key={run} course={course} onRetake={() => setRun(run + 1)} />;
 }
 
+/**
+ * Find your level: one question per lesson, easy to hard (course order), stopping once the learner starts guessing
+ * or missing. Where it stops is where they should start (the edge of what they know).
+ */
 function QuizRun({ course, onRetake }: { course: Course; onRetake: () => void }) {
   const { t } = useT();
-  // Interleaved: questions from every lesson, mixed together.
-  const [questions] = useState(() => shuffled(allQuestions.filter((q) => q.course.id === course.id)).slice(0, QUIZ_SIZE));
+  const [plan] = useState(() => levelQuizPlan(course).filter((q) => questionByKey.has(q.key)));
+  const questions = plan.map((q) => questionByKey.get(q.key)!);
   const courseHref = href('course', course.id);
 
   if (questions.length === 0) {
@@ -36,81 +38,98 @@ function QuizRun({ course, onRetake }: { course: Course; onRetake: () => void })
       ritual={{ kind: 'quiz', title: t('quiz.ritualTitle', { title: course.title }), course: course.id }}
       questions={questions}
       exitHref={courseHref}
+      stopWhen={(results) => shouldStopLevel(results.map((r) => ({ ok: r.ok, conf: r.confidence })))}
       onFinish={(results) => recordQuiz(course.id, Math.round((100 * results.filter((r) => r.ok).length) / results.length))}
-      renderEnd={(results, xp) => <QuizEnd course={course} results={results} xp={xp} onRetake={onRetake} />}
+      renderEnd={(results, xp) => <QuizEnd course={course} plan={plan} results={results} xp={xp} onRetake={onRetake} />}
     />
   );
 }
 
-function QuizEnd({ course, results, xp, onRetake }: { course: Course; results: SessionResult[]; xp: number; onRetake: () => void }) {
-  const { t, pct } = useT();
-  const right = results.filter((r) => r.ok).length;
-  const score = Math.round((100 * right) / results.length);
+function QuizEnd({ course, plan, results, xp, onRetake }: { course: Course; plan: LevelQuestion[]; results: SessionResult[]; xp: number; onRetake: () => void }) {
+  const { t } = useT();
+  const level = levelResult(
+    plan,
+    results.map((r) => ({ lesson: r.ref.lesson, ok: r.ok, conf: r.confidence })),
+  );
+  const perfect = results.length === plan.length && level.shaky.length === 0;
+  const why = (r: SessionResult) =>
+    r.confidence === 'unknown' ? t('quiz.level.reason.unknown') : !r.ok ? t('quiz.level.reason.missed') : t('quiz.level.reason.guessed');
+  const study: { lesson: QuestionRef['lesson']; reason: string }[] = results
+    .filter((r) => !r.ok || r.confidence !== 'sure')
+    .map((r) => ({ lesson: r.ref.lesson, reason: why(r) }));
 
-  // Per-lesson diagnosis: which lessons to study, which you can skip.
-  const byLesson = course.lessons
-    .map((lesson) => {
-      const rs = results.filter((r) => r.ref.lesson.id === lesson.id);
-      return { lesson, total: rs.length, missed: rs.filter((r) => !r.ok).length };
-    })
-    .filter((x) => x.total > 0);
-  const study = byLesson.filter((x) => x.missed > 0);
-  const solid = byLesson.filter((x) => x.missed === 0);
+  const title = level.stopped && level.start ? t('quiz.level.startAt', { lesson: level.start.title }) : perfect ? t('quiz.level.allTitle') : t('quiz.level.patchTitle');
+  const lead = level.stopped
+    ? level.solid.length
+      ? t('quiz.level.stoppedLead', { count: level.solid.length })
+      : t('quiz.level.stoppedFirst')
+    : perfect
+      ? t('quiz.level.allLead')
+      : t('quiz.level.patchLead');
 
   return (
     <>
       <div className="celebrate" aria-hidden>
-        <Icon name={score >= 80 ? 'target' : score >= 50 ? 'trendUp' : 'seedling'} size={72} />
+        <Icon name={perfect ? 'target' : level.solid.length ? 'trendUp' : 'seedling'} size={72} />
       </div>
-      <h1>{pct(score / 100)}</h1>
-      <p className="lead">
-        {t(score >= 80 ? 'quiz.end.summaryHigh' : score >= 50 ? 'quiz.end.summaryMid' : 'quiz.end.summaryLow', { right, total: results.length })}
-      </p>
+      <span className="eyebrow">{t('quiz.level.eyebrow')}</span>
+      <h1>{title}</h1>
+      <p className="lead">{lead}</p>
       <div className="result-tiles">
         <div className="result-tile xp">
           <span>{t('quiz.end.xpEarned')}</span>
-          <strong>{t('quiz.end.xpGain', { xp: xp + (score === 100 ? XP.quizPerfect : 0) })}</strong>
+          <strong>{t('quiz.end.xpGain', { xp: xp + (perfect ? XP.quizPerfect : 0) })}</strong>
         </div>
         <div className="result-tile">
           <span>{t('quiz.end.toStudy')}</span>
-          <strong>{study.length}</strong>
+          <strong>{study.length + level.untested.length}</strong>
         </div>
         <div className="result-tile">
           <span>{t('quiz.end.solid')}</span>
-          <strong>{solid.length}</strong>
+          <strong>{level.solid.length}</strong>
         </div>
       </div>
+
+      {level.start && (
+        <div className="actions center">
+          <a className="btn primary big" href={href('course', course.id, 'lesson', level.start.id)}>
+            {t('quiz.level.startButton')}
+          </a>
+        </div>
+      )}
 
       {study.length > 0 && (
         <div className="diagnosis">
           <h2>{t('quiz.end.studyThese')}</h2>
           <ul>
-            {study.map(({ lesson, missed, total }) => (
+            {study.map(({ lesson, reason }) => (
               <li key={lesson.id}>
                 <a href={href('course', course.id, 'lesson', lesson.id)}>{lesson.title}</a>
                 <span className={`tag ${lesson.pareto}`}>{lesson.pareto === 'core' ? t('common.core') : t('common.deepDive')}</span>
-                <span className="muted small">{t('quiz.end.missed', { missed, total })}</span>
+                <span className="muted small">{reason}</span>
               </li>
             ))}
           </ul>
+          {level.untested.length > 0 && <p className="muted small">{t('quiz.level.notReached', { count: level.untested.length })}</p>}
         </div>
       )}
-      {solid.length > 0 && (
+      {level.solid.length > 0 && (
         <div className="diagnosis ok">
           <h2>{t('quiz.end.solidTitle')}</h2>
           <ul>
-            {solid.map(({ lesson }) => (
+            {level.solid.map((lesson) => (
               <li key={lesson.id}>{lesson.title}</li>
             ))}
           </ul>
         </div>
       )}
+      <p className="muted small">{t('quiz.level.howItWorks')}</p>
       <p className="muted small">{t('quiz.end.reviewNote')}</p>
       <div className="actions center">
         <a className="btn ghost" href={href('course', course.id)}>
           {t('quiz.end.backToCourse')}
         </a>
-        <button className="btn primary big" onClick={onRetake}>
+        <button className="btn big" onClick={onRetake}>
           {t('quiz.end.retake')}
         </button>
       </div>

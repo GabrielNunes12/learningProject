@@ -2,6 +2,7 @@
 // Classic questions and the mini-games all use it, so they look and behave the same and all feed spaced review.
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import type { Confidence } from '../lib/mastery';
 import { XP } from '../lib/storage';
 import type { QuestionStep } from '../types';
 import { InlineMarkdown, Markdown } from './Markdown';
@@ -17,14 +18,21 @@ export interface QuestionProps<S extends QuestionStep = QuestionStep> {
   mode: 'learn' | 'test';
   shuffle?: boolean;
   context?: ReactNode;
-  /** Called when the learner presses Continue. Reports whether the *first* attempt was right. */
-  onDone: (firstTryCorrect: boolean) => void;
+  /** Called when the learner presses Continue. Reports whether the *first* attempt was right, and how sure they were. */
+  onDone: (firstTryCorrect: boolean, confidence: Confidence) => void;
 }
 
 export interface CheckFlow {
   status: Status;
   /** Result of the first attempt; null until the learner has attempted. */
   first: boolean | null;
+  /** How sure the learner was on the first attempt (set when it's made). */
+  confidence: Confidence;
+  /** The "I'm guessing" toggle, before the first attempt. */
+  guessing: boolean;
+  setGuessing: (on: boolean) => void;
+  /** Wrong attempts so far. */
+  misses: number;
   finished: boolean;
   tone: 'right' | 'wrong' | 'revealed' | 'neutral';
   /** Record an attempt: correct, or wrong (learn: retry allowed; test: answer revealed). */
@@ -33,19 +41,32 @@ export interface CheckFlow {
   retry: () => void;
   /** Give up and show the answer. */
   reveal: () => void;
+  /** "I don't know" before any attempt (test mode): an honest miss, the answer is shown. */
+  dontKnow: () => void;
   done: () => void;
 }
 
-export function useCheckFlow(mode: 'learn' | 'test', onDone: (firstTryCorrect: boolean) => void): CheckFlow {
+export function useCheckFlow(mode: 'learn' | 'test', onDone: (firstTryCorrect: boolean, confidence: Confidence) => void): CheckFlow {
   const [status, setStatus] = useState<Status>('answering');
   const [first, setFirst] = useState<boolean | null>(null);
+  const [confidence, setConfidence] = useState<Confidence>('sure');
+  const [guessing, setGuessing] = useState(false);
+  const [misses, setMisses] = useState(0);
   return {
     status,
     first,
+    confidence,
+    guessing,
+    setGuessing,
+    misses,
     finished: status === 'correct' || status === 'revealed',
     tone: status === 'correct' ? 'right' : status === 'wrong' ? 'wrong' : status === 'revealed' ? 'revealed' : 'neutral',
     grade: (ok) => {
-      if (first === null) setFirst(ok);
+      if (first === null) {
+        setFirst(ok);
+        setConfidence(guessing ? 'guess' : 'sure');
+      }
+      if (!ok) setMisses((n) => n + 1);
       setStatus(ok ? 'correct' : mode === 'test' ? 'revealed' : 'wrong');
     },
     retry: () => setStatus('answering'),
@@ -53,7 +74,13 @@ export function useCheckFlow(mode: 'learn' | 'test', onDone: (firstTryCorrect: b
       if (first === null) setFirst(false);
       setStatus('revealed');
     },
-    done: () => onDone(first ?? false),
+    dontKnow: () => {
+      if (first !== null) return;
+      setFirst(false);
+      setConfidence('unknown');
+      setStatus('revealed');
+    },
+    done: () => onDone(first ?? false, confidence),
   };
 }
 
@@ -101,11 +128,14 @@ export function QuestionFrame({
     if (status !== 'answering') feedbackRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, [status]);
 
+  // Effort first: the hint is offered only after a real attempt, and the answer only once the learner is stuck
+  // (missed again after the hint was available, or missed with no hint to try).
   const retry = () => {
     flow.retry();
     onRetry?.();
-    if (step.hint) setShowHint(true);
   };
+  const canShowAnswer = flow.misses >= (step.hint ? 2 : 1);
+  const beforeFirstTry = status === 'answering' && first === null;
   const check = () => {
     if (status === 'answering' && canCheck) onCheck();
   };
@@ -136,7 +166,7 @@ export function QuestionFrame({
 
         {children}
 
-        {mode === 'learn' && step.hint && status === 'answering' && !showHint && (
+        {mode === 'learn' && step.hint && status === 'answering' && first !== null && !showHint && (
           <button className="link hint-link" onClick={() => setShowHint(true)}>
             <Icon name="bulb" size={16} /> {t('lesson.frame.needHint')}
           </button>
@@ -160,12 +190,32 @@ export function QuestionFrame({
 
       <BottomBar tone={tone}>
         <div className="bb-status" role="status">
+          {beforeFirstTry && (
+            <button
+              type="button"
+              className={`guess-toggle${flow.guessing ? ' on' : ''}`}
+              aria-pressed={flow.guessing}
+              title={t('lesson.frame.guessingTip')}
+              onClick={() => flow.setGuessing(!flow.guessing)}
+            >
+              <span className="guess-box" aria-hidden>
+                {flow.guessing ? '✓' : ''}
+              </span>
+              {t('lesson.frame.guessing')}
+            </button>
+          )}
           {status === 'correct' && (
             <>
               <span className="bb-icon">✓</span>
               <div>
-                <strong>{first ? t('common.correct') : t('lesson.frame.gotIt')}</strong>
-                <span>{first ? t('lesson.frame.xpGained', { xp: XP.correct }) : t('lesson.frame.secondTries')}</span>
+                <strong>{first ? (flow.confidence === 'guess' ? t('lesson.frame.guessedRight') : t('common.correct')) : t('lesson.frame.gotIt')}</strong>
+                <span>
+                  {first
+                    ? flow.confidence === 'guess'
+                      ? t('lesson.frame.guessedRightNote')
+                      : t('lesson.frame.xpGained', { xp: XP.correct })
+                    : t('lesson.frame.secondTries')}
+                </span>
               </div>
             </>
           )}
@@ -182,16 +232,27 @@ export function QuestionFrame({
             <>
               <span className="bb-icon">i</span>
               <div>
-                <strong>{mode === 'test' && first === false ? t('lesson.frame.incorrect') : t('lesson.frame.heresAnswer')}</strong>
+                <strong>
+                  {flow.confidence === 'unknown'
+                    ? t('lesson.frame.honestMiss')
+                    : mode === 'test' && first === false
+                      ? t('lesson.frame.incorrect')
+                      : t('lesson.frame.heresAnswer')}
+                </strong>
                 <span>{t('lesson.frame.readWhy')}</span>
               </div>
             </>
           )}
         </div>
         <div className="bb-actions">
-          {status === 'wrong' && (
+          {status === 'wrong' && canShowAnswer && (
             <button className="btn ghost" onClick={flow.reveal}>
               {t('lesson.frame.showAnswer')}
+            </button>
+          )}
+          {mode === 'test' && beforeFirstTry && (
+            <button className="btn ghost" onClick={flow.dontKnow}>
+              {t('lesson.frame.dontKnow')}
             </button>
           )}
           <button className="btn primary big" onClick={primary} disabled={status === 'answering' && !canCheck}>

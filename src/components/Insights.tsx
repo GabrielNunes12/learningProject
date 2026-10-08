@@ -288,7 +288,7 @@ function Sparkline({ item }: { item: ItemStats }) {
   const x = (i: number) => (ys.length === 1 ? W / 2 : pad + (i * (W - 2 * pad)) / (ys.length - 1));
   const y = (v: number) => pad + (1 - v) * (H - 2 * pad);
   const pts = ys.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
-  const results = [...item.recent].map((c) => (c === '1' ? t('insights.spark.right') : t('insights.spark.wrong')));
+  const results = [...item.recent].map((c) => (c === '1' ? t('insights.spark.right') : c === 'g' ? t('insights.spark.guessed') : t('insights.spark.wrong')));
   const slot = (W - 2 * pad) / Math.max(ys.length - 1, 1);
   return (
     <svg className="ins-spark" width={W} height={H} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={t('insights.spark.label', { count: results.length, results: results.join(t('insights.list.separator')) })}>

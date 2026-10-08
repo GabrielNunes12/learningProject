@@ -245,6 +245,7 @@ export default {
   'insights.spark.empty': 'sem histórico',
   'insights.spark.right': 'acerto',
   'insights.spark.wrong': 'erro',
+  'insights.spark.guessed': 'chute',
   'insights.spark.label': {
     one: 'Última {count} resposta, da mais antiga para a mais recente: {results}',
     other: 'Últimas {count} respostas, da mais antiga para a mais recente: {results}',

@@ -146,8 +146,8 @@ function LessonRun({ course, lesson, steps }: { course: Course; lesson: LessonIn
             <QuestionView
               step={step}
               mode="learn"
-              onDone={(ok) => {
-                recordAnswer(questionKey(course.id, lesson.id, step.id), ok);
+              onDone={(ok, confidence) => {
+                recordAnswer(questionKey(course.id, lesson.id, step.id), ok, confidence);
                 setScore((s) => ({ right: s.right + (ok ? 1 : 0), total: s.total + 1 }));
                 setXp((x) => x + (ok ? XP.correct : XP.attempt));
                 next();

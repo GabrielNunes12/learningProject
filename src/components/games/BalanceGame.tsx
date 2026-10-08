@@ -225,7 +225,7 @@ export function BalanceGame({ step, mode, context, onDone }: QuestionProps<Balan
 
   // "Show me how": give up, then replay an optimal solution on the scale from the start.
   function showHow() {
-    if (status !== 'answering' || solved) return;
+    if (status !== 'answering' || solved || history.length < 3) return;
     flow.reveal();
     const steps = howSteps;
     if (reducedMotion()) {
@@ -519,7 +519,8 @@ export function BalanceGame({ step, mode, context, onDone }: QuestionProps<Balan
               <button type="button" className="btn small" disabled={locked || history.length < 2} onClick={restart}>
                 {t('games.balance.restart')}
               </button>
-              <button type="button" className="btn ghost small bal-how" disabled={locked} onClick={showHow}>
+              {/* Effort first: the solution unlocks after two moves of the learner's own. */}
+              <button type="button" className="btn ghost small bal-how" disabled={locked || history.length < 3} onClick={showHow}>
                 {t('games.balance.showHow')}
               </button>
             </div>

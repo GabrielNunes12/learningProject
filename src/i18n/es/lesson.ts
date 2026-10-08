@@ -73,6 +73,12 @@ export default {
   'lesson.frame.heresAnswer': 'Esta es la respuesta',
   'lesson.frame.readWhy': 'Lee el porqué; volverá a salir en tus repasos.',
   'lesson.frame.showAnswer': 'Ver la respuesta',
+  'lesson.frame.guessing': 'Estoy adivinando',
+  'lesson.frame.guessingTip': '¿No estás seguro? Márcalo. Un acierto por suerte no cuenta como saberlo, así que la pregunta vuelve antes.',
+  'lesson.frame.guessedRight': 'Correcto, pero adivinando',
+  'lesson.frame.guessedRightNote': 'Bien por ser honesto. Vuelve mañana para que lo aprendas de verdad.',
+  'lesson.frame.honestMiss': 'Bien: sin adivinar',
+  'lesson.frame.dontKnow': 'No lo sé',
   'lesson.frame.correctAnswer': '<b>Respuesta correcta:</b> {answer}',
 
   // ---------- correct-answer texts (src/lib/answers.ts) ----------
@@ -88,6 +94,7 @@ export default {
   'lesson.session.shorterHeading': 'Resume esta sesión en anclas',
   'lesson.session.shorterIntro': '¿Qué vas a recordar o qué harás distinto la próxima vez? Dos o tres anclas, de cuatro palabras como máximo cada una.',
   'lesson.session.seeResults': 'Ver resultados',
+  'lesson.session.harder': 'Más difícil: ya sabes la más fácil',
   'lesson.loadFailed.title': 'No se pudo cargar esta lección',
   'lesson.loadFailed.body': 'Revisa tu conexión y vuelve a intentarlo.',
 } satisfies Translation<typeof en>;

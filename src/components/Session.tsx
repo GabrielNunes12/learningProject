@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { questionStep, useCourseContent, type QuestionRef } from '../content';
-import { getProgress, recordAnswer, saveSheet, XP } from '../lib/storage';
+import type { Confidence } from '../lib/mastery';
+import { creditAnswer, getProgress, recordAnswer, saveSheet, XP } from '../lib/storage';
 import { dueSheet, finishShorter, sessionSheetKey } from '../lib/thinking';
 import type { Concept } from '../types';
 import { AgainPhase, ShorterPhase } from './paper/Ritual';
@@ -14,6 +15,8 @@ import { useStudyTimer } from './useStudyTimer';
 export interface SessionResult {
   ref: QuestionRef;
   ok: boolean;
+  /** How the learner answered: sure, "I'm guessing" or "I don't know". */
+  confidence: Confidence;
 }
 
 /** Every session is a thinking session: it opens with "make it again" (when a sheet is due) and closes with "make it shorter". */
@@ -30,6 +33,10 @@ interface Props {
   exitHref: string;
   onFinish?: (results: SessionResult[]) => void;
   renderEnd: (results: SessionResult[], xp: number) => ReactNode;
+  /** Ends the questions early when true after an answer (the find-your-level quiz stops once the learner guesses). */
+  stopWhen?: (results: SessionResult[]) => boolean;
+  /** Harder questions asked in place of a known card: question key → the card it stands in for. */
+  standIn?: Record<string, string>;
 }
 
 /** Runs a list of questions one at a time in test mode (quiz and review share this). */
@@ -41,7 +48,7 @@ export function Session(props: Props) {
   return <SessionRun {...props} />;
 }
 
-function SessionRun({ ritual, questions, exitHref, onFinish, renderEnd }: Props) {
+function SessionRun({ ritual, questions, exitHref, onFinish, renderEnd, stopWhen, standIn }: Props) {
   const { t, locale } = useT();
   const [againSheet] = useState(() => dueSheet(getProgress().sheets ?? {}));
   const [phase, setPhase] = useState<'again' | 'questions' | 'shorter' | 'end'>(againSheet ? 'again' : 'questions');
@@ -123,13 +130,15 @@ function SessionRun({ ritual, questions, exitHref, onFinish, renderEnd }: Props)
             context={
               <div className="context-chip">
                 <CourseIcon icon={q.course.icon} color={q.course.color} size={18} /> {q.course.title} · {q.lesson.title}
+                {standIn?.[q.key] && <span className="harder-chip">{t('lesson.session.harder')}</span>}
               </div>
             }
-            onDone={(ok) => {
-              recordAnswer(q.key, ok);
-              const next = [...results, { ref: q, ok }];
+            onDone={(ok, confidence) => {
+              recordAnswer(q.key, ok, confidence);
+              if (standIn?.[q.key]) creditAnswer(standIn[q.key], ok, confidence);
+              const next = [...results, { ref: q, ok, confidence }];
               setResults(next);
-              if (idx + 1 >= questions.length) {
+              if (idx + 1 >= questions.length || stopWhen?.(next)) {
                 onFinish?.(next); // record the score now, even if the learner leaves during "make it shorter"
                 setPhase('shorter');
               } else setIdx(idx + 1);

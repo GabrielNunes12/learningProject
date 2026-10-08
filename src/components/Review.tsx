@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { allQuestions, courses, getCourse, questionByKey, type QuestionRef } from '../content';
+import { harderReview, type PoolQuestion } from '../lib/mastery';
 import { href } from '../lib/router';
 import { dueKeys, getProgress, useProgress, type Progress } from '../lib/storage';
 import { MemoryStrength, ReviewForecast } from './charts';
@@ -12,6 +13,18 @@ import { MixedPracticeCard } from './MixedPractice';
 import { useT } from '../i18n/react';
 
 const SESSION_SIZE = 20;
+
+/** Every question as the difficulty ladder sees it (catalog data only, so no lesson content has to load). */
+let pool: PoolQuestion[] | null = null;
+const questionPool = () =>
+  (pool ??= allQuestions.map((q) => ({
+    key: q.key,
+    course: q.course.id,
+    type: q.step.type,
+    concepts: q.step.concepts,
+    lessonIndex: q.course.lessons.indexOf(q.lesson),
+    lessonCount: q.course.lessons.length,
+  })));
 
 const refsFor = (keys: string[]) => keys.map((k) => questionByKey.get(k)).filter((q): q is QuestionRef => q !== undefined);
 
@@ -127,10 +140,16 @@ export function Review() {
 /** A review session: due questions (optionally for one course), or the weakest ones. */
 export function ReviewSession({ mode, courseId }: { mode: 'start' | 'weak'; courseId?: string }) {
   const { t, n, pct } = useT();
-  const [questions] = useState(() => {
+  // Due cards the learner already knows are examined with a harder question on the same concept ("harder each
+  // time"); the weakest-cards practice asks the cards themselves.
+  const [{ questions, standIn }] = useState(() => {
     const p = getProgress();
-    const keys = mode === 'weak' ? weakest(p, courseId) : dueKeys(p).filter((k) => !courseId || k.startsWith(`${courseId}/`));
-    return refsFor(keys).slice(0, SESSION_SIZE);
+    if (mode === 'weak') return { questions: refsFor(weakest(p, courseId)).slice(0, SESSION_SIZE), standIn: {} };
+    const due = refsFor(dueKeys(p).filter((k) => !courseId || k.startsWith(`${courseId}/`)))
+      .slice(0, SESSION_SIZE)
+      .map((q) => q.key);
+    const plan = harderReview(due, questionPool(), p.cards);
+    return { questions: refsFor(plan.keys), standIn: plan.standIn };
   });
   const course = courseId ? getCourse(courseId) : undefined;
 
@@ -161,6 +180,7 @@ export function ReviewSession({ mode, courseId }: { mode: 'start' | 'weak'; cour
     <Session
       ritual={{ kind: 'review', title: course ? t('review.ritualTitleCourse', { course: course.title }) : t('review.ritualTitle'), course: course?.id }}
       questions={questions}
+      standIn={standIn}
       exitHref="#/review"
       renderEnd={(results, xp) => {
         const right = results.filter((r) => r.ok).length;

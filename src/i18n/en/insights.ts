@@ -244,6 +244,7 @@ export default {
   'insights.spark.empty': 'no history',
   'insights.spark.right': 'right',
   'insights.spark.wrong': 'wrong',
+  'insights.spark.guessed': 'guessed',
   // {results} is a comma-separated list of "right"/"wrong".
   'insights.spark.label': { one: 'Latest {count} answer, oldest first: {results}', other: 'Latest {count} answers, oldest first: {results}' },
   // Tooltip on one point. {result} is "right" or "wrong"; {pct} the accuracy over the last 3 answers.

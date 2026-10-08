@@ -1,6 +1,9 @@
 import { useSyncExternalStore } from 'react';
 import { t, type MessageKey } from '../i18n/core.ts';
 import type { Locale } from '../i18n/locales.ts';
+import { creditedCard, HIST_LEN, INTERVAL_DAYS, MASTERED_BOX, MAX_BOX, nextCard, type Confidence } from './mastery.ts';
+
+export { HIST_LEN, INTERVAL_DAYS, MASTERED_BOX, MAX_BOX };
 
 // Progress lives in localStorage and, when signed in, is synced to the server (see lib/auth.ts).
 
@@ -10,13 +13,11 @@ export interface Card {
   due: number;
   seen: number;
   right: number;
-  /** Recent results, oldest first: "1" right, "0" wrong (at most HIST_LEN). */
+  /** Recent results, oldest first: "1" right, "g" right but guessed, "0" wrong (at most HIST_LEN). */
   hist?: string;
   /** When it was last answered (ms). */
   last?: number;
 }
-
-export const HIST_LEN = 12;
 
 /** A learner's own knowledge map of one course (the 3-layer canvas). */
 export interface KnowledgeMap {
@@ -127,11 +128,6 @@ export interface Progress {
 
 const KEY = 'projectlearn:progress:v1';
 const DAY = 86_400_000;
-export const MAX_BOX = 6;
-/** Days until the next review, indexed by box. Box 1 = review again right away. */
-export const INTERVAL_DAYS = [0, 0, 1, 3, 7, 16, 35];
-/** Cards at this box or above count as "mastered". */
-export const MASTERED_BOX = 4;
 export const GOAL_OPTIONS = [20, 50, 100, 200];
 
 export const emptyProgress = (): Progress => ({
@@ -236,18 +232,19 @@ function gain(p: Progress, xp: number): Progress {
 
 export const XP = { correct: 5, attempt: 1, lessonFirst: 20, lessonRepeat: 5, quizPerfect: 15, think: 5 };
 
-export function recordAnswer(key: string, correct: boolean) {
-  const prev = state.cards[key];
-  const box = correct ? Math.min((prev?.box ?? 1) + 1, MAX_BOX) : 1;
-  const card: Card = {
-    box,
-    due: Date.now() + INTERVAL_DAYS[box] * DAY,
-    seen: (prev?.seen ?? 0) + 1,
-    right: (prev?.right ?? 0) + (correct ? 1 : 0),
-    hist: ((prev?.hist ?? '') + (correct ? '1' : '0')).slice(-HIST_LEN),
-    last: Date.now(),
-  };
+/**
+ * Records an answer for review. `conf` is how the learner answered (see lib/mastery.ts): a right guess earns the same
+ * XP as a sure answer, so being honest about guessing never costs anything, but only sure answers move the card up.
+ */
+export function recordAnswer(key: string, correct: boolean, conf: Confidence = 'sure') {
+  const card = nextCard(state.cards[key], correct, conf, Date.now());
   set(gain({ ...state, cards: { ...state.cards, [key]: card } }, correct ? XP.correct : XP.attempt));
+}
+
+/** Credits a card whose concept was just tested by a harder question in its place (no XP: that went to the harder one). */
+export function creditAnswer(key: string, correct: boolean, conf: Confidence = 'sure') {
+  const prev = state.cards[key];
+  if (prev) set({ ...state, cards: { ...state.cards, [key]: creditedCard(prev, correct, conf, Date.now()) } });
 }
 
 /** Returns the XP awarded. */
