@@ -15,9 +15,11 @@ import { accentStyle, Ring, useBodyAccent } from './ui';
 import { CourseIcon } from './CourseIcon';
 import { ExplainBack } from './ExplainBack';
 import { CheckYourself } from './CheckYourself';
+import { SessionNotes } from './SessionNotes';
 import { Icon } from './icons';
 import { useStudyTimer } from './useStudyTimer';
 import { hasEarned } from '../lib/certificate';
+import { conceptsFor, type ClerkItem } from '../lib/clerk';
 
 import { useT } from '../i18n/react';
 
@@ -41,6 +43,8 @@ function LessonRun({ course, lesson, steps }: { course: Course; lesson: LessonIn
   const [score, setScore] = useState({ right: 0, total: 0 });
   const [xp, setXp] = useState(0);
   const [keywordSheet, setKeywordSheet] = useState<SheetDraft | undefined>();
+  // The questions answered in this lesson, for the session notes at the end.
+  const [results, setResults] = useState<ClerkItem[]>([]);
   // The concept graph for the step-back after a wrong answer (QuestionFrame). Memoised before the early return below.
   const graph = useMemo(
     () => ({ concepts: course.concepts ?? [], prereqs: prerequisiteGraph(course.id), seed: course.id }),
@@ -60,7 +64,7 @@ function LessonRun({ course, lesson, steps }: { course: Course; lesson: LessonIn
     else setIndex(index + 1);
   };
 
-  if (phase === 'done') return <LessonComplete course={course} lesson={lesson} score={score} xp={xp} />;
+  if (phase === 'done') return <LessonComplete course={course} lesson={lesson} score={score} xp={xp} results={results} />;
 
   // Progress bar: [again] + steps + wrong + shorter.
   const before = againSheet ? 1 : 0;
@@ -159,6 +163,7 @@ function LessonRun({ course, lesson, steps }: { course: Course; lesson: LessonIn
                   recordAnswer(questionKey(course.id, lesson.id, step.id), ok, confidence);
                   setScore((s) => ({ right: s.right + (ok ? 1 : 0), total: s.total + 1 }));
                   setXp((x) => x + (ok ? XP.correct : XP.attempt));
+                  setResults((r) => [...r, { courseId: course.id, concepts: conceptsFor(step.concepts, course.concepts), ok, confidence }]);
                   next();
                 }}
               />
@@ -265,7 +270,19 @@ function ExampleView({ step, onContinue }: { step: ExampleStep; onContinue: () =
   );
 }
 
-function LessonComplete({ course, lesson, score, xp }: { course: Course; lesson: LessonInfo; score: { right: number; total: number }; xp: number }) {
+function LessonComplete({
+  course,
+  lesson,
+  score,
+  xp,
+  results,
+}: {
+  course: Course;
+  lesson: LessonInfo;
+  score: { right: number; total: number };
+  xp: number;
+  results: ClerkItem[];
+}) {
   const { t, tx, n, pct } = useT();
   const p = useProgress();
   const { user } = useAuth();
@@ -329,6 +346,7 @@ function LessonComplete({ course, lesson, score, xp }: { course: Course; lesson:
         {/* Explain it back before the takeaway, so the summary doesn't do the recalling for you. */}
         {ideas.length > 0 && <ExplainBack ideas={ideas} />}
         <CheckYourself course={course} lessonId={lesson.id} />
+        <SessionNotes items={results} />
 
         <div className="takeaway">
           <span className="eyebrow">{t('lesson.complete.takeaway')}</span>

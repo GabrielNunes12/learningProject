@@ -1,10 +1,12 @@
 import { useState, type ReactNode } from 'react';
 import { questionStep, useCourseContent, type QuestionRef } from '../content';
 import type { Confidence } from '../lib/mastery';
+import { conceptsFor, type ClerkItem } from '../lib/clerk';
 import { creditAnswer, getProgress, recordAnswer, saveSheet, XP } from '../lib/storage';
 import { dueSheet, finishShorter, sessionSheetKey } from '../lib/thinking';
 import type { Concept } from '../types';
 import { AgainPhase, ShorterPhase } from './paper/Ritual';
+import { SessionNotes } from './SessionNotes';
 import { PlayerHeader, PlayerLoading } from './Layout';
 import { QuestionView } from './QuestionView';
 import { accentStyle, useBodyAccent } from './ui';
@@ -63,10 +65,19 @@ function SessionRun({ ritual, questions, exitHref, onFinish, renderEnd, stopWhen
   const total = questions.length + lead + 1;
 
   if (phase === 'end') {
+    const items: ClerkItem[] = results.map((r) => ({
+      courseId: r.ref.course.id,
+      concepts: conceptsFor(r.ref.step.concepts, r.ref.course.concepts),
+      ok: r.ok,
+      confidence: r.confidence,
+    }));
     return (
       <div className="player">
         <PlayerHeader exitHref={exitHref} done={1} total={1} />
-        <main className="player-body complete">{renderEnd(results, xp)}</main>
+        <main className="player-body complete">
+          {renderEnd(results, xp)}
+          <SessionNotes items={items} />
+        </main>
       </div>
     );
   }

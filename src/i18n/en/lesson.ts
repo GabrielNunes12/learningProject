@@ -75,6 +75,25 @@ export default {
   'lesson.check.actually': 'Actually:',
   'lesson.check.isTrue': 'It’s true.',
   'lesson.check.retry': 'Try again',
+  // Session notes (the clerk), at the end of a session: what the answers showed. "Lucky guesses" are right but guessed;
+  // "To fix" lists what was missed, with its lesson. The root line names the one foundation behind several misses.
+  'lesson.clerk.eyebrow': 'Session notes',
+  'lesson.clerk.solid': 'Solid',
+  'lesson.clerk.guessed': 'Lucky guesses',
+  'lesson.clerk.guessedNote': 'Right, but you guessed: they’ll come back in review.',
+  'lesson.clerk.missed': 'To fix',
+  'lesson.clerk.openLesson': 'Open the lesson',
+  'lesson.clerk.root': {
+    one: 'You missed <b>{items}</b>: it builds on <b>{root}</b>, which you missed too. Start there.',
+    other: 'You missed <b>{items}</b>: they all build on <b>{root}</b>, which you missed too. Start there.',
+  },
+  'lesson.clerk.dueNow': { one: '{count} review due now', other: '{count} reviews due now' },
+  'lesson.clerk.dueTomorrow': { one: '{count} more due tomorrow', other: '{count} more due tomorrow' },
+  'lesson.clerk.upToDate': 'Nothing due: you’re up to date.',
+  'lesson.clerk.copy': 'Copy notes',
+  'lesson.clerk.copied': 'Copied',
+  'lesson.clerk.line': '{label}: {value}',
+  'lesson.clerk.toFix': '{label}: {summary} ({open}: {url})',
 
   'lesson.complete.checkpoint': 'Unit checkpoint: map what you know',
   // <link>…</link> becomes a link to the sign-up page.
