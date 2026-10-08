@@ -12,8 +12,8 @@ export default {
 
   // ---------- missing-step messages ----------
   'thinking.missing.wrongKeywords': {
-    one: 'Añade {count} palabra clave más. Adivinar también vale.',
-    other: 'Añade {count} palabras clave más. Adivinar también vale.',
+    one: 'Añade {count} palabra clave más. Las dudosas también cuentan.',
+    other: 'Añade {count} palabras clave más. Las dudosas también cuentan.',
   },
   'thinking.missing.wrongPiles': {
     one: 'Agrúpalas en {count} montón: arrastra las palabras clave hacia las columnas.',
@@ -38,12 +38,11 @@ export default {
   'thinking.session.quizCourse': 'Test: {course}',
 
   // ---------- make it wrong ----------
-  'thinking.wrong.heading': '¿Qué piensas ya sobre “{topic}”?',
-  'thinking.wrong.lead':
-    'Pon palabras clave en el papel antes de la lección: conjeturas, recuerdos a medias, incluso ideas equivocadas. Luego agrúpalas en montones que te parezcan relacionados. Aquí nada se califica; un primer intento desordenado le da a la lección algo a lo que engancharse.',
-  'thinking.wrong.sheetLabel': 'Tus primeras conjeturas sobre {topic}',
+  'thinking.wrong.heading': '¿Qué te quedó de “{topic}”?',
+  'thinking.wrong.lead': 'Escribe de memoria palabras clave en el papel, sin volver atrás: lo que aprendiste, recuerdos a medias, incluso las que te generan dudas. Luego agrúpalas en montones que vayan juntos. Aquí nada se califica; equivocarte un poco ahora te muestra qué corregir.',
+  'thinking.wrong.sheetLabel': 'Tus palabras clave de {topic}',
   'thinking.wrong.ready': 'Bien. {time} en papel.',
-  'thinking.wrong.start': 'Empezar la lección',
+  'thinking.wrong.start': 'Continuar',
 
   // ---------- make it shorter ----------
   'thinking.shorter.placeholder': 'unas pocas palabras',
@@ -55,8 +54,8 @@ export default {
   'thinking.shorter.missedHeading': 'Detrás de las preguntas que fallaste',
   'thinking.shorter.alsoHeading': 'También en esta lección',
   'thinking.shorter.notMistake': 'No es un error: vale la pena echarle otro vistazo antes de seguir.',
-  'thinking.shorter.beforeHeading': 'Antes de la lección escribiste',
-  'thinking.shorter.firstGuesses': 'Tus primeras conjeturas',
+  'thinking.shorter.beforeHeading': 'Justo antes escribiste',
+  'thinking.shorter.firstGuesses': 'Tus palabras clave',
   'thinking.shorter.rebuildNext': 'Reharás esta hoja de memoria al empezar tu próxima sesión y corregirás lo que esté mal.',
   'thinking.shorter.ready': 'Ya es bastante corto. El desorden no importa.',
   'thinking.shorter.squeeze': 'Condénsalo',
@@ -124,15 +123,14 @@ export default {
 
   // ---------- the Notebook page ----------
   'thinking.notebook.title': 'Cuaderno',
-  'thinking.notebook.subtitle':
-    'Cada hoja en la que pensaste: tus primeras conjeturas, tus anclas y las versiones en limpio que rehiciste de memoria.',
+  'thinking.notebook.subtitle': 'Cada hoja en la que pensaste: tus palabras clave, tus anclas y las versiones en limpio que rehiciste de memoria.',
   'thinking.notebook.streak': 'Racha de reflexión',
   'thinking.notebook.daysThisWeek': '{days} de los últimos 7 días',
   'thinking.notebook.recall': 'Rehecho de memoria',
   'thinking.notebook.redos': { one: '{count} reconstrucción', other: '{count} reconstrucciones' },
   'thinking.notebook.due': { one: '{count} pendiente', other: '{count} pendientes' },
   'thinking.notebook.methodHeading': 'Cómo funciona cada sesión',
-  'thinking.notebook.methodWrong': '<b>{phase}.</b> Antes de una lección, pon en papel lo que crees que sabes y ordénalo, aunque esté mal.',
+  'thinking.notebook.methodWrong': '<b>{phase}.</b> Después de los pasos, pon en papel las palabras clave que recuerdes y ordénalas, aunque algunas estén mal.',
   'thinking.notebook.methodShorter': '<b>{phase}.</b> Después de cada sesión, condénsala en 2–3 anclas de cuatro palabras o menos.',
   'thinking.notebook.methodAgain':
     '<b>{phase}.</b> En la siguiente sesión, rehaz una hoja antigua partiendo de una página en blanco, y luego corrígela y reorganízala. El intervalo crece cada vez.',

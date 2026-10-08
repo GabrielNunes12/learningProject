@@ -1,5 +1,5 @@
 // Thinking on paper: the three-phase ritual that opens and closes every study session.
-//   Make it wrong   (start of a lesson)  dump keywords about the topic, sort them into piles, sketch. Nothing is graded.
+//   Make it wrong   (end of a lesson)    dump keywords from memory after the steps, sort them into piles, sketch. Nothing is graded.
 //   Make it shorter (end of any session) squeeze it into 2–3 anchors of at most 4 words.
 //   Make it again   (start of a session) rebuild an earlier sheet from a blank page, then compare and fix it.
 // Pure: no DOM, only type imports plus the matching helpers from knowledgeMap.ts and t() from the i18n core.
@@ -374,7 +374,7 @@ export function sessionKind(key: string): SessionKind | undefined {
   return m ? (m[1] as SessionKind) : undefined;
 }
 
-/** A lesson sheet after "make it wrong" (anchors come at the end of the lesson). */
+/** A lesson sheet after "make it wrong" (the keywords come after the steps, the anchors right after them). */
 export function startLessonSheet(prev: Sheet | undefined, course: string, lesson: string, title: string, wrong: SheetDraft, now = Date.now()): Sheet {
   return {
     key: lessonSheetKey(course, lesson),

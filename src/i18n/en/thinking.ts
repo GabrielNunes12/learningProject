@@ -6,8 +6,8 @@ import type { Message } from '../core.ts';
 
 export default {
   // ---------- the three phases (product terms: pick one punchy equivalent each and reuse it everywhere) ----------
-  // Phase 1, at the start of a lesson: write down guesses before learning, even wrong ones, and sort them into piles.
-  // The idea is "dare to be wrong first". Shown as a step tag and as a bold lead-in in the Notebook.
+  // Phase 1, at the end of a lesson, after the steps: put keywords on paper from memory, even wrong ones, and sort them into piles.
+  // The idea is "dare to be wrong". Shown as a step tag and as a bold lead-in in the Notebook.
   'thinking.phase.wrong': 'Make it wrong',
   // Phase 2, at the end of a session: squeeze what was learned into 2–3 tiny "anchors" (4 words at most each).
   'thinking.phase.shorter': 'Make it shorter',
@@ -15,7 +15,7 @@ export default {
   'thinking.phase.again': 'Make it again',
 
   // ---------- missing-step messages (src/lib/thinking.ts), shown in the bottom bar while a phase is not done ----------
-  'thinking.missing.wrongKeywords': { one: 'Add {count} more keyword. Guesses count.', other: 'Add {count} more keywords. Guesses count.' },
+  'thinking.missing.wrongKeywords': { one: 'Add {count} more keyword. Unsure ones count.', other: 'Add {count} more keywords. Unsure ones count.' },
   // "Columns" are the pile areas on the paper, below the tray.
   'thinking.missing.wrongPiles': {
     one: 'Sort them into {count} pile: drag keywords down into the columns.',
@@ -38,17 +38,17 @@ export default {
   'thinking.session.quiz': 'Quiz',
   'thinking.session.quizCourse': 'Quiz: {course}',
 
-  // ---------- make it wrong (start of a lesson) ----------
+  // ---------- make it wrong (end of a lesson, after the steps) ----------
   // {topic} is the lesson title.
-  'thinking.wrong.heading': 'What do you already think about “{topic}”?',
+  'thinking.wrong.heading': 'What stuck from “{topic}”?',
   'thinking.wrong.lead':
-    'Put keywords on the paper before the lesson: guesses, half-memories, even wrong ones. Then sort them into piles that feel related. Nothing here is graded; a messy first try gives the lesson something to hook onto.',
+    "Put keywords on the paper from memory, without scrolling back: what you learned, half-remembered bits, even ones you're unsure of. Then sort them into piles that belong together. Nothing here is graded; getting it a bit wrong now shows you what to fix.",
   // Accessible name of the sheet. {topic} is the lesson title.
-  'thinking.wrong.sheetLabel': 'Your first guesses about {topic}',
+  'thinking.wrong.sheetLabel': 'Your keywords from {topic}',
   // {time} is the time spent so far, like "2:05" (minutes:seconds).
   'thinking.wrong.ready': 'Good. {time} on paper.',
-  // Button.
-  'thinking.wrong.start': 'Start the lesson',
+  // Button: goes on to make it shorter.
+  'thinking.wrong.start': 'Continue',
 
   // ---------- make it shorter (end of a session) ----------
   // Placeholder of the first two anchor inputs.
@@ -64,8 +64,8 @@ export default {
   'thinking.shorter.missedHeading': 'Behind the questions you missed',
   'thinking.shorter.alsoHeading': 'Also in this lesson',
   'thinking.shorter.notMistake': 'Not a mistake: worth one more look before you move on.',
-  'thinking.shorter.beforeHeading': 'Before the lesson you wrote',
-  'thinking.shorter.firstGuesses': 'Your first guesses',
+  'thinking.shorter.beforeHeading': 'Just before, you wrote',
+  'thinking.shorter.firstGuesses': 'Your keywords',
   'thinking.shorter.rebuildNext': "You'll rebuild this sheet from memory at the start of your next session, and fix what's wrong.",
   'thinking.shorter.ready': 'Short enough. Messy is fine.',
   // Button: shows what the anchors cover.
@@ -152,7 +152,7 @@ export default {
 
   // ---------- the Notebook page ----------
   'thinking.notebook.title': 'Notebook',
-  'thinking.notebook.subtitle': 'Every sheet you thought on: your first guesses, your anchors, and the clean versions you rebuilt from memory.',
+  'thinking.notebook.subtitle': 'Every sheet you thought on: your keywords, your anchors, and the clean versions you rebuilt from memory.',
   'thinking.notebook.streak': 'Thinking streak',
   // Under the streak: on how many of the last 7 days the learner did a thinking phase.
   'thinking.notebook.daysThisWeek': '{days} of the last 7 days',
@@ -163,7 +163,7 @@ export default {
   'thinking.notebook.due': { one: '{count} due', other: '{count} due' },
   'thinking.notebook.methodHeading': 'How every session works',
   // The three steps. {phase} is the phase name (thinking.phase.*); <b>…</b> is bold.
-  'thinking.notebook.methodWrong': "<b>{phase}.</b> Before a lesson, put what you think you know on paper and sort it, even if it's wrong.",
+  'thinking.notebook.methodWrong': '<b>{phase}.</b> After the steps, put the keywords you remember on paper and sort them, even if some are wrong.',
   'thinking.notebook.methodShorter': '<b>{phase}.</b> After every session, squeeze it into 2–3 anchors of four words or fewer.',
   'thinking.notebook.methodAgain':
     '<b>{phase}.</b> Next session, rebuild an old sheet from a blank page, then fix and reorganise it. The gap grows each time.',

@@ -32,7 +32,7 @@ type Tool = 'words' | 'pen';
 interface Props {
   draft: SheetDraft;
   onChange?: (d: SheetDraft) => void;
-  /** Accessible name of the sheet, e.g. "Your first guesses about Loops". */
+  /** Accessible name of the sheet, e.g. "Your keywords about Loops". */
   label: string;
   placeholder?: string;
   /** Hide the pile columns (a single free area). */

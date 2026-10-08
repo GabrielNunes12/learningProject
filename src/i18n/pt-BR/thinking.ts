@@ -12,8 +12,8 @@ export default {
 
   // ---------- missing-step messages ----------
   'thinking.missing.wrongKeywords': {
-    one: 'Adicione mais {count} palavra-chave. Palpites valem.',
-    other: 'Adicione mais {count} palavras-chave. Palpites valem.',
+    one: 'Adicione mais {count} palavra-chave. As incertas também contam.',
+    other: 'Adicione mais {count} palavras-chave. As incertas também contam.',
   },
   'thinking.missing.wrongPiles': {
     one: 'Separe-as em {count} pilha: arraste as palavras-chave para baixo, até as colunas.',
@@ -37,13 +37,12 @@ export default {
   'thinking.session.quiz': 'Quiz',
   'thinking.session.quizCourse': 'Quiz: {course}',
 
-  // ---------- make it wrong (start of a lesson) ----------
-  'thinking.wrong.heading': 'O que você já pensa sobre “{topic}”?',
-  'thinking.wrong.lead':
-    'Coloque palavras-chave no papel antes da lição: palpites, meias-lembranças, até as erradas. Depois separe-as em pilhas que pareçam relacionadas. Nada aqui vale nota; uma primeira tentativa bagunçada dá à lição algo em que se prender.',
-  'thinking.wrong.sheetLabel': 'Seus primeiros palpites sobre {topic}',
+  // ---------- make it wrong (end of a lesson, after the steps) ----------
+  'thinking.wrong.heading': 'O que ficou de “{topic}”?',
+  'thinking.wrong.lead': 'Escreva de memória palavras-chave no papel, sem voltar à lição: o que você aprendeu, lembranças pela metade, até aquelas de que você não tem certeza. Depois separe-as em pilhas do que anda junto. Nada aqui vale nota; errar um pouco agora mostra o que corrigir.',
+  'thinking.wrong.sheetLabel': 'Suas palavras-chave sobre {topic}',
   'thinking.wrong.ready': 'Boa. {time} no papel.',
-  'thinking.wrong.start': 'Começar a lição',
+  'thinking.wrong.start': 'Continuar',
 
   // ---------- make it shorter (end of a session) ----------
   'thinking.shorter.placeholder': 'poucas palavras',
@@ -58,8 +57,8 @@ export default {
   'thinking.shorter.missedHeading': 'Por trás das questões que você errou',
   'thinking.shorter.alsoHeading': 'Também nesta lição',
   'thinking.shorter.notMistake': 'Não é um erro: vale mais uma olhada antes de seguir em frente.',
-  'thinking.shorter.beforeHeading': 'Antes da lição, você escreveu',
-  'thinking.shorter.firstGuesses': 'Seus primeiros palpites',
+  'thinking.shorter.beforeHeading': 'Logo antes, você escreveu',
+  'thinking.shorter.firstGuesses': 'Suas palavras-chave',
   'thinking.shorter.rebuildNext': 'Você vai refazer esta folha de memória no início da próxima sessão e corrigir o que estiver errado.',
   'thinking.shorter.ready': 'Curto o bastante. Bagunçado não tem problema.',
   'thinking.shorter.squeeze': 'Condensar',
@@ -127,16 +126,14 @@ export default {
 
   // ---------- the Notebook page ----------
   'thinking.notebook.title': 'Caderno',
-  'thinking.notebook.subtitle':
-    'Todas as folhas em que você pensou: seus primeiros palpites, suas âncoras e as versões a limpo que você refez de memória.',
+  'thinking.notebook.subtitle': 'Todas as folhas em que você pensou: suas palavras-chave, suas âncoras e as versões a limpo que você refez de memória.',
   'thinking.notebook.streak': 'Sequência de reflexão',
   'thinking.notebook.daysThisWeek': '{days} dos últimos 7 dias',
   'thinking.notebook.recall': 'Recuperado de memória',
   'thinking.notebook.redos': { one: '{count} reconstrução', other: '{count} reconstruções' },
   'thinking.notebook.due': { one: '{count} pendente', other: '{count} pendentes' },
   'thinking.notebook.methodHeading': 'Como funciona cada sessão',
-  'thinking.notebook.methodWrong':
-    '<b>{phase}.</b> Antes de uma lição, coloque no papel o que você acha que sabe e organize em pilhas, mesmo que esteja errado.',
+  'thinking.notebook.methodWrong': '<b>{phase}.</b> Depois dos passos, coloque no papel as palavras-chave de que você se lembra e organize-as em pilhas, mesmo que algumas estejam erradas.',
   'thinking.notebook.methodShorter': '<b>{phase}.</b> Depois de cada sessão, condense tudo em 2–3 âncoras de no máximo quatro palavras.',
   'thinking.notebook.methodAgain':
     '<b>{phase}.</b> Na sessão seguinte, refaça uma folha antiga a partir de uma página em branco, depois corrija e reorganize. O intervalo aumenta a cada vez.',

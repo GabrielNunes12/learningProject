@@ -59,7 +59,7 @@ function useElapsed() {
 
 // ---------- make it wrong ----------
 
-/** Start of a lesson: dump what you think you know about the topic, sort it, sketch. Nothing is graded. */
+/** End of a lesson, after the steps: put what you remember on paper from memory, sort it, sketch. Nothing is graded. */
 export function WrongPhase({ topic, onDone }: { topic: string; onDone: (draft: SheetDraft) => void }) {
   const { t } = useT();
   const [draft, setDraft] = useState<SheetDraft>(() => emptyDraft());
@@ -98,14 +98,14 @@ interface ShorterProps {
   lessonId?: string;
   /** For sessions: concepts behind missed questions, listed when the anchors don't name them. */
   focus?: Concept[];
-  /** The "make it wrong" sheet from the start of the lesson, shown next to the result. */
-  firstGuesses?: SheetDraft;
+  /** The "make it wrong" keyword sheet from just before this phase, shown next to the result. */
+  keywordSheet?: SheetDraft;
   doneLabel: string;
   onDone: (anchors: string[]) => void;
 }
 
 /** End of a session: squeeze it into 2–3 anchors of at most 4 words, then see what they cover. */
-export function ShorterPhase({ heading, intro, concepts, lessonId, focus, firstGuesses, doneLabel, onDone }: ShorterProps) {
+export function ShorterPhase({ heading, intro, concepts, lessonId, focus, keywordSheet, doneLabel, onDone }: ShorterProps) {
   const { t } = useT();
   const [anchors, setAnchors] = useState<string[]>(() => Array.from({ length: ANCHORS_MAX }, () => ''));
   const [shown, setShown] = useState(false);
@@ -170,10 +170,10 @@ export function ShorterPhase({ heading, intro, concepts, lessonId, focus, firstG
                 <p className="small muted">{t('thinking.shorter.notMistake')}</p>
               </>
             )}
-            {firstGuesses && firstGuesses.chips.length > 0 && (
+            {keywordSheet && keywordSheet.chips.length > 0 && (
               <>
                 <strong>{t('thinking.shorter.beforeHeading')}</strong>
-                <PaperSheet draft={firstGuesses} label={t('thinking.shorter.firstGuesses')} readOnly />
+                <PaperSheet draft={keywordSheet} label={t('thinking.shorter.firstGuesses')} readOnly />
                 <p className="small muted">{t('thinking.shorter.rebuildNext')}</p>
               </>
             )}

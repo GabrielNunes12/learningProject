@@ -32,13 +32,13 @@ export function LessonPlayer({ course, lesson }: { course: Course; lesson: Lesso
 function LessonRun({ course, lesson, steps }: { course: Course; lesson: LessonInfo; steps: Step[] }) {
   const { t, locale } = useT();
   const sheetKey = lessonSheetKey(course.id, lesson.id);
-  // Every lesson is a thinking session: redo an earlier sheet if one is due, guess first, squeeze at the end.
+  // Every lesson is a thinking session: redo an earlier sheet if one is due, learn the steps, sort keywords, squeeze at the end.
   const [againSheet] = useState(() => dueSheet(getProgress().sheets ?? {}, Date.now(), sheetKey));
-  const [phase, setPhase] = useState<Phase>(againSheet ? 'again' : 'wrong');
+  const [phase, setPhase] = useState<Phase>(againSheet ? 'again' : 'steps');
   const [index, setIndex] = useState(0);
   const [score, setScore] = useState({ right: 0, total: 0 });
   const [xp, setXp] = useState(0);
-  const [firstGuesses, setFirstGuesses] = useState<SheetDraft | undefined>();
+  const [keywordSheet, setKeywordSheet] = useState<SheetDraft | undefined>();
   const courseHref = href('course', course.id);
   useBodyAccent(course.color);
   useStudyTimer(course.id);
@@ -49,16 +49,16 @@ function LessonRun({ course, lesson, steps }: { course: Course; lesson: LessonIn
   }, [index, phase]);
 
   const next = () => {
-    if (index + 1 === steps.length) setPhase('shorter');
+    if (index + 1 === steps.length) setPhase('wrong');
     else setIndex(index + 1);
   };
 
   if (phase === 'done') return <LessonComplete course={course} lesson={lesson} score={score} xp={xp} />;
 
-  // Progress bar: [again] + wrong + steps + shorter.
-  const lead = againSheet ? 2 : 1;
-  const total = steps.length + lead + 1;
-  const done = phase === 'again' ? 0 : phase === 'wrong' ? lead - 1 : phase === 'steps' ? lead + index : total - 1;
+  // Progress bar: [again] + steps + wrong + shorter.
+  const before = againSheet ? 1 : 0;
+  const total = before + steps.length + 2;
+  const done = phase === 'again' ? 0 : phase === 'steps' ? before + index : phase === 'wrong' ? before + steps.length : total - 1;
   const step = steps[index];
   // The current step remounts in the new language on a switch; index, phase, score and XP are kept.
   const stepKey = `${index}-${locale}`;
@@ -85,7 +85,7 @@ function LessonRun({ course, lesson, steps }: { course: Course; lesson: LessonIn
             sheet={againSheet}
             onDone={(gained) => {
               setXp((x) => x + gained);
-              setPhase('wrong');
+              setPhase('steps');
             }}
           />
         )}
@@ -94,10 +94,10 @@ function LessonRun({ course, lesson, steps }: { course: Course; lesson: LessonIn
           <WrongPhase
             topic={lesson.title}
             onDone={(draft) => {
-              setFirstGuesses(draft);
+              setKeywordSheet(draft);
               const prev = getProgress().sheets?.[sheetKey];
               setXp((x) => x + saveSheet(startLessonSheet(prev, course.id, lesson.id, lesson.title, draft)));
-              setPhase('steps');
+              setPhase('shorter');
             }}
           />
         )}
@@ -108,11 +108,11 @@ function LessonRun({ course, lesson, steps }: { course: Course; lesson: LessonIn
             intro={t('lesson.shorter.intro')}
             concepts={course.concepts ?? []}
             lessonId={lesson.id}
-            firstGuesses={firstGuesses}
+            keywordSheet={keywordSheet}
             doneLabel={t('lesson.shorter.done')}
             onDone={(anchors) => {
               const sheet = getProgress().sheets?.[sheetKey];
-              const base = sheet ?? startLessonSheet(undefined, course.id, lesson.id, lesson.title, firstGuesses ?? emptyDraft());
+              const base = sheet ?? startLessonSheet(undefined, course.id, lesson.id, lesson.title, keywordSheet ?? emptyDraft());
               const gained = saveSheet(finishShorter(base, anchors));
               setXp((x) => x + gained + completeLesson(lessonKey(course.id, lesson.id)));
               setPhase('done');

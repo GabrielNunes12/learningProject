@@ -11,8 +11,8 @@ export default {
 
   // ---------- missing-step messages ----------
   'thinking.missing.wrongKeywords': {
-    one: "Ajoute encore {count} mot-clé. Les suppositions comptent.",
-    other: "Ajoute encore {count} mots-clés. Les suppositions comptent.",
+    one: "Ajoute encore {count} mot-clé. Les doutes comptent aussi.",
+    other: "Ajoute encore {count} mots-clés. Les doutes comptent aussi.",
   },
   'thinking.missing.wrongPiles': {
     one: "Classe-les en {count} pile : fais glisser les mots-clés vers le bas, dans les colonnes.",
@@ -33,13 +33,12 @@ export default {
   'thinking.session.quiz': "Quiz",
   'thinking.session.quizCourse': "Quiz : {course}",
 
-  // ---------- make it wrong (start of a lesson) ----------
-  'thinking.wrong.heading': "Que penses-tu déjà de « {topic} » ?",
-  'thinking.wrong.lead':
-    "Pose des mots-clés sur la feuille avant la leçon : suppositions, souvenirs flous, même faux. Puis classe-les en piles qui te semblent liées. Rien n'est noté ici ; un premier jet brouillon donne à la leçon de quoi s'accrocher.",
-  'thinking.wrong.sheetLabel': "Tes premières suppositions sur {topic}",
+  // ---------- make it wrong (end of a lesson, after the steps) ----------
+  'thinking.wrong.heading': "Que te reste-t-il de « {topic} » ?",
+  'thinking.wrong.lead': "Écris de mémoire des mots-clés sur la feuille, sans revenir en arrière : ce que tu as retenu, les bribes à moitié oubliées, même celles dont tu doutes. Puis classe-les en piles qui vont ensemble. Rien n'est noté ici ; te tromper un peu maintenant montre ce qu'il faut revoir.",
+  'thinking.wrong.sheetLabel': "Tes mots-clés sur {topic}",
   'thinking.wrong.ready': "Bien. {time} sur papier.",
-  'thinking.wrong.start': "Commencer la leçon",
+  'thinking.wrong.start': "Continuer",
 
   // ---------- make it shorter (end of a session) ----------
   'thinking.shorter.placeholder': "quelques mots",
@@ -51,8 +50,8 @@ export default {
   'thinking.shorter.missedHeading': "Derrière les questions ratées",
   'thinking.shorter.alsoHeading': "Aussi dans cette leçon",
   'thinking.shorter.notMistake': "Ce n'est pas une erreur : ça vaut un dernier coup d'œil avant de continuer.",
-  'thinking.shorter.beforeHeading': "Avant la leçon, tu as écrit",
-  'thinking.shorter.firstGuesses': "Tes premières suppositions",
+  'thinking.shorter.beforeHeading': "Juste avant, tu as écrit",
+  'thinking.shorter.firstGuesses': "Tes mots-clés",
   'thinking.shorter.rebuildNext': "Tu reconstruiras cette feuille de mémoire au début de ta prochaine séance, et tu corrigeras ce qui est faux.",
   'thinking.shorter.ready': "Assez court. Pas besoin que ce soit propre.",
   'thinking.shorter.squeeze': "Condenser",
@@ -120,14 +119,14 @@ export default {
 
   // ---------- the Notebook page ----------
   'thinking.notebook.title': "Carnet",
-  'thinking.notebook.subtitle': "Chaque feuille sur laquelle tu as réfléchi : tes premières suppositions, tes ancres, et les versions au propre reconstruites de mémoire.",
+  'thinking.notebook.subtitle': "Chaque feuille sur laquelle tu as réfléchi : tes mots-clés, tes ancres, et les versions au propre reconstruites de mémoire.",
   'thinking.notebook.streak': "Série de réflexion",
   'thinking.notebook.daysThisWeek': "{days} sur les 7 derniers jours",
   'thinking.notebook.recall': "Retrouvé de mémoire",
   'thinking.notebook.redos': { one: "{count} reprise", other: "{count} reprises" },
   'thinking.notebook.due': { one: "{count} à refaire", other: "{count} à refaire" },
   'thinking.notebook.methodHeading': "Comment se déroule chaque séance",
-  'thinking.notebook.methodWrong': "<b>{phase}.</b> Avant une leçon, mets sur papier ce que tu crois savoir et classe-le, même si c'est faux.",
+  'thinking.notebook.methodWrong': "<b>{phase}.</b> Après les étapes, mets sur papier les mots-clés dont tu te souviens et classe-les, même si certains sont faux.",
   'thinking.notebook.methodShorter': "<b>{phase}.</b> Après chaque séance, condense-la en 2 ou 3 ancres de quatre mots maximum.",
   'thinking.notebook.methodAgain':
     "<b>{phase}.</b> À la séance suivante, reconstruis une ancienne feuille sur une page blanche, puis corrige-la et réorganise-la. L'intervalle s'allonge à chaque fois.",
