@@ -1,0 +1,2597 @@
+{
+  "id": "cpp",
+  "title": "C++",
+  "icon": "C++",
+  "color": "#00599c",
+  "order": 14,
+  "category": "Programming",
+  "level": "Beginner",
+  "description": "Write modern C++20 from your very first program: types, functions, references, containers, classes, lambdas and safe memory with unique_ptr. The 80/20 foundation for game and engine code.",
+  "keyIdeas": [
+    "C++ is compiled: the compiler checks every type before anything runs, so fix the first error first and treat warnings as bugs.",
+    "Integer maths stays integer (`7 / 2` is 3), and signed overflow, uninitialised variables and out-of-range `[]` are undefined behaviour.",
+    "Arguments are copied: take `T&` to change the caller's object and `const T&` to read big objects without copying.",
+    "`std::vector` for sequences, `std::array` for fixed sizes, `std::unordered_map` for lookup by key; use `.at()` and `contains` to stay safe.",
+    "Classes bundle data with the member functions that protect its rules, and `enum class` and `std::optional` make states and missing values explicit.",
+    "Don't write `delete`: objects clean up in their destructors, and `std::unique_ptr` gives each heap object one owner that frees it automatically (RAII)."
+  ],
+  "concepts": [
+    {
+      "id": "compilation",
+      "label": "Compiling and linking",
+      "lesson": "hello-compile",
+      "summary": "The compiler checks every file and turns it into machine code, then the linker joins the pieces into an executable; nothing runs until both succeed.",
+      "aliases": [
+        "compiler",
+        "compile error",
+        "linker",
+        "build"
+      ]
+    },
+    {
+      "id": "static-types",
+      "label": "Static types",
+      "lesson": "variables-types",
+      "summary": "Every variable has one type fixed before the program runs, written out or deduced with auto, so the compiler rejects mismatches.",
+      "aliases": [
+        "types",
+        "auto",
+        "int and double",
+        "std::string"
+      ]
+    },
+    {
+      "id": "undefined-behaviour",
+      "label": "Undefined behaviour",
+      "lesson": "variables-types",
+      "summary": "Operations like reading an uninitialised variable, signed overflow, out-of-range [] or a null dereference have no defined result, so anything can happen.",
+      "aliases": [
+        "UB",
+        "uninitialised variable",
+        "garbage value"
+      ]
+    },
+    {
+      "id": "integer-division",
+      "label": "Integer division",
+      "lesson": "integer-math",
+      "summary": "Dividing two integers drops the fraction (7 / 2 is 3); convert one operand with static_cast<double> for real division.",
+      "aliases": [
+        "int division",
+        "truncation",
+        "static_cast",
+        "modulo"
+      ]
+    },
+    {
+      "id": "integer-overflow",
+      "label": "Integer overflow",
+      "lesson": "integer-math",
+      "summary": "Integers have fixed sizes: signed overflow is undefined behaviour, while unsigned values wrap around.",
+      "aliases": [
+        "overflow",
+        "wraparound",
+        "unsigned",
+        "long long"
+      ]
+    },
+    {
+      "id": "conditions-loops",
+      "label": "Conditions and loops",
+      "lesson": "control-flow",
+      "summary": "if/else if runs the first true branch, while and for repeat while a condition holds, and == compares while = assigns.",
+      "aliases": [
+        "if else",
+        "for loop",
+        "while loop",
+        "break continue"
+      ]
+    },
+    {
+      "id": "functions",
+      "label": "Functions",
+      "lesson": "functions",
+      "summary": "A function has typed parameters and a return type, and must be declared before the code that calls it.",
+      "aliases": [
+        "function declaration",
+        "return",
+        "void",
+        "prototype"
+      ]
+    },
+    {
+      "id": "overloading",
+      "label": "Overloading",
+      "lesson": "functions",
+      "summary": "Functions can share a name when their parameters differ; the compiler picks the best match for the argument types, and default arguments fill in missing ones.",
+      "aliases": [
+        "function overloading",
+        "default arguments"
+      ]
+    },
+    {
+      "id": "references",
+      "label": "References",
+      "lesson": "references-const",
+      "summary": "A reference (T&) is another name for an existing object, so a reference parameter lets a function change the caller's variable.",
+      "aliases": [
+        "T&",
+        "pass by reference",
+        "alias"
+      ]
+    },
+    {
+      "id": "const-reference",
+      "label": "const references",
+      "lesson": "references-const",
+      "summary": "A const T& parameter reads a large object without copying it, and the compiler forbids changing it.",
+      "aliases": [
+        "const&",
+        "const T&",
+        "pass by const reference"
+      ]
+    },
+    {
+      "id": "vector",
+      "label": "std::vector",
+      "lesson": "vectors-arrays",
+      "summary": "A growable array stored contiguously, and the default container; std::array is its fixed-size cousin.",
+      "aliases": [
+        "vector",
+        "std::array",
+        "push_back",
+        "dynamic array"
+      ]
+    },
+    {
+      "id": "range-for",
+      "label": "Range-for loops",
+      "lesson": "vectors-arrays",
+      "summary": "for (T x : v) visits every element: a plain variable is a copy, T& changes the element, const auto& reads without copying.",
+      "aliases": [
+        "for each",
+        "range-based for"
+      ]
+    },
+    {
+      "id": "bounds-checking",
+      "label": ".at() vs []",
+      "lesson": "vectors-arrays",
+      "summary": "v[i] is unchecked and out-of-range access is undefined behaviour, while v.at(i) throws std::out_of_range.",
+      "aliases": [
+        "out of bounds",
+        "at()",
+        "off-by-one",
+        "out_of_range"
+      ]
+    },
+    {
+      "id": "unordered-map",
+      "label": "std::unordered_map",
+      "lesson": "unordered-map",
+      "summary": "A hash table from keys to values; m[key] inserts missing keys, so check with contains and read with at.",
+      "aliases": [
+        "map",
+        "hash map",
+        "dictionary",
+        "contains"
+      ]
+    },
+    {
+      "id": "pointers",
+      "label": "Pointers",
+      "lesson": "pointers",
+      "summary": "A pointer holds an address: & takes it, * and -> follow it, and nullptr means it points nowhere.",
+      "aliases": [
+        "raw pointer",
+        "nullptr",
+        "address-of",
+        "dereference"
+      ]
+    },
+    {
+      "id": "classes",
+      "label": "Structs and classes",
+      "lesson": "structs-classes",
+      "summary": "Types that bundle data with member functions; constructors set them up and private members protect their rules (encapsulation).",
+      "aliases": [
+        "struct",
+        "class",
+        "constructor",
+        "encapsulation",
+        "public private"
+      ]
+    },
+    {
+      "id": "enum-class",
+      "label": "enum class",
+      "lesson": "enums-optional",
+      "summary": "A scoped type with a fixed set of named values that never converts to int, usually handled with a switch.",
+      "aliases": [
+        "enum",
+        "switch",
+        "scoped enum"
+      ]
+    },
+    {
+      "id": "optional",
+      "label": "std::optional",
+      "lesson": "enums-optional",
+      "summary": "Holds either a value or nothing (std::nullopt), replacing magic values; read it with value_or or after checking it.",
+      "aliases": [
+        "optional",
+        "nullopt",
+        "value_or"
+      ]
+    },
+    {
+      "id": "header-source",
+      "label": "Headers and sources",
+      "lesson": "headers-sources",
+      "summary": "Headers declare what exists and are included where needed; .cpp files hold the definitions, compiled separately and linked.",
+      "aliases": [
+        "header file",
+        "#include",
+        "#pragma once",
+        "linker error"
+      ]
+    },
+    {
+      "id": "lambdas",
+      "label": "Lambdas",
+      "lesson": "lambdas-algorithms",
+      "summary": "Inline anonymous functions whose capture list says which local variables they copy or refer to.",
+      "aliases": [
+        "lambda",
+        "capture list",
+        "anonymous function"
+      ]
+    },
+    {
+      "id": "algorithms",
+      "label": "Standard algorithms",
+      "lesson": "lambdas-algorithms",
+      "summary": "Ready-made loops from <algorithm>, such as sort, find_if and count_if, that work on iterator ranges and take lambdas.",
+      "aliases": [
+        "<algorithm>",
+        "std::sort",
+        "find_if",
+        "count_if",
+        "iterators"
+      ]
+    },
+    {
+      "id": "templates",
+      "label": "Templates",
+      "lesson": "templates",
+      "summary": "Code written for a type parameter T, which the compiler turns into a real version for each type used.",
+      "aliases": [
+        "function template",
+        "generics",
+        "typename T"
+      ]
+    },
+    {
+      "id": "stack-vs-heap",
+      "label": "Stack vs heap",
+      "lesson": "heap-unique-ptr",
+      "summary": "Locals live on the stack and are destroyed at the end of their scope; heap objects from new live until something deletes them.",
+      "aliases": [
+        "new delete",
+        "memory leak",
+        "destructor",
+        "scope"
+      ]
+    },
+    {
+      "id": "unique-ptr",
+      "label": "unique_ptr and RAII",
+      "lesson": "heap-unique-ptr",
+      "summary": "std::unique_ptr owns one heap object and deletes it when it goes out of scope, so cleanup happens on every path.",
+      "aliases": [
+        "unique_ptr",
+        "make_unique",
+        "RAII",
+        "smart pointer"
+      ]
+    }
+  ],
+  "links": [
+    {
+      "from": "compilation",
+      "to": "static-types",
+      "label": "enforces"
+    },
+    {
+      "from": "static-types",
+      "to": "integer-division",
+      "label": "decides"
+    },
+    {
+      "from": "static-types",
+      "to": "integer-overflow",
+      "label": "sets the limits for"
+    },
+    {
+      "from": "integer-overflow",
+      "to": "undefined-behaviour",
+      "label": "can be"
+    },
+    {
+      "from": "undefined-behaviour",
+      "to": "compilation",
+      "label": "is not caught by"
+    },
+    {
+      "from": "bounds-checking",
+      "to": "undefined-behaviour",
+      "label": "prevents"
+    },
+    {
+      "from": "pointers",
+      "to": "undefined-behaviour",
+      "label": "can cause"
+    },
+    {
+      "from": "range-for",
+      "to": "conditions-loops",
+      "label": "is a simpler form of"
+    },
+    {
+      "from": "overloading",
+      "to": "functions",
+      "label": "extends"
+    },
+    {
+      "from": "functions",
+      "to": "references",
+      "label": "take parameters by"
+    },
+    {
+      "from": "const-reference",
+      "to": "references",
+      "label": "is a read-only form of"
+    },
+    {
+      "from": "pointers",
+      "to": "references",
+      "label": "is the nullable cousin of"
+    },
+    {
+      "from": "vector",
+      "to": "range-for",
+      "label": "is walked with"
+    },
+    {
+      "from": "vector",
+      "to": "bounds-checking",
+      "label": "offers via .at()"
+    },
+    {
+      "from": "unordered-map",
+      "to": "vector",
+      "label": "looks up by key, unlike"
+    },
+    {
+      "from": "classes",
+      "to": "functions",
+      "label": "bundle data with"
+    },
+    {
+      "from": "classes",
+      "to": "const-reference",
+      "label": "are passed by"
+    },
+    {
+      "from": "enum-class",
+      "to": "conditions-loops",
+      "label": "is branched on with switch, like"
+    },
+    {
+      "from": "optional",
+      "to": "pointers",
+      "label": "is a safer alternative to"
+    },
+    {
+      "from": "header-source",
+      "to": "compilation",
+      "label": "splits"
+    },
+    {
+      "from": "header-source",
+      "to": "functions",
+      "label": "separates declaration from definition of"
+    },
+    {
+      "from": "lambdas",
+      "to": "functions",
+      "label": "are unnamed"
+    },
+    {
+      "from": "algorithms",
+      "to": "lambdas",
+      "label": "take"
+    },
+    {
+      "from": "algorithms",
+      "to": "vector",
+      "label": "work on"
+    },
+    {
+      "from": "templates",
+      "to": "overloading",
+      "label": "generalises"
+    },
+    {
+      "from": "vector",
+      "to": "templates",
+      "label": "is built with"
+    },
+    {
+      "from": "stack-vs-heap",
+      "to": "pointers",
+      "label": "is reached through"
+    },
+    {
+      "from": "unique-ptr",
+      "to": "stack-vs-heap",
+      "label": "ties heap lifetime to stack scope in"
+    },
+    {
+      "from": "unique-ptr",
+      "to": "pointers",
+      "label": "replaces owning raw"
+    },
+    {
+      "from": "static-types",
+      "to": "python/types-conversion",
+      "label": "contrasts with"
+    },
+    {
+      "from": "references",
+      "to": "python/aliasing",
+      "label": "is the explicit form of"
+    },
+    {
+      "from": "references",
+      "to": "game-engine-programming/references-pointers",
+      "label": "is deepened in"
+    },
+    {
+      "from": "pointers",
+      "to": "game-engine-programming/dangling-reference",
+      "label": "can become a"
+    },
+    {
+      "from": "undefined-behaviour",
+      "to": "game-engine-programming/undefined-behaviour",
+      "label": "is explored in"
+    },
+    {
+      "from": "bounds-checking",
+      "to": "game-engine-programming/sanitizers",
+      "label": "is backed up by"
+    },
+    {
+      "from": "classes",
+      "to": "game-engine-programming/value-semantics",
+      "label": "follow"
+    },
+    {
+      "from": "const-reference",
+      "to": "game-engine-programming/const-correctness",
+      "label": "is the first step to"
+    },
+    {
+      "from": "stack-vs-heap",
+      "to": "game-engine-programming/stack-vs-heap",
+      "label": "is deepened in"
+    },
+    {
+      "from": "unique-ptr",
+      "to": "game-engine-programming/unique-ownership",
+      "label": "is deepened in"
+    },
+    {
+      "from": "unique-ptr",
+      "to": "game-engine-programming/raii",
+      "label": "applies"
+    },
+    {
+      "from": "classes",
+      "to": "java/encapsulation",
+      "label": "apply"
+    },
+    {
+      "from": "optional",
+      "to": "java/optional",
+      "label": "works like"
+    },
+    {
+      "from": "lambdas",
+      "to": "java/lambdas",
+      "label": "work like"
+    },
+    {
+      "from": "templates",
+      "to": "java/collections-generics",
+      "label": "resemble"
+    },
+    {
+      "from": "unordered-map",
+      "to": "big-o/hash-map",
+      "label": "is a"
+    },
+    {
+      "from": "enum-class",
+      "to": "kotlin/enums",
+      "label": "is like"
+    }
+  ],
+  "units": [
+    {
+      "id": "first-programs",
+      "title": "First programs",
+      "description": "Compile and run, types, integer maths, decisions, loops and functions.",
+      "lessons": [
+        {
+          "id": "hello-compile",
+          "title": "Your first program",
+          "pareto": "core",
+          "minutes": 6,
+          "takeaway": "C++ is compiled: the compiler checks the whole program and builds an executable before anything runs, so read its first error first.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "From text to a running program",
+              "body": "C++ is a **compiled** language. You write source code in a text file such as `hello.cpp`, a **compiler** checks it and translates it into machine code, and only then do you run the result.\n\n```cpp\n#include <iostream>\n\nint main() {\n    std::cout << \"Hello, world!\\n\";\n    return 0;\n}\n```\n\n- `#include <iostream>` brings in the standard input/output library.\n- `int main()` is where every program starts.\n- `std::cout` is the console: `<<` sends values into it, and `\"\\n\"` ends the line.\n- Statements end with `;`, and braces `{ }` group them. `return 0;` reports success (`main` may leave it out).\n\nIn a terminal, `clang++ -std=c++20 -Wall hello.cpp -o hello` builds the program (g++ and Visual Studio work the same way) and `./hello` runs it."
+            },
+            {
+              "type": "order",
+              "id": "q-build-order",
+              "concepts": [
+                "compilation"
+              ],
+              "prompt": "Put the journey from source file to running program in order.",
+              "items": [
+                "You write `hello.cpp` in an editor",
+                "The compiler checks the code and stops with an error if a rule is broken",
+                "The compiler translates the code into machine code (an object file)",
+                "The linker joins it with library code, such as `std::cout`, into an executable",
+                "You run `./hello` and `main` starts"
+              ],
+              "explanation": "Nothing runs until the whole file has passed the compiler's checks and been linked into an executable. That's the big difference from Python, which reads and runs a script line by line: in C++ a typo on line 300 stops the build before line 1 ever runs."
+            },
+            {
+              "type": "output",
+              "id": "q-cout-chain",
+              "concepts": [
+                "compilation"
+              ],
+              "prompt": "What does this print? Watch where the `\"\\n\"`s are.",
+              "language": "cpp",
+              "code": "#include <iostream>\n\nint main() {\n    std::cout << \"Score: \" << 3 + 4 << \"\\n\";\n    std::cout << \"Lives: \" << 3;\n    std::cout << \"!\\n\";\n}",
+              "output": "Score: 7\nLives: 3!",
+              "explanation": "`3 + 4` is worked out first, so the first line is `Score: 7`. The second statement prints `Lives: 3` **without** a newline, so the next `std::cout` carries on on the same line and adds `!`. Output only moves to a new line when you send `\"\\n\"`."
+            },
+            {
+              "type": "explain",
+              "title": "When the compiler says no",
+              "body": "If the code breaks a rule, the compiler prints an **error** and no program is built. Each message starts with where it happened, *file:line:column*:\n\n```\nhello.cpp:2:9: error: cannot initialize a variable of type 'int' with an lvalue of type 'const char[5]'\n```\n\n- Fix the **first** error first: later ones are often knock-on effects of it.\n- The column points to where the compiler got confused, which is often just *after* the real mistake.\n\n**Warnings** don't stop the build, but with `-Wall -Wextra` they flag code that's legal and almost certainly wrong. Treat them like errors."
+            },
+            {
+              "type": "example",
+              "title": "Reading an error",
+              "problem": "This program doesn't build. The compiler says `hello.cpp:4:5: error: use of undeclared identifier 'cout'; did you mean 'std::cout'?` Before revealing, decide which line to change.\n\n```cpp\n#include <iostream>\n\nint main() {\n    cout << \"Hi\\n\";\n}\n```",
+              "steps": [
+                "`4:5` means line 4, column 5: the start of `cout`.",
+                "*Undeclared identifier* means the compiler doesn't know that name here.",
+                "The standard library puts its names in the namespace `std`, so the console is called `std::cout`. The compiler even suggests it."
+              ],
+              "answer": "Change line 4 to `std::cout << \"Hi\\n\";`. Most first errors are this kind: a missing `std::`, a typo, or a missing `;`."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-semicolon",
+              "concepts": [
+                "compilation"
+              ],
+              "prompt": "This should print `Lives: 3`, but it doesn't build. Click the line with the mistake.",
+              "language": "cpp",
+              "code": "#include <iostream>\n\nint main() {\n    int lives = 3\n    std::cout << \"Lives: \" << lives << \"\\n\";\n}",
+              "error": "error: expected ';' at end of declaration",
+              "lines": [
+                4
+              ],
+              "fixes": [
+                "Add `;` at the end of line 4: `int lives = 3;`",
+                "Change line 3 to `int main() {;`",
+                "Change line 5 to `std::cout << \"Lives: \" << 3 << \"\\n\";`",
+                "Change line 1 to `#include <string>`"
+              ],
+              "answer": 0,
+              "explanation": "Every statement ends with `;`, and line 4 is missing one: the error's column points at the end of that line. An extra `;` on line 3 is just an empty statement, and changing line 5 or the `#include` leaves line 4 broken, so all three still fail with the same error."
+            },
+            {
+              "type": "buckets",
+              "id": "q-compile-or-run",
+              "concepts": [
+                "compilation",
+                "static-types"
+              ],
+              "prompt": "Will the compiler catch it, or will it only show up when the program runs?",
+              "buckets": [
+                "The compiler rejects it: no program is built",
+                "It builds: the problem shows up only when it runs"
+              ],
+              "items": [
+                {
+                  "text": "A missing `;` at the end of a statement",
+                  "bucket": 0
+                },
+                {
+                  "text": "`std::cot << \"hi\";` (a typo in a name)",
+                  "bucket": 0
+                },
+                {
+                  "text": "`int n = \"five\";` (text stored in an `int`)",
+                  "bucket": 0
+                },
+                {
+                  "text": "Calling `add(1)` when `add` needs two numbers",
+                  "bucket": 0
+                },
+                {
+                  "text": "A loop that runs one time too many",
+                  "bucket": 1
+                },
+                {
+                  "text": "Dividing by a number the player typed in, which happens to be 0",
+                  "bucket": 1
+                },
+                {
+                  "text": "Printing \"You win\" when the player actually lost",
+                  "bucket": 1
+                }
+              ],
+              "explanation": "The compiler checks spelling, names, types and argument counts, so those never reach a running program: clang says *no member named 'cot' in namespace 'std'*, *cannot initialize a variable of type 'int' with an lvalue of type 'const char[5]'* and *no matching function for call to 'add'*. It can't know what the player will type or what you meant, so logic mistakes and bad run-time values still need testing."
+            }
+          ]
+        },
+        {
+          "id": "variables-types",
+          "title": "Variables and types",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "Every variable has one fixed type, decided before the program runs; give each one a value when you declare it.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Every variable has a type",
+              "body": "```cpp\nint lives = 3;            // whole numbers\ndouble speed = 2.5;       // decimals\nfloat scale = 0.5f;       // smaller, less precise decimals: note the f\nbool alive = true;        // true or false\nchar grade = 'A';         // one character, in single quotes\nstd::string name = \"Ada\"; // text, in double quotes: #include <string>\n```\n\nA variable's type is fixed for its whole life. `lives = \"three\";` doesn't build: *assigning to 'int' from incompatible type 'const char[6]'*.\n\nThis is **static typing**: the compiler knows every type before the program runs. It catches mistakes early and lets the compiler produce fast machine code. Python, by contrast, checks types only as each line runs."
+            },
+            {
+              "type": "explain",
+              "title": "auto, and text",
+              "body": "`auto` asks the compiler to work out the type from the starting value. The variable is still statically typed:\n\n```cpp\nauto a = 7;      // int\nauto b = 7.0;    // double\nauto c = 2.5f;   // float\nauto d = 'x';    // char\nauto s = \"hi\";   // const char*, NOT std::string\n```\n\nThat last one is a classic trap: a quoted literal is an old C-style array of characters, not a `std::string`. Write `std::string s = \"hi\";` when you want text you can join and change.\n\n`std::string` basics: `+` joins strings, `s.size()` is the length, `s[0]` is the first `char`, and `std::to_string(42)` turns a number into text."
+            },
+            {
+              "type": "buckets",
+              "id": "q-auto-type",
+              "concepts": [
+                "static-types"
+              ],
+              "prompt": "Which type does `auto` deduce? Sort each declaration.",
+              "buckets": [
+                "int",
+                "double",
+                "char",
+                "bool"
+              ],
+              "items": [
+                {
+                  "text": "`auto a = 7;`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`auto c = 7 / 2;`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`auto b = 7.0;`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`auto d = 7 / 2.0;`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`auto g = 1e3;`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`auto e = 'x';`",
+                  "bucket": 2
+                },
+                {
+                  "text": "`auto f = 3 > 2;`",
+                  "bucket": 3
+                },
+                {
+                  "text": "`auto h = 'a' == 'b';`",
+                  "bucket": 3
+                }
+              ],
+              "explanation": "A whole-number literal is an `int`, and anything with a decimal point or an exponent (`1e3`) is a `double`. `7 / 2` is int divided by int, so it stays an `int`; one `double` operand makes `7 / 2.0` a `double`. Single quotes make a `char`, and a comparison such as `3 > 2` gives a `bool`. (Each of these was checked with `static_assert`.)"
+            },
+            {
+              "type": "output",
+              "id": "q-string-ops",
+              "concepts": [
+                "static-types"
+              ],
+              "prompt": "What does this print?",
+              "language": "cpp",
+              "code": "#include <iostream>\n#include <string>\n\nint main() {\n    std::string name = \"Ada\";\n    int level = 7;\n    std::string tag = name + \"#\" + std::to_string(level);\n    std::cout << tag << \" \" << tag.size() << \"\\n\";\n    std::cout << tag[0] << \"\\n\";\n}",
+              "output": "Ada#7 5\nA",
+              "explanation": "`std::to_string(7)` turns the number into the text `\"7\"`, so `tag` is `Ada#7`, which has 5 characters. `tag[0]` is the first character, the `char` `'A'`."
+            },
+            {
+              "type": "explain",
+              "title": "Always initialise",
+              "body": "A local `int`, `double`, `bool`, `char` or pointer declared without a value is **uninitialised**: it holds whatever bits were left in that memory. Reading it is **undefined behaviour** (UB): the C++ standard says nothing about what happens. The program may print garbage, print 0 today and 6 tomorrow, or change behaviour when optimised.\n\n```cpp\nint total;        // garbage\nint count = 0;    // 0\nint hits{};       // {} also means zero\nstd::string s;    // fine: strings and vectors start empty\n```\n\nThe compiler won't stop you, but `-Wall` warns: *variable 'total' is uninitialized when used here*. Initialise every variable where you declare it."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-uninit",
+              "concepts": [
+                "undefined-behaviour"
+              ],
+              "prompt": "This should print `5`. On one run it printed `6`. Click the line with the bug.",
+              "language": "cpp",
+              "code": "#include <iostream>\n\nint main() {\n    int coins;\n    int found = 5;\n    coins += found;\n    std::cout << coins << \"\\n\";\n}",
+              "error": "warning: variable 'coins' is uninitialized when used here [-Wuninitialized]\n...\n6",
+              "lines": [
+                4
+              ],
+              "fixes": [
+                "Change line 4 to `int coins = 0;`",
+                "Change line 5 to `int found = 0;`",
+                "Change line 6 to `coins += 5;`",
+                "Change line 4 to `auto coins;`"
+              ],
+              "answer": 0,
+              "hint": "Which variable is read before anything was stored in it?",
+              "explanation": "`int coins;` leaves `coins` uninitialised, so `coins += found` adds 5 to whatever bits were there (on this run, 1). Giving it a starting value on line 4 fixes it. Zeroing `found` or adding a literal `5` still reads the garbage, and clang still warns. `auto` can't deduce a type from nothing: *declaration of variable 'coins' with deduced type 'auto' requires an initializer*."
+            },
+            {
+              "type": "output",
+              "id": "q-bool-char",
+              "concepts": [
+                "static-types"
+              ],
+              "prompt": "What does this print?",
+              "language": "cpp",
+              "code": "#include <iostream>\n\nint main() {\n    bool ready = true;\n    char grade = 'A';\n    std::cout << ready << \" \" << grade << \" \" << grade + 1 << \"\\n\";\n}",
+              "output": "1 A 66",
+              "hint": "A `char` is a small integer. What type is `grade + 1`?",
+              "explanation": "`std::cout` prints a `bool` as `1` or `0` (send `std::boolalpha` first if you want `true`). A `char` prints as its letter, `A`. But `grade + 1` is arithmetic: the `char` is promoted to the `int` 65 (its character code), so it prints `66`. To get the letter `B`, convert back with `static_cast<char>(grade + 1)`."
+            }
+          ]
+        },
+        {
+          "id": "integer-math",
+          "title": "Integer maths and overflow",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "int divided by int is an int (`7 / 2` is 3), and every integer type has a limit: going past it with a signed type is undefined behaviour.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Integer division",
+              "body": "When both sides of `/` are integers, C++ does **integer division** and drops the fraction (it truncates toward zero): `7 / 2` is `3` and `-7 / 2` is `-3`. `%` gives the remainder: `7 % 2` is `1`.\n\nIf either side is a `double`, you get real division: `7 / 2.0` is `3.5`.\n\nThe **operands** decide the type, not where you store the result: `double avg = 7 / 2;` computes the `int` 3 first and only then stores `3.0`. To divide two `int` variables properly, convert one of them first:\n\n```cpp\ndouble avg = static_cast<double>(total) / count;\n```\n\n`static_cast<T>(x)` is C++'s explicit conversion."
+            },
+            {
+              "type": "output",
+              "id": "q-int-division",
+              "concepts": [
+                "integer-division"
+              ],
+              "prompt": "What does this print?",
+              "language": "cpp",
+              "code": "#include <iostream>\n\nint main() {\n    std::cout << 7 / 2 << \" \" << 7 % 2 << \" \" << 7 / 2.0 << \"\\n\";\n    double average = 7 / 2;\n    std::cout << average << \"\\n\";\n}",
+              "output": "3 1 3.5\n3",
+              "explanation": "`7 / 2` is integer division, `3`; `7 % 2` is the remainder, `1`; `7 / 2.0` has a `double` operand, so it's `3.5`. On the next line `7 / 2` is still `3` before it's stored in `average`, and `std::cout` prints the `double` 3.0 as `3`."
+            },
+            {
+              "type": "example",
+              "title": "Hit accuracy",
+              "problem": "`int hits = 7; int shots = 8;` A programmer writes `double accuracy = hits / shots * 100;` and the HUD shows `0`. Work out why before revealing, then fix it.",
+              "steps": [
+                "`hits / shots` is `int / int`, so 7 / 8 is `0`: the 0.875 is thrown away.",
+                "`0 * 100` is `0`, and storing it in a `double` just makes it `0.0`.",
+                "Convert before dividing: `static_cast<double>(hits) / shots * 100`. Now 7.0 / 8 is 0.875, and the result is 87.5."
+              ],
+              "answer": "`double accuracy = static_cast<double>(hits) / shots * 100;` gives `87.5`. Converting the result instead, as in `static_cast<double>(hits / shots)`, is too late: the fraction is already gone."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-average",
+              "concepts": [
+                "integer-division"
+              ],
+              "prompt": "This should print the average health, `83.3333`. It prints `83`. Click the line with the bug.",
+              "language": "cpp",
+              "code": "#include <iostream>\n\nint main() {\n    int total = 250;\n    int count = 3;\n    double average = total / count;\n    std::cout << average << \"\\n\";\n}",
+              "error": "83",
+              "lines": [
+                6
+              ],
+              "fixes": [
+                "Change line 6 to `double average = static_cast<double>(total) / count;`",
+                "Change line 6 to `double average = static_cast<double>(total / count);`",
+                "Change line 7 to `std::cout << static_cast<double>(average) << \"\\n\";`",
+                "Change line 6 to `auto average = total / count;`"
+              ],
+              "answer": 0,
+              "explanation": "`total / count` divides two `int`s, so 250 / 3 is 83 before it's ever stored in the `double`. Converting `total` first makes it a `double` division. Converting the finished quotient, casting at print time or using `auto` (which deduces `int`) all keep the integer result `83`."
+            },
+            {
+              "type": "explain",
+              "title": "Overflow",
+              "body": "Each integer type has a fixed size. On every mainstream platform `int` is 32 bits, from -2,147,483,648 to 2,147,483,647, and `long long` is 64 bits (up to about 9.2 × 10^18).\n\nGoing past the top is **overflow**, and the two kinds of integer behave differently:\n\n- **Signed** types (`int`, `long long`): overflow is **undefined behaviour**. There's no promise that it wraps around, and the optimiser assumes it never happens.\n- **Unsigned** types (`unsigned int`, and `std::size_t`, which `.size()` returns): arithmetic wraps around. For a 32-bit `unsigned int`, `0u - 1` is 4,294,967,295.\n\nGive counters that keep growing, such as scores or milliseconds, a type with room to spare."
+            },
+            {
+              "type": "numeric",
+              "id": "q-ms-overflow",
+              "concepts": [
+                "integer-overflow"
+              ],
+              "prompt": "A game stores the milliseconds since launch in an `int`. After how many days of running does it pass the `int` maximum, 2,147,483,647? Answer to one decimal place.",
+              "answer": 24.9,
+              "tolerance": 0.05,
+              "hint": "Divide by 1000 for seconds, then by 60, 60 and 24.",
+              "explanation": "2,147,483,647 ms ÷ 1000 ÷ 60 ÷ 60 ÷ 24 ≈ **24.86 days**. A server or console left running for a month would hit it. The same mistake with an unsigned 32-bit counter wraps after about 49.7 days, a real bug that froze Windows 95 and 98 machines. A `long long` of milliseconds lasts about 292 million years."
+            },
+            {
+              "type": "output",
+              "id": "q-unsigned-wrap",
+              "concepts": [
+                "integer-overflow"
+              ],
+              "prompt": "What does this print?",
+              "language": "cpp",
+              "code": "#include <iostream>\n\nint main() {\n    unsigned int ammo = 2;\n    ammo = ammo - 3;\n    std::cout << ammo << \"\\n\";\n}",
+              "output": "4294967295",
+              "hint": "Unsigned arithmetic wraps around. The largest 32-bit unsigned value is 4,294,967,295.",
+              "explanation": "`ammo` is unsigned, so `2 - 3` can't be -1. Unsigned arithmetic wraps around modulo 2^32, landing on the largest value, `4294967295`. This is why code like `v.size() - 1` on an empty vector gives a huge number instead of -1."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-overflow",
+              "concepts": [
+                "integer-overflow",
+                "undefined-behaviour"
+              ],
+              "prompt": "The score should go from 2147483000 up to `2147484000`. Click the line with the bug.",
+              "language": "cpp",
+              "code": "#include <iostream>\n\nint main() {\n    int score = 2147483000;\n    score += 1000;\n    std::cout << score << \"\\n\";\n}",
+              "error": "-2147483296\n\nBuilt with -fsanitize=undefined:\nruntime error: signed integer overflow: 2147483000 + 1000 cannot be represented in type 'int'",
+              "lines": [
+                4,
+                5
+              ],
+              "fixes": [
+                "Change line 4 to `long long score = 2147483000;`",
+                "Change line 5 to `score = score + 1000;`",
+                "Change line 4 to `auto score = 2147483000;`",
+                "Change line 6 to `std::cout << static_cast<long long>(score) << \"\\n\";`"
+              ],
+              "answer": 0,
+              "hint": "What is the largest value an `int` can hold?",
+              "explanation": "The sum is bigger than the largest `int`, so `score += 1000` overflows: undefined behaviour, which on this machine came out as a large negative number. UndefinedBehaviorSanitizer (`-fsanitize=undefined`) reports it. A 64-bit `long long` has room. Rewriting the addition changes nothing, `auto` still deduces `int` from the literal, and casting when printing is too late: the overflow already happened."
+            }
+          ]
+        },
+        {
+          "id": "control-flow",
+          "title": "Decisions and loops",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "`if`/`else if` runs the first true branch, loops repeat while a condition holds, and `==` compares while `=` assigns.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "if, else if, else",
+              "body": "```cpp\nif (hp <= 0) {\n    std::cout << \"Game over\\n\";\n} else if (hp < 20) {\n    std::cout << \"Low health!\\n\";\n} else {\n    std::cout << \"OK\\n\";\n}\n```\n\nThe condition goes in parentheses. Compare with `==`, `!=`, `<`, `<=`, `>` and `>=`, and combine conditions with `&&` (and), `||` (or) and `!` (not).\n\nThe branches are checked top to bottom, and only the **first** true one runs. A single `=` is assignment, not comparison: more on that trap below."
+            },
+            {
+              "type": "explain",
+              "title": "Loops",
+              "body": "```cpp\nwhile (hp > 0) {            // repeat while the condition holds\n    hp -= 4;\n}\n\nfor (int i = 0; i < 5; ++i) {   // start; keep going while; step\n    std::cout << i << \" \";      // 0 1 2 3 4\n}\n```\n\n`++i` adds 1 to `i`. Inside any loop, `break` leaves the loop at once and `continue` skips straight to the next round. A variable declared inside braces, like `i` here, exists only inside them."
+            },
+            {
+              "type": "trace",
+              "id": "q-trace-while",
+              "concepts": [
+                "conditions-loops"
+              ],
+              "prompt": "Step through the loop and predict the values.",
+              "language": "cpp",
+              "code": "int hp = 10;\nint turns = 0;\nwhile (hp > 0) {\n    hp -= 4;\n    ++turns;\n}\nbool dead = hp <= 0;",
+              "frames": [
+                {
+                  "line": 1,
+                  "vars": {
+                    "hp": "10"
+                  }
+                },
+                {
+                  "line": 2,
+                  "vars": {
+                    "hp": "10",
+                    "turns": "0"
+                  }
+                },
+                {
+                  "line": 4,
+                  "vars": {
+                    "hp": "6",
+                    "turns": "0"
+                  },
+                  "note": "`hp > 0` was true, so the body runs."
+                },
+                {
+                  "line": 5,
+                  "vars": {
+                    "hp": "6",
+                    "turns": "1"
+                  }
+                },
+                {
+                  "line": 4,
+                  "vars": {
+                    "hp": "2",
+                    "turns": "1"
+                  },
+                  "ask": "hp"
+                },
+                {
+                  "line": 5,
+                  "vars": {
+                    "hp": "2",
+                    "turns": "2"
+                  }
+                },
+                {
+                  "line": 4,
+                  "vars": {
+                    "hp": "-2",
+                    "turns": "2"
+                  },
+                  "ask": "hp"
+                },
+                {
+                  "line": 5,
+                  "vars": {
+                    "hp": "-2",
+                    "turns": "3"
+                  },
+                  "note": "`turns` is 3. Back at line 3, `hp > 0` is now false, so the loop ends."
+                },
+                {
+                  "line": 7,
+                  "vars": {
+                    "hp": "-2",
+                    "turns": "3",
+                    "dead": "true"
+                  },
+                  "ask": "dead"
+                }
+              ],
+              "hint": "Each round subtracts 4. The loop only notices `hp` is no longer positive when it gets back to line 3.",
+              "explanation": "The condition is checked at the top of each round: 10 → 6 → 2 → -2 takes three rounds. Because the check only happens before a round, `hp` can end below zero. `hp <= 0` is then `true`."
+            },
+            {
+              "type": "output",
+              "id": "q-break-continue",
+              "concepts": [
+                "conditions-loops"
+              ],
+              "prompt": "What does this print?",
+              "language": "cpp",
+              "code": "#include <iostream>\n\nint main() {\n    for (int i = 1; i <= 10; ++i) {\n        if (i % 4 == 0) {\n            break;\n        }\n        if (i % 2 == 0) {\n            continue;\n        }\n        std::cout << i << \"\\n\";\n    }\n}",
+              "output": "1\n3",
+              "explanation": "`i = 1` is printed. `i = 2` is even, so `continue` skips the print. `i = 3` is printed. At `i = 4`, `4 % 4 == 0`, so `break` ends the loop before 5 to 10 ever run."
+            },
+            {
+              "type": "example",
+              "title": "Order matters in else-if",
+              "problem": "Label a hit: 50 or more is `\"critical\"`, 20 or more is `\"heavy\"`, anything else is `\"light\"`. A teammate wrote the `>= 20` check first. What does their version say for a hit of 60?",
+              "steps": [
+                "The branches are tested top to bottom, and the first true one wins.",
+                "With `if (damage >= 20)` first, 60 passes that test, so it returns `\"heavy\"` and never reaches the `>= 50` check.",
+                "Put the strictest threshold first: `>= 50`, then `>= 20`, then `else`."
+              ],
+              "answer": "```cpp\nstd::string label(int damage) {\n    if (damage >= 50) {\n        return \"critical\";\n    } else if (damage >= 20) {\n        return \"heavy\";\n    } else {\n        return \"light\";\n    }\n}\n```\n\n`label(60)` is `\"critical\"`, `label(35)` is `\"heavy\"` and `label(5)` is `\"light\"`. The teammate's version says `\"heavy\"` for 60."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-assign",
+              "concepts": [
+                "conditions-loops"
+              ],
+              "prompt": "With 3 lives this should print `Lives left: 3`. Click the line with the bug.",
+              "language": "cpp",
+              "code": "#include <iostream>\n\nint main() {\n    int lives = 3;\n    if (lives = 0) {\n        std::cout << \"Game over\\n\";\n    } else {\n        std::cout << \"Lives left: \" << lives << \"\\n\";\n    }\n}",
+              "error": "warning: using the result of an assignment as a condition without parentheses [-Wparentheses]\n...\nLives left: 0",
+              "lines": [
+                5
+              ],
+              "fixes": [
+                "Change line 5 to `if (lives == 0) {`",
+                "Change line 5 to `if ((lives = 0)) {`",
+                "Change line 5 to `if (lives = 3) {`",
+                "Change line 4 to `int lives = 0;`"
+              ],
+              "answer": 0,
+              "explanation": "`lives = 0` **assigns** 0, and the condition's value is that 0, which counts as false. So the `else` branch runs and prints the lives that were just set to 0. `==` compares. Extra parentheses only silence clang's warning, `lives = 3` is always true and prints `Game over`, and starting at 0 lives changes the input, not the bug."
+            },
+            {
+              "type": "numeric",
+              "id": "q-nested-stars",
+              "concepts": [
+                "conditions-loops"
+              ],
+              "prompt": "How many `*` does this print?\n\n```cpp\nfor (int i = 0; i < 3; ++i) {\n    for (int j = i; j < 3; ++j) {\n        std::cout << \"*\";\n    }\n}\n```",
+              "answer": 6,
+              "explanation": "The inner loop starts at `j = i`: when `i` is 0 it runs for j = 0, 1, 2 (3 stars), when `i` is 1 for j = 1, 2 (2 stars), and when `i` is 2 once. 3 + 2 + 1 = **6**."
+            }
+          ]
+        },
+        {
+          "id": "functions",
+          "title": "Functions and overloading",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "A function declares its parameter and return types and must be declared before it's called; overloads share a name and differ in their parameters.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Writing a function",
+              "body": "```cpp\nint square(int x) {        // return type, name, parameters\n    return x * x;\n}\n\nvoid greet(std::string name) {   // void: returns nothing\n    std::cout << \"Hi \" << name << \"\\n\";\n}\n```\n\nEvery parameter has a type, and so does the result. C++ reads a file **top to bottom**, so a function must be declared before the line that calls it. Either define it above `main`, or put a **declaration** (the first line plus `;`) near the top and the full definition later:\n\n```cpp\nint cube(int x);   // declaration: \"this exists\"\n```"
+            },
+            {
+              "type": "output",
+              "id": "q-functions",
+              "concepts": [
+                "functions"
+              ],
+              "prompt": "What does this print?",
+              "language": "cpp",
+              "code": "#include <iostream>\n#include <string>\n\nint square(int x) {\n    return x * x;\n}\n\nvoid greet(std::string name) {\n    std::cout << \"Hi \" << name << \"\\n\";\n}\n\nint main() {\n    greet(\"Bo\");\n    std::cout << square(3) + square(4) << \"\\n\";\n}",
+              "output": "Hi Bo\n25",
+              "explanation": "`greet(\"Bo\")` prints `Hi Bo`. Then `square(3) + square(4)` is 9 + 16, so `25`."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-declare",
+              "concepts": [
+                "functions"
+              ],
+              "prompt": "This should print `42`, but it doesn't build. Click the line the compiler complains about.",
+              "language": "cpp",
+              "code": "#include <iostream>\n\nint main() {\n    std::cout << twice(21) << \"\\n\";\n}\n\nint twice(int x) {\n    return x * 2;\n}",
+              "error": "error: use of undeclared identifier 'twice'",
+              "lines": [
+                4
+              ],
+              "fixes": [
+                "Add the declaration `int twice(int x);` above `main` (as a new line 2)",
+                "Change line 7 to `auto twice(int x) {`",
+                "Change line 4 to `std::cout << std::twice(21) << \"\\n\";`",
+                "Change line 7 to `void twice(int x) {`"
+              ],
+              "answer": 0,
+              "explanation": "The compiler reads top to bottom. On line 4 it hasn't seen `twice` yet, so the name is unknown. A declaration above `main` tells it the function exists, and the linker finds the definition later. `auto` or `void` on line 7 don't change the order (and `void` adds *void function 'twice' should not return a value*), and `twice` isn't part of the standard library: *no member named 'twice' in namespace 'std'*."
+            },
+            {
+              "type": "explain",
+              "title": "Overloading and default arguments",
+              "body": "Several functions can share a name if their **parameter types or counts** differ. The compiler picks the best match for the arguments, at compile time:\n\n```cpp\nvoid show(int x);\nvoid show(double x);\nvoid show(std::string s);\n```\n\nThe return type alone isn't enough: `int load();` next to `double load();` fails with *functions that differ only in their return type cannot be overloaded*.\n\nA parameter can have a **default value**, used when the caller leaves it out. Defaults go at the end of the list:\n\n```cpp\nint damage(int base, int mult = 2);\ndamage(5);      // mult is 2\ndamage(5, 3);   // mult is 3\n```"
+            },
+            {
+              "type": "output",
+              "id": "q-overload-pick",
+              "concepts": [
+                "overloading",
+                "integer-division"
+              ],
+              "prompt": "Two overloads of `show`. What does this print?",
+              "language": "cpp",
+              "code": "#include <iostream>\n\nvoid show(int x) {\n    std::cout << \"int \" << x << \"\\n\";\n}\n\nvoid show(double x) {\n    std::cout << \"double \" << x << \"\\n\";\n}\n\nint main() {\n    show(7 / 2);\n    show(7 / 2.0);\n    show('A');\n}",
+              "output": "int 3\ndouble 3.5\nint 65",
+              "hint": "A `char` is a small integer. Converting it to `int` is a better match than converting it to `double`.",
+              "explanation": "`7 / 2` is an `int` (3), so `show(int)` runs. `7 / 2.0` is a `double` (3.5), so `show(double)` runs. `'A'` is a `char`: there's no `show(char)`, and promoting a `char` to `int` is a better match than converting it to `double`, so it prints its character code, `int 65`."
+            },
+            {
+              "type": "example",
+              "title": "Splitting out a function",
+              "problem": "Armour absorbs damage: a hit loses `armour` points, but it can never heal the target. Write `damageAfterArmour(damage, armour)`, and work out what it returns for (30, 12) and (5, 12) before revealing.",
+              "steps": [
+                "Both inputs and the result are whole numbers, so the signature is `int damageAfterArmour(int damage, int armour)`.",
+                "Subtract first: `int result = damage - armour;`",
+                "Guard the edge case: if `result` is negative, return 0; otherwise return `result`."
+              ],
+              "answer": "```cpp\nint damageAfterArmour(int damage, int armour) {\n    int result = damage - armour;\n    if (result < 0) {\n        return 0;\n    }\n    return result;\n}\n```\n\nIt returns `18` for (30, 12) and `0` for (5, 12)."
+            },
+            {
+              "type": "numeric",
+              "id": "q-default-args",
+              "concepts": [
+                "overloading",
+                "functions"
+              ],
+              "prompt": "```cpp\nint dmg(int base, int mult = 2, int bonus = 0) {\n    return base * mult + bonus;\n}\n```\n\nWhat is `dmg(5) + dmg(5, 3) + dmg(5, 1, 4)`?",
+              "answer": 34,
+              "hint": "Arguments fill the parameters from the left; anything left over uses its default.",
+              "explanation": "`dmg(5)` uses both defaults: 5 × 2 + 0 = 10. `dmg(5, 3)` overrides `mult`: 15. `dmg(5, 1, 4)` overrides both: 5 + 4 = 9. 10 + 15 + 9 = **34**. Arguments fill parameters left to right, so you can't skip `mult` and set only `bonus`."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "data-and-memory",
+      "title": "Data and memory",
+      "description": "References, vectors, maps and a first look at pointers.",
+      "lessons": [
+        {
+          "id": "references-const",
+          "title": "References and const&",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "Arguments are copied by default: take `T&` to change the caller's object and `const T&` to read a big object without copying it.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Copies by default",
+              "body": "Passing an argument **copies** it into the parameter, so changing the parameter changes only the copy:\n\n```cpp\nvoid healCopy(int hp) { hp += 10; }   // the caller's value is unchanged\n```\n\nA **reference**, written `int&`, is another name for an existing variable. No copy is made: every use of the reference *is* a use of the original.\n\n```cpp\nint gold = 100;\nint& purse = gold;   // purse is another name for gold\npurse -= 30;         // gold is now 70\n```\n\nA reference parameter, `void healRef(int& hp)`, lets a function change the caller's variable. A reference must be bound when it's created and always refers to the same object."
+            },
+            {
+              "type": "output",
+              "id": "q-copy-vs-ref",
+              "concepts": [
+                "references"
+              ],
+              "prompt": "What does this print?",
+              "language": "cpp",
+              "code": "#include <iostream>\n\nvoid healCopy(int hp) {\n    hp += 10;\n}\n\nvoid healRef(int& hp) {\n    hp += 10;\n}\n\nint main() {\n    int a = 50;\n    healCopy(a);\n    std::cout << a << \"\\n\";\n    healRef(a);\n    std::cout << a << \"\\n\";\n}",
+              "output": "50\n60",
+              "explanation": "`healCopy` adds 10 to its own copy, which disappears when the function returns, so `a` is still `50`. clang even warns *parameter 'hp' set but not used*. `healRef` takes `a` by reference, so the `+= 10` lands on `a` itself: `60`."
+            },
+            {
+              "type": "trace",
+              "id": "q-trace-reference",
+              "concepts": [
+                "references"
+              ],
+              "prompt": "Step through and predict `gold` when asked.",
+              "language": "cpp",
+              "code": "int gold = 100;\nint& purse = gold;\npurse -= 30;\nint copy = gold;\ncopy += 5;\npurse = copy;",
+              "frames": [
+                {
+                  "line": 1,
+                  "vars": {
+                    "gold": "100"
+                  }
+                },
+                {
+                  "line": 2,
+                  "vars": {
+                    "gold": "100",
+                    "purse": "100"
+                  },
+                  "note": "`purse` is another name for `gold`, not a new variable."
+                },
+                {
+                  "line": 3,
+                  "vars": {
+                    "gold": "70",
+                    "purse": "70"
+                  },
+                  "ask": "gold"
+                },
+                {
+                  "line": 4,
+                  "vars": {
+                    "gold": "70",
+                    "purse": "70",
+                    "copy": "70"
+                  },
+                  "note": "`copy` is a separate `int` that starts at 70."
+                },
+                {
+                  "line": 5,
+                  "vars": {
+                    "gold": "70",
+                    "purse": "70",
+                    "copy": "75"
+                  },
+                  "ask": "gold"
+                },
+                {
+                  "line": 6,
+                  "vars": {
+                    "gold": "75",
+                    "purse": "75",
+                    "copy": "75"
+                  },
+                  "ask": "gold"
+                }
+              ],
+              "hint": "A reference can never be re-seated: assigning to it assigns to the variable it names.",
+              "explanation": "Every change through `purse` is a change to `gold`, because they're the same variable: `purse -= 30` makes `gold` 70. `int copy = gold;` makes an independent copy, so `copy += 5` leaves `gold` alone. Finally `purse = copy` **assigns** 75 to `gold`; it doesn't make `purse` refer to `copy`."
+            },
+            {
+              "type": "explain",
+              "title": "const& for reading big things",
+              "body": "Copying an `int` is free, but copying a `std::vector` of 10,000 enemies or a long `std::string` means allocating and copying all of it, on every call. A **const reference** avoids the copy *and* promises not to change the original:\n\n```cpp\nint totalWeight(const std::vector<Item>& items);\n```\n\nIf the function tries to modify it, the build fails: *cannot assign to variable 'score' with const-qualified type 'const int &'*.\n\nRules of thumb for parameters:\n- small built-in types (`int`, `double`, `bool`, `char`): by value\n- bigger objects you only read (`std::string`, `std::vector`, your own structs): `const T&`\n- anything the function must change for the caller: `T&`"
+            },
+            {
+              "type": "buckets",
+              "id": "q-param-choice",
+              "concepts": [
+                "const-reference",
+                "references"
+              ],
+              "prompt": "Pick the parameter style for each function's argument.",
+              "buckets": [
+                "`T` (by value)",
+                "`const T&`",
+                "`T&`"
+              ],
+              "items": [
+                {
+                  "text": "A `double` speed used in a formula",
+                  "bucket": 0
+                },
+                {
+                  "text": "A `char` for the key that was pressed",
+                  "bucket": 0
+                },
+                {
+                  "text": "A `std::string` player name that is only printed",
+                  "bucket": 1
+                },
+                {
+                  "text": "A `std::vector<Enemy>` the function only counts",
+                  "bucket": 1
+                },
+                {
+                  "text": "A large `Level` struct the function only reads",
+                  "bucket": 1
+                },
+                {
+                  "text": "An `int` score the function must increase for the caller",
+                  "bucket": 2
+                },
+                {
+                  "text": "A `std::vector<Item>` inventory the function adds an item to",
+                  "bucket": 2
+                }
+              ],
+              "explanation": "Small built-in values are cheaper to copy than to reach through a reference, so pass them by value. Anything bigger that's only read goes by `const T&`: no copy, and the compiler enforces read-only. When the caller must see the change, use a plain `T&`."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-swap",
+              "concepts": [
+                "references"
+              ],
+              "prompt": "`swapValues` should swap `x` and `y`, so this should print `2 1`. Click the line with the bug.",
+              "language": "cpp",
+              "code": "#include <iostream>\n\nvoid swapValues(int a, int b) {\n    int tmp = a;\n    a = b;\n    b = tmp;\n}\n\nint main() {\n    int x = 1;\n    int y = 2;\n    swapValues(x, y);\n    std::cout << x << \" \" << y << \"\\n\";\n}",
+              "error": "1 2",
+              "lines": [
+                3
+              ],
+              "fixes": [
+                "Change line 3 to `void swapValues(int& a, int& b) {`",
+                "Change line 3 to `void swapValues(const int& a, const int& b) {`",
+                "Change line 12 to `swapValues(y, x);`",
+                "Change line 3 to `void swapValues(int& a, int b) {`"
+              ],
+              "answer": 0,
+              "hint": "Which variables does `a = b;` change?",
+              "explanation": "`a` and `b` are copies, so the function swaps its own copies and throws them away. `int& a, int& b` make them names for the caller's `x` and `y`. `const int&` forbids the assignments (*cannot assign to variable 'a' with const-qualified type 'const int &'*), swapping the arguments in the call still swaps copies, and making only `a` a reference sets `x` to 2 but leaves `y` at 2: `2 2`."
+            }
+          ]
+        },
+        {
+          "id": "vectors-arrays",
+          "title": "Vectors, arrays and range-for",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "`std::vector` is the default container, range-for visits its elements (`&` to change them), and `.at()` checks indexes where `[]` doesn't.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "std::vector",
+              "body": "```cpp\n#include <vector>\n\nstd::vector<int> hp = {30, 12, 7};\nhp.push_back(5);      // add to the end: {30, 12, 7, 5}\nhp.size();            // 4\nhp[0];                // 30, the first element\nhp.back();            // 5, the last element\nhp.pop_back();        // remove the last element\nhp.empty();           // false\n```\n\nA `std::vector<T>` is a growable array of `T`s stored side by side in memory. It's the container you'll use most, and games love it: the CPU reads memory that sits together fastest. The `<int>` fixes the element type: a vector holds one type only. Indexes start at 0, so the last valid one is `size() - 1`."
+            },
+            {
+              "type": "explain",
+              "title": "Looping over a vector",
+              "body": "```cpp\nfor (int x : hp) { ... }           // x is a copy of each element\nfor (int& x : hp) { x *= 2; }      // x is the element itself\nfor (const auto& e : enemies) {}   // read big elements without copying\nfor (std::size_t i = 0; i < hp.size(); ++i) { hp[i]; }   // when you need the index\n```\n\nThe **range-for** loop visits every element in order. Its loop variable follows the rules from the last lesson: a plain type is a copy, `&` refers to the real element, and `const auto&` reads without copying."
+            },
+            {
+              "type": "output",
+              "id": "q-range-for",
+              "concepts": [
+                "range-for",
+                "references"
+              ],
+              "prompt": "What does this print?",
+              "language": "cpp",
+              "code": "#include <iostream>\n#include <vector>\n\nint main() {\n    std::vector<int> hp = {30, 12, 7};\n    for (int x : hp) {\n        x -= 5;\n    }\n    for (int& x : hp) {\n        x *= 2;\n    }\n    hp.push_back(1);\n    for (int x : hp) {\n        std::cout << x << \" \";\n    }\n    std::cout << hp.size() << \"\\n\";\n}",
+              "output": "60 24 14 1 4",
+              "hint": "Which loop changes the vector: the one with `int x` or the one with `int& x`?",
+              "explanation": "The first loop changes copies, so nothing happens (clang warns *variable 'x' set but not used*). The second loop's `int& x` is each real element, so the vector becomes 60, 24, 14. `push_back(1)` adds a fourth element, and the last loop prints all four followed by `size()`, 4."
+            },
+            {
+              "type": "trace",
+              "id": "q-trace-vector",
+              "concepts": [
+                "vector"
+              ],
+              "prompt": "Step through and predict the vector when asked.",
+              "language": "cpp",
+              "code": "std::vector<int> v;\nv.push_back(4);\nv.push_back(9);\nv.push_back(2);\nv[0] = v[1] + v[2];\nv.pop_back();\nint last = v.back();",
+              "frames": [
+                {
+                  "line": 1,
+                  "vars": {
+                    "v": "[]",
+                    "v.size()": "0"
+                  },
+                  "note": "A new vector starts empty."
+                },
+                {
+                  "line": 2,
+                  "vars": {
+                    "v": "[4]",
+                    "v.size()": "1"
+                  }
+                },
+                {
+                  "line": 3,
+                  "vars": {
+                    "v": "[4, 9]",
+                    "v.size()": "2"
+                  }
+                },
+                {
+                  "line": 4,
+                  "vars": {
+                    "v": "[4, 9, 2]",
+                    "v.size()": "3"
+                  },
+                  "note": "Indexes 0, 1, 2 hold 4, 9, 2."
+                },
+                {
+                  "line": 5,
+                  "vars": {
+                    "v": "[11, 9, 2]",
+                    "v.size()": "3"
+                  },
+                  "ask": "v"
+                },
+                {
+                  "line": 6,
+                  "vars": {
+                    "v": "[11, 9]",
+                    "v.size()": "2"
+                  },
+                  "ask": "v.size()"
+                },
+                {
+                  "line": 7,
+                  "vars": {
+                    "v": "[11, 9]",
+                    "v.size()": "2",
+                    "last": "9"
+                  },
+                  "ask": "last"
+                }
+              ],
+              "explanation": "`push_back` appends, so the vector grows to `[4, 9, 2]`. `v[0] = v[1] + v[2]` overwrites the first element with 9 + 2 = 11. `pop_back` removes the last element (the 2), leaving two, and `back()` reads the new last element, 9."
+            },
+            {
+              "type": "explain",
+              "title": "`[]` vs `.at()`",
+              "body": "`v[i]` doesn't check `i`. Reading past the end is **undefined behaviour**: you might get garbage, a crash, or a program that seems fine until it quietly corrupts something else.\n\n`v.at(i)` checks, and throws `std::out_of_range` if `i` isn't between `0` and `size() - 1`, so the program stops with a clear message instead:\n\n```\nlibc++abi: terminating due to uncaught exception of type std::out_of_range: vector\n```\n\nUse `.at()` while learning and whenever an index comes from outside (player input, files). Engines use `[]` in hot loops for speed and catch mistakes in debug builds with **AddressSanitizer** (`-fsanitize=address`), which reports a *heap-buffer-overflow* at the bad line."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-off-by-one",
+              "concepts": [
+                "bounds-checking",
+                "range-for"
+              ],
+              "prompt": "This should print the total score, `19`. It crashes. Click the line with the bug.",
+              "language": "cpp",
+              "code": "#include <iostream>\n#include <vector>\n\nint main() {\n    std::vector<int> scores = {7, 3, 9};\n    int total = 0;\n    for (std::size_t i = 0; i <= scores.size(); ++i) {\n        total += scores.at(i);\n    }\n    std::cout << total << \"\\n\";\n}",
+              "error": "libc++abi: terminating due to uncaught exception of type std::out_of_range: vector",
+              "lines": [
+                7
+              ],
+              "fixes": [
+                "Change line 7 to `for (std::size_t i = 0; i < scores.size(); ++i) {`",
+                "Change line 8 to `total += scores[i];`",
+                "Change line 7 to `for (std::size_t i = 1; i <= scores.size(); ++i) {`",
+                "Change line 6 to `long long total = 0;`"
+              ],
+              "answer": 0,
+              "hint": "With 3 elements, which indexes are valid?",
+              "explanation": "With 3 scores the valid indexes are 0, 1 and 2, but `i <= scores.size()` also runs the body for `i = 3`, and `.at(3)` throws. Use `<`. Switching to `scores[i]` only hides the crash: on our run it even printed 19 by luck, but reading `scores[3]` is undefined behaviour, and AddressSanitizer reports *heap-buffer-overflow*. Starting at 1 skips the 7 and still reads index 3, and the type of `total` has nothing to do with it. (A range-for, `for (int s : scores)`, can't get the bounds wrong at all.)"
+            },
+            {
+              "type": "example",
+              "title": "std::array for fixed sizes",
+              "problem": "A colour always has exactly three channels. Should it be a `std::vector<int>` or a `std::array<int, 3>`? Decide, then reveal.",
+              "steps": [
+                "`std::array<T, N>` (`#include <array>`) has a size fixed when you compile: `std::array<int, 3> rgb = {255, 128, 0};`",
+                "It has no `push_back`: `rgb.push_back(7)` fails with *no member named 'push_back' in 'std::array<int, 3>'*.",
+                "It stores its elements directly, with no separate heap allocation, and supports `[]`, `.at()`, `.size()` and range-for just like a vector."
+              ],
+              "answer": "`std::array<int, 3>`: the count never changes. Use `std::vector` when the number of elements changes while the program runs."
+            },
+            {
+              "type": "buckets",
+              "id": "q-vector-or-array",
+              "concepts": [
+                "vector"
+              ],
+              "prompt": "Vector or array?",
+              "buckets": [
+                "`std::vector`",
+                "`std::array`"
+              ],
+              "items": [
+                {
+                  "text": "The enemies currently alive",
+                  "bucket": 0
+                },
+                {
+                  "text": "Chat messages received this match",
+                  "bucket": 0
+                },
+                {
+                  "text": "Items the player has picked up",
+                  "bucket": 0
+                },
+                {
+                  "text": "The x, y and z of a position",
+                  "bucket": 1
+                },
+                {
+                  "text": "The four corners of a rectangle",
+                  "bucket": 1
+                },
+                {
+                  "text": "The names of the seven days of the week",
+                  "bucket": 1
+                }
+              ],
+              "explanation": "If the count changes at run time (enemies spawn and die, messages arrive, items get picked up), use a `std::vector`. If the count is part of what the thing *is* (3 coordinates, 4 corners, 7 days), a `std::array` says so and needs no heap allocation."
+            }
+          ]
+        },
+        {
+          "id": "unordered-map",
+          "title": "Maps: lookup by key",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "`std::unordered_map` finds a value by its key in about constant time, but `m[key]` inserts missing keys: check with `contains` and read with `at`.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Lookup by key",
+              "body": "```cpp\n#include <unordered_map>\n\nstd::unordered_map<std::string, int> price;\nprice[\"sword\"] = 50;           // insert or overwrite\nprice[\"shield\"] = 30;\nprice.at(\"sword\");             // 50; throws if the key is missing\nprice.contains(\"bow\");         // false (C++20)\nprice.size();                  // 2\nprice.erase(\"shield\");         // remove a key\n\nfor (const auto& [name, cost] : price) {   // visit every pair\n    std::cout << name << \": \" << cost << \"\\n\";\n}\n```\n\nA `std::unordered_map<K, V>` is a hash table: looking up a key takes about the same time however many entries there are. The loop's order is **unspecified**, so never rely on it. If you need the keys in sorted order, `std::map` keeps them sorted (it's a tree, and a little slower)."
+            },
+            {
+              "type": "explain",
+              "title": "The `[]` trap",
+              "body": "`m[key]` never fails: if the key is missing, it **inserts** it with a default value (`0` for numbers, `\"\"` for strings) and returns that. That's handy for counting, because `++counts[word];` starts every new word at 0.\n\nBut it's wrong for *checking*: asking `price[\"bow\"]` quietly adds a bow to the shop. To check without changing the map, use `contains`; to read a key that must exist, use `at`."
+            },
+            {
+              "type": "output",
+              "id": "q-map-insert",
+              "concepts": [
+                "unordered-map"
+              ],
+              "prompt": "What does this print?",
+              "language": "cpp",
+              "code": "#include <iostream>\n#include <string>\n#include <unordered_map>\n\nint main() {\n    std::unordered_map<std::string, int> stock = {{\"apple\", 3}};\n    std::cout << stock[\"pear\"] << \" \";\n    std::cout << stock.size() << \" \";\n    std::cout << stock.contains(\"kiwi\") << \"\\n\";\n}",
+              "output": "0 2 0",
+              "explanation": "`stock[\"pear\"]` doesn't find a pear, so it inserts one with the value 0 and prints `0`. Now the map has 2 keys. `contains(\"kiwi\")` only checks, and `std::cout` prints the `false` as `0`."
+            },
+            {
+              "type": "example",
+              "title": "Counting with a map",
+              "problem": "Count how often each enemy type appears in `{\"orc\", \"elf\", \"orc\", \"imp\", \"orc\"}`. Predict `counts[\"orc\"]` and `counts.size()` before revealing.",
+              "steps": [
+                "Start with an empty `std::unordered_map<std::string, int> counts;`.",
+                "For each word, `++counts[w];`. The first time a word appears, `[]` inserts it with 0 and `++` makes it 1.",
+                "After the loop: orc 3, elf 1, imp 1."
+              ],
+              "answer": "```cpp\nstd::vector<std::string> words = {\"orc\", \"elf\", \"orc\", \"imp\", \"orc\"};\nstd::unordered_map<std::string, int> counts;\nfor (const std::string& w : words) {\n    ++counts[w];\n}\n```\n\n`counts[\"orc\"]` is `3` and `counts.size()` is `3`: three different keys."
+            },
+            {
+              "type": "trace",
+              "id": "q-trace-kills",
+              "concepts": [
+                "unordered-map"
+              ],
+              "prompt": "Step through and predict the values. (The map is shown sorted by key; an `unordered_map`'s real order is unspecified.)",
+              "language": "cpp",
+              "code": "std::unordered_map<std::string, int> kills;\nkills[\"orc\"] += 1;\nkills[\"elf\"] += 1;\nkills[\"orc\"] += 1;\nint orcs = kills[\"orc\"];\nint trolls = kills[\"troll\"];\nstd::size_t kinds = kills.size();",
+              "frames": [
+                {
+                  "line": 1,
+                  "vars": {
+                    "kills": "{}"
+                  }
+                },
+                {
+                  "line": 2,
+                  "vars": {
+                    "kills": "{\"orc\": 1}"
+                  },
+                  "note": "A missing key is inserted as 0, then `+= 1` makes it 1."
+                },
+                {
+                  "line": 3,
+                  "vars": {
+                    "kills": "{\"elf\": 1, \"orc\": 1}"
+                  }
+                },
+                {
+                  "line": 4,
+                  "vars": {
+                    "kills": "{\"elf\": 1, \"orc\": 2}"
+                  }
+                },
+                {
+                  "line": 5,
+                  "vars": {
+                    "kills": "{\"elf\": 1, \"orc\": 2}",
+                    "orcs": "2"
+                  },
+                  "ask": "orcs"
+                },
+                {
+                  "line": 6,
+                  "vars": {
+                    "kills": "{\"elf\": 1, \"orc\": 2, \"troll\": 0}",
+                    "orcs": "2",
+                    "trolls": "0"
+                  }
+                },
+                {
+                  "line": 7,
+                  "vars": {
+                    "kills": "{\"elf\": 1, \"orc\": 2, \"troll\": 0}",
+                    "orcs": "2",
+                    "trolls": "0",
+                    "kinds": "3"
+                  },
+                  "ask": "kinds"
+                }
+              ],
+              "hint": "Does `kills[\"troll\"]` change the map?",
+              "explanation": "Each `kills[...] += 1` inserts the key at 0 the first time, so orc ends at 2 and elf at 1. Reading `kills[\"troll\"]` returns 0, but it also **inserts** troll, so the map now has 3 keys."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-map-check",
+              "concepts": [
+                "unordered-map"
+              ],
+              "prompt": "The shop sells 2 items. This should print `bow is not sold`, then `2 items for sale`. Click the line with the bug.",
+              "language": "cpp",
+              "code": "#include <iostream>\n#include <string>\n#include <unordered_map>\n\nint main() {\n    std::unordered_map<std::string, int> price = {{\"sword\", 50}, {\"shield\", 30}};\n    std::string item = \"bow\";\n    if (price[item] == 0) {\n        std::cout << item << \" is not sold\\n\";\n    }\n    std::cout << price.size() << \" items for sale\\n\";\n}",
+              "error": "bow is not sold\n3 items for sale",
+              "lines": [
+                8
+              ],
+              "fixes": [
+                "Change line 8 to `if (!price.contains(item)) {`",
+                "Change line 8 to `if (price.at(item) == 0) {`",
+                "Change line 8 to `if (price[item] < 1) {`",
+                "Change line 8 to `if (price.contains(item)) {`"
+              ],
+              "answer": 0,
+              "hint": "What does `[]` do with a key that isn't in the map?",
+              "explanation": "`price[item]` can't find a bow, so it inserts one priced 0, and the shop now lists 3 items. `contains` checks without inserting. `at` throws for a missing key (*unordered_map::at: key not found*), `price[item] < 1` inserts just the same, and dropping the `!` reverses the test, so the message never prints."
+            },
+            {
+              "type": "buckets",
+              "id": "q-pick-container",
+              "concepts": [
+                "unordered-map",
+                "vector"
+              ],
+              "prompt": "Pick the container for each job.",
+              "buckets": [
+                "`std::vector`",
+                "`std::unordered_map`",
+                "`std::array`"
+              ],
+              "items": [
+                {
+                  "text": "Health of each enemy, in spawn order",
+                  "bucket": 0
+                },
+                {
+                  "text": "Scores to sort into a leaderboard",
+                  "bucket": 0
+                },
+                {
+                  "text": "Item prices, looked up by item name",
+                  "bucket": 1
+                },
+                {
+                  "text": "Settings looked up by key, such as \"volume\"",
+                  "bucket": 1
+                },
+                {
+                  "text": "How many times each word appears in a chat log",
+                  "bucket": 1
+                },
+                {
+                  "text": "The red, green and blue channels of a colour",
+                  "bucket": 2
+                },
+                {
+                  "text": "The x and y of a 2D point",
+                  "bucket": 2
+                }
+              ],
+              "explanation": "Ordered sequences you append to or sort are vectors. When you find things by a key rather than a position, use a map. When the number of elements is fixed by what the thing is, use an array."
+            }
+          ]
+        },
+        {
+          "id": "pointers",
+          "title": "Pointers, briefly",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "A pointer holds an address: `&` takes one, `*` follows it, and `nullptr` means it points nowhere, so check before you follow it.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Addresses",
+              "body": "Every variable lives somewhere in memory, at an **address**. `&x` gives that address, and a **pointer** stores one:\n\n```cpp\nint a = 5;\nint* p = &a;    // p holds the address of a\n*p = 6;         // * follows the pointer: a is now 6\n```\n\n`int*` reads \"pointer to int\". Unlike a reference, a pointer can be changed to point somewhere else, and it can point **nowhere**: `nullptr`. Following a null pointer is undefined behaviour, usually a crash, so check first: `if (p != nullptr)`.\n\nPrinting `p` itself shows a raw address that changes from run to run, which is why the trace below shows `&a` instead."
+            },
+            {
+              "type": "trace",
+              "id": "q-trace-pointer",
+              "concepts": [
+                "pointers"
+              ],
+              "prompt": "Step through and predict the values.",
+              "language": "cpp",
+              "code": "int a = 5;\nint b = 8;\nint* p = &a;\n*p += 1;\np = &b;\n*p = *p * 2;\np = nullptr;",
+              "frames": [
+                {
+                  "line": 1,
+                  "vars": {
+                    "a": "5"
+                  }
+                },
+                {
+                  "line": 2,
+                  "vars": {
+                    "a": "5",
+                    "b": "8"
+                  }
+                },
+                {
+                  "line": 3,
+                  "vars": {
+                    "a": "5",
+                    "b": "8",
+                    "p": "&a",
+                    "*p": "5"
+                  },
+                  "note": "`p` holds the address of `a`, so `*p` reads `a`."
+                },
+                {
+                  "line": 4,
+                  "vars": {
+                    "a": "6",
+                    "b": "8",
+                    "p": "&a",
+                    "*p": "6"
+                  },
+                  "ask": "a"
+                },
+                {
+                  "line": 5,
+                  "vars": {
+                    "a": "6",
+                    "b": "8",
+                    "p": "&b",
+                    "*p": "8"
+                  },
+                  "ask": "*p"
+                },
+                {
+                  "line": 6,
+                  "vars": {
+                    "a": "6",
+                    "b": "16",
+                    "p": "&b",
+                    "*p": "16"
+                  },
+                  "ask": "b"
+                },
+                {
+                  "line": 7,
+                  "vars": {
+                    "a": "6",
+                    "b": "16",
+                    "p": "nullptr"
+                  },
+                  "note": "`p` now points nowhere: `*p` would be undefined behaviour."
+                }
+              ],
+              "hint": "`*p` is whatever variable `p` currently points at.",
+              "explanation": "`*p += 1` writes through the pointer into `a`, making it 6. `p = &b` changes the **pointer**, not any `int`: now `*p` reads `b`, which is 8. `*p = *p * 2` doubles `b` to 16 and leaves `a` alone."
+            },
+            {
+              "type": "explain",
+              "title": "`->`, and when to use pointers",
+              "body": "For a pointer to a struct or class, `p->hp` is shorthand for `(*p).hp`:\n\n```cpp\nPlayer hero;\nPlayer* p = &hero;\np->hp -= 25;   // same as (*p).hp -= 25\n```\n\nPrefer a **reference** when something must always exist. Use a pointer when it may be missing (`nullptr`) or must be re-pointed later, like a turret's current target.\n\nA pointer to something that has been destroyed is **dangling**: it still holds the old address, and using it is undefined behaviour. Pointers that *own* memory are a separate story, coming in the heap lesson."
+            },
+            {
+              "type": "output",
+              "id": "q-pointer-reference",
+              "concepts": [
+                "pointers",
+                "references"
+              ],
+              "prompt": "What does this print?",
+              "language": "cpp",
+              "code": "#include <iostream>\n\nint main() {\n    int score = 10;\n    int* p = &score;\n    int& r = score;\n    *p = 20;\n    r = r + 5;\n    std::cout << score << \" \" << *p << \" \" << (p == &r) << \"\\n\";\n}",
+              "output": "25 25 1",
+              "explanation": "`p` and `r` both reach `score`: `*p = 20` sets it to 20 and `r = r + 5` makes it 25, so `score` and `*p` are both `25`. A reference has no address of its own, so `&r` is the address of `score`, the same as `p`: the comparison is true, printed as `1`."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-nullptr",
+              "concepts": [
+                "pointers",
+                "undefined-behaviour"
+              ],
+              "prompt": "This should print the first negative value, or print nothing if there isn't one. It crashes. Click the line with the bug.",
+              "language": "cpp",
+              "code": "#include <iostream>\n#include <vector>\n\nint* findFirstNegative(std::vector<int>& values) {\n    for (int& x : values) {\n        if (x < 0) return &x;\n    }\n    return nullptr;\n}\n\nint main() {\n    std::vector<int> hp = {30, 12, 7};\n    int* hit = findFirstNegative(hp);\n    std::cout << *hit << \"\\n\";\n}",
+              "error": "Built with -fsanitize=address,undefined:\nruntime error: load of null pointer of type 'int'\n...\nERROR: AddressSanitizer: SEGV on unknown address 0x000000000000",
+              "lines": [
+                14
+              ],
+              "fixes": [
+                "Change line 14 to `if (hit != nullptr) std::cout << *hit << \"\\n\";`",
+                "Change line 14 to `std::cout << hit << \"\\n\";`",
+                "Change line 8 to `return 0;`",
+                "Change line 13 to `int* hit = &findFirstNegative(hp);`"
+              ],
+              "answer": 0,
+              "hint": "What does `findFirstNegative` return for `{30, 12, 7}`?",
+              "explanation": "No value is negative, so `findFirstNegative` returns `nullptr`, and `*hit` follows a null pointer: undefined behaviour, here a segmentation fault. Check before dereferencing. Printing `hit` itself prints the pointer (`0`), not nothing. `return 0;` is just another way to write a null pointer, so it crashes the same way, and `&findFirstNegative(hp)` doesn't build: *cannot take the address of an rvalue of type 'int *'*."
+            },
+            {
+              "type": "buckets",
+              "id": "q-ref-or-pointer",
+              "concepts": [
+                "pointers",
+                "references"
+              ],
+              "prompt": "Reference or pointer?",
+              "buckets": [
+                "Reference (`T&`)",
+                "Pointer (`T*`)"
+              ],
+              "items": [
+                {
+                  "text": "Must be bound to an object when it's created",
+                  "bucket": 0
+                },
+                {
+                  "text": "Every use is automatically a use of the original, no `*` needed",
+                  "bucket": 0
+                },
+                {
+                  "text": "A parameter that must always refer to a real player",
+                  "bucket": 0
+                },
+                {
+                  "text": "Can be `nullptr`",
+                  "bucket": 1
+                },
+                {
+                  "text": "Can be re-pointed at another object later",
+                  "bucket": 1
+                },
+                {
+                  "text": "Reaches members with `->`",
+                  "bucket": 1
+                },
+                {
+                  "text": "A turret's current target, which may be nobody",
+                  "bucket": 1
+                }
+              ],
+              "explanation": "A reference is a permanent second name: always bound, never null, never re-pointed, so it's the natural choice when something must exist. A pointer is a value holding an address: it can be null or change, which suits optional or changing relationships, and it needs `*` or `->` to reach the object."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "own-types",
+      "title": "Your own types",
+      "description": "Structs and classes, enum class, std::optional and splitting code into files.",
+      "lessons": [
+        {
+          "id": "structs-classes",
+          "title": "Structs and classes",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "A struct or class bundles data with the member functions that use it; private members plus public functions keep its rules true, and objects copy like values.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Grouping data with struct",
+              "body": "```cpp\nstruct Vec2 {\n    float x = 0;\n    float y = 0;\n\n    float length() const {\n        return std::sqrt(x * x + y * y);\n    }\n};\n```\n\n```cpp\nVec2 p{3, 4};\np.x;          // 3\np.length();   // 5 (std::sqrt needs #include <cmath>)\n```\n\nA `struct` bundles named **members** into one type. Functions declared inside it are **member functions** and use the members directly. `const` after the parentheses promises that the function doesn't change the object.\n\nObjects are **values**: `Vec2 q = p;` copies every member, and from then on `p` and `q` are independent. That's true for `struct` and `class` alike (unlike C# or Java classes, where variables share one object)."
+            },
+            {
+              "type": "output",
+              "id": "q-struct-copy",
+              "concepts": [
+                "classes"
+              ],
+              "prompt": "What does this print?",
+              "language": "cpp",
+              "code": "#include <iostream>\n\nstruct Vec2 {\n    int x = 0;\n    int y = 0;\n};\n\nint main() {\n    Vec2 a{1, 2};\n    Vec2 b = a;\n    b.x = 10;\n    Vec2 c;\n    std::cout << a.x << \" \" << b.x << \" \" << c.y << \"\\n\";\n}",
+              "output": "1 10 0",
+              "explanation": "`Vec2 b = a;` copies `a`, so setting `b.x` to 10 leaves `a.x` at 1. `c` is created without arguments, so its members take their default values: `c.y` is `0`."
+            },
+            {
+              "type": "explain",
+              "title": "Classes protect their rules",
+              "body": "```cpp\nclass Player {\npublic:\n    Player(std::string name, int maxHp)\n        : name_(name), hp_(maxHp), maxHp_(maxHp) {}\n\n    void takeDamage(int amount) {\n        hp_ = std::max(0, hp_ - amount);\n    }\n    void heal(int amount) {\n        hp_ = std::min(maxHp_, hp_ + amount);\n    }\n    int hp() const { return hp_; }\n\nprivate:\n    std::string name_;\n    int hp_;\n    int maxHp_;\n};\n```\n\n`public:` members are the interface anyone can use; `private:` members can only be touched by the class's own member functions. This is **encapsulation**: no code outside can set `hp_` to -50 or 9999, so the rule \"0 ≤ hp ≤ max\" holds everywhere.\n\nThe **constructor** has the class's name and no return type, and runs when an object is created. The list after `:` sets each member. (`std::max` and `std::min` come from `<algorithm>`; the trailing `_` is just a common naming habit for private members.)\n\n`struct` and `class` differ only in the default: members are public in a struct and private in a class."
+            },
+            {
+              "type": "trace",
+              "id": "q-trace-player",
+              "concepts": [
+                "classes"
+              ],
+              "prompt": "Using the `Player` class above, predict `kai.hp()` when asked.",
+              "language": "cpp",
+              "code": "Player kai(\"Kai\", 100);\nkai.takeDamage(30);\nkai.heal(50);\nkai.takeDamage(45);\nkai.takeDamage(200);\nkai.heal(15);",
+              "frames": [
+                {
+                  "line": 1,
+                  "vars": {
+                    "kai.hp()": "100"
+                  },
+                  "note": "The constructor sets `hp_` and `maxHp_` to 100."
+                },
+                {
+                  "line": 2,
+                  "vars": {
+                    "kai.hp()": "70"
+                  },
+                  "note": "100 - 30."
+                },
+                {
+                  "line": 3,
+                  "vars": {
+                    "kai.hp()": "100"
+                  },
+                  "ask": "kai.hp()"
+                },
+                {
+                  "line": 4,
+                  "vars": {
+                    "kai.hp()": "55"
+                  }
+                },
+                {
+                  "line": 5,
+                  "vars": {
+                    "kai.hp()": "0"
+                  },
+                  "ask": "kai.hp()"
+                },
+                {
+                  "line": 6,
+                  "vars": {
+                    "kai.hp()": "15"
+                  },
+                  "ask": "kai.hp()"
+                }
+              ],
+              "hint": "`heal` never goes above `maxHp_`, and `takeDamage` never goes below 0.",
+              "explanation": "`heal(50)` would reach 120, but `std::min(maxHp_, ...)` caps it at 100. Taking 45 leaves 55, and taking 200 would go negative, so `std::max(0, ...)` stops at 0. Healing 15 from 0 gives 15. The rules live in two member functions, and nothing outside the class can bypass them."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-private",
+              "concepts": [
+                "classes"
+              ],
+              "prompt": "This should add 25 more coins and print `75`, but it doesn't build. Click the line with the error.",
+              "language": "cpp",
+              "code": "#include <iostream>\n\nclass Wallet {\npublic:\n    void deposit(int amount) {\n        if (amount > 0) coins_ += amount;\n    }\n    int coins() const { return coins_; }\n\nprivate:\n    int coins_ = 0;\n};\n\nint main() {\n    Wallet w;\n    w.deposit(50);\n    w.coins_ += 25;\n    std::cout << w.coins() << \"\\n\";\n}",
+              "error": "error: 'coins_' is a private member of 'Wallet'",
+              "lines": [
+                17
+              ],
+              "fixes": [
+                "Change line 17 to `w.deposit(25);`",
+                "Change line 17 to `w.coins() += 25;`",
+                "Change line 17 to `Wallet::coins_ += 25;`",
+                "Change line 5 to `void deposit(int amount) const {`"
+              ],
+              "answer": 0,
+              "hint": "Which members can code outside the class use?",
+              "explanation": "`coins_` is private, so only `Wallet`'s own member functions may touch it. Go through the public interface: `w.deposit(25)`. `w.coins()` returns a copy of the number, which can't be assigned to (*expression is not assignable*). `Wallet::coins_` is still private and names no particular wallet, and making `deposit` `const` forbids it from changing `coins_` at all."
+            },
+            {
+              "type": "mcq",
+              "id": "q-struct-vs-class",
+              "concepts": [
+                "classes"
+              ],
+              "prompt": "A C# programmer asks what really differs between `struct` and `class` in C++. What's the answer?",
+              "choices": [
+                "Only the default access: members are public in a `struct` and private in a `class`",
+                "A `struct` is copied on assignment, while a `class` object is shared by reference",
+                "A `struct` can't have constructors or member functions",
+                "`class` objects always live on the heap, and `struct` objects on the stack"
+              ],
+              "answer": 0,
+              "explanation": "In C++ the two keywords make the same kind of type. Both copy on assignment, both can have constructors and member functions, and either can live on the stack or the heap. The only difference is the default access, so by convention `struct` is used for plain data and `class` for types with rules to protect."
+            }
+          ]
+        },
+        {
+          "id": "enums-optional",
+          "title": "enum class and std::optional",
+          "pareto": "extra",
+          "minutes": 7,
+          "takeaway": "`enum class` gives a fixed set of named states that a `switch` can handle, and `std::optional<T>` says \"a T, or nothing\" without magic values.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "enum class and switch",
+              "body": "```cpp\nenum class State { Idle, Running, Jumping };\n```\n\n```cpp\nState s = State::Idle;\nswitch (s) {\n    case State::Idle:    speed = 0; break;\n    case State::Running: speed = 5; break;\n    case State::Jumping: speed = 3; break;\n}\n```\n\nAn `enum class` is a type with a fixed set of named values. The names are scoped (`State::Idle`), and it doesn't silently convert to or from `int`, so a `State` can't be mixed up with a score.\n\n`switch` jumps to the matching `case`. Each case needs a `break`, or execution **falls through** into the next one. With `-Wall`, clang warns when a switch over an enum misses a value: *enumeration value 'Jumping' not handled in switch*. Add a state later, and the compiler points out every switch to update."
+            },
+            {
+              "type": "output",
+              "id": "q-fallthrough",
+              "concepts": [
+                "enum-class"
+              ],
+              "prompt": "What does this print?",
+              "language": "cpp",
+              "code": "#include <iostream>\n\nenum class Weapon { Sword, Bow, Staff };\n\nint damage(Weapon w) {\n    int d = 0;\n    switch (w) {\n        case Weapon::Sword:\n            d += 10;\n        case Weapon::Bow:\n            d += 5;\n            break;\n        case Weapon::Staff:\n            d += 1;\n            break;\n    }\n    return d;\n}\n\nint main() {\n    std::cout << damage(Weapon::Sword) << \" \" << damage(Weapon::Bow) << \" \" << damage(Weapon::Staff) << \"\\n\";\n}",
+              "output": "15 5 1",
+              "hint": "Which case has no `break`?",
+              "explanation": "`Weapon::Sword` has no `break`, so after `d += 10` execution falls through into the `Bow` case and adds 5 more: `15`. `Bow` gives `5` and `Staff` gives `1`. A missing `break` is a classic bug; when you really want to fall through, write `[[fallthrough]];` to say so."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-enum-int",
+              "concepts": [
+                "enum-class"
+              ],
+              "prompt": "This should print `facing right`, but it doesn't build. Click the line with the error.",
+              "language": "cpp",
+              "code": "#include <iostream>\n\nenum class Dir { Left, Right };\n\nint main() {\n    Dir facing = Dir::Right;\n    if (facing == 1) {\n        std::cout << \"facing right\\n\";\n    }\n}",
+              "error": "error: invalid operands to binary expression ('Dir' and 'int')",
+              "lines": [
+                7
+              ],
+              "fixes": [
+                "Change line 7 to `if (facing == Dir::Right) {`",
+                "Change line 7 to `if (facing == Right) {`",
+                "Change line 7 to `if (facing = Dir::Right) {`",
+                "Change line 7 to `if (facing == \"Right\") {`"
+              ],
+              "answer": 0,
+              "explanation": "An `enum class` never converts to `int`, so `facing == 1` has no meaning. Compare with a value of the same type: `Dir::Right`. The names are scoped, so plain `Right` is an *undeclared identifier*; `=` assigns, and a `Dir` *is not contextually convertible to 'bool'*; and a string literal isn't a `Dir` either."
+            },
+            {
+              "type": "explain",
+              "title": "std::optional",
+              "body": "Some functions may have no answer: finding an item that isn't there, or reading a level name that doesn't exist. `std::optional<T>` (`#include <optional>`) holds either a `T` or nothing, written `std::nullopt`:\n\n```cpp\nstd::optional<int> parseLevel(const std::string& s) {\n    if (s == \"easy\") return 1;\n    if (s == \"hard\") return 3;\n    return std::nullopt;\n}\n```\n\nCheck before using it, with `if (opt)` or `opt.has_value()`, then read the value with `*opt`. Or say what to use instead: `opt.value_or(0)`. `opt.value()` throws `std::bad_optional_access` when it's empty.\n\nIt beats magic values like `-1`, which might be a real answer, and it's clearer than a pointer that may be null."
+            },
+            {
+              "type": "example",
+              "title": "Where is the key?",
+              "problem": "Write `findItem(bag, name)`, which returns the slot an item is in, or nothing. What should it return, and how does the caller use the result? Decide before revealing.",
+              "steps": [
+                "The result is either an index or nothing, so the return type is `std::optional<std::size_t>`.",
+                "Loop over the slots and `return i;` on a match (it converts to an optional holding `i`). After the loop, `return std::nullopt;`.",
+                "The caller can test it right in the `if`: `if (auto slot = findItem(bag, \"key\"))`, then use `*slot` inside."
+              ],
+              "answer": "```cpp\nstd::optional<std::size_t> findItem(const std::vector<std::string>& bag, const std::string& name) {\n    for (std::size_t i = 0; i < bag.size(); ++i) {\n        if (bag[i] == name) return i;\n    }\n    return std::nullopt;\n}\n\nint main() {\n    std::vector<std::string> bag = {\"rope\", \"lamp\", \"key\"};\n    if (auto slot = findItem(bag, \"key\")) {\n        std::cout << \"key in slot \" << *slot << \"\\n\";\n    }\n    if (!findItem(bag, \"map\")) {\n        std::cout << \"no map\\n\";\n    }\n}\n```\n\nIt prints `key in slot 2` and `no map`."
+            },
+            {
+              "type": "output",
+              "id": "q-optional",
+              "concepts": [
+                "optional"
+              ],
+              "prompt": "Using `parseLevel` from above, what does this print?",
+              "language": "cpp",
+              "code": "#include <iostream>\n#include <optional>\n#include <string>\n\nstd::optional<int> parseLevel(const std::string& s) {\n    if (s == \"easy\") return 1;\n    if (s == \"hard\") return 3;\n    return std::nullopt;\n}\n\nint main() {\n    auto a = parseLevel(\"hard\");\n    auto b = parseLevel(\"nightmare\");\n    std::cout << a.value_or(0) << \" \" << b.value_or(0) << \" \" << b.has_value() << \"\\n\";\n}",
+              "output": "3 0 0",
+              "explanation": "`\"hard\"` gives an optional holding 3, so `value_or(0)` returns `3`. `\"nightmare\"` matches nothing, so `b` is empty: `value_or(0)` falls back to `0`, and `has_value()` is false, printed as `0`."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-bad-optional",
+              "concepts": [
+                "optional"
+              ],
+              "prompt": "With no scores yet this should print `Best: 0`. It crashes. Click the line with the bug.",
+              "language": "cpp",
+              "code": "#include <iostream>\n#include <optional>\n#include <vector>\n\nstd::optional<int> best(const std::vector<int>& scores) {\n    if (scores.empty()) return std::nullopt;\n    int top = scores[0];\n    for (int s : scores) {\n        if (s > top) top = s;\n    }\n    return top;\n}\n\nint main() {\n    std::vector<int> scores;\n    std::cout << \"Best: \" << best(scores).value() << \"\\n\";\n}",
+              "error": "libc++abi: terminating due to uncaught exception of type std::bad_optional_access: bad_optional_access",
+              "lines": [
+                16
+              ],
+              "fixes": [
+                "Change line 16 to `std::cout << \"Best: \" << best(scores).value_or(0) << \"\\n\";`",
+                "Change line 6 to `if (scores.empty()) return {};`",
+                "Change line 16 to `std::cout << \"Best: \" << best(scores) << \"\\n\";`",
+                "Change line 15 to `std::vector<int> scores = {};`"
+              ],
+              "answer": 0,
+              "hint": "What does `best` return for an empty vector, and what does `.value()` do with that?",
+              "explanation": "`best` correctly returns an empty optional for an empty vector, but `.value()` on an empty optional throws `std::bad_optional_access`. `value_or(0)` supplies the fallback. `return {};` is just another way to write `std::nullopt`, an optional can't be printed directly (*invalid operands to binary expression*), and `= {}` still makes an empty vector."
+            }
+          ]
+        },
+        {
+          "id": "headers-sources",
+          "title": "Headers and source files",
+          "pareto": "extra",
+          "minutes": 6,
+          "takeaway": "Headers declare what exists and `.cpp` files define how it works; each `.cpp` compiles on its own and the linker joins them.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Splitting a program into files",
+              "body": "```cpp\n// ---- math.h ----\n#pragma once\nint add(int a, int b);\n\n// ---- math.cpp ----\n#include \"math.h\"\nint add(int a, int b) {\n    return a + b;\n}\n\n// ---- main.cpp ----\n#include <iostream>\n#include \"math.h\"\nint main() {\n    std::cout << add(2, 3) << \"\\n\";\n}\n```\n\n`#include` literally pastes the file's text in place. Quotes find your own headers; angle brackets find library ones. `#pragma once` stops a header from being pasted twice into the same file.\n\nEach `.cpp` file is compiled **separately** into an object file, and then the **linker** joins them into one program:\n\n```\nclang++ -std=c++20 main.cpp math.cpp -o game\n```"
+            },
+            {
+              "type": "order",
+              "id": "q-build-steps",
+              "concepts": [
+                "header-source",
+                "compilation"
+              ],
+              "prompt": "Put what happens when you run `clang++ main.cpp math.cpp -o game` in order.",
+              "items": [
+                "The contents of `math.h` are pasted into each `.cpp` file that includes it",
+                "`main.cpp` and `math.cpp` are compiled separately into two object files",
+                "The linker matches the call to `add` in one object file with its definition in the other",
+                "The linker writes the executable `game`",
+                "You run `./game` and it prints 5"
+              ],
+              "explanation": "Including happens first, as plain text pasting. Then each `.cpp` file is compiled on its own: while compiling `main.cpp`, the compiler only knows `add` from its declaration. Joining the call to the actual function body is the linker's job, and only then is there a program to run."
+            },
+            {
+              "type": "explain",
+              "title": "Linker errors",
+              "body": "A **compiler** error names a file and line. A **linker** error comes later, after every file compiled fine, when the pieces don't fit together:\n\n- Something is declared and called but never defined, or its `.cpp` file was left out of the build:\n\n```\nUndefined symbols for architecture arm64:\n  \"add(int, int)\", referenced from:\n      _main in main-c7f57c.o\nld: symbol(s) not found for architecture arm64\n```\n\n- Something is **defined** in a header that two `.cpp` files include, so it now exists twice: *duplicate symbol*.\n\nRule of thumb: headers hold declarations, class definitions and templates. Function bodies go in `.cpp` files, written as `void Player::takeDamage(int amount) { ... }` for member functions, or are marked `inline`."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-duplicate-symbol",
+              "concepts": [
+                "header-source"
+              ],
+              "prompt": "Three files are shown together. `clang++ hud.cpp main.cpp -o game` should build a program that prints `30`, but linking fails. Click the line with the bug.",
+              "language": "cpp",
+              "code": "// ---- score.h ----\n#pragma once\n\nint bonus(int level) {\n    return level * 10;\n}\n\n// ---- hud.cpp ----\n#include \"score.h\"\n\nint hudBonus() {\n    return bonus(2);\n}\n\n// ---- main.cpp ----\n#include <iostream>\n#include \"score.h\"\n\nint hudBonus();\n\nint main() {\n    std::cout << bonus(1) + hudBonus() << \"\\n\";\n}",
+              "error": "duplicate symbol 'bonus(int)' in:\n    .../hud-5f71e5.o\n    .../main-f7fbeb.o\nld: 1 duplicate symbols",
+              "lines": [
+                4
+              ],
+              "fixes": [
+                "Change line 4 to `inline int bonus(int level) {`",
+                "Delete line 2 (`#pragma once`)",
+                "Change line 17 to `#include <score.h>`",
+                "Delete line 9 (`#include \"score.h\"` in hud.cpp)"
+              ],
+              "answer": 0,
+              "hint": "How many object files end up containing the body of `bonus`?",
+              "explanation": "`#pragma once` only prevents a double paste *within one file*. Both `hud.cpp` and `main.cpp` include the header, so both object files contain a full definition of `bonus`, and the linker refuses to pick one. `inline` allows identical definitions in several files (the other fix is to leave only the declaration in the header and move the body to a `score.cpp`). Removing `#pragma once` changes nothing here, angle brackets don't search the current folder (*'score.h' file not found with <angled> include*), and without the include `hud.cpp` doesn't know `bonus` at all."
+            },
+            {
+              "type": "buckets",
+              "id": "q-header-or-source",
+              "concepts": [
+                "header-source"
+              ],
+              "prompt": "Header or source file?",
+              "buckets": [
+                "Header (`.h`)",
+                "Source file (`.cpp`)"
+              ],
+              "items": [
+                {
+                  "text": "`int add(int a, int b);`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`#pragma once`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`struct Vec2 { float x; float y; };`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`class Player { ... };` listing its members",
+                  "bucket": 0
+                },
+                {
+                  "text": "`int add(int a, int b) { return a + b; }`",
+                  "bucket": 1
+                },
+                {
+                  "text": "The body of `Player::takeDamage`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`int main() { ... }`",
+                  "bucket": 1
+                }
+              ],
+              "explanation": "Headers say *what exists*: declarations and type definitions that every file using them needs to see. Source files say *how it works*: function bodies, which must exist exactly once in the whole program, and `main`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-linker-meaning",
+              "concepts": [
+                "header-source",
+                "compilation"
+              ],
+              "prompt": "The build stops with `Undefined symbols` for `\"takeDamage(int)\"`, and no file or line number. What's the most likely cause?",
+              "choices": [
+                "`takeDamage` was declared and called, but its definition never made it into the build",
+                "There's a syntax error inside `player.h`",
+                "`main.cpp` is missing `#include \"player.h\"`",
+                "`takeDamage` was called with a `double` instead of an `int`"
+              ],
+              "answer": 0,
+              "explanation": "*Undefined symbols* is a linker error: every file compiled, but no object file contains the function's body. Maybe it was never written, or its `.cpp` file was left out of the compile command. A syntax error or a missing include are compiler errors with a file and line (a missing declaration gives *use of undeclared identifier*), and a `double` argument simply converts to `int`."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "modern-toolkit",
+      "title": "The modern toolkit",
+      "description": "Lambdas and algorithms, owning heap memory with unique_ptr, and templates.",
+      "lessons": [
+        {
+          "id": "lambdas-algorithms",
+          "title": "Lambdas and <algorithm>",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "A lambda is an inline function whose `[]` says which local variables it captures; pass lambdas to `std::sort`, `std::count_if` and `std::find_if` instead of writing the loops.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Lambdas",
+              "body": "A **lambda** is a small function written right where you need it:\n\n```cpp\nauto twice = [](int x) { return x * 2; };\ntwice(4);   // 8\n```\n\nThe `[]` is the **capture list**: the local variables from the surrounding code that the lambda may use.\n\n- `[limit]` copies `limit` into the lambda when the lambda is created\n- `[&total]` refers to `total` itself, so the lambda sees, and can change, its current value\n- `[=]` copies everything the lambda uses; `[&]` refers to everything it uses\n\nUsing an ordinary local variable that isn't captured is a compile error."
+            },
+            {
+              "type": "explain",
+              "title": "<algorithm>",
+              "body": "`#include <algorithm>` gives you tested versions of common loops. They take a range as two **iterators**, `v.begin()` and `v.end()`, and many take a lambda:\n\n```cpp\nstd::sort(v.begin(), v.end());                        // ascending\nstd::sort(v.begin(), v.end(), [](int a, int b) { return a > b; });  // descending\nauto n = std::count_if(v.begin(), v.end(), [](int x) { return x < 0; });\nauto it = std::find_if(v.begin(), v.end(), [](int x) { return x > 10; });\nif (it != v.end()) { /* *it is the first match */ }\n```\n\n`find_if` returns an iterator, a position in the vector; `v.end()` means \"not found\". `*it` reads the element, and `it - v.begin()` is its index. C++20 also offers shorter versions such as `std::ranges::sort(v)`."
+            },
+            {
+              "type": "output",
+              "id": "q-sort-count",
+              "concepts": [
+                "algorithms",
+                "lambdas"
+              ],
+              "prompt": "What does this print?",
+              "language": "cpp",
+              "code": "#include <algorithm>\n#include <iostream>\n#include <vector>\n\nint main() {\n    std::vector<int> hp = {40, 5, 75, 20};\n    std::sort(hp.begin(), hp.end(), [](int a, int b) { return a > b; });\n    auto low = std::count_if(hp.begin(), hp.end(), [](int h) { return h < 30; });\n    std::cout << hp[0] << \" \" << hp[3] << \" \" << low << \"\\n\";\n}",
+              "output": "75 5 2",
+              "explanation": "The comparison lambda returns `a > b`, so bigger values go first: `75, 40, 20, 5`. `hp[0]` is `75` and `hp[3]` is `5`. `count_if` counts the elements for which the lambda returns true: 20 and 5 are below 30, so `2`."
+            },
+            {
+              "type": "example",
+              "title": "Finding an enemy",
+              "problem": "Find the first enemy with less than 10 hp in `{{\"orc\", 40}, {\"imp\", 8}, {\"elf\", 3}}` and print its name. Which enemy is it, and what must you check before using the result?",
+              "steps": [
+                "`std::find_if` with the lambda `[](const Enemy& e) { return e.hp < 10; }` walks the vector from the front.",
+                "The orc fails the test; the imp passes, so `find_if` stops there and returns an iterator to it. The elf also matches, but it's never reached.",
+                "If nothing matched, the iterator would equal `enemies.end()`, and using it would be undefined behaviour. Check first, then read the name with `it->name`."
+              ],
+              "answer": "```cpp\nstd::vector<Enemy> enemies = {{\"orc\", 40}, {\"imp\", 8}, {\"elf\", 3}};\nauto it = std::find_if(enemies.begin(), enemies.end(),\n                       [](const Enemy& e) { return e.hp < 10; });\nif (it != enemies.end()) {\n    std::cout << \"finish off the \" << it->name << \"\\n\";\n}\n```\n\nIt prints `finish off the imp`."
+            },
+            {
+              "type": "trace",
+              "id": "q-trace-capture",
+              "concepts": [
+                "lambdas"
+              ],
+              "prompt": "Two lambdas capture `bonus` in different ways. Predict the values when asked.",
+              "language": "cpp",
+              "code": "int bonus = 5;\nauto byValue = [bonus](int x) { return x + bonus; };\nauto byRef = [&bonus](int x) { return x + bonus; };\nbonus = 100;\nint a = byValue(1);\nint b = byRef(1);",
+              "frames": [
+                {
+                  "line": 1,
+                  "vars": {
+                    "bonus": "5"
+                  }
+                },
+                {
+                  "line": 2,
+                  "vars": {
+                    "bonus": "5",
+                    "byValue(0)": "5"
+                  },
+                  "note": "`byValue` stored its own copy of `bonus` (5) when it was created."
+                },
+                {
+                  "line": 3,
+                  "vars": {
+                    "bonus": "5",
+                    "byValue(0)": "5",
+                    "byRef(0)": "5"
+                  },
+                  "note": "`byRef` refers to the real `bonus`."
+                },
+                {
+                  "line": 4,
+                  "vars": {
+                    "bonus": "100",
+                    "byValue(0)": "5",
+                    "byRef(0)": "100"
+                  },
+                  "ask": "byValue(0)"
+                },
+                {
+                  "line": 5,
+                  "vars": {
+                    "bonus": "100",
+                    "byValue(0)": "5",
+                    "byRef(0)": "100",
+                    "a": "6"
+                  },
+                  "ask": "a"
+                },
+                {
+                  "line": 6,
+                  "vars": {
+                    "bonus": "100",
+                    "byValue(0)": "5",
+                    "byRef(0)": "100",
+                    "a": "6",
+                    "b": "101"
+                  },
+                  "ask": "b"
+                }
+              ],
+              "hint": "A capture by value is taken once, when the lambda is created.",
+              "explanation": "`[bonus]` copied the value 5 when `byValue` was created, so later changes to `bonus` don't affect it: `byValue(1)` is 6. `[&bonus]` refers to the variable itself, so `byRef` sees the new 100: `byRef(1)` is 101."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-capture",
+              "concepts": [
+                "lambdas",
+                "algorithms"
+              ],
+              "prompt": "This should count the enemies below `limit` and print `2`, but it doesn't build. Click the line with the error.",
+              "language": "cpp",
+              "code": "#include <algorithm>\n#include <iostream>\n#include <vector>\n\nint main() {\n    std::vector<int> hp = {40, 5, 75, 20};\n    int limit = 30;\n    auto low = std::count_if(hp.begin(), hp.end(), [](int h) { return h < limit; });\n    std::cout << low << \"\\n\";\n}",
+              "error": "error: variable 'limit' cannot be implicitly captured in a lambda with no capture-default specified",
+              "lines": [
+                8
+              ],
+              "fixes": [
+                "On line 8, change the lambda to `[limit](int h) { return h < limit; }`",
+                "On line 8, change the lambda to `[](int h, int limit) { return h < limit; }`",
+                "On line 8, change the lambda to `[h](int h) { return h < limit; }`",
+                "On line 8, pass `limit` as an extra argument: `std::count_if(hp.begin(), hp.end(), [](int h) { return h < limit; }, limit)`"
+              ],
+              "answer": 0,
+              "explanation": "`limit` is a local variable of `main`, and the lambda's empty `[]` doesn't capture it. `[limit]` copies it in. A second parameter doesn't work because `count_if` calls the lambda with one argument, `[h]` tries to capture a variable that doesn't exist (*use of undeclared identifier 'h'*), and `count_if` takes no fourth argument (*no matching function for call to 'count_if'*)."
+            },
+            {
+              "type": "numeric",
+              "id": "q-find-if-index",
+              "concepts": [
+                "algorithms"
+              ],
+              "prompt": "What does this print?\n\n```cpp\nstd::vector<int> v = {8, 3, 15, 4, 23, 42};\nauto it = std::find_if(v.begin(), v.end(), [](int x) { return x > 10; });\nstd::cout << it - v.begin() << \"\\n\";\n```",
+              "answer": 2,
+              "hint": "`it - v.begin()` is the index of the element `it` points at.",
+              "explanation": "`find_if` stops at the first element greater than 10. 8 and 3 fail; 15 at index 2 is the first match. `it - v.begin()` is the distance from the start: **2**."
+            }
+          ]
+        },
+        {
+          "id": "heap-unique-ptr",
+          "title": "The heap, new/delete and unique_ptr",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Locals die at the end of their scope; for heap objects use `std::make_unique`, whose owner frees them automatically on every path (RAII), and never write `delete` yourself.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Stack and heap",
+              "body": "Local variables live on the **stack**. Each is created when its line runs and destroyed automatically at the closing brace of its scope, in reverse order of creation. A class can run code at that moment in its **destructor**, written `~Name()`.\n\nSometimes an object must outlive the function that creates it, or how many you need is only known while the program runs. Then it goes on the **heap**:\n\n```cpp\nEnemy* e = new Enemy();   // allocate on the heap; you get a pointer\n// ...\ndelete e;                 // you must free it yourself\n```\n\nC++ has no garbage collector. Every `new` needs exactly one `delete`: forget it and the memory **leaks**; delete twice, or use the object after `delete`, and it's undefined behaviour. (`std::vector` and `std::string` use the heap too, but free it themselves in their destructors.)"
+            },
+            {
+              "type": "output",
+              "id": "q-scope-order",
+              "concepts": [
+                "stack-vs-heap"
+              ],
+              "prompt": "The constructor prints `+name` and the destructor prints `-name`. What does this program print?",
+              "language": "cpp",
+              "code": "#include <iostream>\n#include <string>\n\nstruct Noisy {\n    std::string name;\n    Noisy(std::string n) : name(n) { std::cout << \"+\" << name << \" \"; }\n    ~Noisy() { std::cout << \"-\" << name << \" \"; }\n};\n\nint main() {\n    Noisy a(\"a\");\n    {\n        Noisy b(\"b\");\n        Noisy c(\"c\");\n    }\n    Noisy d(\"d\");\n}",
+              "output": "+a +b +c -c -b +d -d -a",
+              "hint": "Objects are destroyed at the closing brace of their scope, newest first.",
+              "explanation": "`a` is created, then the inner braces create `b` and `c`. At the inner closing brace they're destroyed in reverse order: `-c -b`. Then `d` is created, and at the end of `main` the remaining objects are destroyed in reverse order: `-d -a`."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-leak",
+              "concepts": [
+                "stack-vs-heap",
+                "unique-ptr"
+              ],
+              "prompt": "`draw(false)` should load the texture and free it again, printing `load` then `free`. Click the line where the texture escapes.",
+              "language": "cpp",
+              "code": "#include <iostream>\n#include <memory>\n\nstruct Texture {\n    Texture() { std::cout << \"load\\n\"; }\n    ~Texture() { std::cout << \"free\\n\"; }\n};\n\nbool draw(bool visible) {\n    Texture* t = new Texture();\n    if (!visible) {\n        return false;\n    }\n    delete t;\n    return true;\n}\n\nint main() {\n    draw(false);\n}",
+              "error": "load",
+              "lines": [
+                10,
+                12
+              ],
+              "fixes": [
+                "Change line 10 to `auto t = std::make_unique<Texture>();` and delete line 14",
+                "Change line 14 to `delete t; delete t;`",
+                "Change line 10 to `Texture t = new Texture();`",
+                "Change line 12 to `return false; delete t;`"
+              ],
+              "answer": 0,
+              "hint": "Follow `draw(false)` line by line. Which line leaves the function, and what does it skip?",
+              "explanation": "When `visible` is false, the early `return` on line 12 skips the `delete`, so the texture is never freed: a leak. Every new exit path would need its own `delete`. A `std::unique_ptr` frees the texture on every path out of `draw`. A second `delete` is never reached (and would be a double free if it were), code after `return` never runs, and a `Texture` isn't a `Texture*`: *no viable conversion from 'Texture *' to 'Texture'*."
+            },
+            {
+              "type": "explain",
+              "title": "unique_ptr: the heap without delete",
+              "body": "`std::unique_ptr<T>` (`#include <memory>`) is a small object that **owns** a heap object and deletes it in its own destructor:\n\n```cpp\n{\n    auto t = std::make_unique<Enemy>();   // new, wrapped\n    t->draw();                            // use it like a pointer\n}                                         // t's scope ends: the Enemy is deleted\n```\n\nBecause `t` itself is a local, it's destroyed on **every** way out of the scope (the normal end, an early `return`, an exception), so the object can't leak. Tying a resource to an object's lifetime like this is called **RAII** (resource acquisition is initialisation). It's how C++ manages memory, files and locks.\n\nThere's exactly one owner, so copying fails: *call to implicitly-deleted copy constructor of 'unique_ptr<int>'*. Handing ownership on with `std::move` comes later in the track. In modern C++, write `make_unique` instead of `new`, and never write `delete` yourself."
+            },
+            {
+              "type": "output",
+              "id": "q-unique-scope",
+              "concepts": [
+                "unique-ptr"
+              ],
+              "prompt": "The destructor prints `free` and the name. What does this print?",
+              "language": "cpp",
+              "code": "#include <iostream>\n#include <memory>\n#include <string>\n\nstruct Texture {\n    std::string name;\n    Texture(std::string n) : name(n) {}\n    ~Texture() { std::cout << \"free \" << name << \"\\n\"; }\n};\n\nint main() {\n    auto hero = std::make_unique<Texture>(\"hero\");\n    {\n        auto tmp = std::make_unique<Texture>(\"tmp\");\n        std::cout << \"drawing\\n\";\n    }\n    std::cout << \"end\\n\";\n}",
+              "output": "drawing\nfree tmp\nend\nfree hero",
+              "explanation": "`tmp` is owned by a `unique_ptr` declared inside the inner braces, so it's freed right after `drawing`, at that closing brace. `hero`'s owner lives until the end of `main`, so it's freed after `end`. No `delete` anywhere, and nothing leaks."
+            },
+            {
+              "type": "buckets",
+              "id": "q-who-frees",
+              "concepts": [
+                "stack-vs-heap",
+                "unique-ptr"
+              ],
+              "prompt": "Who frees it?",
+              "buckets": [
+                "Freed automatically",
+                "You must free it with `delete`"
+              ],
+              "items": [
+                {
+                  "text": "A local `int` inside a function",
+                  "bucket": 0
+                },
+                {
+                  "text": "A `Player` declared as a local variable",
+                  "bucket": 0
+                },
+                {
+                  "text": "An object from `std::make_unique<Enemy>()`",
+                  "bucket": 0
+                },
+                {
+                  "text": "The elements of a `std::vector<Enemy>`",
+                  "bucket": 0
+                },
+                {
+                  "text": "An object from `new Enemy()` stored in an `Enemy*`",
+                  "bucket": 1
+                },
+                {
+                  "text": "The `Enemy*` returned by a function that called `new`",
+                  "bucket": 1
+                }
+              ],
+              "explanation": "Locals die at the end of their scope, and owners such as `unique_ptr` and `std::vector` free their heap memory in their destructors. Only a raw `new` leaves the job to you, which is why modern C++ code avoids it."
+            },
+            {
+              "type": "mcq",
+              "id": "q-why-unique",
+              "concepts": [
+                "unique-ptr"
+              ],
+              "prompt": "Why is `auto t = std::make_unique<Texture>();` better than `Texture* t = new Texture();` with a `delete t;` at the end of the function?",
+              "choices": [
+                "The texture is freed on every path out of the scope, including early returns and exceptions",
+                "It switches on a garbage collector for that object",
+                "Several owners can share the texture, and it's freed when the last one is done",
+                "The texture is stored on the stack, which is faster"
+              ],
+              "answer": 0,
+              "explanation": "The `unique_ptr` is a local, so its destructor runs however the scope is left, and it deletes the texture. There's no garbage collector involved. Shared ownership is `std::shared_ptr`, a different tool. And the texture itself is still on the heap: only the small owner object is on the stack."
+            }
+          ]
+        },
+        {
+          "id": "templates",
+          "title": "Templates: code for any type",
+          "pareto": "extra",
+          "minutes": 7,
+          "takeaway": "A template is a recipe the compiler turns into real code for each type you use it with; `std::vector<int>` and friends are templates too.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "One function for many types",
+              "body": "```cpp\ntemplate <typename T>\nT biggest(T a, T b) {\n    return a > b ? a : b;   // condition ? if-true : if-false\n}\n```\n\n```cpp\nbiggest(3, 7);              // T is int: 7\nbiggest(2.5, 9.0);          // T is double: 9\nbiggest<double>(2, 2.5);    // T named explicitly: 2.5\n```\n\nA **function template** is a recipe. When you call it, the compiler **deduces** `T` from the arguments and generates a real function for that type, at compile time. Any type works as long as the body compiles for it: here, `T` needs a `>`.\n\nYou've been using templates all along: `std::vector<int>`, `std::array<int, 3>`, `std::unordered_map<std::string, int>`, `std::optional<int>` and `std::unique_ptr<Texture>` are **class templates**, and the `<...>` are their template arguments."
+            },
+            {
+              "type": "output",
+              "id": "q-template-calls",
+              "concepts": [
+                "templates"
+              ],
+              "prompt": "What does this print?",
+              "language": "cpp",
+              "code": "#include <iostream>\n#include <string>\n\ntemplate <typename T>\nT biggest(T a, T b) {\n    return a > b ? a : b;\n}\n\nint main() {\n    std::cout << biggest(3, 7) << \" \" << biggest(2.5, 9.0) << \" \";\n    std::cout << biggest<std::string>(\"pear\", \"apple\") << \"\\n\";\n}",
+              "output": "7 9 pear",
+              "explanation": "`biggest(3, 7)` makes an `int` version and returns 7. `biggest(2.5, 9.0)` makes a `double` version and returns 9.0, printed as `9`. With `<std::string>` both literals become strings, which compare alphabetically, and \"pear\" comes after \"apple\": `pear`."
+            },
+            {
+              "type": "buckets",
+              "id": "q-deduce-T",
+              "concepts": [
+                "templates"
+              ],
+              "prompt": "What does `T` become in each call to `biggest`?",
+              "buckets": [
+                "`int`",
+                "`double`",
+                "`char`",
+                "`std::string`"
+              ],
+              "items": [
+                {
+                  "text": "`biggest(4, 9)`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`biggest(10 / 4, 3)`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`biggest<int>('a', 98)`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`biggest(1.5, 2.0)`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`biggest(10 / 4.0, 3.0)`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`biggest<double>(1, 2)`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`biggest('x', 'y')`",
+                  "bucket": 2
+                },
+                {
+                  "text": "`biggest(std::string(\"ab\"), std::string(\"b\"))`",
+                  "bucket": 3
+                }
+              ],
+              "explanation": "Without `<...>`, `T` is the type of the arguments, and both must agree: `10 / 4` is an `int`, `10 / 4.0` a `double`, `'x'` a `char`. With `<...>`, you choose `T` and the arguments are converted to it. (Each answer was checked with `static_assert`.)"
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-deduce",
+              "concepts": [
+                "templates"
+              ],
+              "prompt": "This should print the bigger number, `2.5`, but it doesn't build. Click the line with the error.",
+              "language": "cpp",
+              "code": "#include <iostream>\n\ntemplate <typename T>\nT biggest(T a, T b) {\n    return a > b ? a : b;\n}\n\nint main() {\n    std::cout << biggest(2, 2.5) << \"\\n\";\n}",
+              "error": "error: no matching function for call to 'biggest'\nnote: candidate template ignored: deduced conflicting types for parameter 'T' ('int' vs. 'double')",
+              "lines": [
+                9
+              ],
+              "fixes": [
+                "Change line 9 to `std::cout << biggest<double>(2, 2.5) << \"\\n\";`",
+                "Change line 9 to `std::cout << biggest<int>(2, 2.5) << \"\\n\";`",
+                "Change line 4 to `int biggest(T a, T b) {`",
+                "Change line 3 to `template <typename T, typename T>`"
+              ],
+              "answer": 0,
+              "hint": "What type does `2` suggest for `T`? And `2.5`?",
+              "explanation": "From `2` the compiler deduces `T = int` and from `2.5` it deduces `T = double`, and one `T` can't be both. Naming `T` as `double` converts the 2. `biggest<int>` builds but turns 2.5 into 2 (clang warns *implicit conversion from 'double' to 'int' changes value from 2.5 to 2*) and prints `2`. Changing the return type doesn't touch the deduction, and a template can't have two parameters with the same name."
+            },
+            {
+              "type": "example",
+              "title": "The text trap",
+              "problem": "`biggest(\"pear\", \"apple\")` compiles. Why can't you trust its answer? Think it through, then reveal.",
+              "steps": [
+                "Quoted literals aren't `std::string`s. Passed by value, they turn into `const char*`, so `T` is deduced as `const char*`.",
+                "`a > b` then compares two **addresses**, not the letters. Which literal sits at the higher address is up to the compiler.",
+                "Ask for real strings instead: `biggest<std::string>(\"pear\", \"apple\")` returns `\"pear\"`."
+              ],
+              "answer": "With `T = const char*` the template compiles but compares pointers. Name the type, or pass `std::string`s, whenever a template gets text."
+            },
+            {
+              "type": "mcq",
+              "id": "q-when-instantiated",
+              "concepts": [
+                "templates"
+              ],
+              "prompt": "When is the `double` version of `biggest` created?",
+              "choices": [
+                "At compile time, because some call in the program needs `biggest<double>`",
+                "At run time, the first time the program calls it with doubles",
+                "Never: one shared version handles every type, as with Java generics",
+                "When `#include <iostream>` is processed"
+              ],
+              "answer": 0,
+              "explanation": "The compiler generates a separate, fully typed function for each `T` the program uses, while it compiles. That's why templates cost nothing at run time, and why their errors appear at compile time. Java generics work differently: one compiled version works on `Object` references (type erasure)."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

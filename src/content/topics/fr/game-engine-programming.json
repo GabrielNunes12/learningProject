@@ -3,7 +3,7 @@
   "title": "Programmation de moteur de jeu",
   "icon": "C++",
   "color": "#364fc7",
-  "order": 20,
+  "order": 23,
   "category": "Programming",
   "level": "Advanced",
   "description": "Écris le C++ qui se cache sous un moteur de jeu : gère la mémoire sans ramasse-miettes, évite le comportement indéfini (UB) qui fait planter les moteurs, organise tes données pour le cache, puis construis des handles, des allocateurs, une boucle à pas fixe et des jobs simples.",
@@ -596,27 +596,27 @@
     },
     {
       "from": "fixed-timestep-loop",
-      "to": "game-development/fixed-timestep",
+      "to": "game-development-cpp/fixed-timestep",
       "label": "est la façon dont un moteur met en œuvre"
     },
     {
       "from": "ecs",
-      "to": "game-development/components",
-      "label": "stocke dans des tableaux compacts ce que C# garde dans"
+      "to": "game-development-cpp/components",
+      "label": "range dans des tableaux compacts les données dispersées dans"
     },
     {
       "from": "pool-allocator",
-      "to": "game-development/object-pool",
+      "to": "game-development-cpp/object-pool",
       "label": "est le côté mémoire de"
     },
     {
       "from": "value-semantics",
-      "to": "game-development/value-semantics",
-      "label": "couvre aussi les classes, contrairement à"
+      "to": "game-development-cpp/value-semantics",
+      "label": "est la règle qui sous-tend"
     },
     {
       "from": "determinism",
-      "to": "game-development/seeded-rng",
+      "to": "game-development-cpp/seeded-rng",
       "label": "nécessite plus que"
     }
   ],
@@ -636,7 +636,7 @@
             {
               "type": "explain",
               "title": "Fais connaissance avec Ember",
-              "body": "**Ember** est un petit studio qui écrit son propre moteur en C++. **Rosa** est la programmeuse moteur principale. **Kai** écrit le code de gameplay et a déjà sorti des jeux en C#.\n\nPremière surprise pour Kai : en C#, une variable de type `class` contient une *référence* vers un objet du tas géré par le ramasse-miettes. En C++, cette séparation n'existe pas. **Tout type est un type valeur**, `struct` comme `class`. Écrire `Enemy b = a;` copie l'objet entier, membre par membre, et dès lors `a` et `b` sont deux ennemis distincts.\n\nPour parler du *même* objet, il faut le demander explicitement, avec une référence ou un pointeur."
+              "body": "**Ember** est un petit studio qui écrit son propre moteur en C++. **Rosa** est la programmeuse moteur principale. **Kai** a écrit du code de gameplay en C++ et passe maintenant au travail sur le moteur.\n\nLe code de jeu de Kai passait les petites structs comme `Vec2` par valeur et gardait les gros objets derrière des `std::unique_ptr`. Le code d'un moteur manipule les objets eux-mêmes, alors Rosa commence par la règle qui sous-tend ces deux habitudes : **tout type est un type valeur**, `struct` comme `class`. Écrire `Enemy b = a;` copie l'objet entier, membre par membre, et dès lors `a` et `b` sont deux ennemis distincts. Dans les langages avec ramasse-miettes, une variable de classe contiendrait plutôt une *référence*.\n\nPour parler du *même* objet, il faut le demander explicitement, avec une référence ou un pointeur."
             },
             {
               "type": "output",
@@ -650,7 +650,7 @@
               "code": "#include <cstdio>\n\nstruct Enemy { int hp; };\n\nint main() {\n    Enemy a{100};\n    Enemy b = a;\n    Enemy& r = a;\n    b.hp -= 30;\n    r.hp -= 10;\n    std::printf(\"%d %d\\n\", a.hp, b.hp);\n}",
               "output": "90 70",
               "hint": "Lequel de `b` et `r` est un objet distinct, et lequel n'est qu'un autre nom pour `a` ?",
-              "explanation": "`Enemy b = a;` copie `a`, donc `b` est un second ennemi avec ses propres `hp`. Retirer 30 à `b` ne touche pas `a` : `b.hp` vaut 70. `r` n'est pas du tout un objet, juste un autre nom pour `a`, donc `r.hp -= 10` retire 10 à `a` : 90.\n\nEn C# avec `class Enemy`, les deux lignes auraient modifié le même objet."
+              "explanation": "`Enemy b = a;` copie `a`, donc `b` est un second ennemi avec ses propres `hp`. Retirer 30 à `b` ne touche pas `a` : `b.hp` vaut 70. `r` n'est pas du tout un objet, juste un autre nom pour `a`, donc `r.hp -= 10` retire 10 à `a` : 90.\n\nDans un langage avec ramasse-miettes, où une variable de classe contient une référence, les deux lignes auraient modifié le même objet."
             },
             {
               "type": "explain",
@@ -843,12 +843,12 @@
               "code": "#include <cstdio>\n\nstruct Noisy {\n    const char* name;\n    ~Noisy() { std::printf(\"bye %s\\n\", name); }\n};\n\nint main() {\n    Noisy a{\"a\"};\n    {\n        Noisy b{\"b\"};\n        Noisy c{\"c\"};\n    }\n    Noisy d{\"d\"};\n}",
               "output": "bye c\nbye b\nbye d\nbye a",
               "hint": "Le `{ }` interne se termine avant même que `d` soit créé. Dans une portée, le dernier construit est le premier détruit.",
-              "explanation": "`b` et `c` vivent dans le bloc interne, ils meurent donc à sa fermeture, le plus récent d'abord : `c`, puis `b`. Ensuite `d` est créé. À la fin de `main`, les variables locales restantes meurent dans l'ordre inverse : `d`, puis `a`.\n\nCe moment est garanti. En C#, un finaliseur s'exécute quand le GC le décide ; un destructeur C++ s'exécute exactement à l'accolade fermante."
+              "explanation": "`b` et `c` vivent dans le bloc interne, ils meurent donc à sa fermeture, le plus récent d'abord : `c`, puis `b`. Ensuite `d` est créé. À la fin de `main`, les variables locales restantes meurent dans l'ordre inverse : `d`, puis `a`.\n\nCe moment est garanti. Dans un langage avec ramasse-miettes, le code de nettoyage s'exécute quand le ramasse-miettes le décide ; un destructeur C++ s'exécute exactement à l'accolade fermante."
             },
             {
               "type": "explain",
               "title": "RAII : laisse le destructeur nettoyer",
-              "body": "Le **RAII** (*Resource Acquisition Is Initialization*) transforme cette garantie en habitude : enveloppe chaque ressource dans un objet dont le constructeur l'acquiert et dont le destructeur la libère.\n\n- `std::vector`, `std::string` et `std::unique_ptr` possèdent de la mémoire du tas.\n- `std::lock_guard` verrouille un mutex puis le déverrouille.\n- Le `GpuBuffer` d'un moteur libère la mémoire vidéo ; un `ScopedTimer` enregistre la durée d'un bloc.\n\nLe destructeur s'exécute quelle que soit la façon de quitter la portée : arriver à la fin, un `return` anticipé ou une exception. Le code de moteur écrit ainsi contient rarement le mot `delete`."
+              "body": "Tu as déjà croisé le **RAII** (*Resource Acquisition Is Initialization*) avec `std::unique_ptr`. Un moteur transforme cette garantie en habitude pour chaque ressource, pas seulement la mémoire : enveloppe chacune dans un objet dont le constructeur l'acquiert et dont le destructeur la libère.\n\n- `std::vector`, `std::string` et `std::unique_ptr` possèdent de la mémoire du tas.\n- `std::lock_guard` verrouille un mutex puis le déverrouille.\n- Le `GpuBuffer` d'un moteur libère la mémoire vidéo ; un `ScopedTimer` enregistre la durée d'un bloc.\n\nLe destructeur s'exécute quelle que soit la façon de quitter la portée : arriver à la fin, un `return` anticipé ou une exception. Le code de moteur écrit ainsi contient rarement le mot `delete`."
             },
             {
               "type": "bug",
@@ -944,7 +944,7 @@
             {
               "type": "explain",
               "title": "Qui le supprime ?",
-              "body": "Chaque objet du tas a besoin d'une réponse unique à la question *qui libère ceci ?* `std::unique_ptr<T>` écrit cette réponse dans le type : il **possède** l'objet et le supprime dans son destructeur.\n\n```cpp\nauto level = std::make_unique<Level>();  // level owns the Level\n```\n\nIl ne peut pas être copié (deux propriétaires supprimeraient deux fois), seulement **déplacé** : `auto next = std::move(level);` transfère la propriété et laisse `level` vide. Sur cette machine, `sizeof(std::unique_ptr<Mesh>)` fait 8 octets, comme un `Mesh*` brut.\n\nLe code qui ne fait qu'*utiliser* l'objet prend un simple `Mesh&` ou `Mesh*`. Ceux-là ne possèdent rien ; ils observent."
+              "body": "Chaque objet du tas a besoin d'une réponse unique à la question *qui libère ceci ?* `std::unique_ptr<T>`, qui détenait les composants dans ton code de jeu, écrit cette réponse dans le type : il **possède** l'objet et le supprime dans son destructeur.\n\n```cpp\nauto level = std::make_unique<Level>();  // level owns the Level\n```\n\nIl ne peut pas être copié (deux propriétaires supprimeraient deux fois), seulement **déplacé** : `auto next = std::move(level);` transfère la propriété et laisse `level` vide. Sur cette machine, `sizeof(std::unique_ptr<Mesh>)` fait 8 octets, comme un `Mesh*` brut.\n\nLe code qui ne fait qu'*utiliser* l'objet prend un simple `Mesh&` ou `Mesh*`. Ceux-là ne possèdent rien ; ils observent."
             },
             {
               "type": "bug",
@@ -1153,7 +1153,7 @@
             {
               "type": "explain",
               "title": "Pas d'exception, pas de garantie",
-              "body": "C# vérifie chaque indice de tableau et lève `IndexOutOfRangeException`. Le `v[i]` du C++ ne vérifie rien : lire au-delà de la fin est un **comportement indéfini** (UB). Le standard du langage n'impose *aucune exigence* sur ce qui se passe ensuite. Le programme peut afficher n'importe quoi, planter, ou fonctionner parfaitement jusqu'à la build release.\n\nC'est ce dernier point qui est le piège. L'optimiseur a le droit de supposer que l'UB n'arrive jamais et de réorganiser le code sur cette base : un bug peut donc se cacher en `-O0` et apparaître en `-O2`, ou ne se manifester que sur une seule console.\n\nL'UB que les programmeurs moteur rencontrent vraiment : accès hors limites, utilisation de mémoire libérée, lecture de variables non initialisées, débordement d'entier signé et data races."
+              "body": "Tu as vu que `v.at(i)` vérifie l'indice et lève `std::out_of_range`, alors que `v[i]` ne vérifie rien. Les boucles chaudes d'un moteur utilisent `v[i]`, et lire au-delà de la fin avec lui est un **comportement indéfini** (UB). Le standard du langage n'impose *aucune exigence* sur ce qui se passe ensuite. Le programme peut afficher n'importe quoi, planter, ou fonctionner parfaitement jusqu'à la build release.\n\nC'est ce dernier point qui est le piège. L'optimiseur a le droit de supposer que l'UB n'arrive jamais et de réorganiser le code sur cette base : un bug peut donc se cacher en `-O0` et apparaître en `-O2`, ou ne se manifester que sur une seule console.\n\nL'UB que les programmeurs moteur rencontrent vraiment : accès hors limites, utilisation de mémoire libérée, lecture de variables non initialisées, débordement d'entier signé et data races."
             },
             {
               "type": "buckets",
@@ -1278,7 +1278,7 @@
             {
               "type": "explain",
               "title": "Où sont passés les ennemis",
-              "body": "Un `std::vector` garde ses éléments dans un seul bloc contigu du tas. `size()` est le nombre d'éléments qu'il contient ; `capacity()` est le nombre qui tiennent dans le bloc.\n\nQuand `push_back` trouve le bloc plein, le vector en alloue un plus grand, y déplace chaque élément et **libère l'ancien bloc**. Tout `Enemy&`, `Enemy*` ou itérateur qui pointait dans l'ancien bloc pointe maintenant sur de la mémoire libérée : il est **pendant**. L'utiliser est un comportement indéfini.\n\nEn C#, une `List<Enemy>` de classes contient des références vers des objets qui ne bougent jamais. Un `std::vector<Enemy>` contient les ennemis eux-mêmes, qui bougent donc."
+              "body": "Un `std::vector` garde ses éléments dans un seul bloc contigu du tas. `size()` est le nombre d'éléments qu'il contient ; `capacity()` est le nombre qui tiennent dans le bloc.\n\nQuand `push_back` trouve le bloc plein, le vector en alloue un plus grand, y déplace chaque élément et **libère l'ancien bloc**. Tout `Enemy&`, `Enemy*` ou itérateur qui pointait dans l'ancien bloc pointe maintenant sur de la mémoire libérée : il est **pendant**. L'utiliser est un comportement indéfini.\n\nC'est pourquoi le cours de jeu gardait les composants derrière des `std::unique_ptr` : quand le vector grandissait, seuls les pointeurs bougeaient, jamais les composants. Un `std::vector<Enemy>` contient les ennemis eux-mêmes, qui bougent donc."
             },
             {
               "type": "trace",
@@ -1885,7 +1885,7 @@
             {
               "type": "explain",
               "title": "Les données d'abord, les objets ensuite",
-              "body": "En C#, un objet de jeu est généralement une classe qui contient une liste d'objets composants, chacun avec son propre `Update()`. Chaque composant est un objet séparé sur le tas : en mettre 10 000 à jour, c'est donc 10 000 sauts de pointeur et appels virtuels.\n\nUn **entity component system** (ECS) retourne cette organisation :\n\n- Une **entité** n'est qu'un identifiant, comme un `std::uint32_t`. Elle ne possède rien.\n- Un **composant** est une donnée brute (`Position`, `Velocity`, `Health`) stockée **compactée dans un tableau par type de composant**.\n- Un **système** est une fonction qui boucle sur les tableaux dont elle a besoin : `for i: pos[i] += vel[i] * dt`.\n\nLes boucles chaudes deviennent exactement les parcours contigus d'un même champ que le cache aime."
+              "body": "Dans le cours de jeu, un objet de jeu contenait un vector de `std::unique_ptr<Component>`, chaque composant avec son propre `update()` virtuel. Chaque composant est un objet séparé sur le tas : en mettre 10 000 à jour, c'est donc 10 000 sauts de pointeur et appels virtuels.\n\nUn **entity component system** (ECS) retourne cette organisation :\n\n- Une **entité** n'est qu'un identifiant, comme un `std::uint32_t`. Elle ne possède rien.\n- Un **composant** est une donnée brute (`Position`, `Velocity`, `Health`) stockée **compactée dans un tableau par type de composant**.\n- Un **système** est une fonction qui boucle sur les tableaux dont elle a besoin : `for i: pos[i] += vel[i] * dt`.\n\nLes boucles chaudes deviennent exactement les parcours contigus d'un même champ que le cache aime."
             },
             {
               "type": "buckets",

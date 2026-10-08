@@ -3,7 +3,7 @@
   "title": "Game Engine Programming",
   "icon": "C++",
   "color": "#364fc7",
-  "order": 20,
+  "order": 23,
   "category": "Programming",
   "level": "Advanced",
   "description": "Write the C++ underneath a game engine: own memory without a garbage collector, avoid the undefined behaviour that crashes engines, lay data out for the cache, and build handles, allocators, a fixed-step loop and simple jobs.",
@@ -518,27 +518,27 @@
     },
     {
       "from": "fixed-timestep-loop",
-      "to": "game-development/fixed-timestep",
+      "to": "game-development-cpp/fixed-timestep",
       "label": "is how an engine implements"
     },
     {
       "from": "ecs",
-      "to": "game-development/components",
-      "label": "stores in packed arrays what C# keeps in"
+      "to": "game-development-cpp/components",
+      "label": "packs into arrays the data scattered across"
     },
     {
       "from": "pool-allocator",
-      "to": "game-development/object-pool",
+      "to": "game-development-cpp/object-pool",
       "label": "is the memory side of"
     },
     {
       "from": "value-semantics",
-      "to": "game-development/value-semantics",
-      "label": "covers classes too, unlike"
+      "to": "game-development-cpp/value-semantics",
+      "label": "is the rule behind"
     },
     {
       "from": "determinism",
-      "to": "game-development/seeded-rng",
+      "to": "game-development-cpp/seeded-rng",
       "label": "needs more than"
     }
   ],
@@ -558,7 +558,7 @@
             {
               "type": "explain",
               "title": "Meet Ember",
-              "body": "**Ember** is a small studio writing its own engine in C++. **Rosa** is the lead engine programmer. **Kai** writes gameplay code and has shipped games in C#.\n\nThe first surprise for Kai: in C#, a `class` variable holds a *reference* to an object on the garbage-collected heap. In C++ there is no such split. **Every type is a value type**, `struct` and `class` alike. Writing `Enemy b = a;` copies the whole object, member by member, and from then on `a` and `b` are two separate enemies.\n\nTo talk about the *same* object you have to ask for it explicitly, with a reference or a pointer."
+              "body": "**Ember** is a small studio writing its own engine in C++. **Rosa** is the lead engine programmer. **Kai** has written C++ gameplay code and is now moving to engine work.\n\nKai's game code passed small structs such as `Vec2` by value and kept big objects behind `std::unique_ptr`. Engine code handles the objects themselves, so Rosa starts with the rule underneath both habits: **every type is a value type**, `struct` and `class` alike. Writing `Enemy b = a;` copies the whole object, member by member, and from then on `a` and `b` are two separate enemies. In languages with a garbage collector, a class variable would hold a *reference* instead.\n\nTo talk about the *same* object you have to ask for it explicitly, with a reference or a pointer."
             },
             {
               "type": "output",
@@ -572,7 +572,7 @@
               "code": "#include <cstdio>\n\nstruct Enemy { int hp; };\n\nint main() {\n    Enemy a{100};\n    Enemy b = a;\n    Enemy& r = a;\n    b.hp -= 30;\n    r.hp -= 10;\n    std::printf(\"%d %d\\n\", a.hp, b.hp);\n}",
               "output": "90 70",
               "hint": "Which of `b` and `r` is a separate object, and which is just another name for `a`?",
-              "explanation": "`Enemy b = a;` copies `a`, so `b` is a second enemy with its own `hp`. Taking 30 from `b` leaves `a` alone: `b.hp` is 70. `r` is not an object at all, just another name for `a`, so `r.hp -= 10` takes 10 from `a`: 90.\n\nIn C# with `class Enemy`, both lines would have changed the same object."
+              "explanation": "`Enemy b = a;` copies `a`, so `b` is a second enemy with its own `hp`. Taking 30 from `b` leaves `a` alone: `b.hp` is 70. `r` is not an object at all, just another name for `a`, so `r.hp -= 10` takes 10 from `a`: 90.\n\nIn a language with a garbage collector, where a class variable holds a reference, both lines would have changed the same object."
             },
             {
               "type": "explain",
@@ -765,12 +765,12 @@
               "code": "#include <cstdio>\n\nstruct Noisy {\n    const char* name;\n    ~Noisy() { std::printf(\"bye %s\\n\", name); }\n};\n\nint main() {\n    Noisy a{\"a\"};\n    {\n        Noisy b{\"b\"};\n        Noisy c{\"c\"};\n    }\n    Noisy d{\"d\"};\n}",
               "output": "bye c\nbye b\nbye d\nbye a",
               "hint": "The inner `{ }` ends before `d` is even created. Within a scope, the last one built is the first one destroyed.",
-              "explanation": "`b` and `c` live in the inner block, so they die when it closes, newest first: `c`, then `b`. Then `d` is created. At the end of `main`, the remaining locals die in reverse order: `d`, then `a`.\n\nThis timing is guaranteed. In C# a finalizer runs whenever the GC gets around to it; a C++ destructor runs exactly at the closing brace."
+              "explanation": "`b` and `c` live in the inner block, so they die when it closes, newest first: `c`, then `b`. Then `d` is created. At the end of `main`, the remaining locals die in reverse order: `d`, then `a`.\n\nThis timing is guaranteed. In a language with a garbage collector, cleanup code runs whenever the collector gets around to it; a C++ destructor runs exactly at the closing brace."
             },
             {
               "type": "explain",
               "title": "RAII: let the destructor clean up",
-              "body": "**RAII** (*Resource Acquisition Is Initialization*) turns that guarantee into a habit: wrap every resource in an object whose constructor acquires it and whose destructor releases it.\n\n- `std::vector`, `std::string` and `std::unique_ptr` own heap memory.\n- `std::lock_guard` locks a mutex and unlocks it.\n- An engine's `GpuBuffer` frees video memory; a `ScopedTimer` records how long a block took.\n\nThe destructor runs on every way out of the scope: falling off the end, an early `return`, or an exception. Engine code written this way rarely contains the word `delete`."
+              "body": "You've met **RAII** (*Resource Acquisition Is Initialization*) through `std::unique_ptr`. An engine turns that guarantee into a habit for every resource, not only memory: wrap each one in an object whose constructor acquires it and whose destructor releases it.\n\n- `std::vector`, `std::string` and `std::unique_ptr` own heap memory.\n- `std::lock_guard` locks a mutex and unlocks it.\n- An engine's `GpuBuffer` frees video memory; a `ScopedTimer` records how long a block took.\n\nThe destructor runs on every way out of the scope: falling off the end, an early `return`, or an exception. Engine code written this way rarely contains the word `delete`."
             },
             {
               "type": "bug",
@@ -866,7 +866,7 @@
             {
               "type": "explain",
               "title": "Who deletes it?",
-              "body": "Every heap object needs exactly one answer to *who frees this?* `std::unique_ptr<T>` writes that answer into the type: it **owns** the object and deletes it in its destructor.\n\n```cpp\nauto level = std::make_unique<Level>();  // level owns the Level\n```\n\nIt can't be copied (two owners would delete twice), only **moved**: `auto next = std::move(level);` transfers ownership and leaves `level` empty. On this machine `sizeof(std::unique_ptr<Mesh>)` is 8 bytes, the same as a raw `Mesh*`.\n\nCode that only *uses* the object takes a plain `Mesh&` or `Mesh*`. Those don't own anything; they just observe."
+              "body": "Every heap object needs exactly one answer to *who frees this?* `std::unique_ptr<T>`, which held the components in your game code, writes that answer into the type: it **owns** the object and deletes it in its destructor.\n\n```cpp\nauto level = std::make_unique<Level>();  // level owns the Level\n```\n\nIt can't be copied (two owners would delete twice), only **moved**: `auto next = std::move(level);` transfers ownership and leaves `level` empty. On this machine `sizeof(std::unique_ptr<Mesh>)` is 8 bytes, the same as a raw `Mesh*`.\n\nCode that only *uses* the object takes a plain `Mesh&` or `Mesh*`. Those don't own anything; they just observe."
             },
             {
               "type": "bug",
@@ -1075,7 +1075,7 @@
             {
               "type": "explain",
               "title": "No exception, no guarantee",
-              "body": "C# checks every array index and throws `IndexOutOfRangeException`. C++'s `v[i]` doesn't check: reading past the end is **undefined behaviour** (UB). The language standard places *no requirement at all* on what happens next. The program may print garbage, crash, or work perfectly until the release build.\n\nThat last part is the trap. The optimiser is allowed to assume UB never happens and rearrange code on that basis, so a bug can hide at `-O0` and appear at `-O2`, or show up only on one console.\n\nThe UB that engine programmers actually hit: out-of-bounds access, using freed memory, reading uninitialised variables, signed integer overflow and data races."
+              "body": "You've seen that `v.at(i)` checks the index and throws `std::out_of_range`, while `v[i]` doesn't check. Engine hot loops use `v[i]`, and reading past the end with it is **undefined behaviour** (UB). The language standard places *no requirement at all* on what happens next. The program may print garbage, crash, or work perfectly until the release build.\n\nThat last part is the trap. The optimiser is allowed to assume UB never happens and rearrange code on that basis, so a bug can hide at `-O0` and appear at `-O2`, or show up only on one console.\n\nThe UB that engine programmers actually hit: out-of-bounds access, using freed memory, reading uninitialised variables, signed integer overflow and data races."
             },
             {
               "type": "buckets",
@@ -1200,7 +1200,7 @@
             {
               "type": "explain",
               "title": "Where the enemies went",
-              "body": "A `std::vector` keeps its elements in one contiguous heap block. `size()` is how many elements it holds; `capacity()` is how many fit in the block.\n\nWhen `push_back` finds the block full, the vector allocates a bigger one, moves every element across, and **frees the old block**. Any `Enemy&`, `Enemy*` or iterator that pointed into the old block now points at freed memory: it **dangles**. Using it is undefined behaviour.\n\nIn C#, a `List<Enemy>` of classes holds references to objects that never move. A `std::vector<Enemy>` holds the enemies themselves, so they do move."
+              "body": "A `std::vector` keeps its elements in one contiguous heap block. `size()` is how many elements it holds; `capacity()` is how many fit in the block.\n\nWhen `push_back` finds the block full, the vector allocates a bigger one, moves every element across, and **frees the old block**. Any `Enemy&`, `Enemy*` or iterator that pointed into the old block now points at freed memory: it **dangles**. Using it is undefined behaviour.\n\nThat's why the game course kept components behind `std::unique_ptr`: when the vector grew, only the pointers moved, never the components. A `std::vector<Enemy>` holds the enemies themselves, so they do move."
             },
             {
               "type": "trace",
@@ -1807,7 +1807,7 @@
             {
               "type": "explain",
               "title": "Data first, objects second",
-              "body": "In C#, a game object is usually a class holding a list of component objects, each with its own `Update()`. Every component is a separate heap object, so updating 10,000 of them means 10,000 pointer hops and virtual calls.\n\nAn **entity component system** (ECS) turns this inside out:\n\n- An **entity** is just an id, such as `std::uint32_t`. It owns nothing.\n- A **component** is plain data (`Position`, `Velocity`, `Health`) stored **packed in one array per component type**.\n- A **system** is a function that loops over the arrays it needs: `for i: pos[i] += vel[i] * dt`.\n\nThe hot loops become exactly the contiguous, same-field walks the cache likes."
+              "body": "In the game course, a game object held a vector of `std::unique_ptr<Component>`, each component with its own virtual `update()`. Every component is a separate heap object, so updating 10,000 of them means 10,000 pointer hops and virtual calls.\n\nAn **entity component system** (ECS) turns this inside out:\n\n- An **entity** is just an id, such as `std::uint32_t`. It owns nothing.\n- A **component** is plain data (`Position`, `Velocity`, `Health`) stored **packed in one array per component type**.\n- A **system** is a function that loops over the arrays it needs: `for i: pos[i] += vel[i] * dt`.\n\nThe hot loops become exactly the contiguous, same-field walks the cache likes."
             },
             {
               "type": "buckets",

@@ -1,0 +1,2927 @@
+{
+  "id": "game-development-cpp",
+  "title": "Desenvolvimento de jogos (C++)",
+  "icon": "GD++",
+  "color": "#0b7285",
+  "order": 22,
+  "category": "Programming",
+  "level": "Intermediate",
+  "description": "Faça jogos em C++ moderno: rode um game loop independente da taxa de frames, mova e colida coisas com um Vec2, estruture objetos com componentes e máquinas de estado e mantenha cada frame dentro do orçamento.",
+  "keyIdeas": [
+    "Um jogo é um **loop**: ler a entrada, atualizar e renderizar, a cada frame, dentro de um orçamento de cerca de 16,7 ms a 60 fps.",
+    "Escreva as velocidades **por segundo** e multiplique pelo **delta time**; avance a física com um **passo de tempo fixo**.",
+    "Um pequeno tipo de valor **`Vec2`** com operadores carrega o movimento: normalize as direções antes de multiplicá-las por uma velocidade e use o **produto escalar** para “à frente de”.",
+    "Detecte sobreposições de forma barata (caixas, círculos), empurre para fora pela menor sobreposição e faça um **sweep** em objetos rápidos para que não atravessem paredes (tunneling).",
+    "Monte objetos com pequenos **componentes** sob posse de `unique_ptr` e conduza o comportamento deles com **máquinas de estado** explícitas sobre um `enum class`.",
+    "Respeite o orçamento do frame: faça **pool** do que você spawna, pare de alocar a cada frame, use uma **grade espacial** e meça antes de otimizar."
+  ],
+  "concepts": [
+    {
+      "id": "game-loop",
+      "label": "Game loop",
+      "lesson": "game-loop",
+      "summary": "A cada frame o jogo lê a entrada, atualiza o mundo e o renderiza; a 60 fps tudo isso precisa caber em cerca de 16,7 ms.",
+      "aliases": [
+        "frame",
+        "loop principal",
+        "main loop",
+        "orçamento do frame",
+        "frame budget",
+        "atualizar e renderizar",
+        "update and render",
+        "fps"
+      ]
+    },
+    {
+      "id": "value-semantics",
+      "label": "Cópias e referências",
+      "lesson": "cpp-for-games",
+      "summary": "Valores pequenos como Vec2 são passados por valor, coisas grandes só de leitura por const& e coisas a alterar por &; uma variável de laço ou parâmetro por valor altera apenas uma cópia.",
+      "aliases": [
+        "passagem por valor",
+        "pass by value",
+        "referência const",
+        "const reference",
+        "const&",
+        "cópia no range-for",
+        "range-for copy",
+        "cópia",
+        "copy"
+      ]
+    },
+    {
+      "id": "callbacks",
+      "label": "Callbacks",
+      "lesson": "cpp-for-games",
+      "summary": "Uma lista de objetos std::function, geralmente lambdas, que um objeto chama para anunciar uma mudança sem saber quem está ouvindo.",
+      "aliases": [
+        "std::function",
+        "lambda",
+        "evento",
+        "event",
+        "ouvinte",
+        "listener",
+        "observer",
+        "observador",
+        "captura",
+        "capture"
+      ]
+    },
+    {
+      "id": "delta-time",
+      "label": "Delta time",
+      "lesson": "delta-time",
+      "summary": "Os segundos desde o último frame; multiplicar taxas por segundo por ele torna movimento e timers independentes da taxa de frames.",
+      "aliases": [
+        "dt",
+        "tempo do frame",
+        "frame time",
+        "steady_clock",
+        "independência da taxa de frames",
+        "frame-rate independence"
+      ]
+    },
+    {
+      "id": "fixed-timestep",
+      "label": "Passo de tempo fixo",
+      "lesson": "fixed-timestep",
+      "summary": "A física avança em passos iguais alimentados por um acumulador de tempo real, então os resultados não dependem da taxa de frames.",
+      "aliases": [
+        "acumulador",
+        "accumulator",
+        "passo de física",
+        "physics step",
+        "interpolação",
+        "interpolation",
+        "espiral da morte",
+        "spiral of death",
+        "fixed update"
+      ]
+    },
+    {
+      "id": "vector",
+      "label": "Vetores",
+      "lesson": "vectors",
+      "summary": "Posições, velocidades e acelerações são pares (x, y) em um pequeno tipo Vec2 com operadores sobrecarregados: velocidade × dt move a posição e aceleração × dt altera a velocidade.",
+      "aliases": [
+        "vetor",
+        "Vec2",
+        "velocidade",
+        "velocity",
+        "aceleração",
+        "acceleration",
+        "comprimento",
+        "length",
+        "sobrecarga de operadores",
+        "operator overloading"
+      ]
+    },
+    {
+      "id": "normalization",
+      "label": "Normalização",
+      "lesson": "vectors",
+      "summary": "Dividir um vetor pelo seu comprimento dá uma direção unitária, então direção × velocidade tem a velocidade certa até na diagonal.",
+      "aliases": [
+        "normalizar",
+        "normalize",
+        "vetor unitário",
+        "unit vector",
+        "normalized()",
+        "velocidade na diagonal",
+        "diagonal speed"
+      ]
+    },
+    {
+      "id": "dot-product",
+      "label": "Produto escalar",
+      "lesson": "facing-and-steering",
+      "summary": "a.x·b.x + a.y·b.y; para vetores unitários é o cosseno do ângulo, então o sinal diz se algo está à frente ou atrás e um limite define um campo de visão.",
+      "aliases": [
+        "dot",
+        "produto escalar",
+        "à frente de",
+        "in front of",
+        "campo de visão",
+        "field of view",
+        "cosseno",
+        "cosine",
+        "FOV"
+      ]
+    },
+    {
+      "id": "steering",
+      "label": "Steering",
+      "lesson": "facing-and-steering",
+      "summary": "Virar aos poucos somando (velocidade desejada − velocidade atual) um pouco de cada vez, para seek, flee e arrive suaves.",
+      "aliases": [
+        "seek",
+        "flee",
+        "arrive",
+        "perseguir",
+        "fugir",
+        "comportamento de steering",
+        "steering behaviour",
+        "velocidade desejada",
+        "desired velocity"
+      ]
+    },
+    {
+      "id": "input-edges",
+      "label": "Pressionar vs segurar",
+      "lesson": "input",
+      "summary": "“Pressionado” é pressionado agora e solto no frame anterior, então guarde o estado anterior; buffers e coyote time perdoam toques um pouco cedo ou tarde demais.",
+      "aliases": [
+        "IsKeyPressed",
+        "detecção de borda",
+        "edge detection",
+        "polling",
+        "jump buffer",
+        "coyote time",
+        "mapeamento de entrada",
+        "input mapping"
+      ]
+    },
+    {
+      "id": "aabb",
+      "label": "Sobreposição de AABB",
+      "lesson": "collisions",
+      "summary": "Caixas alinhadas aos eixos só se sobrepõem quando suas faixas se sobrepõem em x e em y.",
+      "aliases": [
+        "bounding box",
+        "caixa delimitadora",
+        "box collider",
+        "sobreposição de retângulos",
+        "rectangle overlap",
+        "axis-aligned bounding box"
+      ]
+    },
+    {
+      "id": "circle-collision",
+      "label": "Sobreposição de círculos",
+      "lesson": "collisions",
+      "summary": "Dois círculos se sobrepõem quando a distância ao quadrado entre os centros é menor que o quadrado da soma dos raios.",
+      "aliases": [
+        "circle collider",
+        "colisão de círculos",
+        "checagem de distância",
+        "distance check",
+        "colisão de esferas",
+        "sphere collision",
+        "raio",
+        "radius"
+      ]
+    },
+    {
+      "id": "collision-resolution",
+      "label": "Resolução de colisão",
+      "lesson": "collision-response",
+      "summary": "Empurre quem se move e está sobreposto para fora pelo eixo de menor sobreposição, em direção ao seu próprio lado, e zere a velocidade nesse eixo.",
+      "aliases": [
+        "empurrar para fora",
+        "push out",
+        "translação mínima",
+        "minimum translation",
+        "resposta à colisão",
+        "collision response",
+        "separação",
+        "separation"
+      ]
+    },
+    {
+      "id": "tunnelling",
+      "label": "Tunneling",
+      "lesson": "collision-response",
+      "summary": "Um objeto rápido passa por um obstáculo fino entre duas checagens; sweeps, raycasts ou substeps o pegam.",
+      "aliases": [
+        "tunelamento",
+        "tunneling",
+        "tunnelling",
+        "bala atravessando papel",
+        "bullet through paper",
+        "detecção contínua de colisão",
+        "continuous collision detection",
+        "CCD",
+        "sweep",
+        "swept collision"
+      ]
+    },
+    {
+      "id": "components",
+      "label": "Componentes",
+      "lesson": "components",
+      "summary": "Objetos de jogo possuem pequenos componentes de uma só função por meio de unique_ptr para uma base comum, em vez de herança profunda ou múltipla.",
+      "aliases": [
+        "componente",
+        "component",
+        "composição em vez de herança",
+        "composition over inheritance",
+        "unique_ptr<Component>",
+        "slicing",
+        "entity component",
+        "game object",
+        "objeto de jogo"
+      ]
+    },
+    {
+      "id": "state-machine",
+      "label": "Máquina de estados",
+      "lesson": "state-machines",
+      "summary": "Um estado atual vindo de um enum class, com transições explícitas entre estados; substitui pilhas de flags booleanas.",
+      "aliases": [
+        "FSM",
+        "máquina de estados finita",
+        "finite state machine",
+        "enum class",
+        "switch",
+        "estados",
+        "states",
+        "transições",
+        "transitions",
+        "histerese",
+        "hysteresis"
+      ]
+    },
+    {
+      "id": "object-pool",
+      "label": "Object pooling",
+      "lesson": "pooling",
+      "summary": "Reutilize objetos inativos em vez de criá-los e destruí-los, e zere todos os campos quando um for reutilizado.",
+      "aliases": [
+        "pool",
+        "pooling",
+        "lista de livres",
+        "free list",
+        "reutilizar objetos",
+        "reuse objects",
+        "spawn",
+        "spawning"
+      ]
+    },
+    {
+      "id": "per-frame-allocation",
+      "label": "Alocação por frame",
+      "lesson": "pooling",
+      "summary": "Cada new, make_unique, contêiner copiado ou vector que cresce pede memória ao alocador de uso geral; fazer isso milhares de vezes por frame custa tempo, então use reserve, reutilize e faça pool.",
+      "aliases": [
+        "alocação no heap",
+        "heap allocation",
+        "new",
+        "make_unique",
+        "reserve",
+        "crescimento do vector",
+        "vector growth",
+        "malloc"
+      ]
+    },
+    {
+      "id": "easing",
+      "label": "Lerp e easing",
+      "lesson": "game-feel",
+      "summary": "O lerp mistura valores, as curvas de easing remodelam a mistura para dar sensação melhor, e 1 − e^(−k·dt) torna a suavização por frame independente da taxa de frames.",
+      "aliases": [
+        "lerp",
+        "std::lerp",
+        "ease out",
+        "suavização",
+        "smoothing",
+        "câmera seguindo",
+        "camera follow",
+        "screen shake",
+        "tremor de tela",
+        "trauma"
+      ]
+    },
+    {
+      "id": "bfs",
+      "label": "Busca em largura",
+      "lesson": "pathfinding",
+      "summary": "Explorar uma grade para fora a partir do início com uma fila, o que encontra um caminho mais curto em passos.",
+      "aliases": [
+        "BFS",
+        "flood fill",
+        "flow field",
+        "std::queue",
+        "fila",
+        "busca em grade",
+        "grid search"
+      ]
+    },
+    {
+      "id": "a-star",
+      "label": "Busca A*",
+      "lesson": "pathfinding",
+      "summary": "Expandir o tile com o menor f = g + h, em que h estima a distância restante, para achar um caminho mais curto explorando menos.",
+      "aliases": [
+        "A star",
+        "A*",
+        "A estrela",
+        "heurística",
+        "heuristic",
+        "distância de Manhattan",
+        "Manhattan distance",
+        "Dijkstra",
+        "priority_queue"
+      ]
+    },
+    {
+      "id": "seeded-rng",
+      "label": "Aleatoriedade com seed",
+      "lesson": "seeds-and-saves",
+      "summary": "Um gerador pseudoaleatório como std::mt19937 iniciado com a mesma seed dá a mesma sequência, então mundos procedurais podem ser reconstruídos exatamente.",
+      "aliases": [
+        "seed",
+        "semente",
+        "PRNG",
+        "mt19937",
+        "geração procedural",
+        "procedural generation",
+        "aleatório determinístico",
+        "deterministic random"
+      ]
+    },
+    {
+      "id": "save-state",
+      "label": "Dados de save",
+      "lesson": "seeds-and-saves",
+      "summary": "Salve os dados que não dá para reconstruir, com um número de versão, escrevendo um arquivo temporário e renomeando-o; reconstrua todo o resto ao carregar.",
+      "aliases": [
+        "arquivo de save",
+        "save file",
+        "serialização",
+        "serialization",
+        "fstream",
+        "versionamento de save",
+        "save versioning",
+        "carregar jogo",
+        "load game"
+      ]
+    },
+    {
+      "id": "spatial-partitioning",
+      "label": "Grade espacial",
+      "lesson": "performance",
+      "summary": "Distribuir objetos em células de uma grade para que cada um seja testado só contra seus vizinhos, e não contra todos os outros objetos.",
+      "aliases": [
+        "spatial grid",
+        "spatial hash",
+        "broad phase",
+        "grade uniforme",
+        "uniform grid",
+        "quadtree",
+        "particionamento espacial",
+        "partitioning"
+      ]
+    }
+  ],
+  "links": [
+    {
+      "from": "game-loop",
+      "to": "delta-time",
+      "label": "mede"
+    },
+    {
+      "from": "delta-time",
+      "to": "fixed-timestep",
+      "label": "é refinado por"
+    },
+    {
+      "from": "fixed-timestep",
+      "to": "tunnelling",
+      "label": "reduz"
+    },
+    {
+      "from": "delta-time",
+      "to": "vector",
+      "label": "escala"
+    },
+    {
+      "from": "normalization",
+      "to": "vector",
+      "label": "se aplica a"
+    },
+    {
+      "from": "dot-product",
+      "to": "normalization",
+      "label": "precisa de"
+    },
+    {
+      "from": "steering",
+      "to": "vector",
+      "label": "se apoia em"
+    },
+    {
+      "from": "steering",
+      "to": "normalization",
+      "label": "precisa de"
+    },
+    {
+      "from": "value-semantics",
+      "to": "vector",
+      "label": "decide como passar"
+    },
+    {
+      "from": "input-edges",
+      "to": "game-loop",
+      "label": "é lido(a) em"
+    },
+    {
+      "from": "input-edges",
+      "to": "fixed-timestep",
+      "label": "pode ser perdido(a) por"
+    },
+    {
+      "from": "circle-collision",
+      "to": "dot-product",
+      "label": "usa"
+    },
+    {
+      "from": "aabb",
+      "to": "circle-collision",
+      "label": "contrasta com"
+    },
+    {
+      "from": "collision-resolution",
+      "to": "aabb",
+      "label": "vem depois de"
+    },
+    {
+      "from": "tunnelling",
+      "to": "delta-time",
+      "label": "cresce com"
+    },
+    {
+      "from": "components",
+      "to": "callbacks",
+      "label": "se comunicam por meio de"
+    },
+    {
+      "from": "components",
+      "to": "value-semantics",
+      "label": "evitam o slicing sem copiar para"
+    },
+    {
+      "from": "state-machine",
+      "to": "components",
+      "label": "costuma ser feita com"
+    },
+    {
+      "from": "state-machine",
+      "to": "steering",
+      "label": "comanda"
+    },
+    {
+      "from": "state-machine",
+      "to": "bfs",
+      "label": "pode disparar"
+    },
+    {
+      "from": "object-pool",
+      "to": "per-frame-allocation",
+      "label": "elimina"
+    },
+    {
+      "from": "per-frame-allocation",
+      "to": "game-loop",
+      "label": "consome o orçamento de"
+    },
+    {
+      "from": "easing",
+      "to": "delta-time",
+      "label": "precisa de"
+    },
+    {
+      "from": "a-star",
+      "to": "bfs",
+      "label": "melhora"
+    },
+    {
+      "from": "bfs",
+      "to": "steering",
+      "label": "fornece waypoints a"
+    },
+    {
+      "from": "seeded-rng",
+      "to": "save-state",
+      "label": "diminui"
+    },
+    {
+      "from": "spatial-partitioning",
+      "to": "aabb",
+      "label": "reduz o número de"
+    },
+    {
+      "from": "spatial-partitioning",
+      "to": "game-loop",
+      "label": "protege o orçamento de"
+    },
+    {
+      "from": "value-semantics",
+      "to": "per-frame-allocation",
+      "label": "evita acidentes de"
+    },
+    {
+      "from": "delta-time",
+      "to": "everyday-math/speed-distance-time",
+      "label": "aplica"
+    },
+    {
+      "from": "game-loop",
+      "to": "game-engine-programming/profiling",
+      "label": "é mantido(a) no orçamento por"
+    },
+    {
+      "from": "fixed-timestep",
+      "to": "game-engine-programming/fixed-timestep-loop",
+      "label": "é implementado(a) por completo em"
+    },
+    {
+      "from": "value-semantics",
+      "to": "game-engine-programming/value-semantics",
+      "label": "é aprofundado(a) em"
+    },
+    {
+      "from": "components",
+      "to": "game-engine-programming/ecs",
+      "label": "evoluem para"
+    },
+    {
+      "from": "object-pool",
+      "to": "game-engine-programming/pool-allocator",
+      "label": "é generalizado(a) por"
+    },
+    {
+      "from": "object-pool",
+      "to": "game-engine-programming/generational-handles",
+      "label": "fica mais seguro(a) com"
+    },
+    {
+      "from": "per-frame-allocation",
+      "to": "game-engine-programming/arena-allocator",
+      "label": "é eliminado(a) para dados temporários por"
+    },
+    {
+      "from": "seeded-rng",
+      "to": "game-engine-programming/determinism",
+      "label": "é uma parte de"
+    },
+    {
+      "from": "spatial-partitioning",
+      "to": "big-o/quadratic-time",
+      "label": "evita"
+    },
+    {
+      "from": "spatial-partitioning",
+      "to": "big-o/hash-map",
+      "label": "pode usar"
+    },
+    {
+      "from": "object-pool",
+      "to": "big-o/space-time-tradeoff",
+      "label": "é um tipo de"
+    }
+  ],
+  "units": [
+    {
+      "id": "loop-and-time",
+      "title": "O loop e o relógio",
+      "description": "Como um jogo roda: um loop, muitos frames por segundo, o C++ em que os jogos se apoiam e o tempo medido para que a velocidade seja a mesma em qualquer máquina.",
+      "lessons": [
+        {
+          "id": "game-loop",
+          "title": "O loop que move tudo",
+          "pareto": "core",
+          "minutes": 6,
+          "takeaway": "Um jogo é um loop que lê a entrada, atualiza o mundo e o renderiza a cada frame, e a 60 fps tudo isso precisa caber em cerca de 16,7 ms.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Conheça o Ember Run",
+              "body": "A **Rin** acabou de aprender C++ e quer fazer jogos com ele. O **Dario** é um designer com um plano: o **Ember Run**, um jogo 2D em que uma raposa carrega uma lanterna por uma floresta à noite, coleta faíscas e desvia de slimes e morcegos.\n\nA maioria dos programas espera por alguma coisa: um clique, uma requisição. Um jogo nunca espera. Ele roda o mesmo **loop** muitas vezes por segundo, e cada passada é um **frame**:\n\n```cpp\nwhile (running) {\n    readInput();   // what is held, what was pressed\n    update();      // move, collide, think, count down timers\n    render();      // draw everything where it now is\n}\n```\n\n- **Entrada**: ler o teclado, o mouse ou o gamepad.\n- **Atualização**: mover as coisas, checar colisões, rodar a lógica dos inimigos, fazer a contagem regressiva dos timers.\n- **Renderização**: desenhar o mundo onde tudo está agora.\n\nEm uma engine como Unreal ou Godot, a engine é dona desse loop e chama o seu código uma vez por frame. Neste curso a Rin escreve as peças em C++ puro, para você ver o que a engine faz por você."
+            },
+            {
+              "type": "order",
+              "id": "q-loop-order",
+              "concepts": [
+                "game-loop"
+              ],
+              "prompt": "Coloque em ordem o trabalho de um frame do Ember Run.",
+              "items": [
+                "Ler quais teclas estão pressionadas",
+                "Mover a raposa usando essa entrada",
+                "Checar se a raposa agora está sobre um slime",
+                "Desenhar a floresta e, por cima, a raposa",
+                "Mostrar a imagem pronta na tela"
+              ],
+              "hint": "Você só pode se mover com uma entrada que já leu, e só pode desenhar posições que já calculou.",
+              "explanation": "A entrada vem primeiro, porque a atualização precisa dela. A atualização move as coisas e *só depois* checa colisões, porque as colisões dependem das novas posições. A renderização desenha o resultado de trás para a frente, e a imagem pronta só é exibida quando está completa, então o jogador nunca vê um frame desenhado pela metade."
+            },
+            {
+              "type": "explain",
+              "title": "O orçamento do frame",
+              "body": "A **60 frames por segundo**, cada frame tem 1000 ms ÷ 60 ≈ **16,7 ms** para entrada, atualização *e* renderização juntas. Esse tempo é o **orçamento do frame** (*frame budget*).\n\nSe um frame demora mais, o jogo mostra menos frames por segundo: com 25 ms por frame você tem 40 fps, e o jogo fica menos fluido. Um único frame de 200 ms é uma **travada** (*hitch*) visível.\n\nTaxas de atualização maiores encolhem o orçamento. É por isso que quem programa jogos pensa em milissegundos por frame, e não só em “está rápido”."
+            },
+            {
+              "type": "numeric",
+              "id": "q-frame-budget",
+              "concepts": [
+                "game-loop"
+              ],
+              "prompt": "O monitor novo do Dario atualiza **144** vezes por segundo. Para acompanhar, quantos **milissegundos** cada frame tem?",
+              "answer": 6.94,
+              "tolerance": 0.01,
+              "unit": "ms",
+              "hint": "Divida um segundo, em milissegundos, pelo número de frames.",
+              "explanation": "1000 ms ÷ 144 ≈ **6,94 ms** por frame, bem menos da metade dos 16,7 ms de um jogo a 60 fps. Tudo o que o jogo faz a cada frame precisa caber nisso, e é por isso que os custos por frame importam tanto mais adiante neste curso."
+            },
+            {
+              "type": "output",
+              "id": "q-render-first",
+              "concepts": [
+                "game-loop"
+              ],
+              "prompt": "A Rin escreveu um loop de teste que **renderiza antes de atualizar**. Cada passada do laço `for` é um frame. O que ele imprime?",
+              "language": "cpp",
+              "code": "#include <cstdio>\n\nint main() {\n    bool rightHeld[] = {true, true, false, true};\n    float x = 0;\n\n    for (bool right : rightHeld) {\n        std::printf(\"%g\\n\", x);   // render: draw the fox\n        if (right) x += 2;        // update: move it\n    }\n}",
+              "output": "0\n2\n4\n4",
+              "hint": "Cada frame imprime `x` primeiro e só depois move a raposa.",
+              "explanation": "Cada frame desenha a posição de **antes** de a entrada deste frame ser aplicada: 0, depois 2, depois 4, e no terceiro frame a tecla já foi solta, então `x` continua 4, que o quarto frame desenha. O último movimento, para 6, nunca chega a ser desenhado.\n\nRenderizar antes de atualizar mostra tudo ao jogador com um frame de atraso, o que dá a sensação de input lag. Leia a entrada, atualize e *depois* renderize."
+            },
+            {
+              "type": "buckets",
+              "id": "q-update-or-render",
+              "concepts": [
+                "game-loop"
+              ],
+              "prompt": "Separe cada trecho de código do Ember Run na parte do frame a que ele pertence.",
+              "buckets": [
+                "Atualização (muda o mundo)",
+                "Renderização (desenha o mundo)"
+              ],
+              "items": [
+                {
+                  "text": "Mover a raposa pela sua velocidade",
+                  "bucket": 0
+                },
+                {
+                  "text": "Checar se a raposa tocou uma faísca",
+                  "bucket": 0
+                },
+                {
+                  "text": "Contar o timer de invencibilidade depois de um golpe",
+                  "bucket": 0
+                },
+                {
+                  "text": "Decidir se um slime começa a perseguir",
+                  "bucket": 0
+                },
+                {
+                  "text": "Desenhar o sprite da raposa na sua posição",
+                  "bucket": 1
+                },
+                {
+                  "text": "Desenhar a barra de vida por cima de tudo",
+                  "bucket": 1
+                },
+                {
+                  "text": "Escurecer a tela conforme a lanterna se apaga",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Isso ainda precisaria acontecer se ninguém estivesse olhando para a tela?",
+              "explanation": "A **atualização** muda o estado do jogo: posições, timers, pontuações, decisões. A **renderização** só lê esse estado e o transforma em pixels. Mantê-las separadas significa que desenhar nunca altera o jogo, e a mesma lógica de atualização funciona quer um frame seja desenhado ou pulado. Em C++ você pode tornar essa regra verificável: dê ao `render` um `const World&`, e o compilador rejeita qualquer tentativa de mudar o mundo durante o desenho."
+            },
+            {
+              "type": "numeric",
+              "id": "q-per-frame-speed",
+              "concepts": [
+                "game-loop"
+              ],
+              "prompt": "A primeira raposa da Rin se move **2 pixels por frame**. No PC da Rin o jogo roda a 60 fps; no notebook velho do Dario ele chega a apenas **30 fps**. Quantos **pixels por segundo** a raposa percorre no notebook?",
+              "answer": 60,
+              "unit": "px/s",
+              "hint": "Pixels por frame × frames por segundo.",
+              "explanation": "2 px × 30 frames = **60 px/s** no notebook, contra 2 × 60 = 120 px/s no PC. O mesmo jogo roda à **metade da velocidade** na máquina mais lenta, e com o dobro da velocidade numa tela de 120 Hz. Amarrar a velocidade aos frames é um bug, e a lição de delta time o corrige."
+            }
+          ]
+        },
+        {
+          "id": "cpp-for-games",
+          "title": "O C++ em que os jogos se apoiam",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Passe tipos matemáticos pequenos por valor, coisas grandes por referência const e coisas que você altera por referência, dê aos vetores operadores de verdade e anuncie mudanças por meio de uma lista de callbacks std::function.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Copiar, ler ou alterar",
+              "body": "A Rin conhece o básico de C++. O código de jogo traz uma preocupação constante: **a cada frame**, milhares de objetos são passados de um lado para o outro, então cada cópia tem um custo e cada cópia acidental é um bug esperando para acontecer.\n\nA regra usual para parâmetros e variáveis de laço:\n\n- **Por valor** (`Vec2 v`, `float dt`): coisas pequenas, alguns números. Copiar 8 bytes é tão barato quanto passar um endereço.\n- **Por `const&`** (`const Level& level`): coisas grandes que o código só lê, como uma fase com 10.000 tiles ou uma `std::string`.\n- **Por `&`** (`Enemy& e`): coisas que o código precisa alterar.\n\nA mesma regra vale para laços `for`: `for (Enemy e : enemies)` copia todos os inimigos, um de cada vez."
+            },
+            {
+              "type": "buckets",
+              "id": "q-param-choice",
+              "concepts": [
+                "value-semantics"
+              ],
+              "prompt": "Como cada um destes deve ser passado a uma função no Ember Run?",
+              "buckets": [
+                "Por valor",
+                "Por `const&`",
+                "Por `&`"
+              ],
+              "items": [
+                {
+                  "text": "O tempo do frame `dt`, um `float`",
+                  "bucket": 0
+                },
+                {
+                  "text": "Uma direção `Vec2` que a função só lê",
+                  "bucket": 0
+                },
+                {
+                  "text": "Uma coordenada de tile: dois `int`s",
+                  "bucket": 0
+                },
+                {
+                  "text": "A fase inteira (10.000 tiles) para uma consulta de pathfinding",
+                  "bucket": 1
+                },
+                {
+                  "text": "Uma `std::string` com o nome do som a tocar",
+                  "bucket": 1
+                },
+                {
+                  "text": "A raposa, cuja vida a mordida do slime precisa diminuir",
+                  "bucket": 2
+                },
+                {
+                  "text": "O `std::vector` de balas ao qual a arma acrescenta",
+                  "bucket": 2
+                }
+              ],
+              "hint": "É um punhado de números? É grande? A função precisa alterar?",
+              "explanation": "Alguns números (`dt`, um `Vec2`, uma coordenada de tile) vão **por valor**: a cópia é tão barata quanto passar um endereço, e a função não consegue atrapalhar o valor de quem chamou. Coisas grandes que só são lidas (uma fase, uma string) vão por **`const&`**: sem cópia, e o compilador impede escritas acidentais. Tudo que a função precisa alterar vai por **`&`**: uma cópia da raposa levaria o dano e seria descartada."
+            },
+            {
+              "type": "bug",
+              "id": "q-range-for-copy",
+              "concepts": [
+                "value-semantics"
+              ],
+              "prompt": "Cada slime deve se mover `speed × dt`, então isto deveria imprimir `1.0 9.5`. Clique na linha com o bug.",
+              "language": "cpp",
+              "code": "#include <cstdio>\n#include <vector>\n\nstruct Slime { float x; float speed; };\n\nint main() {\n    std::vector<Slime> slimes{{0, 2}, {10, -1}};\n    float dt = 0.5f;\n    for (Slime s : slimes) {\n        s.x += s.speed * dt;\n    }\n    std::printf(\"%.1f %.1f\\n\", slimes[0].x, slimes[1].x);\n}",
+              "error": "0.0 10.0",
+              "lines": [
+                9
+              ],
+              "fixes": [
+                "Mude a linha 9 para `for (Slime& s : slimes) {`",
+                "Mude a linha 9 para `for (const Slime& s : slimes) {`",
+                "Mude a linha 9 para `for (auto s : slimes) {`",
+                "Mude a linha 10 para `s.x = s.x + s.speed * dt;`"
+              ],
+              "answer": 0,
+              "hint": "Que objeto `s.x += ...` altera: o slime que está no vector ou outra coisa?",
+              "explanation": "`Slime s` é uma **cópia** de cada slime, feita de novo a cada passada do laço. O laço move a cópia e a descarta, então o vector nunca muda. `Slime& s` faz de `s` outro nome para o slime que está no vector, e o programa imprime `1.0 9.5`.\n\n`const Slime&` evita a cópia, mas proíbe a escrita: o clang para com *cannot assign to variable 's' with const-qualified type 'const Slime &'*. `auto s` deduz `Slime`, a mesma cópia, e reescrever a soma continua alterando só a cópia."
+            },
+            {
+              "type": "explain",
+              "title": "Operadores para tipos matemáticos",
+              "body": "Jogos são cheios de matemática com tipos pequenos: posições, velocidades, cores. O C++ deixa esses tipos usarem operadores de verdade, então `pos += vel * dt;` se lê como a fórmula:\n\n```cpp\nstruct Vec2 {\n    float x = 0, y = 0;\n\n    Vec2& operator+=(Vec2 o) { x += o.x; y += o.y; return *this; }\n};\n\nVec2 operator+(Vec2 a, Vec2 b) { return {a.x + b.x, a.y + b.y}; }\nVec2 operator*(Vec2 v, float k) { return {v.x * k, v.y * k}; }\n```\n\n`operator+` e `operator*` recebem seus argumentos **por valor** (um `Vec2` são só dois floats) e devolvem um `Vec2` **novo**. `operator+=` é um membro: ele altera o objeto à sua esquerda e devolve uma referência a ele. Esse é o padrão: `+` cria um valor novo, `+=` altera um no lugar."
+            },
+            {
+              "type": "output",
+              "id": "q-vec-ops",
+              "concepts": [
+                "vector",
+                "value-semantics"
+              ],
+              "prompt": "Usando o `Vec2` acima, o que isto imprime?",
+              "language": "cpp",
+              "code": "#include <cstdio>\n\nstruct Vec2 {\n    float x = 0, y = 0;\n    Vec2& operator+=(Vec2 o) { x += o.x; y += o.y; return *this; }\n};\nVec2 operator+(Vec2 a, Vec2 b) { return {a.x + b.x, a.y + b.y}; }\nVec2 operator*(Vec2 v, float k) { return {v.x * k, v.y * k}; }\n\nint main() {\n    Vec2 pos{1, 2};\n    Vec2 vel{4, -2};\n    Vec2 next = pos + vel * 0.5f;\n    pos += vel;\n    std::printf(\"(%g, %g) (%g, %g)\\n\", next.x, next.y, pos.x, pos.y);\n}",
+              "output": "(3, 1) (5, 0)",
+              "hint": "`*` tem precedência sobre `+`. Quais linhas alteram `pos` e quais só criam um valor novo?",
+              "explanation": "`vel * 0.5f` é (2, −1), e `pos + (2, −1)` cria um vetor **novo** (3, 1) para `next` sem tocar em `pos`. Depois `pos += vel` altera o próprio `pos`: (1 + 4, 2 − 2) = (5, 0). Mesmas regras de operadores do `int`: `a + b` deixa `a` em paz, `a += b` o altera."
+            },
+            {
+              "type": "explain",
+              "title": "Callbacks: lambdas em std::function",
+              "body": "Quando a raposa se machuca, a barra de vida, um som e o tremor da câmera precisam reagir. O `Health` não deveria saber de nenhum deles. Em vez disso, ele guarda uma lista de **callbacks**: `std::function<void(int)>` guarda qualquer callable que receba um `int`, geralmente uma lambda.\n\n```cpp\nstruct Health {\n    int current = 3;\n    std::vector<std::function<void(int)>> onChanged;   // the listeners\n\n    void damage(int amount) {\n        current -= amount;\n        for (auto& listener : onChanged) listener(current);\n    }\n};\n```\n\nOs ouvintes se inscrevem com `health.onChanged.push_back([](int hp) { ... });`. Uma lambda que captura com `[&]` mantém referências a variáveis locais, então essas variáveis precisam viver mais que o callback."
+            },
+            {
+              "type": "output",
+              "id": "q-event-order",
+              "concepts": [
+                "callbacks"
+              ],
+              "prompt": "Dois ouvintes se inscrevem em `onChanged`, e então a raposa leva dano duas vezes. O que isto imprime?",
+              "language": "cpp",
+              "code": "#include <cstdio>\n#include <functional>\n#include <vector>\n\nstruct Health {\n    int current = 3;\n    std::vector<std::function<void(int)>> onChanged;\n\n    void damage(int amount) {\n        current -= amount;\n        for (auto& listener : onChanged) listener(current);\n    }\n};\n\nint main() {\n    Health health;\n    int hits = 0;\n    health.onChanged.push_back([&hits](int hp) { ++hits; std::printf(\"bar shows %d\\n\", hp); });\n    health.onChanged.push_back([](int hp) { if (hp <= 0) std::printf(\"game over\\n\"); });\n\n    health.damage(2);\n    health.damage(2);\n    std::printf(\"hits: %d\\n\", hits);\n}",
+              "output": "bar shows 1\nbar shows -1\ngame over\nhits: 2",
+              "hint": "Cada chamada de `damage` executa todos os ouvintes, na ordem em que foram adicionados. A primeira lambda captura `hits` por referência.",
+              "explanation": "O primeiro `damage(2)` leva a vida de 3 para 1 e chama os dois ouvintes: a barra imprime `bar shows 1`, e o segundo não imprime nada porque 1 > 0. O segundo `damage(2)` leva a −1: `bar shows -1` e depois `game over`. A primeira lambda capturou `hits` **por referência**, então o `++hits` dela alterou a variável do `main`: `hits: 2`. O `Health` nunca menciona barras nem telas de game over; ele só anuncia a mudança."
+            },
+            {
+              "type": "output",
+              "id": "q-capture",
+              "concepts": [
+                "callbacks"
+              ],
+              "prompt": "Duas lambdas leem `sparks`: uma captura por valor, outra por referência. O que isto imprime?",
+              "language": "cpp",
+              "code": "#include <cstdio>\n#include <functional>\n\nint main() {\n    int sparks = 0;\n    std::function<int()> byValue = [sparks] { return sparks; };\n    std::function<int()> byRef = [&sparks] { return sparks; };\n    sparks = 5;\n    std::printf(\"%d %d\\n\", byValue(), byRef());\n}",
+              "output": "0 5",
+              "hint": "Uma captura por valor copia a variável quando a lambda é **criada**.",
+              "explanation": "`[sparks]` copiou o valor 0 para dentro da lambda quando ela foi criada, então mudanças posteriores em `sparks` ficam invisíveis para ela: **0**. `[&sparks]` guarda uma referência, então lê o valor atual: **5**. Callbacks que devem enxergar o estado atual capturam por referência, e então a variável precisa ainda existir sempre que o callback rodar; capture por valor quando o que você quer é um instantâneo."
+            }
+          ]
+        },
+        {
+          "id": "delta-time",
+          "title": "A mesma velocidade em toda máquina",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "Escreva as velocidades por segundo e multiplique-as pelo delta time, os segundos desde o último frame, para que o movimento leve o mesmo tempo real em qualquer taxa de frames.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Meça o frame",
+              "body": "Mover 2 pixels *por frame* amarra a velocidade à taxa de frames. A correção: meça quanto tempo o último frame levou, o **delta time** ou `dt`, em segundos, e escreva toda velocidade **por segundo**: `x += speed * dt;`\n\n```cpp\nauto previous = std::chrono::steady_clock::now();\nwhile (running) {\n    auto now = std::chrono::steady_clock::now();\n    float dt = std::chrono::duration<float>(now - previous).count();   // seconds\n    previous = now;\n    update(dt);\n    render();\n}\n```\n\n`std::chrono::steady_clock` nunca volta no tempo, ao contrário do relógio de parede. As engines entregam o mesmo número: o Godot passa `delta` para `_process`, a Unreal passa `DeltaTime` para `Tick`.\n\nA 60 fps o `dt` é cerca de 0,0167 s e a 30 fps cerca de 0,033 s. A máquina lenta dá passos maiores, mas menos deles, então as duas percorrem `speed` unidades a cada segundo: distância = velocidade × tempo, uma vez por frame."
+            },
+            {
+              "type": "example",
+              "title": "Por frame, por segundo",
+              "problem": "A raposa corre a **150 px/s**. Quanto ela se move a cada frame a 25 fps e a 100 fps, e quanto em um segundo em cada caso?",
+              "steps": [
+                "A 25 fps, `dt` = 1 ÷ 25 = 0,04 s, então cada frame move 150 × 0,04 = **6 px**.",
+                "A 100 fps, `dt` = 1 ÷ 100 = 0,01 s, então cada frame move 150 × 0,01 = **1,5 px**.",
+                "Em um segundo: 25 frames × 6 px = 150 px, e 100 frames × 1,5 px = 150 px."
+              ],
+              "answer": "Passos diferentes, os **mesmos 150 px por segundo** nas duas máquinas."
+            },
+            {
+              "type": "output",
+              "id": "q-dt-two-machines",
+              "concepts": [
+                "delta-time"
+              ],
+              "prompt": "Cada função simula **um segundo** a uma dada taxa de frames. A primeira move 5 px por frame; a segunda move 150 px por segundo usando `dt`. O que isto imprime?",
+              "language": "cpp",
+              "code": "#include <cstdio>\n\nfloat perFrame(int fps) {\n    float x = 0;\n    for (int frame = 0; frame < fps; ++frame)   // one second of frames\n        x += 5;                                 // 5 pixels per frame\n    return x;\n}\n\nfloat perSecond(int fps) {\n    float x = 0, dt = 1.0f / fps;\n    for (int frame = 0; frame < fps; ++frame)\n        x += 150 * dt;                          // 150 pixels per second\n    return x;\n}\n\nint main() {\n    std::printf(\"%.0f %.0f\\n\", perFrame(30), perFrame(60));\n    std::printf(\"%.0f %.0f\\n\", perSecond(30), perSecond(60));\n}",
+              "output": "150 300\n150 150",
+              "hint": "Um segundo a 30 fps são 30 frames. O que cada frame soma em cada versão?",
+              "explanation": "`perFrame` soma 5 px por frame: 30 × 5 = **150** a 30 fps, mas 60 × 5 = **300** a 60 fps. `perSecond` soma `150 * dt`, então 30 frames × 5 px e 60 frames × 2,5 px dão **150**. (`%.0f` arredonda o ruído de float de alguns milionésimos.)"
+            },
+            {
+              "type": "bug",
+              "id": "q-missing-dt",
+              "concepts": [
+                "delta-time"
+              ],
+              "prompt": "Dario deixa uma faísca cair de um galho. Depois de um segundo ela deveria ter caído cerca de **5 unidades** nas duas máquinas, mas cai bem mais, e ainda mais a 60 fps. Clique na linha com o bug.",
+              "language": "cpp",
+              "code": "#include <cstdio>\n\nfloat fall(int fps) {\n    float dt = 1.0f / fps;\n    float y = 0, vy = 0;\n    for (int frame = 0; frame < fps; ++frame) {\n        vy += 10 * dt;   // gravity: vy grows by 10 units/s every second\n        y += vy;\n    }\n    return y;\n}\n\nint main() {\n    std::printf(\"30 fps: %.1f\\n\", fall(30));\n    std::printf(\"60 fps: %.1f\\n\", fall(60));\n}",
+              "error": "30 fps: 155.0\n60 fps: 305.0",
+              "lines": [
+                8
+              ],
+              "fixes": [
+                "Mudar a linha 8 para `y += vy * dt;`",
+                "Mudar a linha 7 para `vy += 10;`, para a gravidade combinar com a atualização de posição por frame",
+                "Mude a linha 4 para `float dt = 1.0f / 60;`, para que as duas máquinas usem o mesmo passo",
+                "Mude a linha 6 para `for (int frame = 0; frame < 60; ++frame) {`, para que as duas máquinas rodem o mesmo número de frames"
+              ],
+              "answer": 0,
+              "hint": "A velocidade está em unidades **por segundo**. Pelo que um valor por segundo precisa ser multiplicado antes de ser somado a cada frame?",
+              "explanation": "`vy` é uma velocidade em unidades por segundo, mas a linha 8 soma tudo dela **a cada frame**, então a queda cresce com o número de frames. `y += vy * dt` soma só a parte deste frame. Tirar o `dt` da gravidade, forjar um `dt` constante ou forçar 60 frames deixam, todos, a soma por frame no lugar.\n\nA versão corrigida imprime 5.2 e 5.1, não exatamente 5: avançar em pedaços é uma aproximação, e passos menores são mais precisos. A lição de passo de tempo fixo elimina até essa diferença."
+            },
+            {
+              "type": "explain",
+              "title": "Onde entra o dt",
+              "body": "Uma regra simples: **tudo que muda continuamente, a certa taxa por segundo, é multiplicado por `dt`**.\n\n- A posição muda pela velocidade: `pos += vel * dt;`\n- A velocidade muda pela aceleração: `vel += accel * dt;`\n- Os timers contam tempo real: `cooldown -= dt;`\n\nCoisas que acontecem **uma vez**, num instante, não: definir a velocidade do pulo quando o botão é pressionado, teletransportar para um checkpoint, somar 1 à pontuação."
+            },
+            {
+              "type": "buckets",
+              "id": "q-needs-dt",
+              "concepts": [
+                "delta-time"
+              ],
+              "prompt": "Quais atualizações do Ember Run devem ser multiplicadas por `dt`?",
+              "buckets": [
+                "Multiplicar por dt (uma taxa por segundo)",
+                "Sem dt (acontece uma vez)"
+              ],
+              "items": [
+                {
+                  "text": "Correr a 150 px por segundo",
+                  "bucket": 0
+                },
+                {
+                  "text": "A lanterna perde 2 unidades de óleo por segundo",
+                  "bucket": 0
+                },
+                {
+                  "text": "Uma torreta gira 90 graus por segundo",
+                  "bucket": 0
+                },
+                {
+                  "text": "Um cooldown de dash de 0,5 s conta regressivamente",
+                  "bucket": 0
+                },
+                {
+                  "text": "Definir a velocidade vertical como 8 quando o pulo é pressionado",
+                  "bucket": 1
+                },
+                {
+                  "text": "Teletransportar a raposa para o último checkpoint",
+                  "bucket": 1
+                },
+                {
+                  "text": "Somar 1 à pontuação quando uma faísca é coletada",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Pergunte: isso é descrito “por segundo” ou acontece num único instante?",
+              "explanation": "Velocidades, consumos, rotações e timers são **taxas**: o efeito deles precisa crescer com o tempo que passou, então usam `dt`. Um pulo define uma velocidade uma única vez (depois a gravidade a altera com `dt`), um teletransporte é instantâneo e um bônus de pontuação é um evento isolado. Multiplicar esses por `dt` deixaria os pulos minúsculos e as pontuações fracionárias."
+            },
+            {
+              "type": "numeric",
+              "id": "q-hitch",
+              "concepts": [
+                "delta-time"
+              ],
+              "prompt": "Enquanto uma fase carrega, um frame leva **0,5 s**. A raposa corre a **300 px/s**. Quanto ela se move nesse único frame?",
+              "answer": 150,
+              "unit": "px",
+              "hint": "Distância = velocidade × `dt`, com o `dt` deste frame.",
+              "explanation": "300 × 0,5 = **150 px** em um único passo. Com `dt` a raposa ainda cobre a distância certa, mas **salta** até lá em vez de percorrê-la, e poderia passar direto por uma parede ou pela beira de um buraco. Por isso os jogos limitam o `dt` (`dt = std::min(dt, 0.1f);` é uma escolha comum), e a física roda em pequenos passos fixos, como a próxima lição mostra."
+            }
+          ]
+        },
+        {
+          "id": "fixed-timestep",
+          "title": "Passos fixos para a física",
+          "pareto": "extra",
+          "minutes": 8,
+          "takeaway": "Rode a física em passos de tamanho fixo alimentados por um acumulador de tempo real, para os resultados serem iguais em qualquer taxa de frames, e leia a entrada de um frame só uma vez por frame renderizado.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Por que um passo fixo",
+              "body": "O `dt` variável ainda tem dois problemas: os resultados derivam um pouco com a taxa de frames (o 5.2 contra 5.1 da última lição), e um único `dt` enorme pode fazer objetos atravessarem paredes ou quicarem de forma descontrolada.\n\nPor isso a física avança em **passos fixos**, por mais rápido que a tela atualize: o `FixedUpdate` da Unity roda 50 vezes por segundo por padrão e o `_physics_process` do Godot 60 vezes. A renderização continua acontecendo uma vez por frame.\n\nO truque é um **acumulador**: some o tempo real de cada frame a ele e então rode passos de física enquanto ele guardar pelo menos o equivalente a um passo, subtraindo um passo a cada vez. O tempo que sobra espera pelo próximo frame."
+            },
+            {
+              "type": "trace",
+              "id": "q-accumulator",
+              "concepts": [
+                "fixed-timestep"
+              ],
+              "prompt": "Três frames renderizados levam 16, 16 e 50 ms. Acompanhe o acumulador (tempos em milissegundos inteiros para manter os números limpos) e preveja os valores.",
+              "language": "cpp",
+              "code": "const int stepMs = 20;                    // physics runs every 20 ms (50 Hz)\nstd::vector<int> frameTimes{16, 16, 50};  // how long each rendered frame took\nint accumulator = 0;\nint steps = 0;\n\nfor (int frameMs : frameTimes) {\n    accumulator += frameMs;\n    while (accumulator >= stepMs) {\n        ++steps;\n        accumulator -= stepMs;\n    }\n}\nstd::printf(\"%d\\n\", steps);",
+              "frames": [
+                {
+                  "line": 4,
+                  "vars": {
+                    "accumulator": "0",
+                    "steps": "0"
+                  }
+                },
+                {
+                  "line": 7,
+                  "vars": {
+                    "frameMs": "16",
+                    "accumulator": "16",
+                    "steps": "0"
+                  },
+                  "note": "Só 16 ms guardados: ainda não dá para um passo de 20 ms."
+                },
+                {
+                  "line": 7,
+                  "vars": {
+                    "frameMs": "16",
+                    "accumulator": "32",
+                    "steps": "0"
+                  }
+                },
+                {
+                  "line": 10,
+                  "vars": {
+                    "frameMs": "16",
+                    "accumulator": "12",
+                    "steps": "1"
+                  },
+                  "ask": "accumulator"
+                },
+                {
+                  "line": 7,
+                  "vars": {
+                    "frameMs": "50",
+                    "accumulator": "62",
+                    "steps": "1"
+                  },
+                  "note": "O terceiro frame, lento, somou 50 ms de uma vez."
+                },
+                {
+                  "line": 10,
+                  "vars": {
+                    "frameMs": "50",
+                    "accumulator": "42",
+                    "steps": "2"
+                  },
+                  "ask": "accumulator"
+                },
+                {
+                  "line": 10,
+                  "vars": {
+                    "frameMs": "50",
+                    "accumulator": "22",
+                    "steps": "3"
+                  }
+                },
+                {
+                  "line": 10,
+                  "vars": {
+                    "frameMs": "50",
+                    "accumulator": "2",
+                    "steps": "4"
+                  },
+                  "ask": "steps"
+                },
+                {
+                  "line": 13,
+                  "vars": {
+                    "accumulator": "2",
+                    "steps": "4"
+                  },
+                  "out": "4"
+                }
+              ],
+              "hint": "O `while` roda enquanto houver pelo menos 20 ms guardados, tirando 20 ms a cada vez.",
+              "explanation": "O primeiro frame guarda 16 ms: nenhum passo. O segundo leva a 32, então roda um passo e sobram 12 ms. O frame lento de 50 ms leva a 62, o bastante para **três** passos (62 → 42 → 22 → 2). Quatro passos de física no total, cada um com exatos 20 ms, por mais irregulares que tenham sido os frames."
+            },
+            {
+              "type": "numeric",
+              "id": "q-fixed-per-second",
+              "concepts": [
+                "fixed-timestep"
+              ],
+              "prompt": "O passo fixo da Rin é de **0,02 s**. Num notebook rodando a **30 fps**, quantos passos de física rodam por segundo, em média?",
+              "answer": 50,
+              "unit": "passos",
+              "hint": "O passo fixo não depende da taxa de frames.",
+              "explanation": "1 ÷ 0,02 = **50** passos de física por segundo a 30 fps, 60 fps ou 144 fps. A 30 fps isso dá em média 1,67 passo por frame renderizado, então alguns frames rodam um passo e outros rodam dois. A 144 fps a maioria dos frames não roda **nenhum**."
+            },
+            {
+              "type": "explain",
+              "title": "Sobras e interpolação",
+              "body": "Depois dos passos, em geral sobra algum tempo no acumulador: 2 ms no trace. A tela é desenhada *entre* dois estados da física, então desenhar o último estado como está faz o movimento engasgar um pouco.\n\nA correção é **interpolar**: com `alpha = accumulator / step`, desenhe os objetos em `previous + (current - previous) * alpha`.\n\nMais um perigo: se um passo de física leva mais tempo para ser *calculado* do que o tempo que ele simula, o acumulador cresce a cada frame e o jogo trava (a *espiral da morte*). Os loops limitam quanto tempo um frame pode somar. O curso Game Engine Programming constrói esse loop por inteiro."
+            },
+            {
+              "type": "numeric",
+              "id": "q-interpolate",
+              "concepts": [
+                "fixed-timestep"
+              ],
+              "prompt": "O passo de física é 20 ms e sobram **5 ms** no acumulador. O morcego estava em x = **100** depois do passo anterior e está em x = **110** depois do último. Onde ele deve ser desenhado?",
+              "answer": 102.5,
+              "tolerance": 0.01,
+              "hint": "`alpha` = sobra ÷ passo. Depois ande essa fração do caminho da posição anterior até a atual.",
+              "explanation": "`alpha` = 5 ÷ 20 = 0,25, então desenhe-o em 100 + (110 − 100) × 0,25 = **102,5**. Cada frame renderizado passa a mostrar uma posição que corresponde ao tempo real desde o último passo, e o movimento fica suave mesmo que a física só atualize 50 vezes por segundo."
+            },
+            {
+              "type": "buckets",
+              "id": "q-update-or-fixed",
+              "concepts": [
+                "fixed-timestep"
+              ],
+              "prompt": "Quais destes pertencem ao update por frame (uma vez por frame renderizado) e quais ao passo fixo (uma vez por passo de física)?",
+              "buckets": [
+                "Uma vez por frame renderizado",
+                "Uma vez por passo fixo"
+              ],
+              "items": [
+                {
+                  "text": "Checar se o pulo foi pressionado neste frame",
+                  "bucket": 0
+                },
+                {
+                  "text": "Mover a câmera suavemente atrás da raposa",
+                  "bucket": 0
+                },
+                {
+                  "text": "Animar o contador de pontos subindo",
+                  "bucket": 0
+                },
+                {
+                  "text": "Aplicar a força do vento às folhas que caem",
+                  "bucket": 1
+                },
+                {
+                  "text": "Definir a velocidade de física da raposa a partir da entrada guardada",
+                  "bucket": 1
+                },
+                {
+                  "text": "Avançar uma simulação própria de uma corda balançando",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Isso afeta a simulação de física ou é sobre o que o jogador vê e faz a cada frame?",
+              "explanation": "Tudo que alimenta a **simulação de física** (forças, velocidades, integração própria) vai no passo fixo, para avançar nos mesmos passos iguais da física. As coisas por frame vão no update por frame: ler a entrada de um frame, a câmera e a animação da interface devem acompanhar cada frame renderizado, ou engasgariam em altas taxas de atualização."
+            },
+            {
+              "type": "mcq",
+              "id": "q-missed-jump",
+              "concepts": [
+                "fixed-timestep",
+                "input-edges"
+              ],
+              "prompt": "A Rin calcula `jumpPressed` (verdadeiro só no frame em que o Espaço desce) uma vez por frame renderizado, mas o lê dentro do laço `while` do passo fixo. A 144 fps, alguns toques de pulo não fazem nada. Por quê?",
+              "choices": [
+                "`jumpPressed` é verdadeiro por apenas um frame renderizado, e a maioria dos frames a 144 fps não roda nenhum passo fixo",
+                "O passo fixo roda com tanta frequência que lê cada toque duas vezes e o anula",
+                "O código de física não pode ler variáveis de entrada enquanto o acumulador não é zero",
+                "O acumulador estoura quando a taxa de frames passa de 100"
+              ],
+              "answer": 0,
+              "hint": "A 144 fps, quantos frames renderizados existem por passo de física?",
+              "explanation": "São 144 frames renderizados, mas só 50 passos de física por segundo, então cerca de dois frames em cada três **não** rodam nenhum passo fixo. Se o toque cai em um desses, `jumpPressed` é verdadeiro só durante aquele frame e nunca é visto. Guarde o toque (`jumpQueued = true;`) quando ler a entrada e limpe-o no passo fixo que o consome."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "move-and-collide",
+      "title": "Mover e colidir",
+      "description": "Vetores para posição, velocidade e direção; leitura de entrada; e como encontrar e corrigir sobreposições entre as coisas.",
+      "lessons": [
+        {
+          "id": "vectors",
+          "title": "Vetores: onde e com que velocidade",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Posições, velocidades e acelerações são vetores: some velocidade × dt à posição e normalize uma direção antes de multiplicá-la por uma velocidade.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Um Vec2 pequeno",
+              "body": "Um **vetor** é um par de números (x, y). Os jogos o usam para uma **posição** (onde), uma **velocidade** (com que rapidez e em que sentido) e uma **aceleração** (como a velocidade muda). Toda engine e biblioteca de matemática tem um (`glm::vec2`, o `Vector2` do raylib, o `FVector2D` da Unreal); este curso faz o `Vec2` da lição de C++ crescer até virar um pequeno header, e os trechos daqui em diante o incluem:\n\n```cpp\n// vec2.h\n#pragma once\n#include <cmath>\n#include <ostream>\n\nstruct Vec2 {\n    float x = 0, y = 0;\n\n    Vec2& operator+=(Vec2 o) { x += o.x; y += o.y; return *this; }\n    Vec2& operator-=(Vec2 o) { x -= o.x; y -= o.y; return *this; }\n\n    float length() const { return std::sqrt(x * x + y * y); }\n    Vec2 normalized() const {\n        float len = length();\n        return len > 0 ? Vec2{x / len, y / len} : *this;\n    }\n};\n\ninline Vec2 operator+(Vec2 a, Vec2 b) { return {a.x + b.x, a.y + b.y}; }\ninline Vec2 operator-(Vec2 a, Vec2 b) { return {a.x - b.x, a.y - b.y}; }\ninline Vec2 operator*(Vec2 v, float k) { return {v.x * k, v.y * k}; }\ninline Vec2 operator/(Vec2 v, float k) { return {v.x / k, v.y / k}; }\ninline float dot(Vec2 a, Vec2 b) { return a.x * b.x + a.y * b.y; }\n\ninline std::ostream& operator<<(std::ostream& os, Vec2 v) {\n    return os << '(' << v.x << \", \" << v.y << ')';\n}\n```\n\nSão dois floats, então ele é passado **por valor** em todo lugar, e o `operator<<` o imprime como `(x, y)`."
+            },
+            {
+              "type": "explain",
+              "title": "Mover com vetores",
+              "body": "Todo o movimento básico são duas linhas por passo:\n\n- `velocity += acceleration * dt;`\n- `position += velocity * dt;`\n\nA gravidade é uma aceleração apontando para baixo, como (0, −10). Uma velocidade de (4, 0) significa 4 unidades por segundo para a direita; o **comprimento** dela, √(x² + y²), é a rapidez.\n\nEste curso usa **y para cima**, como a maior parte da matemática e da física. Muitas APIs de tela 2D (SDL e raylib entre elas) contam o y **para baixo** na tela, então sempre confira para que lado a sua engine conta."
+            },
+            {
+              "type": "trace",
+              "id": "q-trace-projectile",
+              "concepts": [
+                "vector",
+                "delta-time"
+              ],
+              "prompt": "Uma faísca é lançada de lado e cai sob a gravidade. Avance dois passos de meio segundo e preveja os vetores.",
+              "language": "cpp",
+              "code": "Vec2 position{0, 0};\nVec2 velocity{4, 0};\nconst Vec2 gravity{0, -10};\nfloat dt = 0.5f;\n\nfor (int step = 0; step < 2; ++step) {\n    velocity += gravity * dt;\n    position += velocity * dt;\n}\nstd::cout << position << '\\n';",
+              "frames": [
+                {
+                  "line": 4,
+                  "vars": {
+                    "position": "(0, 0)",
+                    "velocity": "(4, 0)",
+                    "dt": "0.5"
+                  }
+                },
+                {
+                  "line": 7,
+                  "vars": {
+                    "step": "0",
+                    "position": "(0, 0)",
+                    "velocity": "(4, -5)",
+                    "dt": "0.5"
+                  },
+                  "ask": "velocity",
+                  "note": "A gravidade muda a velocidade primeiro..."
+                },
+                {
+                  "line": 8,
+                  "vars": {
+                    "step": "0",
+                    "position": "(2, -2.5)",
+                    "velocity": "(4, -5)",
+                    "dt": "0.5"
+                  },
+                  "ask": "position",
+                  "note": "...depois a nova velocidade move a posição."
+                },
+                {
+                  "line": 7,
+                  "vars": {
+                    "step": "1",
+                    "position": "(2, -2.5)",
+                    "velocity": "(4, -10)",
+                    "dt": "0.5"
+                  }
+                },
+                {
+                  "line": 8,
+                  "vars": {
+                    "step": "1",
+                    "position": "(4, -7.5)",
+                    "velocity": "(4, -10)",
+                    "dt": "0.5"
+                  },
+                  "ask": "position"
+                },
+                {
+                  "line": 10,
+                  "vars": {
+                    "position": "(4, -7.5)",
+                    "velocity": "(4, -10)",
+                    "dt": "0.5"
+                  },
+                  "out": "(4, -7.5)"
+                }
+              ],
+              "hint": "Vetores somam componente a componente: (4, 0) + (0, −10) × 0,5 = (4 + 0, 0 − 5).",
+              "explanation": "Passo 1: gravidade × 0,5 = (0, −5), então a velocidade vira (4, −5); depois velocidade × 0,5 = (2, −2,5) move a faísca para **(2, −2,5)**. Passo 2: velocidade (4, −10), e a posição ganha (2, −5) para chegar a **(4, −7,5)**. O x cresce de forma constante enquanto o y cai mais rápido a cada passo: um arco curvo a partir de duas linhas de matemática vetorial."
+            },
+            {
+              "type": "explain",
+              "title": "As diagonais ficam rápidas demais",
+              "body": "A entrada costuma chegar como uma direção: direita é (1, 0), cima é (0, 1), e direita + cima juntas é (1, 1). Multiplique isso pela velocidade e a raposa anda **mais rápido na diagonal**, porque (1, 1) tem comprimento √2 ≈ 1,41.\n\nA correção é **normalizar**: divida um vetor pelo próprio comprimento para obter um **vetor unitário**, de comprimento 1, apontando para o mesmo lado. `direction.normalized() * speed` passa a ter sempre comprimento `speed`.\n\nUm vetor nulo não tem direção, então `normalized()` o devolve inalterado em vez de dividir por zero."
+            },
+            {
+              "type": "numeric",
+              "id": "q-diagonal-speed",
+              "concepts": [
+                "normalization"
+              ],
+              "prompt": "A raposa se move a velocidade 5 e Rin multiplica a entrada bruta (1, 1) por 5 sem normalizar. Com que rapidez a raposa realmente se move na diagonal?",
+              "answer": 7.071,
+              "tolerance": 0.01,
+              "unit": "unidades/s",
+              "hint": "A velocidade é (5, 5). O comprimento dela é √(5² + 5²).",
+              "explanation": "A velocidade é (5, 5), com comprimento √50 ≈ **7,07**: cerca de 41% mais rápido que em linha reta. Os jogadores percebem, e quem faz speedrun explora isso. Normalizando (1, 1) antes, obtém-se (0,707, 0,707), e × 5 isso tem comprimento exatamente 5."
+            },
+            {
+              "type": "bug",
+              "id": "q-diagonal",
+              "concepts": [
+                "normalization"
+              ],
+              "prompt": "As duas linhas deveriam imprimir `5.00`: a raposa corre na mesma velocidade em linha reta ou na diagonal. Clique na linha com o bug.",
+              "language": "cpp",
+              "code": "#include <cstdio>\n#include \"vec2.h\"\n\nVec2 velocity(bool left, bool right, bool down, bool up, float speed) {\n    Vec2 input{float(right) - float(left), float(up) - float(down)};\n    return input * speed;\n}\n\nint main() {\n    Vec2 straight = velocity(false, true, false, false, 5);   // right\n    Vec2 diagonal = velocity(false, true, false, true, 5);    // right + up\n    std::printf(\"%.2f\\n\", straight.length());\n    std::printf(\"%.2f\\n\", diagonal.length());\n}",
+              "error": "5.00\n7.07",
+              "lines": [
+                6
+              ],
+              "fixes": [
+                "Mude a linha 6 para `return input.normalized() * speed;`",
+                "Mude a linha 6 para `return (input * speed).normalized();`",
+                "Mude a linha 6 para `return input * (speed / 1.414f);`"
+              ],
+              "answer": 0,
+              "hint": "Qual vetor precisa ter comprimento 1: a direção da entrada ou a velocidade final?",
+              "explanation": "Normalize a **direção** e depois multiplique pela velocidade. Normalizar *depois* de multiplicar joga a velocidade fora, e os dois comprimentos viram 1.00. Dividir por 1.414 corrige a diagonal, mas reduz o movimento em linha reta para 3.54."
+            },
+            {
+              "type": "example",
+              "title": "Mirar no mouse",
+              "problem": "A raposa em (1, 1) lança uma faísca no cursor do mouse em (4, 5). As faíscas voam a velocidade 10. Que velocidade a faísca deve receber?",
+              "steps": [
+                "Direção = alvo − origem = (4 − 1, 5 − 1) = (3, 4).",
+                "O comprimento é √(3² + 4²) = 5, então a direção unitária é (3, 4) ÷ 5 = (0,6, 0,8).",
+                "Velocidade = direção unitária × rapidez = (0,6, 0,8) × 10 = (6, 8). No código: `(target - origin).normalized() * 10`."
+              ],
+              "answer": "A faísca recebe velocidade **(6, 8)**: apontando para o cursor, com comprimento exatamente 10."
+            },
+            {
+              "type": "numeric",
+              "id": "q-aim-velocity",
+              "concepts": [
+                "normalization",
+                "vector"
+              ],
+              "prompt": "Um morcego em (2, 3) mergulha na raposa em (14, −2) com velocidade **26**. Qual é o componente **y** da velocidade dele?",
+              "answer": -10,
+              "hint": "A direção (12, −5) tem comprimento 13. Divida por ele e depois multiplique por 26.",
+              "explanation": "Direção = (14 − 2, −2 − 3) = (12, −5), comprimento √(144 + 25) = 13. Direção unitária (12/13, −5/13), vezes 26, dá **(24, −10)**. O componente y é **−10**: para baixo, porque a raposa está mais baixo que o morcego."
+            }
+          ]
+        },
+        {
+          "id": "facing-and-steering",
+          "title": "À frente, atrás e virando para perseguir",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "O produto escalar de duas direções diz o quanto elas concordam (1 mesmo sentido, 0 de lado, −1 oposto), e o steering vira uma velocidade aos poucos em direção a uma desejada.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "O produto escalar",
+              "body": "`dot(a, b) = a.x * b.x + a.y * b.y`. Para dois vetores **unitários**, o resultado é o cosseno do ângulo entre eles:\n\n- **1**: mesmo sentido\n- **0**: ângulo reto\n- **−1**: sentidos opostos\n\nEntão *“a raposa está à frente deste guarda?”* cabe numa linha: `dot(facing, (fox - guard).normalized()) > 0`. Um **campo de visão** é um limiar mais estrito: um cone de 90° (45° de cada lado) exige um dot de pelo menos cos 45° ≈ 0,707.\n\nPara saber *à frente ou atrás*, o sinal basta, então você pode até dispensar a normalização."
+            },
+            {
+              "type": "numeric",
+              "id": "q-dot-value",
+              "concepts": [
+                "dot-product"
+              ],
+              "prompt": "Um guarda olha para **(0, 1)**. A raposa está a um deslocamento de **(3, 4)** do guarda. Quanto vale `dot(facing, offset.normalized())`?",
+              "answer": 0.8,
+              "tolerance": 0.001,
+              "hint": "Normalize (3, 4) primeiro: o comprimento dele é 5.",
+              "explanation": "(3, 4) ÷ 5 = (0,6, 0,8), e dot((0, 1), (0,6, 0,8)) = 0 × 0,6 + 1 × 0,8 = **0,8**. Esse é o cos 37°: a raposa está à frente do guarda, a 37° da linha ao longo da qual ele olha."
+            },
+            {
+              "type": "buckets",
+              "id": "q-in-front",
+              "concepts": [
+                "dot-product"
+              ],
+              "prompt": "Um guarda está em (0, 0) olhando para **(1, 1)**. Para cada deslocamento da raposa em relação ao guarda, calcule o produto escalar e classifique.",
+              "buckets": [
+                "À frente (dot > 0)",
+                "Atrás (dot < 0)",
+                "Exatamente de lado (dot = 0)"
+              ],
+              "items": [
+                {
+                  "text": "(3, −1)",
+                  "bucket": 0
+                },
+                {
+                  "text": "(0, 5)",
+                  "bucket": 0
+                },
+                {
+                  "text": "(1, 0)",
+                  "bucket": 0
+                },
+                {
+                  "text": "(−2, 1)",
+                  "bucket": 1
+                },
+                {
+                  "text": "(−1, −4)",
+                  "bucket": 1
+                },
+                {
+                  "text": "(−3, 2)",
+                  "bucket": 1
+                },
+                {
+                  "text": "(2, −2)",
+                  "bucket": 2
+                },
+                {
+                  "text": "(4, −4)",
+                  "bucket": 2
+                }
+              ],
+              "hint": "Com direção (1, 1), o produto escalar é só x + y.",
+              "explanation": "dot((1, 1), (x, y)) = x + y. (3, −1), (0, 5) e (1, 0) dão 2, 5 e 1: à frente. (−2, 1), (−1, −4) e (−3, 2) dão −1, −5 e −1: atrás. (2, −2) e (4, −4) dão exatamente 0: estão na linha que passa pelo guarda em ângulo reto com a direção dele. Só o **sinal** importou, então não houve necessidade de normalizar."
+            },
+            {
+              "type": "output",
+              "id": "q-fov",
+              "concepts": [
+                "dot-product"
+              ],
+              "prompt": "`canSee` devolve verdadeiro quando o produto escalar alcança `minDot`. O guarda olha para a direita. O que isto imprime?",
+              "language": "cpp",
+              "code": "#include <iostream>\n#include \"vec2.h\"\n\nbool canSee(Vec2 guard, Vec2 facing, Vec2 target, float minDot) {\n    Vec2 toTarget = (target - guard).normalized();\n    return dot(facing, toTarget) >= minDot;\n}\n\nint main() {\n    Vec2 guard{0, 0};\n    Vec2 facing{1, 0};   // already length 1\n    std::cout << std::boolalpha;\n    std::cout << canSee(guard, facing, {5, 5}, 0.5f) << '\\n';\n    std::cout << canSee(guard, facing, {0, 5}, 0.5f) << '\\n';\n    std::cout << canSee(guard, facing, {-5, 1}, -0.5f) << '\\n';\n}",
+              "output": "true\nfalse\nfalse",
+              "hint": "Calcule o ângulo até cada alvo: 45°, 90° e quase diretamente atrás. Depois compare os cossenos.",
+              "explanation": "(5, 5) está a 45° da direção do olhar: dot ≈ 0,707 ≥ 0,5, então **true** (um limiar de 0,5 é um cone de 120°). (0, 5) está a 90°: dot 0 < 0,5, **false**. (−5, 1) está quase exatamente atrás: dot ≈ −0,98, que falha até o limiar bem largo de −0,5 (um cone de 240°), então **false**."
+            },
+            {
+              "type": "explain",
+              "title": "Steering em vez de virar de estalo",
+              "body": "Um slime que define `velocity = toFox * maxSpeed` a cada frame vira instantaneamente, como um robô. O **steering** vira aos poucos:\n\n- **desejada** = (alvo − posição).normalized() × maxSpeed\n- **steering** = desejada − velocidade\n- velocidade += steering × turnRate (uma fração, ou uma força limitada × `dt`)\n\nA velocidade se curva em direção à desejada ao longo de vários frames, o que cria perseguições curvas e convincentes. Inverta a direção desejada para **fugir**; reduza a velocidade desejada perto do alvo para **chegar** sem passar do ponto."
+            },
+            {
+              "type": "example",
+              "title": "Um passo de steering",
+              "problem": "Um slime em (0, 0) se move com velocidade (0, 2). A raposa está em (10, 0). A velocidade máxima é 2 e o slime fecha **metade** da diferença até a velocidade desejada a cada passo. Qual é a nova velocidade dele?",
+              "steps": [
+                "Velocidade desejada = (10, 0).normalized() × 2 = (1, 0) × 2 = (2, 0).",
+                "Steering = desejada − velocidade = (2, 0) − (0, 2) = (2, −2).",
+                "Nova velocidade = (0, 2) + (2, −2) × 0,5 = (1, 1)."
+              ],
+              "answer": "O slime agora se move a **(1, 1)**: a meio caminho entre subir e ir em direção à raposa. No próximo passo ele se curva mais para a direita."
+            },
+            {
+              "type": "numeric",
+              "id": "q-steer-step",
+              "concepts": [
+                "steering",
+                "normalization"
+              ],
+              "prompt": "Um morcego em (2, 2) voa para a esquerda com velocidade (−3, 0). A raposa está em (2, 8). A velocidade máxima é 3 e o morcego fecha metade da diferença até a velocidade desejada a cada passo. Qual é o componente **x** da nova velocidade dele?",
+              "answer": -1.5,
+              "hint": "A raposa está bem em cima do morcego, então a velocidade desejada é (0, 3).",
+              "explanation": "Desejada = (0, 6).normalized() × 3 = (0, 3). Steering = (0, 3) − (−3, 0) = (3, 3). Nova velocidade = (−3, 0) + (3, 3) × 0,5 = **(−1,5, 1,5)**. O morcego ainda está à deriva para a esquerda, mas já está virando para cima, em direção à raposa."
+            },
+            {
+              "type": "mcq",
+              "id": "q-snap-or-steer",
+              "concepts": [
+                "steering"
+              ],
+              "prompt": "Dario diz que os slimes perseguidores parecem robóticos: no instante em que a raposa passa por eles, eles invertem de direção na hora. O que Rin deve mudar?",
+              "choices": [
+                "Mover a velocidade uma fração do caminho até a velocidade desejada a cada frame, em vez de defini-la direto",
+                "Normalizar a velocidade duas vezes para a direção ficar mais precisa",
+                "Aumentar a taxa de frames para a curva levar menos tempo",
+                "Checar com um produto escalar se a raposa está à frente antes de perseguir"
+              ],
+              "answer": 0,
+              "hint": "O problema é a rapidez com que a direção muda, não para que direção ela muda.",
+              "explanation": "Definir `velocity = desired` vira no ato. Misturar em direção a ela (steering) espalha a curva por vários frames, então os slimes fazem um arco ao girar. Normalizar não muda a direção, uma taxa de frames maior deixa o estalo ainda mais rápido, e uma checagem de campo de visão decide *se* persegue, não *como* virar."
+            }
+          ]
+        },
+        {
+          "id": "input",
+          "title": "Pressionar, segurar, soltar",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "“Pressionado neste frame” significa pressionado agora e solto no frame anterior, então guarde o estado do frame passado, e use buffers pequenos para que toques alguns frames adiantados ainda contem.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Consultando o teclado",
+              "body": "A maior parte da entrada de jogo é **consultada por polling**: a cada frame você pergunta *“o Espaço está pressionado agora?”* As bibliotecas de jogo dão três respostas; o raylib, por exemplo, tem:\n\n- `IsKeyDown(KEY_SPACE)`: segurada neste frame (mova enquanto segura)\n- `IsKeyPressed(KEY_SPACE)`: **pressionada** neste frame (pule uma vez)\n- `IsKeyReleased(KEY_SPACE)`: **solta** neste frame\n\nBibliotecas de nível mais baixo, como SDL e GLFW, informam só se uma tecla está pressionada, mais eventos quando ela muda. *Pressionar* é uma **borda**: pressionada agora **e** não pressionada no frame anterior. Para calculá-la você mesmo, lembre o estado do frame anterior."
+            },
+            {
+              "type": "trace",
+              "id": "q-trace-edge",
+              "concepts": [
+                "input-edges"
+              ],
+              "prompt": "O Espaço fica pressionado por dois frames. Acompanhe a detecção de borda e preveja os valores.",
+              "language": "cpp",
+              "code": "bool spaceDown[] = {false, true, true, false};   // key state on 4 frames\nbool wasDown = false;\nint jumps = 0;\n\nfor (bool down : spaceDown) {\n    bool pressed = down && !wasDown;\n    if (pressed) ++jumps;\n    wasDown = down;\n}\nstd::printf(\"%d\\n\", jumps);",
+              "frames": [
+                {
+                  "line": 3,
+                  "vars": {
+                    "wasDown": "false",
+                    "jumps": "0"
+                  }
+                },
+                {
+                  "line": 6,
+                  "vars": {
+                    "down": "false",
+                    "pressed": "false",
+                    "wasDown": "false",
+                    "jumps": "0"
+                  }
+                },
+                {
+                  "line": 8,
+                  "vars": {
+                    "down": "false",
+                    "pressed": "false",
+                    "wasDown": "false",
+                    "jumps": "0"
+                  }
+                },
+                {
+                  "line": 6,
+                  "vars": {
+                    "down": "true",
+                    "pressed": "true",
+                    "wasDown": "false",
+                    "jumps": "0"
+                  },
+                  "ask": "pressed",
+                  "note": "Pressionada agora, solta no frame passado: uma borda."
+                },
+                {
+                  "line": 8,
+                  "vars": {
+                    "down": "true",
+                    "pressed": "true",
+                    "wasDown": "true",
+                    "jumps": "1"
+                  },
+                  "ask": "jumps"
+                },
+                {
+                  "line": 6,
+                  "vars": {
+                    "down": "true",
+                    "pressed": "false",
+                    "wasDown": "true",
+                    "jumps": "1"
+                  },
+                  "ask": "pressed",
+                  "note": "Ainda segurada: nenhum toque novo."
+                },
+                {
+                  "line": 8,
+                  "vars": {
+                    "down": "true",
+                    "pressed": "false",
+                    "wasDown": "true",
+                    "jumps": "1"
+                  }
+                },
+                {
+                  "line": 6,
+                  "vars": {
+                    "down": "false",
+                    "pressed": "false",
+                    "wasDown": "true",
+                    "jumps": "1"
+                  }
+                },
+                {
+                  "line": 8,
+                  "vars": {
+                    "down": "false",
+                    "pressed": "false",
+                    "wasDown": "false",
+                    "jumps": "1"
+                  }
+                },
+                {
+                  "line": 10,
+                  "vars": {
+                    "wasDown": "false",
+                    "jumps": "1"
+                  },
+                  "out": "1"
+                }
+              ],
+              "hint": "`pressed` precisa que `down` seja true e `wasDown` (o frame passado) seja false.",
+              "explanation": "O frame 2 é o único em que a tecla está pressionada **e** estava solta no frame anterior, então `pressed` é verdadeiro uma vez e `jumps` vira 1. No frame 3 a tecla continua pressionada, mas `wasDown` agora é verdadeiro, então não há um segundo pulo. O frame 4 é uma soltura, não um toque. Segurar uma tecla dá um pulo, que é o que os jogadores esperam."
+            },
+            {
+              "type": "bug",
+              "id": "q-jump-never",
+              "concepts": [
+                "input-edges"
+              ],
+              "prompt": "O jogador pressiona o Espaço duas vezes (frames 2 e 6) e deveria obter `jumps: 2`. Em vez disso, a raposa nunca pula. Clique na linha com o bug.",
+              "language": "cpp",
+              "code": "#include <cstdio>\n\nint main() {\n    bool spaceDown[] = {false, true, true, true, false, true};\n    bool wasDown = false;\n    int jumps = 0;\n\n    for (bool down : spaceDown) {\n        wasDown = down;\n        bool pressed = down && !wasDown;\n        if (pressed) ++jumps;\n    }\n    std::printf(\"jumps: %d\\n\", jumps);\n}",
+              "error": "jumps: 0",
+              "lines": [
+                9
+              ],
+              "fixes": [
+                "Mova a linha 9 para baixo da linha 11, para que `wasDown` ainda guarde o estado do frame anterior quando `pressed` for calculado",
+                "Mude a linha 10 para `bool pressed = down || !wasDown;`",
+                "Mude a linha 10 para `bool pressed = down;`",
+                "Mude a linha 5 para `bool wasDown = true;`"
+              ],
+              "answer": 0,
+              "hint": "Quando a linha 10 roda, qual é o valor de `wasDown` comparado a `down`?",
+              "explanation": "A linha 9 sobrescreve `wasDown` com o estado deste frame **antes** de a linha 10 lê-lo, então `down && !wasDown` é sempre `down && !down`: falso. Atualize o histórico **depois** de usá-lo. `down || !wasDown` agora é sempre verdadeiro (6 pulos), `pressed = down` pula em todo frame segurado (4), e começar com `wasDown = true` não muda nada."
+            },
+            {
+              "type": "explain",
+              "title": "Entrada tolerante",
+              "body": "Os jogadores apertam pular alguns frames **antes** de aterrissar e esperam que funcione. Dois pequenos timers deixam o controle justo:\n\n- **Jump buffer**: quando o pulo é pressionado, defina `bufferTimer = 0.1f;`. Faça a contagem regressiva com `dt`; se a raposa aterrissar enquanto ele estiver acima de zero, pule.\n- **Coyote time**: depois de sair andando de uma beirada, permita um pulo por cerca de 0,1 s, como se ainda estivesse no chão.\n\nOs dois são apenas `float`s com contagem regressiva por `dt`, verificados junto ao estado da raposa."
+            },
+            {
+              "type": "numeric",
+              "id": "q-buffer-frames",
+              "concepts": [
+                "input-edges",
+                "delta-time"
+              ],
+              "prompt": "O jump buffer é de **0,1 s** e o jogo roda a **60 fps**. Até quantos frames antes de pousar o jogador pode apertar o pulo e ainda assim conseguir o pulo?",
+              "answer": 6,
+              "unit": "frames",
+              "hint": "Quantos frames cabem em 0,1 s?",
+              "explanation": "0,1 s × 60 frames por segundo = **6 frames**. Como o timer conta tempo real com `dt`, ele também vale 0,1 s a 144 fps (cerca de 14 frames): a mesma tolerância em tempo em toda máquina."
+            },
+            {
+              "type": "order",
+              "id": "q-input-pipeline",
+              "concepts": [
+                "input-edges"
+              ],
+              "prompt": "Coloque em ordem o caminho de um toque de pulo, do dedo até a raposa.",
+              "items": [
+                "O teclado informa que o Espaço foi pressionado",
+                "A camada de entrada registra o Espaço como “pressionado neste frame”",
+                "O jogo mapeia o Espaço para a ação “Jump”, para o jogador poder remapeá-la",
+                "O código do jogador vê que Jump foi pressionado e inicia o jump buffer",
+                "A raposa está no chão (ou em coyote time), então sua velocidade vertical é definida para cima"
+              ],
+              "hint": "Primeiro o hardware, depois a camada de entrada, depois o significado da tecla para o seu jogo e, por fim, a raposa.",
+              "explanation": "O dispositivo informa o estado bruto da tecla, a camada de entrada o transforma em estados por frame (segurada, pressionada, solta), o jogo mapeia teclas para **ações** de modo que o mesmo código funcione com uma tecla remapeada ou um gamepad, e só então a lógica do próprio jogador decide se este pulo é permitido agora."
+            },
+            {
+              "type": "buckets",
+              "id": "q-poll-or-event",
+              "concepts": [
+                "input-edges"
+              ],
+              "prompt": "Quais entradas é melhor **ler a cada frame** (polling) e quais é melhor **tratar quando acontecem** (um evento ou um toque de um frame)?",
+              "buckets": [
+                "Ler a cada frame",
+                "Tratar quando acontece"
+              ],
+              "items": [
+                {
+                  "text": "A direção do analógico que move a raposa",
+                  "bucket": 0
+                },
+                {
+                  "text": "A posição do mouse para mirar a lanterna",
+                  "bucket": 0
+                },
+                {
+                  "text": "Quanto o gatilho foi puxado, para a velocidade de corrida",
+                  "bucket": 0
+                },
+                {
+                  "text": "O botão de pausa",
+                  "bucket": 1
+                },
+                {
+                  "text": "Uma letra digitada na caixa de nome do save",
+                  "bucket": 1
+                },
+                {
+                  "text": "O gamepad sendo desconectado",
+                  "bucket": 1
+                }
+              ],
+              "hint": "É um valor que continua importando a cada frame ou um momento que importa uma vez?",
+              "explanation": "Valores contínuos (direção do analógico, posição da mira, pressão do gatilho) importam a cada frame, então leia-os a cada frame. Momentos discretos (um toque de pausa, uma letra digitada, uma desconexão) devem ser tratados uma vez, quando acontecem; consultá-los por polling arrisca perder um toque curto ou tratá-lo duas vezes."
+            }
+          ]
+        },
+        {
+          "id": "collisions",
+          "title": "Esses dois se tocam?",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Duas caixas alinhadas aos eixos só se sobrepõem se se sobrepuserem em x e em y; dois círculos se sobrepõem quando a distância entre os centros é menor que a soma dos raios.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Caixas",
+              "body": "O colisor mais simples é uma **AABB**, uma *caixa delimitadora alinhada aos eixos* (axis-aligned bounding box): um retângulo que nunca gira, guardado como seus cantos mínimo e máximo. Duas AABBs só se sobrepõem se se sobrepuserem **nos dois eixos**:\n\n```cpp\nstruct Box { float minX, minY, maxX, maxY; };\n\nbool overlaps(Box a, Box b) {\n    return a.minX < b.maxX && a.maxX > b.minX &&   // overlap on x\n           a.minY < b.maxY && a.maxY > b.minY;     // and on y\n}\n\nint main() {\n    Box fox{0, 0, 1, 1};\n    std::cout << std::boolalpha;\n    std::cout << overlaps(fox, {0.5f, 0.5f, 2, 2}) << '\\n';   // true\n    std::cout << overlaps(fox, {1, 0, 2, 1}) << '\\n';         // false: edges only touch\n}\n```\n\nEle imprime `true` e `false`. Os `<` e `>` estritos significam que caixas cujas bordas apenas se tocam não contam, o que deixa a raposa ficar *em cima* de uma plataforma sem estar “dentro” dela. Uma `Box` são quatro floats, então é passada por valor."
+            },
+            {
+              "type": "buckets",
+              "id": "q-aabb-cases",
+              "concepts": [
+                "aabb"
+              ],
+              "prompt": "Separe cada par de caixas A e B. Bordas que apenas se encostam não contam como sobreposição.",
+              "buckets": [
+                "Sobrepõem",
+                "Não sobrepõem"
+              ],
+              "items": [
+                {
+                  "text": "A: x de 0 a 4, y de 0 a 2 | B: x de 3 a 6, y de 1 a 5",
+                  "bucket": 0
+                },
+                {
+                  "text": "A: x de 0 a 4, y de 0 a 2 | B: x de 4 a 6, y de 0 a 2",
+                  "bucket": 1
+                },
+                {
+                  "text": "A: x de 0 a 4, y de 0 a 2 | B: x de 1 a 3, y de 3 a 5",
+                  "bucket": 1
+                },
+                {
+                  "text": "A: x de 0 a 10, y de 0 a 10 | B: x de 2 a 3, y de 2 a 3",
+                  "bucket": 0
+                },
+                {
+                  "text": "A: x de 0 a 2, y de 0 a 8 | B: x de −3 a 1, y de 6 a 7",
+                  "bucket": 0
+                },
+                {
+                  "text": "A: x de 0 a 2, y de 0 a 2 | B: x de 3 a 5, y de 3 a 5",
+                  "bucket": 1
+                },
+                {
+                  "text": "A: x de 0 a 6, y de 0 a 1 | B: x de 5 a 7, y de −2 a 0,5",
+                  "bucket": 0
+                },
+                {
+                  "text": "A: x de 0 a 3, y de 0 a 3 | B: x de 1 a 2, y de 3 a 4",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Confira o x primeiro: as faixas se sobrepõem? Depois o y. As duas precisam se sobrepor.",
+              "explanation": "A sobreposição exige que as duas faixas se sobreponham. O primeiro par compartilha x de 3 a 4 e y de 1 a 2. O segundo só se encosta em x = 4. O terceiro se sobrepõe em x, mas não em y. Uma caixa pequena totalmente dentro de uma grande se sobrepõe. O quinto compartilha x de 0 a 1 e y de 6 a 7, e o sétimo compartilha x de 5 a 6 e y de 0 a 0,5. O sexto falha nos dois eixos, e o último só se encosta ao longo de y = 3."
+            },
+            {
+              "type": "bug",
+              "id": "q-aabb-or",
+              "concepts": [
+                "aabb"
+              ],
+              "prompt": "O galho está bem acima da raposa, então isto deveria imprimir `false`. O clang avisou, e o programa imprimiu `true`. Clique na linha com o bug.",
+              "language": "cpp",
+              "code": "#include <iostream>\n\nstruct Box { float minX, minY, maxX, maxY; };\n\nbool overlaps(Box a, Box b) {\n    return a.minX < b.maxX && a.maxX > b.minX ||\n           a.minY < b.maxY && a.maxY > b.minY;\n}\n\nint main() {\n    Box fox{0, 0, 1, 1};\n    Box branch{0.5f, 5, 2, 6};   // high above the fox\n    std::cout << std::boolalpha << overlaps(fox, branch) << '\\n';\n}",
+              "error": "warning: '&&' within '||' [-Wlogical-op-parentheses]\ntrue",
+              "lines": [
+                6
+              ],
+              "fixes": [
+                "Troque o `||` no fim da linha 6 por `&&`",
+                "Coloque parênteses em volta do teste de cada eixo nas linhas 6 e 7, como o aviso sugere",
+                "Mude a linha 6 para usar `<=` e `>=`, para que bordas que se tocam também contem",
+                "Troque as linhas 6 e 7 de lugar, para que o teste de y venha primeiro"
+              ],
+              "answer": 0,
+              "hint": "A raposa e o galho se sobrepõem em x. Sobrepor em um eixo deveria bastar?",
+              "explanation": "Com `||`, sobrepor-se em **qualquer** eixo conta, e a raposa se sobrepõe ao galho em x (0 a 1 contra 0,5 a 2), então o teste diz `true` embora eles estejam a 4 unidades de distância na vertical. Separar-se em um único eixo já significa que não há colisão, então os eixos precisam ser unidos com `&&`. O aviso era uma pista de verdade, mas os parênteses que ele sugere só deixam o `||` explícito: o programa continua imprimindo `true`. `<=` afrouxa ainda mais o teste, e trocar a ordem não muda nada."
+            },
+            {
+              "type": "explain",
+              "title": "Círculos",
+              "body": "Coisas redondas, e personagens, costumam ser **círculos**: um centro e um raio. Dois círculos se sobrepõem quando a distância entre os centros é menor que a soma dos raios.\n\nCalcular uma distância exige `std::sqrt`, que é mais lenta que todo o resto aqui. Compare os valores **ao quadrado**: `dot(d, d) < (ra + rb) * (ra + rb)`, em que `d` é o vetor entre os centros. Os dois lados não são negativos, então a comparação dá a mesma resposta.\n\nOs círculos têm um bônus: girar um círculo não o muda."
+            },
+            {
+              "type": "output",
+              "id": "q-circles",
+              "concepts": [
+                "circle-collision"
+              ],
+              "prompt": "`touch` compara a distância ao quadrado com o quadrado da soma dos raios. O que isto imprime?",
+              "language": "cpp",
+              "code": "#include <iostream>\n#include \"vec2.h\"\n\nbool touch(Vec2 a, float ra, Vec2 b, float rb) {\n    Vec2 d = b - a;\n    return dot(d, d) < (ra + rb) * (ra + rb);   // squared distance vs squared radii\n}\n\nint main() {\n    std::cout << std::boolalpha;\n    std::cout << touch({0, 0}, 1, {3, 0}, 1.5f) << '\\n';\n    std::cout << touch({0, 0}, 1, {3, 4}, 4.5f) << '\\n';\n    std::cout << touch({0, 0}, 2, {3, 4}, 3) << '\\n';\n}",
+              "output": "false\ntrue\nfalse",
+              "hint": "As distâncias são 3, 5 e 5. Compare cada uma com a soma dos dois raios.",
+              "explanation": "Primeiro: distância 3, raios 1 + 1,5 = 2,5, então 9 < 6,25 é **false**. Segundo: distância 5, raios 1 + 4,5 = 5,5, e 25 < 30,25 é **true**. Terceiro: distância 5, raios 2 + 3 = 5, e 25 < 25 é **false**: eles se tocam em exatamente um ponto, que este teste estrito não conta como sobreposição."
+            },
+            {
+              "type": "numeric",
+              "id": "q-circle-gap",
+              "concepts": [
+                "circle-collision"
+              ],
+              "prompt": "Uma faísca em (1, 2) tem raio 2. Um slime em (7, 10) tem raio 3. Qual é a largura do **vão** entre as bordas deles?",
+              "answer": 5,
+              "unit": "unidades",
+              "hint": "Ache a distância entre os centros e depois subtraia os dois raios.",
+              "explanation": "Os centros diferem por (6, 8), então estão a √(36 + 64) = 10 de distância. Os raios cobrem 2 + 3 = 5 disso, deixando um vão de **5**. Um resultado negativo significaria que eles se sobrepõem nessa medida."
+            },
+            {
+              "type": "mcq",
+              "id": "q-shape-choice",
+              "concepts": [
+                "circle-collision",
+                "aabb"
+              ],
+              "prompt": "Dario adiciona uma pedra que rola e gira morro abaixo. Qual collider continua correto enquanto ela gira, sem trabalho extra?",
+              "choices": [
+                "Um círculo, porque girar um círculo não o altera",
+                "Uma AABB do tamanho do sprite da pedra",
+                "Uma AABB recalculada só quando a pedra parar",
+                "Nenhum collider: checar os pixels do sprite contra a raposa a cada frame"
+              ],
+              "answer": 0,
+              "hint": "Qual forma parece igual em todos os ângulos?",
+              "explanation": "Um círculo é igual em todos os ângulos, então girar nunca o invalida, e o teste continua sendo algumas multiplicações e uma comparação. Uma AABB não gira, então uma caixa girando ficaria para fora ou deixaria brechas. Testes por pixel são lentos demais para rodar a cada frame para cada par. As AABBs continuam ideais para tiles, paredes e plataformas que nunca giram."
+            }
+          ]
+        },
+        {
+          "id": "collision-response",
+          "title": "Empurrar para fora e atravessar",
+          "pareto": "extra",
+          "minutes": 8,
+          "takeaway": "Resolva uma sobreposição empurrando para fora ao longo do eixo de menor sobreposição, e faça um sweep em objetos rápidos por todo o caminho deles para que não atravessem paredes finas (tunneling).",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Detectar não é resolver",
+              "body": "Detectar uma sobreposição diz que a raposa está *dentro* da parede. A **resolução** a coloca de volta para fora.\n\nPara duas AABBs, meça a sobreposição em cada eixo: `std::min(maxes) − std::max(mins)`. Depois empurre quem se move para fora ao longo do eixo de **menor** sobreposição, em direção ao próprio lado. Esse é o caminho mais curto para sair, muitas vezes chamado de *translação mínima*. Por fim, zere a velocidade nesse eixo: ser empurrada para cima para fora do chão significa *aterrissou*.\n\nEmpurrar ao longo da maior sobreposição teletransportaria a raposa para o outro lado da parede."
+            },
+            {
+              "type": "example",
+              "title": "Dentro da parede",
+              "problem": "A raposa ocupa x de 0 a 2, y de 0 a 2. Uma parede ocupa x de 1,5 a 5, y de −1 a 3. Como a raposa deve ser empurrada para fora?",
+              "steps": [
+                "Sobreposição em x = min(2, 5) − max(0, 1,5) = 2 − 1,5 = 0,5.",
+                "Sobreposição em y = min(2, 3) − max(0, −1) = 2 − 0 = 2.",
+                "A sobreposição em x é menor, então empurre ao longo de x. O centro da raposa (x = 1) está à esquerda do da parede (x = 3,25), então empurre-a para a esquerda."
+              ],
+              "answer": "Mova a raposa **0,5 unidade para a esquerda**, de volta para x de −0,5 a 1,5, e zere a velocidade horizontal dela."
+            },
+            {
+              "type": "numeric",
+              "id": "q-push-out",
+              "concepts": [
+                "collision-resolution"
+              ],
+              "prompt": "Caindo rápido, a raposa agora ocupa x de 4 a 6, y de 3 a 5, e uma plataforma ocupa x de 0 a 10, y de 0 a 3,25. Em quantas unidades a raposa deve ser empurrada para fora?",
+              "answer": 0.25,
+              "tolerance": 0.001,
+              "unit": "unidades",
+              "hint": "Calcule as duas sobreposições e fique com a menor.",
+              "explanation": "Sobreposição em x = min(6, 10) − max(4, 0) = 2. Sobreposição em y = min(5, 3,25) − max(3, 0) = **0,25**, a menor. O centro da raposa está acima do da plataforma, então ela é empurrada **para cima** em 0,25 e pousa em cima, com a velocidade vertical definida como 0."
+            },
+            {
+              "type": "output",
+              "id": "q-resolve",
+              "concepts": [
+                "collision-resolution"
+              ],
+              "prompt": "`pushOut` devolve quanto o objeto em movimento deve andar para sair da parede. O que isto imprime?",
+              "language": "cpp",
+              "code": "#include <algorithm>\n#include <iostream>\n#include \"vec2.h\"\n\nstruct Box { float minX, minY, maxX, maxY; };\n\nVec2 pushOut(Box mover, Box wall) {\n    float overlapX = std::min(mover.maxX, wall.maxX) - std::max(mover.minX, wall.minX);\n    float overlapY = std::min(mover.maxY, wall.maxY) - std::max(mover.minY, wall.minY);\n    if (overlapX <= 0 || overlapY <= 0) return {0, 0};   // not touching\n\n    bool moverIsLeft = mover.minX + mover.maxX < wall.minX + wall.maxX;\n    bool moverIsBelow = mover.minY + mover.maxY < wall.minY + wall.maxY;\n    if (overlapX < overlapY) return {moverIsLeft ? -overlapX : overlapX, 0};\n    return {0, moverIsBelow ? -overlapY : overlapY};\n}\n\nint main() {\n    std::cout << pushOut({6, 1, 8, 3}, {2, 0, 6.75f, 6}) << '\\n';\n    std::cout << pushOut({1, -1, 3, 1}, {0, 0.5f, 10, 4}) << '\\n';\n}",
+              "output": "(0.75, 0)\n(0, -0.5)",
+              "hint": "Para cada par, calcule a sobreposição em x e em y, escolha a menor e depois defina o sinal pelo lado em que quem se move está.",
+              "explanation": "Primeiro par: sobreposição x = min(8, 6,75) − max(6, 2) = 0,75, sobreposição y = min(3, 6) − max(1, 0) = 2. Empurre ao longo de x; o centro de quem se move (7) está à direita do da parede (4,375), então empurre para a **direita**: (0,75, 0). Segundo par: sobreposição x = 2, sobreposição y = min(1, 4) − max(−1, 0,5) = 0,5. Empurre ao longo de y; quem se move está abaixo, então empurre para **baixo**: (0, −0,5), a raposa batendo a cabeça numa beirada."
+            },
+            {
+              "type": "explain",
+              "title": "Tunneling",
+              "body": "As checagens de colisão rodam em momentos discretos. Se algo se move mais longe em um passo do que a espessura de uma parede, ele pode estar na frente da parede em um passo e atrás dela no seguinte, e **nenhuma checagem jamais vê uma sobreposição**. Isso é o **tunneling**.\n\nBalas rápidas, dashes, paredes finas e valores grandes de `dt` o tornam mais provável. Correções:\n\n- **Sweep**: teste o caminho inteiro da posição antiga até a nova (um raycast ou uma forma varrida). Engines de física como o Box2D oferecem colisão contínua para corpos rápidos, que faz isso.\n- **Substeps**: divida um movimento grande em vários pequenos.\n- Colisores mais espessos ou um limite de velocidade."
+            },
+            {
+              "type": "numeric",
+              "id": "q-tunnel-speed",
+              "concepts": [
+                "tunnelling"
+              ],
+              "prompt": "Uma parede tem **0,2** unidade de espessura e a física avança a cada **0,02 s**. A partir de que velocidade, em unidades por segundo, uma bala minúscula pode pular a parede em um único passo?",
+              "answer": 10,
+              "unit": "unidades/s",
+              "hint": "A bala atravessa quando a distância por passo supera a espessura da parede.",
+              "explanation": "Distância por passo = velocidade × 0,02. Isso supera 0,2 quando velocidade > 0,2 ÷ 0,02 = **10 unidades/s**. Isso é lento para uma bala, e por isso as balas costumam ser raycasts ou usar detecção de colisão contínua em vez de simples testes de sobreposição."
+            },
+            {
+              "type": "bug",
+              "id": "q-tunnel",
+              "concepts": [
+                "tunnelling"
+              ],
+              "prompt": "A bala se move 2 unidades por frame em direção a uma parede que vai de x 9,2 a 9,8. Deveria imprimir `hit on frame 5`, mas imprime `missed`. Clique na linha com o bug.",
+              "language": "cpp",
+              "code": "#include <cstdio>\n\nint main() {\n    float wallMin = 9.2f, wallMax = 9.8f;       // a thin wall\n    float x = 0, speed = 120, dt = 1.0f / 60;   // 2 units per frame\n    int frame = 0;\n    bool hit = false;\n\n    while (frame < 10 && !hit) {\n        ++frame;\n        x += speed * dt;\n        hit = x >= wallMin && x <= wallMax;\n    }\n    if (hit) std::printf(\"hit on frame %d\\n\", frame);\n    else std::printf(\"missed\\n\");\n}",
+              "error": "missed",
+              "lines": [
+                12
+              ],
+              "fixes": [
+                "Mude a linha 12 para `hit = x - speed * dt <= wallMax && x >= wallMin;`, testando todo o trecho percorrido neste frame",
+                "Mude a linha 5 para `float x = 0, speed = 240, dt = 1.0f / 60;`, para que a bala chegue à parede mais cedo",
+                "Mude a linha 9 para `while (frame < 20 && !hit) {`, para que rode por mais frames",
+                "Mude a linha 12 para `hit = x >= wallMin || x <= wallMax;`"
+              ],
+              "answer": 0,
+              "hint": "Liste as posições que a checagem vê: 2, 4, 6, 8, 10... Alguma delas está dentro da parede?",
+              "explanation": "A checagem só olha onde a bala **está**: 8 fica antes da parede e 10 fica depois dela, então nunca vê uma sobreposição. Testar o segmento da posição anterior (`x - speed * dt`) até a nova pega a parede no frame 5. Mais velocidade faz pular mais, mais frames só deixam a bala seguir voando, e `||` é verdadeiro para toda posição, informando um acerto no frame 1."
+            },
+            {
+              "type": "mcq",
+              "id": "q-tunnel-fix",
+              "concepts": [
+                "tunnelling"
+              ],
+              "prompt": "O dash da raposa percorre 3 tiles num único frame e às vezes atravessa direto paredes de 1 tile. Qual correção ataca a causa?",
+              "choices": [
+                "Checar todo o caminho do dash, com um raycast ou dividindo-o em passos menores que um tile",
+                "Subir o limite de taxa de frames, para os frames ficarem mais curtos",
+                "Fazer os sprites das paredes parecerem mais grossos",
+                "Checar colisões duas vezes por frame na posição final"
+              ],
+              "answer": 0,
+              "hint": "O problema é o que acontece entre o início e o fim do dash.",
+              "explanation": "O dash cobre mais distância em um passo do que a espessura de uma parede, então só o caminho entre as duas posições pode revelar a parede: um raycast ou sweep, ou substeps menores que um tile. O dash percorre 3 tiles em um frame por mais curto que seja o frame, um sprite não muda o collider, e checar a mesma posição final duas vezes vê a mesma coisa."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "structure-and-feel",
+      "title": "Estrutura e sensação",
+      "description": "Monte objetos a partir de componentes, dê a eles estados explícitos, faça o spawn sem alocar a cada frame e deixe o movimento com uma sensação boa.",
+      "lessons": [
+        {
+          "id": "components",
+          "title": "Construa com componentes, não com árvores genealógicas",
+          "pareto": "core",
+          "minutes": 9,
+          "takeaway": "Monte um objeto de jogo com pequenos componentes que fazem um trabalho cada um, sob posse de unique_ptr, em vez de uma árvore de classes profunda, e guarde o estado de cada objeto em membros.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "A armadilha da árvore genealógica",
+              "body": "A Rin começa com herança: `Enemy`, depois `FlyingEnemy` e `ShootingEnemy`. Aí o Dario quer um morcego que voa **e** atira, uma torreta que atira mas nunca se move e um slime que pula e se divide. Cada nova mistura exige uma nova classe, e o código compartilhado acaba copiado ou empurrado para uma classe base inchada.\n\nA resposta comum é a **composição**. Um objeto de jogo é um contêiner; o que ele *faz* vem dos **componentes** anexados a ele: um para mover, um para desenhar, um para guardar a vida. A Unreal monta atores a partir de componentes, e o Godot monta cenas a partir de pequenos nós filhos, no mesmo espírito. Um morcego atirador é só um objeto com um componente de voo e um componente de tiro."
+            },
+            {
+              "type": "mcq",
+              "id": "q-diamond",
+              "concepts": [
+                "components"
+              ],
+              "prompt": "O C++, ao contrário de Java e C#, permite `struct Bat : FlyingEnemy, ShootingEnemy {};`, em que as duas bases estendem `Enemy` (que tem um `int hp`). O que dá errado?",
+              "choices": [
+                "O morcego contém duas partes `Enemy` separadas, com dois valores de `hp`, então `bat.hp -= 5;` nem compila",
+                "Nada: as duas bases compartilham um só `Enemy`, e o morcego simplesmente tem os dois comportamentos",
+                "O C++ só permite uma classe base com membros de dados, então a declaração é rejeitada",
+                "Funções virtuais deixam de funcionar em qualquer classe com duas classes base"
+              ],
+              "answer": 0,
+              "hint": "Cada classe base traz a sua própria cópia de tudo o que herdou.",
+              "explanation": "Cada um de `FlyingEnemy` e `ShootingEnemy` contém o seu próprio `Enemy`, então um `Bat` tem **dois** deles: `bat.FlyingEnemy::hp` e `bat.ShootingEnemy::hp` são variáveis diferentes (5 e 10 depois de danificar uma). O simples `bat.hp` é ambíguo, e o clang para com *non-static member 'hp' found in multiple base-class subobjects of type 'Enemy'*. A herança `virtual` pode fundir os dois, ao custo de mais regras para aprender, e a árvore continua precisando de uma nova classe para cada combinação. Com componentes, o morcego simplesmente ganha um `Flyer` e um `Shooter`."
+            },
+            {
+              "type": "explain",
+              "title": "Um sistema de componentes minúsculo",
+              "body": "Aqui está uma versão mínima, usada nos trechos a seguir. A cada frame o jogo chama `update(dt)` em cada objeto, que o chama em cada um de seus componentes:\n\n```cpp\n// gameobject.h\n#pragma once\n#include <memory>\n#include <string>\n#include <utility>\n#include <vector>\n#include \"vec2.h\"\n\nstruct GameObject;\n\nstruct Component {\n    virtual ~Component() = default;\n    virtual void update(GameObject& owner, float dt) = 0;\n};\n\nstruct GameObject {\n    std::string name;\n    Vec2 position;\n    std::vector<std::unique_ptr<Component>> components;\n\n    explicit GameObject(std::string n) : name(std::move(n)) {}\n\n    template <class T>\n    T& add() {\n        components.push_back(std::make_unique<T>());\n        return static_cast<T&>(*components.back());\n    }\n\n    template <class T>\n    T* get() {\n        for (auto& c : components)\n            if (auto* found = dynamic_cast<T*>(c.get())) return found;\n        return nullptr;\n    }\n\n    void update(float dt) {\n        for (auto& c : components) c->update(*this, dt);\n    }\n};\n```\n\nOs componentes têm tipos diferentes, então o objeto guarda **ponteiros para a classe base**, e `std::unique_ptr` faz dele o único dono deles: eles são apagados junto com ele. `add<Mover>()` cria um e devolve uma referência a ele; `get<T>()` encontra um com `dynamic_cast`, que devolve `nullptr` quando um componente não é um `T`."
+            },
+            {
+              "type": "output",
+              "id": "q-components-run",
+              "concepts": [
+                "components"
+              ],
+              "prompt": "Um slime recebe dois componentes: um o move, outro o faz pular a cada segundo. Depois de três frames de meio segundo, o que isto imprime?",
+              "language": "cpp",
+              "code": "#include <iostream>\n#include \"gameobject.h\"\n\nstruct Mover : Component {\n    Vec2 velocity;\n    void update(GameObject& owner, float dt) override { owner.position += velocity * dt; }\n};\n\nstruct Hopper : Component {\n    float timer = 0;\n    void update(GameObject& owner, float dt) override {\n        timer += dt;\n        if (timer >= 1) { timer = 0; owner.position += Vec2{0, 3}; }\n    }\n};\n\nint main() {\n    GameObject slime{\"slime\"};\n    slime.add<Mover>().velocity = {2, 0};\n    slime.add<Hopper>();\n\n    for (int frame = 0; frame < 3; ++frame) slime.update(0.5f);\n    std::cout << slime.position << '\\n';\n}",
+              "output": "(3, 3)",
+              "hint": "Cada frame roda `Mover` e depois `Hopper`. Acompanhe o x e o timer do pulo separadamente.",
+              "explanation": "`Mover` soma (2, 0) × 0,5 = (1, 0) por frame: três frames dão x = 3. `Hopper` soma 0,5 s por frame; no segundo frame o timer dele chega a 1, então o slime pula 3 para cima uma vez e o timer é zerado. Posição final **(3, 3)**. Nenhum componente sabe que o outro existe; os dois só alteram a posição do dono."
+            },
+            {
+              "type": "bug",
+              "id": "q-static-timer",
+              "concepts": [
+                "components"
+              ],
+              "prompt": "Dois slimes recebem cada um o seu próprio `Hopper`. Depois de 1 segundo, cada um deveria ter pulado uma vez: `A hopped 1, B hopped 1`. Clique na linha com o bug.",
+              "language": "cpp",
+              "code": "#include <cstdio>\n#include \"gameobject.h\"\n\nstruct Hopper : Component {\n    int hops = 0;\n    void update(GameObject&, float dt) override {\n        static float timer = 0;\n        timer += dt;\n        if (timer >= 1) { timer = 0; ++hops; }\n    }\n};\n\nint main() {\n    GameObject a{\"slime A\"}, b{\"slime B\"};\n    Hopper& hopA = a.add<Hopper>();\n    Hopper& hopB = b.add<Hopper>();\n\n    for (int frame = 0; frame < 2; ++frame) {\n        a.update(0.5f);\n        b.update(0.5f);\n    }\n    std::printf(\"A hopped %d, B hopped %d\\n\", hopA.hops, hopB.hops);\n}",
+              "error": "A hopped 0, B hopped 2",
+              "lines": [
+                7
+              ],
+              "fixes": [
+                "Apague a linha 7 e adicione um membro `float timer = 0;` depois da linha 5, para que cada Hopper tenha o seu próprio timer",
+                "Troque as linhas 19 e 20, para que o slime A atualize depois do slime B",
+                "Mude a linha 8 para `timer += dt / 2;`, já que dois slimes somam a ele",
+                "Mude a linha 9 para pular quando `timer >= 2`"
+              ],
+              "answer": 0,
+              "hint": "Quantas variáveis `timer` existem quando há dois objetos `Hopper`?",
+              "explanation": "Uma variável local `static` é criada uma vez e compartilhada por **toda chamada** da função, em qualquer objeto em que ela seja chamada. Os dois Hoppers somam a um só timer, que chega a 1 a cada segunda chamada de update, sempre a do slime B: A 0 pulos, B 2. Uma variável membro dá a cada componente o seu próprio timer. Trocar a ordem apenas dá os dois pulos ao A, e reduzir o incremento à metade ou dobrar o limiar ainda compartilha um timer entre os dois (B pula uma vez, A nunca)."
+            },
+            {
+              "type": "bug",
+              "id": "q-slicing",
+              "concepts": [
+                "components"
+              ],
+              "prompt": "A Rin tenta guardar os componentes por valor. O mover deveria mover `x` em 2 × 0,5, imprimindo `x = 1`. Clique na linha com o bug.",
+              "language": "cpp",
+              "code": "#include <cstdio>\n#include <memory>\n#include <vector>\n\nstruct Component {\n    virtual ~Component() = default;\n    virtual void update(float&, float) {}\n};\n\nstruct Mover : Component {\n    float speed = 2;\n    void update(float& x, float dt) override { x += speed * dt; }\n};\n\nint main() {\n    std::vector<Component> parts;\n    parts.push_back(Mover{});\n    float x = 0;\n    for (auto& p : parts) p.update(x, 0.5f);\n    std::printf(\"x = %g\\n\", x);\n}",
+              "error": "x = 0",
+              "lines": [
+                16,
+                17
+              ],
+              "fixes": [
+                "Mude a linha 16 para `std::vector<std::unique_ptr<Component>> parts;`, a linha 17 para `parts.push_back(std::make_unique<Mover>());` e a linha 19 para chamar `p->update(x, 0.5f)`",
+                "Mude a linha 17 para `parts.emplace_back(Mover{});`",
+                "Mude a linha 12 para `void update(float& x, float dt) final { x += speed * dt; }`",
+                "Mude a linha 19 para `for (Component p : parts) p.update(x, 0.5f);`"
+              ],
+              "answer": 0,
+              "hint": "Um `std::vector<Component>` guarda objetos de exatamente um tipo. O que acontece com a parte `Mover` quando um `Mover` é copiado para dentro dele?",
+              "explanation": "Um `std::vector<Component>` guarda objetos `Component` simples. Inserir um `Mover` copia apenas a parte `Component` dele e descarta o resto, incluindo `speed` e o comportamento do `Mover`: isso é o **slicing**. Todo elemento agora é um `Component` base, cujo `update` não faz nada, então `x` continua 0. Tipos diferentes de componente precisam ficar atrás de ponteiros para a base, aqui de posse de `std::unique_ptr`.\n\n`emplace_back` faz slicing do mesmo jeito, `final` não muda nada na cópia, e uma variável de laço por valor faz slicing uma segunda vez."
+            },
+            {
+              "type": "explain",
+              "title": "Componentes conversando",
+              "body": "Componentes no mesmo objeto se encontram com `get<T>()`. Ele percorre a lista com `dynamic_cast`, então faça isso uma vez, quando o objeto for montado, e guarde o ponteiro. Esse ponteiro continua válido conforme mais componentes são adicionados: o vector move seus `unique_ptr`s quando cresce, mas os componentes em si nunca se movem.\n\nEntre objetos, prefira **callbacks**: o `Health` guarda uma lista de funções `onDied`, e a pontuação, o som e o spawner adicionam uma cada. O `Health` nunca precisa saber que eles existem, então adicionar uma nova reação nunca significa editá-lo.\n\nCada componente deve ter **um trabalho**: o que muda pelo mesmo motivo fica junto."
+            },
+            {
+              "type": "buckets",
+              "id": "q-which-component",
+              "concepts": [
+                "components"
+              ],
+              "prompt": "Rin está dividindo a classe de 600 linhas da raposa em componentes. Coloque cada peça onde ela pertence.",
+              "buckets": [
+                "Health",
+                "Mover",
+                "SpriteView"
+              ],
+              "items": [
+                {
+                  "text": "Pontos de vida atuais e máximos",
+                  "bucket": 0
+                },
+                {
+                  "text": "A função membro `damage(int amount)`",
+                  "bucket": 0
+                },
+                {
+                  "text": "Os callbacks `onDied`",
+                  "bucket": 0
+                },
+                {
+                  "text": "Velocidade e velocidade máxima",
+                  "bucket": 1
+                },
+                {
+                  "text": "Aplicar velocidade × dt à posição",
+                  "bucket": 1
+                },
+                {
+                  "text": "Qual imagem desenhar",
+                  "bucket": 2
+                },
+                {
+                  "text": "O flash vermelho mostrado ao sofrer dano",
+                  "bucket": 2
+                },
+                {
+                  "text": "A camada de desenho, para a raposa aparecer na frente da grama",
+                  "bucket": 2
+                }
+              ],
+              "hint": "Pergunte sobre o que cada peça trata: continuar vivo, se mover ou ter certa aparência.",
+              "explanation": "O **Health** é dono dos pontos de vida, do dano e do anúncio da morte. O **Mover** é dono da velocidade e do movimento. O **SpriteView** é dono de tudo sobre a aparência, incluindo o flash de dano, que ele pode exibir adicionando um callback ao `Health`. Cada componente agora muda por um único motivo, e o mesmo `Health` pode ir em slimes, caixotes e no chefe."
+            }
+          ]
+        },
+        {
+          "id": "state-machines",
+          "title": "Máquinas de estado para jogadores e inimigos",
+          "pareto": "core",
+          "minutes": 9,
+          "takeaway": "Dê a cada personagem um único estado atual explícito, um valor de enum class como Patrol, Chase ou Attack, e deixe só as transições listadas alterá-lo.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Booleanos geram bugs",
+              "body": "A raposa da Rin tem `isJumping`, `isDashing`, `isAttacking` e `isDead`. Logo ela pode dar dash estando morta e atacar no meio do pulo de maneiras que ninguém projetou, e cada novo recurso checa cinco flags.\n\nUma **máquina de estados finita** troca as flags por **um** estado atual de uma lista fixa, um `enum class` em C++. Cada estado tem o seu próprio comportamento, e só **transições** específicas levam de um estado a outro: Grounded → Jumping quando o pulo é pressionado, Jumping → Falling quando a velocidade para cima acaba, Falling → Grounded ao aterrissar.\n\nOs inimigos também. Um slime patrulha, persegue quando a raposa chega a 5 tiles, ataca a 1 e desiste quando a raposa está além de 7."
+            },
+            {
+              "type": "trace",
+              "id": "q-trace-fsm",
+              "concepts": [
+                "state-machine"
+              ],
+              "prompt": "A máquina de estados do slime como um `switch`: só o `case` do estado atual roda, e seus `if`s decidem o próximo estado. Preveja o estado depois de cada frame.",
+              "language": "cpp",
+              "code": "enum class State { Patrol, Chase, Attack };\n\nfloat distances[] = {8, 4, 0.5f, 3, 9};   // fox distance on 5 frames\nState state = State::Patrol;\n\nfor (float d : distances) {\n    switch (state) {\n    case State::Patrol:\n        if (d < 5) state = State::Chase;\n        break;\n    case State::Chase:\n        if (d < 1) state = State::Attack;\n        else if (d > 7) state = State::Patrol;\n        break;\n    case State::Attack:\n        if (d >= 1) state = State::Chase;\n        break;\n    }\n}",
+              "frames": [
+                {
+                  "line": 4,
+                  "vars": {
+                    "state": "State::Patrol"
+                  }
+                },
+                {
+                  "line": 9,
+                  "vars": {
+                    "d": "8",
+                    "state": "State::Patrol"
+                  },
+                  "note": "Longe demais: o `if` de Patrol exige d < 5, então o estado continua."
+                },
+                {
+                  "line": 9,
+                  "vars": {
+                    "d": "4",
+                    "state": "State::Chase"
+                  },
+                  "ask": "state"
+                },
+                {
+                  "line": 12,
+                  "vars": {
+                    "d": "0.5",
+                    "state": "State::Attack"
+                  },
+                  "ask": "state"
+                },
+                {
+                  "line": 16,
+                  "vars": {
+                    "d": "3",
+                    "state": "State::Chase"
+                  }
+                },
+                {
+                  "line": 13,
+                  "vars": {
+                    "d": "9",
+                    "state": "State::Patrol"
+                  },
+                  "ask": "state"
+                }
+              ],
+              "hint": "Só roda o case do **estado atual**. Em Chase, a raposa precisa estar a menos de 1 para ele atacar, ou a mais de 7 para ele desistir.",
+              "explanation": "Em 8 o slime continua patrulhando. Em 4 (< 5) ele começa a perseguir. Em 0,5 (< 1) ele ataca. Em 3 a raposa recuou (≥ 1), então ele persegue de novo. Em 9 (> 7) ele desiste e patrulha. Toda mudança segue uma transição listada, e um slime nunca pode estar perseguindo e patrulhando ao mesmo tempo. Como `State` é um `enum class`, o clang também avisa (`-Wswitch`) se um novo estado for adicionado e um `switch` o esquecer."
+            },
+            {
+              "type": "explain",
+              "title": "Um estado de cada vez",
+              "body": "A cada frame, o update faz o trabalho do estado atual e depois checa as transições desse estado:\n\n- **Patrol**: andar entre waypoints; se a raposa estiver perto, mudar para Chase.\n- **Chase**: dirigir-se à raposa; se estiver muito perto, Attack; se estiver longe, Patrol.\n- **Attack**: tocar a mordida; quando terminar, Chase.\n\nMuitas máquinas também rodam ações de **entrada** e de **saída** numa transição: iniciar a animação de perseguição, zerar o timer de ataque. Uma pequena função `changeState(State next)` que as executa é o lugar usual. Os sistemas de animação das engines (os Animation Blueprints da Unreal, a `AnimationTree` do Godot) incluem máquinas de estado visuais construídas sobre a mesma ideia."
+            },
+            {
+              "type": "bug",
+              "id": "q-double-jump",
+              "concepts": [
+                "state-machine"
+              ],
+              "prompt": "O segundo toque acontece no ar e não deveria fazer nada, então isto deveria imprimir `Jumping, jumps: 1`. Clique na linha com o bug.",
+              "language": "cpp",
+              "code": "#include <cstdio>\n\nenum class Move { Grounded, Jumping, Falling };\nenum class Button { Jump, Dash };\nconst char* names[] = {\"Grounded\", \"Jumping\", \"Falling\"};\n\nstruct Player {\n    Move state = Move::Grounded;\n    int jumps = 0;\n\n    void press(Button b) {\n        if (b == Button::Jump) {\n            state = Move::Jumping;\n            ++jumps;\n        }\n    }\n};\n\nint main() {\n    Player player;\n    player.press(Button::Jump);   // on the ground: should jump\n    player.press(Button::Jump);   // already in the air: should do nothing\n    std::printf(\"%s, jumps: %d\\n\", names[static_cast<int>(player.state)], player.jumps);\n}",
+              "error": "Jumping, jumps: 2",
+              "lines": [
+                12
+              ],
+              "fixes": [
+                "Mude a linha 12 para `if (b == Button::Jump && state == Move::Grounded) {`",
+                "Mude a linha 12 para `if (b == Button::Jump && state != Move::Falling) {`",
+                "Adicione `state = Move::Grounded;` depois da linha 14",
+                "Mude a linha 8 para que o jogador comece em `Move::Falling`"
+              ],
+              "answer": 0,
+              "hint": "Qual é o único estado em que um pulo é permitido?",
+              "explanation": "A transição de pulo dispara a partir de **qualquer** estado, então um segundo toque no ar pula de novo. Uma transição deve nomear o estado de onde parte: Grounded → Jumping. Excluir apenas Falling ainda permite pular a partir de Jumping. Voltar a Grounded dentro do pulo faz todo toque ser um pulo (`Grounded, jumps: 2`), e começar em Falling só muda o primeiro estado."
+            },
+            {
+              "type": "numeric",
+              "id": "q-flag-combos",
+              "concepts": [
+                "state-machine"
+              ],
+              "prompt": "A raposa tem três `bool`s: `isJumping`, `isDashing` e `isDead`. Quantas combinações de valores eles podem guardar?",
+              "answer": 8,
+              "hint": "Cada booleano dobra o número de combinações.",
+              "explanation": "2 × 2 × 2 = **8** combinações, incluindo absurdos como dar dash estando morta, e cada uma é um caso que algum código pode encontrar. Com `enum class Move { Idle, Jumping, Dashing, Dead }` há exatamente os 4 estados que você projetou, e adicionar um recurso adiciona um estado, não dobra o número."
+            },
+            {
+              "type": "explain",
+              "title": "Limites que não ficam piscando",
+              "body": "Se um slime começa a perseguir a distância < 5 e para em > 5, uma raposa parada bem em 5 faz com que ele alterne entre Patrol e Chase a cada frame, tremendo no lugar.\n\nA correção é a **histerese**: limites diferentes para entrar e para sair de um estado. Persiga quando estiver a menos de 5, mas desista só quando estiver a mais de 7. Entre 5 e 7, o slime continua fazendo o que já estava fazendo.\n\nTimers também ajudam: ficar em Attack por pelo menos 0,4 s, ou ignorar a raposa por um segundo depois de perdê-la."
+            },
+            {
+              "type": "mcq",
+              "id": "q-hysteresis",
+              "concepts": [
+                "state-machine"
+              ],
+              "prompt": "Um morcego alterna entre Patrol e Chase a cada frame sempre que a raposa paira perto de 6 tiles de distância, onde a única regra dele vira. Qual é a melhor correção?",
+              "choices": [
+                "Começar a perseguir abaixo de 6 tiles, mas parar só além de 8, para haver uma faixa em que o estado não muda",
+                "Checar a distância só a cada dois frames",
+                "Mudar `<` para `<=` na condição de perseguição",
+                "Adicionar um terceiro estado entre Patrol e Chase que faz o mesmo que Patrol"
+              ],
+              "answer": 0,
+              "hint": "O problema é um único limite usado nas duas direções.",
+              "explanation": "Um limite nas duas direções significa que qualquer tremor em torno dele inverte o estado. Limites separados de entrada e saída (**histerese**) dão ao estado espaço para se estabilizar. Checar com menos frequência só deixa o pisca-pisca mais lento, `<=` desloca o limite sem removê-lo, e um estado extra com o mesmo limite pisca do mesmo jeito."
+            },
+            {
+              "type": "buckets",
+              "id": "q-state-or-transition",
+              "concepts": [
+                "state-machine"
+              ],
+              "prompt": "Dario esboçou o comportamento do slime num quadro branco. Quais anotações são **estados** e quais são **transições** (as condições que levam de um estado a outro)?",
+              "buckets": [
+                "Estado",
+                "Transição"
+              ],
+              "items": [
+                {
+                  "text": "Patrol",
+                  "bucket": 0
+                },
+                {
+                  "text": "Chase",
+                  "bucket": 0
+                },
+                {
+                  "text": "Stunned",
+                  "bucket": 0
+                },
+                {
+                  "text": "Attack",
+                  "bucket": 0
+                },
+                {
+                  "text": "A raposa chega a 5 tiles",
+                  "bucket": 1
+                },
+                {
+                  "text": "Atingido pelo flash da lanterna",
+                  "bucket": 1
+                },
+                {
+                  "text": "O timer de atordoamento chega a 0",
+                  "bucket": 1
+                },
+                {
+                  "text": "A animação da mordida termina",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Estados são o que o slime está fazendo por um tempo. Transições são coisas que acontecem num momento.",
+              "explanation": "Estados duram: patrulhando, perseguindo, atordoado, atacando. Transições são eventos ou condições checadas a partir de um estado em particular: a raposa se aproximando (Patrol → Chase), um flash da lanterna (qualquer estado → Stunned), um timer acabando (Stunned → Patrol), uma animação terminando (Attack → Chase). Desenhar estados como caixas e transições como setas rotuladas é o jeito habitual de projetá-los."
+            }
+          ]
+        },
+        {
+          "id": "pooling",
+          "title": "Fazer spawn sem engasgos",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Cada new e cada vector que cresce pede memória ao alocador de uso geral, então reserve capacidade de antemão, reutilize contêineres entre frames e mantenha um pool de objetos cujos campos são todos redefinidos na reutilização.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Todo new tem um preço",
+              "body": "O C++ não tem coletor de lixo para pausar o jogo: a memória é liberada no instante em que o dono a solta, quando um `unique_ptr` sai de escopo ou um vector é destruído. Mas **alocar** ainda custa.\n\nCada `new` ou `std::make_unique` pede um bloco ao alocador de uso geral, que precisa achar espaço livre do tamanho certo e depois recebê-lo de volta; de vez em quando ele precisa pedir mais ao sistema operacional. Uma alocação é barata. Milhares por frame, para cada bala, partícula e lista temporária, se somam, e espalham os objetos pela memória.\n\nOs contêineres também alocam. Quando `push_back` encontra um `std::vector` cheio, ele aloca um bloco maior, move todos os elementos para lá e libera o antigo."
+            },
+            {
+              "type": "output",
+              "id": "q-vector-growth",
+              "concepts": [
+                "per-frame-allocation"
+              ],
+              "prompt": "Com a biblioteca padrão do Apple clang (libc++), um `std::vector` cheio **dobra** sua capacidade quando cresce (outras bibliotecas padrão podem crescer de outro jeito). O segundo vector chama `reserve` primeiro. O que isto imprime?",
+              "language": "cpp",
+              "code": "#include <cstdio>\n#include <vector>\n\nint countGrowths(std::vector<int>& v, int n) {\n    int growths = 0;\n    for (int i = 0; i < n; ++i) {\n        auto before = v.capacity();\n        v.push_back(i);\n        if (v.capacity() != before) ++growths;   // a new, bigger block\n    }\n    return growths;\n}\n\nint main() {\n    std::vector<int> plain;\n    std::vector<int> reserved;\n    reserved.reserve(100);\n    std::printf(\"%d %zu\\n\", countGrowths(plain, 100), plain.capacity());\n    std::printf(\"%d %zu\\n\", countGrowths(reserved, 100), reserved.capacity());\n}",
+              "output": "8 128\n0 100",
+              "hint": "Um vector vazio tem capacidade 0. Liste as capacidades conforme ele dobra: 1, 2, 4, ... até haver lugar para 100.",
+              "explanation": "O vector simples cresce para 1, 2, 4, 8, 16, 32, 64 e 128: **8** alocações (cada uma copiando tudo o que já havia) para guardar 100 números, terminando com capacidade 128. O vector com reserva alocou espaço para 100 uma vez, antes do laço, então o próprio laço aloca **0** vezes. Quando você sabe mais ou menos quantos itens um frame vai produzir, use `reserve` uma vez; melhor ainda, mantenha o vector entre os frames e use `clear()`, que preserva a capacidade."
+            },
+            {
+              "type": "numeric",
+              "id": "q-alloc-rate",
+              "concepts": [
+                "per-frame-allocation"
+              ],
+              "prompt": "O efeito de faíscas chama `std::make_unique<Particle>()` para **200** partículas novas a cada frame, e libera o mesmo tanto de antigas. A **60 fps**, quantas alocações no heap isso dá por segundo?",
+              "answer": 12000,
+              "unit": "alocações",
+              "hint": "Alocações por frame × frames por segundo.",
+              "explanation": "200 × 60 = **12.000** alocações por segundo, mais 12.000 liberações, de um único efeito. Cada uma é uma ida ao alocador de uso geral, e as partículas acabam onde houver espaço livre. Um pool, que reutiliza as mesmas partículas sem parar, leva isso a zero depois dos primeiros frames."
+            },
+            {
+              "type": "explain",
+              "title": "Um object pool",
+              "body": "Um **pool** guarda os objetos que não estão em uso e os entrega de novo em vez de criar novos:\n\n```cpp\n// pool.h\n#pragma once\n#include <cstddef>\n#include <memory>\n#include <vector>\n\ntemplate <class T>\nclass Pool {\n    std::vector<std::unique_ptr<T>> all;   // owns every object ever created\n    std::vector<T*> freeList;              // the ones not in use right now\n\npublic:\n    T* get() {\n        if (!freeList.empty()) {\n            T* item = freeList.back();\n            freeList.pop_back();\n            return item;                   // reuse: no allocation\n        }\n        all.push_back(std::make_unique<T>());\n        return all.back().get();\n    }\n\n    void release(T* item) { freeList.push_back(item); }\n\n    std::size_t created() const { return all.size(); }\n};\n```\n\n`get` reutiliza um objeto livre, se houver, e cria um novo só quando o pool está vazio. `release` devolve um objeto. Depois de um curto aquecimento, o jogo para de alocar balas por completo. Cada objeto vive no seu próprio `unique_ptr`, então um `T*` continua válido enquanto `all` cresce.\n\nO código de engine vai além: um bloco pré-alocado de slots, com handles que percebem quando um slot foi reutilizado (veja o curso Game Engine Programming)."
+            },
+            {
+              "type": "output",
+              "id": "q-pool-created",
+              "concepts": [
+                "object-pool"
+              ],
+              "prompt": "Usando o `Pool<T>` acima, o que isto imprime?",
+              "language": "cpp",
+              "code": "#include <iostream>\n#include \"pool.h\"\n\nstruct Bullet { float x = 0, y = 0; };\n\nint main() {\n    Pool<Bullet> pool;\n    Bullet* a = pool.get();\n    Bullet* b = pool.get();\n    pool.release(a);\n    Bullet* c = pool.get();\n    Bullet* d = pool.get();\n\n    std::cout << pool.created() << '\\n';\n    std::cout << std::boolalpha << (a == c) << '\\n';\n    std::cout << (b == d) << '\\n';\n}",
+              "output": "3\ntrue\nfalse",
+              "hint": "Acompanhe a lista de livres: o que há nela antes de cada `get`?",
+              "explanation": "`a` e `b` são novos (2 criados). Liberar `a` o coloca na lista de livres, então `c` **é** `a` de novo: `a == c` é **true**. A lista de livres então fica vazia, então `d` é novo: **3** criados no total para quatro chamadas de `get`, e `d` é uma bala diferente de `b`, que ainda está em uso."
+            },
+            {
+              "type": "bug",
+              "id": "q-pool-reset",
+              "concepts": [
+                "object-pool"
+              ],
+              "prompt": "Uma bala do pool expira depois de 2 segundos. O segundo tiro reutiliza a primeira bala e deveria imprimir `flying`, mas imprime `expired`. Clique na linha com o bug.",
+              "language": "cpp",
+              "code": "#include <cstdio>\n#include \"pool.h\"\n#include \"vec2.h\"\n\nstruct Bullet {\n    Vec2 position;\n    float age = 0;\n    bool active = false;\n\n    void fire(Vec2 at) { position = at; active = true; }\n    void update(float dt) {\n        age += dt;\n        if (age >= 2) active = false;\n    }\n};\n\nint main() {\n    Pool<Bullet> pool;\n\n    Bullet* first = pool.get();\n    first->fire({0, 0});\n    for (int i = 0; i < 5; ++i) first->update(0.5f);   // lives 2 s, then expires\n    pool.release(first);\n\n    Bullet* second = pool.get();                       // reuses the same object\n    second->fire({5, 5});\n    second->update(0.5f);\n    std::printf(\"%s\\n\", second->active ? \"flying\" : \"expired\");\n}",
+              "error": "expired",
+              "lines": [
+                10
+              ],
+              "fixes": [
+                "Mude a linha 10 para `void fire(Vec2 at) { position = at; age = 0; active = true; }`",
+                "Adicione um construtor depois da linha 8: `Bullet() { age = 0; }`",
+                "Mude a linha 13 para `if (age > 2) active = false;`",
+                "Mude a linha 7 para `float age{};`"
+              ],
+              "answer": 0,
+              "hint": "O segundo tiro é o mesmo objeto do primeiro. Qual é o `age` dele quando é disparado de novo?",
+              "explanation": "Um objeto do pool volta com **todo o seu estado antigo**. `fire` redefine a posição e `active`, mas não `age`, que ainda é 2,5 do primeiro tiro, então um update depois a bala já passou do tempo de vida. Todo campo precisa ser redefinido quando um objeto é reutilizado. Um construtor e um inicializador de membro padrão rodam apenas quando o objeto é criado pela primeira vez, nunca na reutilização, e `>` em vez de `>=` ainda vê uma idade de 3."
+            },
+            {
+              "type": "order",
+              "id": "q-bullet-lifecycle",
+              "concepts": [
+                "object-pool"
+              ],
+              "prompt": "Coloque em ordem a vida de uma bala do pool.",
+              "items": [
+                "Pegar uma bala do pool (ou criar uma se o pool estiver vazio)",
+                "Zerar todos os campos: posição, velocidade, idade, dano",
+                "Ativá-la para que seja atualizada e desenhada",
+                "Movê-la a cada frame até acertar algo ou expirar",
+                "Desativá-la para que deixe de ser atualizada e desenhada",
+                "Liberá-la de volta ao pool para o próximo tiro"
+              ],
+              "hint": "O reset vem antes de a bala ser usada, e ela sai do jogo antes de voltar ao pool.",
+              "explanation": "Pegar, **redefinir**, ativar, usar, desativar, devolver. Redefinir na saída do pool garante que nenhum estado velho vaze para o próximo tiro, e desativar antes de devolver significa que uma bala do pool nunca continua voando ou colidindo enquanto espera. Qualquer coisa que ainda guarde um ponteiro para uma bala devolvida também precisa largá-lo: o próximo tiro reutilizará esse objeto."
+            }
+          ]
+        },
+        {
+          "id": "game-feel",
+          "title": "Suavização, câmera e shake",
+          "pareto": "extra",
+          "minutes": 8,
+          "takeaway": "O lerp mistura valores, as curvas de easing remodelam a mistura, e a suavização por frame precisa usar 1 − e^(−k·dt) para se comportar igual em qualquer taxa de frames.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Lerp e easing",
+              "body": "O **Lerp** (interpolação linear) mistura dois valores: `lerp(a, b, t) = a + (b − a) * t`. Com `t = 0` você obtém `a`, com `t = 1` obtém `b`, e no meio uma mistura em linha reta. O C++20 o tem como `std::lerp` em `<cmath>`.\n\nAnime `t` de 0 a 1 ao longo de uma duração e algo desliza em velocidade constante, o que parece mecânico. O **easing** remodela o `t` primeiro:\n\n- **Ease out**, `1 − (1 − t)²`: começa rápido e se acomoda com suavidade, bom para menus e itens voando até o HUD.\n- **Ease in**, `t²`: começa devagar e acelera.\n- **Smoothstep**, `3t² − 2t³`: suave nas duas pontas.\n\n```cpp\nfloat a = std::lerp(10.0f, 30.0f, 0.5f);    // 20\nfloat t = 0.5f;\nfloat eased = 1 - (1 - t) * (1 - t);        // ease out: 0.75\nfloat b = std::lerp(0.0f, 200.0f, eased);   // 150\n```"
+            },
+            {
+              "type": "numeric",
+              "id": "q-lerp",
+              "concepts": [
+                "easing"
+              ],
+              "prompt": "Quanto vale `std::lerp(10.0f, 30.0f, 0.25f)`?",
+              "answer": 15,
+              "hint": "Comece em 10 e ande um quarto do caminho até 30.",
+              "explanation": "A diferença é 30 − 10 = 20, e um quarto dela é 5, então **15**."
+            },
+            {
+              "type": "numeric",
+              "id": "q-ease-out",
+              "concepts": [
+                "easing"
+              ],
+              "prompt": "Uma faísca coletada voa 200 px até o HUD usando ease-out, `1 − (1 − t)²`. Um quarto do caminho na animação (`t = 0.25`), quanto ela já percorreu?",
+              "answer": 87.5,
+              "tolerance": 0.01,
+              "unit": "px",
+              "hint": "Suavize o `t` primeiro: 1 − 0,75². Depois faça o lerp de 0 a 200.",
+              "explanation": "t suavizado = 1 − (0,75)² = 1 − 0,5625 = 0,4375, e lerp(0, 200, 0,4375) = **87,5 px**. Quase metade da distância em um quarto do tempo: a faísca dispara e depois desacelera até se acomodar. O movimento linear estaria em 50 px."
+            },
+            {
+              "type": "explain",
+              "title": "A câmera seguindo",
+              "body": "Uma câmera travada na raposa sacode a cada passo. Um truque comum a move uma fração da distância que falta a cada frame:\n\n`camera += (target - camera) * 0.1f;`\n\nA câmera desliza e se acomoda suavemente. Mas esse 0,1 é **por frame**, então uma máquina mais rápida fecha a distância mais vezes por segundo."
+            },
+            {
+              "type": "output",
+              "id": "q-follow-fps",
+              "concepts": [
+                "easing",
+                "delta-time"
+              ],
+              "prompt": "As duas chamadas simulam o mesmo décimo de segundo, a 20 fps (2 frames) e a 40 fps (4 frames). O que isto imprime?",
+              "language": "cpp",
+              "code": "#include <cstdio>\n\nfloat follow(int frames) {\n    float camera = 0, target = 100;\n    for (int frame = 0; frame < frames; ++frame)\n        camera += (target - camera) * 0.5f;   // close half the gap each frame\n    return camera;\n}\n\nint main() {\n    std::printf(\"%g\\n\", follow(2));   // 1/10 s at 20 fps\n    std::printf(\"%g\\n\", follow(4));   // 1/10 s at 40 fps\n}",
+              "output": "75\n93.75",
+              "hint": "Cada frame reduz pela metade a distância restante até 100.",
+              "explanation": "A distância cai pela metade a cada frame: 100 → 50 → 25 depois de dois frames (câmera em **75**), e segue para 12,5 → 6,25 depois de quatro (câmera em **93,75**). O mesmo tempo real, uma câmera bem diferente: a máquina rápida parece mais firme. A fração precisa depender de `dt`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-follow-fix",
+              "concepts": [
+                "easing",
+                "delta-time"
+              ],
+              "prompt": "Qual mistura `t` por frame faz `camera += (target - camera) * t` fechar a **mesma parcela da distância por segundo** em qualquer taxa de frames? (`k` define o quão ágil ela é.)",
+              "choices": [
+                "`1 - std::exp(-k * dt)`",
+                "`0.1f`",
+                "`0.1f * fps`",
+                "`std::exp(-k * dt)`"
+              ],
+              "answer": 0,
+              "hint": "Cada frame mantém uma fração (1 − t) da distância. Ao longo de um segundo, essas frações se multiplicam.",
+              "explanation": "Cada frame mantém `e^(−k·dt)` da distância, e ao longo de um segundo as frações mantidas se multiplicam em `e^(−k)`, seja qual for o número de frames. Com k = 5, uma câmera que começa 100 unidades atrás fica 0,67 unidade aquém depois de um segundo a 30, 60 e 144 fps igualmente (verificado por simulação). Uma constante `0.1f` depende do número de frames, `0.1f * fps` é ainda pior, e `std::exp(-k * dt)` é a fração *mantida*, não a fechada."
+            },
+            {
+              "type": "explain",
+              "title": "Screen shake",
+              "body": "O juice faz os golpes parecerem pesados: um breve congelamento de **hit-stop**, partículas, um achatamento do sprite e o **screen shake**.\n\nUm bom shake usa **trauma**, um número de 0 a 1. Cada golpe soma um pouco; ele se esgota a cada frame com `trauma = std::max(0.0f, trauma - decay * dt);`. O deslocamento da câmera é `maxOffset * trauma * trauma` vezes um valor aleatório ou de ruído de −1 a 1.\n\nElevar ao quadrado é uma curva de easing (ease-in): golpes pequenos mal balançam e os grandes sacodem de verdade, e o shake some suavemente. Sacuda a câmera, nunca o mundo, para que as colisões não sejam afetadas."
+            },
+            {
+              "type": "numeric",
+              "id": "q-shake",
+              "concepts": [
+                "easing",
+                "delta-time"
+              ],
+              "prompt": "Uma mordida de slime define o trauma como **0,6**. O deslocamento máximo é **10 px** e o trauma decai **1,5 por segundo**. Qual é o maior deslocamento de shake possível **0,2 s depois**?",
+              "answer": 0.9,
+              "tolerance": 0.01,
+              "unit": "px",
+              "hint": "Primeiro escoe o trauma: 0,6 − 1,5 × 0,2. Depois eleve ao quadrado e multiplique por 10.",
+              "explanation": "O trauma cai para 0,6 − 1,5 × 0,2 = 0,3, e 10 × 0,3² = **0,9 px**. Logo depois da mordida eram 10 × 0,6² = 3,6 px, então em um quinto de segundo o tremor diminuiu para um quarto do tamanho. Elevar ao quadrado é o que o faz sumir rápido no fim em vez de continuar balançando."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "worlds-and-speed",
+      "title": "Caminhos, mundos e velocidade",
+      "description": "Encontre caminhos contornando paredes, gere e salve mundos de forma reproduzível e mantenha o orçamento do frame com menos alocações e menos checagens.",
+      "lessons": [
+        {
+          "id": "pathfinding",
+          "title": "Encontrando um caminho numa grade",
+          "pareto": "core",
+          "minutes": 10,
+          "takeaway": "A busca em largura explora uma grade em anéis a partir do início usando uma fila e encontra um caminho mais curto; o A* acrescenta uma estimativa de distância e explora muito menos.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Quando o steering não basta",
+              "body": "O steering vai direto para a raposa, então um slime atrás de uma parede fica empurrando contra ela para sempre. O **pathfinding** (busca de caminho) planeja antes uma rota contornando os obstáculos.\n\nTrate a fase como uma **grade**: cada tile livre é um nó, ligado a seus vizinhos livres acima, abaixo, à esquerda e à direita. A **busca em largura (BFS)** explora a partir do início em anéis: todo tile a 1 passo, depois todo tile a 2 passos, e assim por diante. Uma **fila** (o primeiro a entrar é o primeiro a sair) mantém essa ordem. Na primeira vez que a BFS alcança o objetivo, ela encontrou um caminho mais curto, medido em passos."
+            },
+            {
+              "type": "order",
+              "id": "q-bfs-steps",
+              "concepts": [
+                "bfs"
+              ],
+              "prompt": "Coloque em ordem os passos da busca em largura.",
+              "items": [
+                "Colocar o tile inicial na fila e marcá-lo como visitado, a distância 0",
+                "Tirar da fila o tile mais antigo",
+                "Se for o objetivo, parar: a distância dele é o comprimento de um caminho mais curto",
+                "Para cada vizinho livre ainda não visitado, marcá-lo como visitado com distância + 1 e adicioná-lo à fila",
+                "Voltar para o próximo tile; se a fila esvaziar antes, não há caminho"
+              ],
+              "hint": "Nada pode sair da fila antes de algo entrar.",
+              "explanation": "Comece, pegue o tile mais antigo, confira se é o objetivo, expanda os vizinhos não visitados dele e repita. Marcar os tiles como visitados **quando entram na fila** impede que um tile entre duas vezes nela. Registrar também de que tile cada vizinho veio permite voltar do objetivo para reconstruir a rota."
+            },
+            {
+              "type": "explain",
+              "title": "BFS em C++",
+              "body": "Os mesmos passos em C++, num mapa 5×5 em que `#` é uma parede:\n\n```cpp\nstruct Tile { int r, c; };\n\nint steps(const std::vector<std::string>& map) {\n    int rows = static_cast<int>(map.size()), cols = static_cast<int>(map[0].size());\n    std::vector<std::vector<int>> dist(rows, std::vector<int>(cols, -1));   // -1: not visited\n    std::queue<Tile> frontier;\n    dist[0][0] = 0;                               // S is in the top-left corner\n    frontier.push({0, 0});\n\n    while (!frontier.empty()) {\n        Tile t = frontier.front();                // oldest tile first\n        frontier.pop();\n        if (map[t.r][t.c] == 'G') return dist[t.r][t.c];\n        Tile next[] = {{t.r - 1, t.c}, {t.r + 1, t.c}, {t.r, t.c - 1}, {t.r, t.c + 1}};\n        for (Tile n : next) {\n            bool open = n.r >= 0 && n.r < rows && n.c >= 0 && n.c < cols && map[n.r][n.c] != '#';\n            if (open && dist[n.r][n.c] == -1) {   // not visited yet\n                dist[n.r][n.c] = dist[t.r][t.c] + 1;\n                frontier.push(n);\n            }\n        }\n    }\n    return -1;                                    // no path\n}\n\nint main() {\n    std::vector<std::string> map{\n        \"S.#..\",\n        \"..#..\",\n        \"....G\",\n        \".###.\",\n        \".....\",\n    };\n    std::printf(\"%d\\n\", steps(map));\n}\n```\n\nEle imprime `6`. `dist` começa em −1 em toda parte, então “visitado” significa apenas “tem uma distância”. A `std::queue` devolve os tiles na ordem em que entraram."
+            },
+            {
+              "type": "numeric",
+              "id": "q-bfs-distance",
+              "concepts": [
+                "bfs"
+              ],
+              "prompt": "Usando apenas movimentos para cima, para baixo, para a esquerda e para a direita, quantos passos tem o caminho mais curto de S até G?\n\n```text\nS . # . .\n. . # . .\n# . # . G\n. . . . #\n. # . . .\n```",
+              "answer": 8,
+              "hint": "A parede da coluna do meio só tem uma abertura embaixo. Conte os movimentos para contorná-la.",
+              "explanation": "A coluna do meio é parede até a linha 2, então a rota precisa passar por baixo dela na linha 3: 1 para a direita (a coluna 0 está bloqueada dois tiles abaixo de S), 3 para baixo até a linha 3, 2 para a direita por baixo da parede, 1 para cima e 1 para a direita até G. São 1 + 3 + 2 + 1 + 1 = **8** movimentos, e a função `steps` acima, executada neste mapa, imprime 8. O BFS o encontra porque alcança todos os tiles à distância 8 antes de qualquer tile à distância 9."
+            },
+            {
+              "type": "bug",
+              "id": "q-stack-not-queue",
+              "concepts": [
+                "bfs"
+              ],
+              "prompt": "A busca da Rin encontra um caminho, mas não o mais curto: o objetivo está a **5** passos e ela imprime `9`. Clique em uma linha com o bug.",
+              "language": "cpp",
+              "code": "#include <cstdio>\n#include <stack>\n#include <string>\n#include <vector>\n\nstruct Tile { int r, c; };\n\nint steps(const std::vector<std::string>& map) {\n    int rows = static_cast<int>(map.size()), cols = static_cast<int>(map[0].size());\n    std::vector<std::vector<int>> dist(rows, std::vector<int>(cols, -1));\n    std::stack<Tile> frontier;\n    dist[0][0] = 0;\n    frontier.push({0, 0});\n\n    while (!frontier.empty()) {\n        Tile t = frontier.top();\n        frontier.pop();\n        if (map[t.r][t.c] == 'G') return dist[t.r][t.c];\n        Tile next[] = {{t.r - 1, t.c}, {t.r + 1, t.c}, {t.r, t.c - 1}, {t.r, t.c + 1}};\n        for (Tile n : next) {\n            bool open = n.r >= 0 && n.r < rows && n.c >= 0 && n.c < cols && map[n.r][n.c] != '#';\n            if (open && dist[n.r][n.c] == -1) {\n                dist[n.r][n.c] = dist[t.r][t.c] + 1;\n                frontier.push(n);\n            }\n        }\n    }\n    return -1;\n}\n\nint main() {\n    std::vector<std::string> map{\"S....\", \".....\", \".##..\", \"..G..\", \".....\"};\n    std::printf(\"%d\\n\", steps(map));\n}",
+              "error": "9",
+              "lines": [
+                11,
+                16
+              ],
+              "fixes": [
+                "Use `std::queue<Tile>` na linha 11 (com `#include <queue>` na linha 2) e `frontier.front()` na linha 16, para que o tile mais antigo seja expandido primeiro",
+                "Inverta a ordem dos vizinhos na linha 19, para que a busca tente direita e baixo primeiro",
+                "Continue a busca depois de alcançar G e devolva a menor distância vista (linha 18), com `return best;` na linha 28"
+              ],
+              "answer": 0,
+              "hint": "Uma pilha devolve o tile adicionado **mais recentemente**. Que tiles isso explora primeiro?",
+              "explanation": "`std::stack` retira o tile mais novo, então a busca mergulha por um corredor o mais fundo que puder: isso é a busca em **profundidade**. As distâncias são fixadas quando um tile é descoberto pela primeira vez, então um desvio longo é registrado para G antes de a rota curta ser explorada. Uma fila expande os tiles em ordem de distância, o que faz o BFS encontrar um caminho mais curto. Outra ordem dos vizinhos só escolhe outro desvio (imprime 7), e tomar o mínimo não ajuda, porque a distância de G é definida uma vez (ainda 9)."
+            },
+            {
+              "type": "explain",
+              "title": "A*: apontar a busca",
+              "body": "O BFS se espalha por igual em todas as direções, até para longe do objetivo. O **A\\*** explora primeiro o tile mais promissor, pontuando cada um com `f = g + h`:\n\n- `g`: passos dados desde o início até agora\n- `h`: uma **estimativa** dos passos que faltam até o objetivo\n\nNuma grade de 4 direções, um bom `h` é a **distância de Manhattan** `|dx| + |dy|`. O A* mantém seus tiles em espera numa `std::priority_queue` ordenada por `f`. Enquanto `h` nunca *superestimar*, o A* ainda encontra um caminho mais curto explorando muito menos tiles. Custos de tile diferentes (a lama custa 3, a estrada custa 1) também exigem A* ou o algoritmo de Dijkstra, que é o A* com `h = 0`; o BFS simples só conta passos."
+            },
+            {
+              "type": "numeric",
+              "id": "q-manhattan",
+              "concepts": [
+                "a-star"
+              ],
+              "prompt": "Numa grade de 4 direções, qual é a estimativa de Manhattan `h` do tile (2, 7) até o objetivo em (9, 3)?",
+              "answer": 11,
+              "hint": "|9 − 2| + |3 − 7|.",
+              "explanation": "|9 − 2| + |3 − 7| = 7 + 4 = **11**. Sem paredes no caminho, é exatamente o número de movimentos necessários; as paredes só alongam o caminho real, então a estimativa nunca superestima."
+            },
+            {
+              "type": "numeric",
+              "id": "q-f-score",
+              "concepts": [
+                "a-star"
+              ],
+              "prompt": "O A* tem dois tiles esperando. O tile T foi alcançado em **6** passos e tem `h` = **4**. O tile U foi alcançado em **3** passos e tem `h` = **9**. Qual é a pontuação `f` do tile que o A* expande a seguir?",
+              "answer": 10,
+              "hint": "Calcule `f = g + h` para os dois. O A* expande o menor.",
+              "explanation": "f(T) = 6 + 4 = 10 e f(U) = 3 + 9 = 12, então o A* expande **T** (f = **10**) a seguir. A BFS teria pego U primeiro, porque ele está a menos passos do início, mesmo que U esteja indo na direção errada."
+            },
+            {
+              "type": "buckets",
+              "id": "q-bfs-or-astar",
+              "concepts": [
+                "bfs",
+                "a-star"
+              ],
+              "prompt": "Para cada tarefa do Ember Run, a BFS simples basta ou o A* (ou Dijkstra) é a ferramenta melhor?",
+              "buckets": [
+                "A BFS basta",
+                "Use A* ou Dijkstra"
+              ],
+              "items": [
+                {
+                  "text": "Um slime atravessando uma sala de 20 × 20 em que todo tile custa o mesmo",
+                  "bucket": 0
+                },
+                {
+                  "text": "Uma busca a partir do tile da raposa que informa a 200 morcegos a distância até ela",
+                  "bucket": 0
+                },
+                {
+                  "text": "Achar a faísca mais próxima, onde quer que esteja",
+                  "bucket": 0
+                },
+                {
+                  "text": "Uma unidade atravessando um mapa de 1000 × 1000 até um objetivo conhecido",
+                  "bucket": 1
+                },
+                {
+                  "text": "Tiles de pântano custam 3 movimentos e tiles de estrada custam 1",
+                  "bucket": 1
+                },
+                {
+                  "text": "Um mapa de tática por turnos com colinas que custam a mais",
+                  "bucket": 1
+                }
+              ],
+              "hint": "A BFS conta passos e se espalha em todas as direções. Quando esses dois fatos viram problema?",
+              "explanation": "A BFS é ideal em grades pequenas e uniformes, e quando você **quer** o mapa inteiro: uma busca a partir da raposa dá a cada morcego a sua distância (um *flow field*), e a primeira faísca alcançada é a mais próxima. O A* ganha quando um único objetivo conhecido está longe num mapa grande, porque ele segue em direção a ele, e sempre que os tiles têm custos diferentes, porque a BFS não consegue contá-los."
+            }
+          ]
+        },
+        {
+          "id": "seeds-and-saves",
+          "title": "Seeds e arquivos de save",
+          "pareto": "extra",
+          "minutes": 9,
+          "takeaway": "Um gerador com seed produz a mesma sequência sempre, então um mundo pode ser reconstruído a partir da seed; salve os dados que não dá para reconstruir, com um número de versão.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Aleatório, mas repetível",
+              "body": "Os números aleatórios de computador são **pseudoaleatórios**: uma fórmula transforma uma **seed** numa longa sequência que parece aleatória. Mesma seed, mesma sequência, mesmo mundo. Isso dá fases diárias que todos os jogadores compartilham, replays e relatos de bug que dizem *“a seed 1234 trava”*.\n\nO `std::mt19937` de `<random>` é totalmente especificado pelo padrão do C++ (ele chega a afirmar que o 10.000º número da seed padrão é 4123659995), então uma seed dá os mesmos números brutos em todo compilador. As **distribuições**, como `std::uniform_int_distribution`, não são especificadas com tanta exatidão, então bibliotecas padrão diferentes podem transformar esses números em resultados diferentes. Para mundos que precisam se regenerar de forma idêntica em qualquer lugar, mapeie você mesmo os números brutos:\n\n```cpp\nstruct Rng {\n    std::mt19937 engine;\n    explicit Rng(std::uint32_t seed) : engine(seed) {}\n\n    // A whole number from min up to (not including) max.\n    int range(int min, int max) {\n        return min + static_cast<int>(engine() % static_cast<std::uint32_t>(max - min));\n    }\n};\n```\n\nO `%` torna alguns valores muito levemente mais prováveis que outros, o que não faz mal para um gerador de fases."
+            },
+            {
+              "type": "output",
+              "id": "q-reshuffle",
+              "concepts": [
+                "seeded-rng"
+              ],
+              "prompt": "A versão 2 do gerador de fases adiciona uma pedra entre as duas árvores, usando o mesmo `Rng` e a mesma seed. O que isto imprime?",
+              "language": "cpp",
+              "code": "#include <cstdint>\n#include <iostream>\n#include <random>\n\nstruct Rng {\n    std::mt19937 engine;\n    explicit Rng(std::uint32_t seed) : engine(seed) {}\n    int range(int min, int max) { return min + static_cast<int>(engine() % static_cast<std::uint32_t>(max - min)); }\n};\n\nint main() {\n    Rng before(42);                 // version 1: two trees\n    int treeA = before.range(0, 100);\n    int treeB = before.range(0, 100);\n\n    Rng after(42);                  // version 2: same seed, a rock added in between\n    int treeA2 = after.range(0, 100);\n    int rock = after.range(0, 100);\n    int treeB2 = after.range(0, 100);\n\n    std::cout << std::boolalpha;\n    std::cout << (treeA == treeA2) << '\\n';\n    std::cout << (rock == treeB) << '\\n';\n    std::cout << (treeB == treeB2) << '\\n';\n}",
+              "output": "true\ntrue\nfalse",
+              "hint": "Os dois geradores produzem a mesma sequência de números. Qual sorteio cada variável recebe: o 1º, o 2º ou o 3º?",
+              "explanation": "`treeA` e `treeA2` são ambos o **primeiro** sorteio: true. A pedra agora fica com o **segundo** sorteio, que antes era de `treeB`: true. `treeB2` recebe o **terceiro** sorteio, um número diferente (para esta seed, é): false. Adicionar uma chamada aleatória deslocou todas as árvores depois dela, então seeds antigas agora produzem florestas diferentes. Dê a cada sistema, ou a cada pedaço do mundo, o seu próprio gerador."
+            },
+            {
+              "type": "explain",
+              "title": "Gerando mundos",
+              "body": "A **geração procedural** cria conteúdo a partir de regras mais números aleatórios: cavernas por um passeio aleatório, alturas de terreno por ruído suave, itens por tabelas ponderadas.\n\nPara mantê-la reproduzível:\n\n- Derive uma seed por **chunk** a partir da seed do mundo e das coordenadas do chunk, por exemplo calculando um hash dos dois, para que os chunks possam ser gerados em qualquer ordem e cada um saia sempre igual.\n- Dê geradores separados a sistemas separados (terreno, itens, inimigos), para que um recurso novo não desloque os outros.\n- Nunca use a seed do relógio nem do `std::random_device` se o resultado precisar ser repetível."
+            },
+            {
+              "type": "buckets",
+              "id": "q-reproducible",
+              "concepts": [
+                "seeded-rng"
+              ],
+              "prompt": "O Dario quer um mundo exatamente igual toda vez que for carregado a partir da mesma seed, em qualquer plataforma. Quais abordagens garantem isso?",
+              "buckets": [
+                "Mesmo mundo sempre",
+                "Não reproduzível"
+              ],
+              "items": [
+                {
+                  "text": "Cada chunk tem o seu próprio gerador, com seed derivada da seed do mundo e das coordenadas do chunk",
+                  "bucket": 0
+                },
+                {
+                  "text": "O arquivo de save guarda a seed, e o mapa é regenerado ao carregar",
+                  "bucket": 0
+                },
+                {
+                  "text": "Terreno e loot usam geradores separados criados a partir da mesma seed",
+                  "bucket": 0
+                },
+                {
+                  "text": "Um gerador compartilhado, com os chunks gerados na ordem em que o jogador explora",
+                  "bucket": 1
+                },
+                {
+                  "text": "O gerador recebe a seed do `std::random_device`",
+                  "bucket": 1
+                },
+                {
+                  "text": "Terreno e loot compartilham um gerador, e um novo sorteio de loot é adicionado numa atualização",
+                  "bucket": 1
+                },
+                {
+                  "text": "As posições das árvores vêm de `std::uniform_int_distribution`, e as builds de PC e de console usam bibliotecas padrão diferentes",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Pergunte se algo além da seed pode mudar qual número cada parte do mundo recebe.",
+              "explanation": "Reproduzível significa que todo sorteio aleatório depende apenas da seed (e de entradas fixas, como coordenadas). Geradores por chunk e por sistema fazem isso. Um gerador compartilhado faz os resultados dependerem da **ordem** das chamadas: explorar por outro caminho, ou adicionar um novo sorteio, entrega os sorteios seguintes a outras coisas. O `std::random_device` foi feito para ser imprevisível, e uma distribuição padrão pode mapear os mesmos números brutos de outro jeito em outra biblioteca padrão."
+            },
+            {
+              "type": "explain",
+              "title": "O que vai num arquivo de save",
+              "body": "Salve **dados**, não objetos vivos: a seed, a posição e a vida da raposa, os ids dos itens do inventário, quais baús estão abertos. Reconstrua todo o resto ao carregar: o mapa gerado, as texturas, os ponteiros entre objetos (um endereço não significa nada na próxima execução).\n\nTrês hábitos evitam dor de cabeça:\n\n- Coloque um número de **versão** em cada save e atualize as versões antigas ao carregar.\n- Use um formato simples: um `key value` por linha, escrito com `<fstream>` e lido de volta com `>>`, basta para um jogo pequeno.\n- Escreva num arquivo temporário e depois substitua o save antigo de uma só vez, para que uma falha no meio do salvamento não deixe um arquivo pela metade:\n\n```cpp\nvoid save(const SaveData& s) {\n    {\n        std::ofstream out(\"save.tmp\");\n        out << \"version \" << s.version << '\\n'\n            << \"seed \" << s.seed << '\\n'\n            << \"health \" << s.health << '\\n';\n    }                                               // the file is closed here\n    std::filesystem::rename(\"save.tmp\", \"save.txt\");\n}\n```\n\nNo Linux e no macOS, `rename` coloca o arquivo novo no lugar com uma única operação."
+            },
+            {
+              "type": "output",
+              "id": "q-load-old-save",
+              "concepts": [
+                "save-state"
+              ],
+              "prompt": "Os saves da versão 1 não tinham `maxHealth`. Chaves ausentes do arquivo mantêm o padrão, 0. O que isto imprime?",
+              "language": "cpp",
+              "code": "#include <iostream>\n#include <sstream>\n#include <string>\n\nstruct SaveData { int version = 0, seed = 0, health = 0, maxHealth = 0; };\n\nSaveData load(std::istream& in) {\n    SaveData s;\n    std::string key;\n    while (in >> key) {\n        if (key == \"version\") in >> s.version;\n        else if (key == \"seed\") in >> s.seed;\n        else if (key == \"health\") in >> s.health;\n        else if (key == \"maxHealth\") in >> s.maxHealth;\n    }\n    if (s.version < 2) { s.version = 2; s.maxHealth = 5; }   // version 1 had no maxHealth\n    return s;\n}\n\nint main() {\n    std::istringstream oldSave(\"version 1\\nseed 42\\nhealth 3\\n\");\n    std::istringstream newSave(\"version 2\\nseed 42\\nhealth 3\\nmaxHealth 8\\n\");\n    for (SaveData s : {load(oldSave), load(newSave)})\n        std::cout << 'v' << s.version << ' ' << s.health << '/' << s.maxHealth << '\\n';\n}",
+              "output": "v2 3/5\nv2 3/8",
+              "hint": "Qual dos dois saves tem `version < 2`?",
+              "explanation": "O save antigo não tem `maxHealth`, então ele fica em 0; a `version` dele é 1, então `load` o atualiza para a versão 2 com `maxHealth = 5`: **v2 3/5**. O save novo já tem versão 2 e `maxHealth` 8, então passa direto: **v2 3/8**. Sem a checagem de versão, os jogadores antigos carregariam com vida máxima 0. Receber `std::istream&` significa que o mesmo `load` lê um arquivo (`std::ifstream`) ou, como aqui, uma string."
+            },
+            {
+              "type": "buckets",
+              "id": "q-save-or-rebuild",
+              "concepts": [
+                "save-state",
+                "seeded-rng"
+              ],
+              "prompt": "Rin está escrevendo o arquivo de save. O que deve ser **salvo** e o que deve ser **reconstruído** ao carregar?",
+              "buckets": [
+                "Salvar",
+                "Reconstruir ao carregar"
+              ],
+              "items": [
+                {
+                  "text": "A seed do mundo",
+                  "bucket": 0
+                },
+                {
+                  "text": "Quais baús foram abertos",
+                  "bucket": 0
+                },
+                {
+                  "text": "A posição e a vida da raposa",
+                  "bucket": 0
+                },
+                {
+                  "text": "Os ids dos itens do inventário",
+                  "bucket": 0
+                },
+                {
+                  "text": "O mapa de tiles gerado",
+                  "bucket": 1
+                },
+                {
+                  "text": "O ponteiro `Fox*` de um slime para a raposa",
+                  "bucket": 1
+                },
+                {
+                  "text": "As texturas e os sons",
+                  "bucket": 1
+                },
+                {
+                  "text": "Os caminhos atuais dos morcegos até a raposa",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Dá para recriar isso exatamente a partir das outras coisas salvas e dos arquivos do jogo?",
+              "explanation": "Salve as **escolhas e mudanças** que não dá para recalcular: a seed, os baús abertos, a posição, a vida, o inventário. O mapa se regenera a partir da seed, os ponteiros são reconectados quando os objetos são criados (um endereço salvo apontaria para o nada na próxima execução), os assets vêm com o jogo e os caminhos são recalculados em um frame. Saves menores carregam mais rápido e quebram menos quando o jogo é atualizado."
+            },
+            {
+              "type": "mcq",
+              "id": "q-save-crash",
+              "concepts": [
+                "save-state"
+              ],
+              "prompt": "Os jogadores relatam que o save fica corrompido quando o jogo trava **durante** o salvamento. Qual é a melhor correção?",
+              "choices": [
+                "Escrever o save novo num arquivo temporário e depois substituir o arquivo antigo por ele com um único `std::filesystem::rename`",
+                "Salvar com mais frequência, para perder menos progresso",
+                "Chamar `out.flush()` depois de cada linha escrita no arquivo de save",
+                "Trocar o texto por um formato binário, para que a escrita leve menos tempo"
+              ],
+              "answer": 0,
+              "hint": "O perigo é o momento em que o save antigo está sobrescrito pela metade.",
+              "explanation": "Abrir o save com `std::ofstream` o esvazia na hora, então se o jogo morrer no meio da escrita só uma parte dos dados novos estará lá. Escrever primeiro um arquivo novo completo e depois colocá-lo no lugar com um único rename significa que o save em disco é sempre o antigo ou o novo. Salvar com mais frequência, descarregar (flush) com mais frequência ou mudar de formato continuam sobrescrevendo o save antigo no lugar."
+            }
+          ]
+        },
+        {
+          "id": "performance",
+          "title": "Rápido o bastante: alocações e grades",
+          "pareto": "extra",
+          "minutes": 9,
+          "takeaway": "Meça primeiro uma build otimizada com um profiler, pare de alocar a cada frame e use uma grade espacial para que cada objeto seja checado só contra seus vizinhos, e não contra tudo.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Meça primeiro",
+              "body": "Quando o jogo engasga, rode um **profiler** numa build **otimizada** (`-O2`, do jeito que vai ser lançada): o Instruments no macOS, o `perf` no Linux, o profiler do Visual Studio no Windows, ou um dentro do jogo, como o Tracy. Ele mostra para quais funções vai o tempo de cada frame. Chutar desperdiça dias, e uma build de debug é lenta em lugares diferentes.\n\nDois culpados aparecem sem parar:\n\n- **Alocar a cada frame**: contêineres, strings e objetos novos criados e descartados a cada frame.\n- **Checar tudo contra tudo**: com n objetos, testar todos os pares dá n(n − 1)/2 checagens, que cresce com n²."
+            },
+            {
+              "type": "numeric",
+              "id": "q-pairs",
+              "concepts": [
+                "spatial-partitioning"
+              ],
+              "prompt": "Uma fase de bullet hell tem **1000** balas e inimigos, e todos os pares são testados para colisão a cada frame. Quantos testes de pares isso dá por frame?",
+              "answer": 499500,
+              "hint": "n(n − 1) / 2 com n = 1000.",
+              "explanation": "1000 × 999 ÷ 2 = **499.500** testes por frame, cerca de 30 milhões por segundo a 60 fps. Dobre os objetos e o trabalho quase quadruplica. A maioria desses pares está em lados opostos da tela e nunca poderia se tocar."
+            },
+            {
+              "type": "sim",
+              "sim": "growth",
+              "title": "n contra n²",
+              "body": "Arraste o controle para ver como checar todos os pares (n²) se afasta de tocar cada objeto uma vez (n) conforme o número de objetos cresce. Uma grade espacial procura trazer as checagens de colisão de volta para perto da curva de n.",
+              "curves": [
+                "n",
+                "n^2"
+              ],
+              "maxN": 5000
+            },
+            {
+              "type": "explain",
+              "title": "Uma grade espacial",
+              "body": "Divida o mundo em **células** quadradas, do tamanho do maior objeto. A cada frame, coloque cada objeto na célula em que sua posição cai: para uma fase delimitada, um `std::vector` de células indexado por `cy * width + cx` funciona, e um `std::unordered_map` com a célula como chave serve para um mundo sem fim. Mantenha as células entre os frames e use `clear()` nelas, para reaproveitar a capacidade. Para achar o que pode tocar um objeto, olhe só na célula dele e nas 8 em volta.\n\nA célula de uma posição é o **floor** de `x / size` em cada eixo:\n\n```cpp\nint cellOf(float x, float size) {\n    return static_cast<int>(std::floor(x / size));   // floor, not a plain cast\n}\n```\n\nUm `static_cast<int>` simples corta em direção a zero, então −0,25 vira 0 em vez de −1. As engines de física rodam uma *broad phase* assim para os próprios corpos (o Box2D usa uma árvore de caixas em vez de uma grade); você precisa de uma para as suas próprias consultas, como *quais morcegos estão perto da lanterna*."
+            },
+            {
+              "type": "bug",
+              "id": "q-cell-truncate",
+              "concepts": [
+                "spatial-partitioning"
+              ],
+              "prompt": "As células têm 4 unidades de largura, então x de −4 até 0 é a célula −1 e x de 0 até 4 é a célula 0. Isto deveria imprimir `(2, 0)`, `(-1, 0)` e `(0, 0)`. Clique na linha com o bug.",
+              "language": "cpp",
+              "code": "#include <cmath>\n#include <cstdio>\n#include \"vec2.h\"\n\nstruct Cell { int x, y; };\n\nCell cellOf(Vec2 p, float size) {\n    return {static_cast<int>(p.x / size), static_cast<int>(p.y / size)};\n}\n\nint main() {\n    Vec2 points[] = {{9.5f, 2}, {-1, 2}, {1, 2}};\n    for (Vec2 p : points) {\n        Cell c = cellOf(p, 4);\n        std::printf(\"(%d, %d)\\n\", c.x, c.y);\n    }\n}",
+              "error": "(2, 0)\n(0, 0)\n(0, 0)",
+              "lines": [
+                8
+              ],
+              "fixes": [
+                "Mude a linha 8 para aplicar `std::floor(...)` a cada divisão antes da conversão",
+                "Mude a linha 8 para aplicar `std::round(...)` a cada divisão antes da conversão",
+                "Mude a linha 8 para aplicar `std::ceil(...)` a cada divisão antes da conversão",
+                "Mude a linha 8 para aplicar `std::abs(...)` a cada divisão antes da conversão, para que posições negativas funcionem"
+              ],
+              "answer": 0,
+              "hint": "Quanto é −1 ÷ 4, e o que um cast para `int` faz com −0,25?",
+              "explanation": "Converter para `int` **trunca em direção a zero**, então −0,25 vira 0 e a célula 0 cobre em segredo x de −4 a 4, o dobro da largura de qualquer outra célula. `std::floor` sempre arredonda para baixo, dando −1. `std::round` e `std::ceil` deslocam todos os limites das células (9,5 cai na célula 2 com round mas na 3 com ceil, e y = 2 vai para a célula 1), e `std::abs` dobra a metade esquerda do mundo sobre a metade direita."
+            },
+            {
+              "type": "numeric",
+              "id": "q-grid-pairs",
+              "concepts": [
+                "spatial-partitioning"
+              ],
+              "prompt": "Os mesmos 1000 objetos estão espalhados uniformemente numa grade, com cerca de **10 por célula**. Cada objeto é testado só contra os outros da própria célula e das 8 ao redor, cerca de **90** objetos. Contando cada par uma vez, aproximadamente quantos testes isso dá por frame?",
+              "answer": 45000,
+              "tolerance": 1000,
+              "hint": "1000 objetos × 90 vizinhos, e depois divida por dois, porque senão cada par seria contado duas vezes.",
+              "explanation": "1000 × 90 ÷ 2 ≈ **45.000** testes, cerca de um décimo dos 499.500 de antes, e agora o custo cresce em proporção ao número de objetos, e não ao quadrado dele. Dez vezes mais objetos numa fase dez vezes maior significa dez vezes o trabalho, não cem."
+            },
+            {
+              "type": "buckets",
+              "id": "q-allocates",
+              "concepts": [
+                "per-frame-allocation"
+              ],
+              "prompt": "Quais linhas, executadas a cada frame, alocam memória no heap? (Medido substituindo o `operator new` global por um que conta suas chamadas, com `-O0` e `-O2`, no Apple clang com libc++.)",
+              "buckets": [
+                "Aloca toda vez",
+                "Sem alocação"
+              ],
+              "items": [
+                {
+                  "text": "`std::vector<Enemy*> nearby; nearby.push_back(e);`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`std::string label = \"Sparks collected this run: \" + std::to_string(n);`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`auto p = std::make_unique<Particle>();`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`std::vector<int> ids = level.enemyIds;`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`Vec2 offset{1, 2};`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`kept.clear(); kept.push_back(id);` num vector criado uma vez na inicialização",
+                  "bucket": 1
+                },
+                {
+                  "text": "`std::sort(ids.begin(), ids.end());`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`for (const Enemy& e : enemies) total += e.hp;`",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Um contêiner novo, uma string longa, `make_unique` ou uma **cópia** de um vector precisam todos de um bloco novo. Valores simples, contêineres reutilizados e algoritmos no lugar, não.",
+              "explanation": "Um vector criado dentro do frame aloca no primeiro `push_back`; uma `std::string` longa concatenada, `make_unique` e copiar um vector (fácil de fazer sem querer com `=` ou um parâmetro por valor) alocam sempre. Um `Vec2` é um valor local simples, um vector esvaziado mantém sua capacidade, `std::sort` trabalha no lugar e um laço sobre `const&` não copia nada. Crie os contêineres uma vez, reutilize-os e passe as coisas grandes por referência."
+            },
+            {
+              "type": "mcq",
+              "id": "q-measure-first",
+              "concepts": [
+                "per-frame-allocation",
+                "game-loop"
+              ],
+              "prompt": "O Ember Run roda fluido, mas **dá uma travada a cada poucos segundos**. O que Rin deve fazer primeiro?",
+              "choices": [
+                "Registrar o engasgo com um profiler numa build otimizada e ver o que roda nos frames lentos",
+                "Reescrever o código de colisão com uma grade espacial, já que as colisões costumam ser o problema",
+                "Baixar a taxa de frames alvo para 30 fps, para cada frame ter o dobro do orçamento",
+                "Trocar todo `std::vector` por um array cru, já que os vectors alocam"
+              ],
+              "answer": 0,
+              "hint": "Travadas regulares e ocasionais têm uma causa que você consegue ver nos próprios frames lentos.",
+              "explanation": "Um jogo fluido com picos periódicos aponta para algo que acontece de vez em quando: uma rajada de alocações quando um vector ultrapassa sua capacidade, um arquivo carregado na thread do jogo, uma onda grande de spawns. Só o profiler mostra qual é. Reescrever as colisões é um chute, reduzir pela metade a taxa de frames esconde o problema e piora todos os frames, e arrays crus jogam fora a segurança sem tocar na causa."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

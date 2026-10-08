@@ -3,7 +3,7 @@
   "title": "Programação de engines de jogos",
   "icon": "C++",
   "color": "#364fc7",
-  "order": 20,
+  "order": 23,
   "category": "Programming",
   "level": "Advanced",
   "description": "Escreva o C++ que fica por baixo de uma engine de jogos: gerencie memória sem garbage collector, evite o comportamento indefinido (UB) que derruba engines, organize os dados para o cache e construa handles, alocadores, um loop de passo fixo e jobs simples.",
@@ -610,27 +610,27 @@
     },
     {
       "from": "fixed-timestep-loop",
-      "to": "game-development/fixed-timestep",
+      "to": "game-development-cpp/fixed-timestep",
       "label": "é como uma engine implementa"
     },
     {
       "from": "ecs",
-      "to": "game-development/components",
-      "label": "guarda em arrays compactados o que o C# guarda em"
+      "to": "game-development-cpp/components",
+      "label": "guarda em arrays compactados os dados espalhados por"
     },
     {
       "from": "pool-allocator",
-      "to": "game-development/object-pool",
+      "to": "game-development-cpp/object-pool",
       "label": "é o lado da memória de"
     },
     {
       "from": "value-semantics",
-      "to": "game-development/value-semantics",
-      "label": "vale também para classes, ao contrário de"
+      "to": "game-development-cpp/value-semantics",
+      "label": "é a regra por trás de"
     },
     {
       "from": "determinism",
-      "to": "game-development/seeded-rng",
+      "to": "game-development-cpp/seeded-rng",
       "label": "exige mais do que"
     }
   ],
@@ -650,7 +650,7 @@
             {
               "type": "explain",
               "title": "Conheça a Ember",
-              "body": "A **Ember** é um estúdio pequeno que escreve a própria engine em C++. **Rosa** é a programadora líder de engine. **Kai** escreve código de gameplay e já lançou jogos em C#.\n\nA primeira surpresa para o Kai: em C#, uma variável de `class` guarda uma *referência* para um objeto no heap com garbage collector. Em C++ não existe essa divisão. **Todo tipo é um tipo de valor**, `struct` e `class` igualmente. Escrever `Enemy b = a;` copia o objeto inteiro, membro por membro, e daí em diante `a` e `b` são dois inimigos separados.\n\nPara falar do *mesmo* objeto você precisa pedir isso explicitamente, com uma referência ou um ponteiro."
+              "body": "A **Ember** é um estúdio pequeno que escreve a própria engine em C++. **Rosa** é a programadora líder de engine. **Kai** já escreveu código de gameplay em C++ e agora está passando para o trabalho de engine.\n\nO código de jogo do Kai passava structs pequenas como `Vec2` por valor e guardava objetos grandes atrás de `std::unique_ptr`. Código de engine lida com os próprios objetos, então a Rosa começa pela regra por trás desses dois hábitos: **todo tipo é um tipo de valor**, `struct` e `class` igualmente. Escrever `Enemy b = a;` copia o objeto inteiro, membro por membro, e daí em diante `a` e `b` são dois inimigos separados. Em linguagens com garbage collector, uma variável de classe guardaria uma *referência*.\n\nPara falar do *mesmo* objeto você precisa pedir isso explicitamente, com uma referência ou um ponteiro."
             },
             {
               "type": "output",
@@ -664,7 +664,7 @@
               "code": "#include <cstdio>\n\nstruct Enemy { int hp; };\n\nint main() {\n    Enemy a{100};\n    Enemy b = a;\n    Enemy& r = a;\n    b.hp -= 30;\n    r.hp -= 10;\n    std::printf(\"%d %d\\n\", a.hp, b.hp);\n}",
               "output": "90 70",
               "hint": "Qual de `b` e `r` é um objeto separado, e qual é só outro nome para `a`?",
-              "explanation": "`Enemy b = a;` copia `a`, então `b` é um segundo inimigo com o próprio `hp`. Tirar 30 de `b` não mexe em `a`: `b.hp` fica 70. `r` não é um objeto, só outro nome para `a`, então `r.hp -= 10` tira 10 de `a`: 90.\n\nEm C# com `class Enemy`, as duas linhas teriam alterado o mesmo objeto."
+              "explanation": "`Enemy b = a;` copia `a`, então `b` é um segundo inimigo com o próprio `hp`. Tirar 30 de `b` não mexe em `a`: `b.hp` fica 70. `r` não é um objeto, só outro nome para `a`, então `r.hp -= 10` tira 10 de `a`: 90.\n\nNuma linguagem com garbage collector, em que uma variável de classe guarda uma referência, as duas linhas teriam alterado o mesmo objeto."
             },
             {
               "type": "explain",
@@ -857,12 +857,12 @@
               "code": "#include <cstdio>\n\nstruct Noisy {\n    const char* name;\n    ~Noisy() { std::printf(\"bye %s\\n\", name); }\n};\n\nint main() {\n    Noisy a{\"a\"};\n    {\n        Noisy b{\"b\"};\n        Noisy c{\"c\"};\n    }\n    Noisy d{\"d\"};\n}",
               "output": "bye c\nbye b\nbye d\nbye a",
               "hint": "O `{ }` interno termina antes de `d` ser criado. Dentro de um escopo, o último construído é o primeiro destruído.",
-              "explanation": "`b` e `c` vivem no bloco interno, então morrem quando ele fecha, o mais novo primeiro: `c`, depois `b`. Então `d` é criado. No fim de `main`, as locais restantes morrem em ordem inversa: `d`, depois `a`.\n\nEsse momento é garantido. Em C# um finalizador roda quando o GC der um jeito; um destrutor de C++ roda exatamente na chave de fechamento."
+              "explanation": "`b` e `c` vivem no bloco interno, então morrem quando ele fecha, o mais novo primeiro: `c`, depois `b`. Então `d` é criado. No fim de `main`, as locais restantes morrem em ordem inversa: `d`, depois `a`.\n\nEsse momento é garantido. Numa linguagem com garbage collector, o código de limpeza roda quando o coletor der um jeito; um destrutor de C++ roda exatamente na chave de fechamento."
             },
             {
               "type": "explain",
               "title": "RAII: deixe o destrutor limpar",
-              "body": "**RAII** (*Resource Acquisition Is Initialization*, a aquisição de recurso é a inicialização) transforma essa garantia em hábito: envolva cada recurso num objeto cujo construtor o adquire e cujo destrutor o libera.\n\n- `std::vector`, `std::string` e `std::unique_ptr` são donos de memória do heap.\n- `std::lock_guard` trava um mutex e o destrava.\n- O `GpuBuffer` de uma engine libera memória de vídeo; um `ScopedTimer` registra quanto tempo um bloco levou.\n\nO destrutor roda em toda saída do escopo: chegar ao fim, um `return` antecipado ou uma exceção. Código de engine escrito assim raramente contém a palavra `delete`."
+              "body": "Você já conheceu o **RAII** (*Resource Acquisition Is Initialization*, a aquisição de recurso é a inicialização) com o `std::unique_ptr`. Uma engine transforma essa garantia em hábito para todo recurso, não só memória: envolva cada um num objeto cujo construtor o adquire e cujo destrutor o libera.\n\n- `std::vector`, `std::string` e `std::unique_ptr` são donos de memória do heap.\n- `std::lock_guard` trava um mutex e o destrava.\n- O `GpuBuffer` de uma engine libera memória de vídeo; um `ScopedTimer` registra quanto tempo um bloco levou.\n\nO destrutor roda em toda saída do escopo: chegar ao fim, um `return` antecipado ou uma exceção. Código de engine escrito assim raramente contém a palavra `delete`."
             },
             {
               "type": "bug",
@@ -958,7 +958,7 @@
             {
               "type": "explain",
               "title": "Quem dá o delete?",
-              "body": "Todo objeto do heap precisa de exatamente uma resposta para *quem libera isto?* O `std::unique_ptr<T>` escreve essa resposta no tipo: ele é **dono** do objeto e o deleta no seu destrutor.\n\n```cpp\nauto level = std::make_unique<Level>();  // level owns the Level\n```\n\nEle não pode ser copiado (dois donos deletariam duas vezes), só **movido**: `auto next = std::move(level);` transfere a posse e deixa `level` vazio. Nesta máquina `sizeof(std::unique_ptr<Mesh>)` é 8 bytes, o mesmo de um `Mesh*` puro.\n\nO código que só *usa* o objeto recebe um `Mesh&` ou `Mesh*` simples. Eles não são donos de nada; apenas observam."
+              "body": "Todo objeto do heap precisa de exatamente uma resposta para *quem libera isto?* O `std::unique_ptr<T>`, que guardava os componentes no seu código de jogo, escreve essa resposta no tipo: ele é **dono** do objeto e o deleta no seu destrutor.\n\n```cpp\nauto level = std::make_unique<Level>();  // level owns the Level\n```\n\nEle não pode ser copiado (dois donos deletariam duas vezes), só **movido**: `auto next = std::move(level);` transfere a posse e deixa `level` vazio. Nesta máquina `sizeof(std::unique_ptr<Mesh>)` é 8 bytes, o mesmo de um `Mesh*` puro.\n\nO código que só *usa* o objeto recebe um `Mesh&` ou `Mesh*` simples. Eles não são donos de nada; apenas observam."
             },
             {
               "type": "bug",
@@ -1167,7 +1167,7 @@
             {
               "type": "explain",
               "title": "Sem exceção, sem garantia",
-              "body": "O C# verifica cada índice de array e lança `IndexOutOfRangeException`. O `v[i]` do C++ não verifica: ler além do fim é **comportamento indefinido** (UB). O padrão da linguagem não faz *nenhuma exigência* sobre o que acontece depois. O programa pode imprimir lixo, travar ou funcionar perfeitamente até o build de release.\n\nEssa última parte é a armadilha. O otimizador tem permissão para presumir que o UB nunca acontece e reorganizar o código com base nisso, então um bug pode se esconder em `-O0` e aparecer em `-O2`, ou surgir só em um console.\n\nOs UBs que programadores de engine realmente encontram: acesso fora dos limites, uso de memória liberada, leitura de variáveis não inicializadas, overflow de inteiro com sinal e data races."
+              "body": "Você já viu que `v.at(i)` verifica o índice e lança `std::out_of_range`, enquanto `v[i]` não verifica. Os loops quentes de uma engine usam `v[i]`, e ler além do fim com ele é **comportamento indefinido** (UB). O padrão da linguagem não faz *nenhuma exigência* sobre o que acontece depois. O programa pode imprimir lixo, travar ou funcionar perfeitamente até o build de release.\n\nEssa última parte é a armadilha. O otimizador tem permissão para presumir que o UB nunca acontece e reorganizar o código com base nisso, então um bug pode se esconder em `-O0` e aparecer em `-O2`, ou surgir só em um console.\n\nOs UBs que programadores de engine realmente encontram: acesso fora dos limites, uso de memória liberada, leitura de variáveis não inicializadas, overflow de inteiro com sinal e data races."
             },
             {
               "type": "buckets",
@@ -1292,7 +1292,7 @@
             {
               "type": "explain",
               "title": "Para onde os inimigos foram",
-              "body": "Um `std::vector` guarda seus elementos num único bloco contíguo do heap. `size()` é quantos elementos ele tem; `capacity()` é quantos cabem no bloco.\n\nQuando `push_back` encontra o bloco cheio, o vector aloca um maior, move todos os elementos para lá e **libera o bloco antigo**. Qualquer `Enemy&`, `Enemy*` ou iterador que apontava para o bloco antigo agora aponta para memória liberada: ele fica **pendente (dangling)**. Usá-lo é comportamento indefinido.\n\nEm C#, uma `List<Enemy>` de classes guarda referências a objetos que nunca se movem. Um `std::vector<Enemy>` guarda os próprios inimigos, então eles se movem."
+              "body": "Um `std::vector` guarda seus elementos num único bloco contíguo do heap. `size()` é quantos elementos ele tem; `capacity()` é quantos cabem no bloco.\n\nQuando `push_back` encontra o bloco cheio, o vector aloca um maior, move todos os elementos para lá e **libera o bloco antigo**. Qualquer `Enemy&`, `Enemy*` ou iterador que apontava para o bloco antigo agora aponta para memória liberada: ele fica **pendente (dangling)**. Usá-lo é comportamento indefinido.\n\nPor isso o curso de jogos guardava os componentes atrás de `std::unique_ptr`: quando o vector crescia, só os ponteiros se moviam, nunca os componentes. Um `std::vector<Enemy>` guarda os próprios inimigos, então eles se movem."
             },
             {
               "type": "trace",
@@ -1899,7 +1899,7 @@
             {
               "type": "explain",
               "title": "Dados primeiro, objetos depois",
-              "body": "Em C#, um objeto de jogo costuma ser uma classe que guarda uma lista de objetos de componente, cada um com seu próprio `Update()`. Cada componente é um objeto separado no heap, então atualizar 10.000 deles significa 10.000 saltos de ponteiro e chamadas virtuais.\n\nUm **entity component system** (ECS) vira isso do avesso:\n\n- Uma **entidade** é só um id, como um `std::uint32_t`. Ela não é dona de nada.\n- Um **componente** é dado simples (`Position`, `Velocity`, `Health`) guardado **compactado em um array por tipo de componente**.\n- Um **sistema** é uma função que percorre em loop os arrays de que precisa: `for i: pos[i] += vel[i] * dt`.\n\nOs loops quentes viram exatamente as passadas contíguas, sobre o mesmo campo, de que o cache gosta."
+              "body": "No curso de jogos, um objeto de jogo guardava um vector de `std::unique_ptr<Component>`, cada componente com seu próprio `update()` virtual. Cada componente é um objeto separado no heap, então atualizar 10.000 deles significa 10.000 saltos de ponteiro e chamadas virtuais.\n\nUm **entity component system** (ECS) vira isso do avesso:\n\n- Uma **entidade** é só um id, como um `std::uint32_t`. Ela não é dona de nada.\n- Um **componente** é dado simples (`Position`, `Velocity`, `Health`) guardado **compactado em um array por tipo de componente**.\n- Um **sistema** é uma função que percorre em loop os arrays de que precisa: `for i: pos[i] += vel[i] * dt`.\n\nOs loops quentes viram exatamente as passadas contíguas, sobre o mesmo campo, de que o cache gosta."
             },
             {
               "type": "buckets",

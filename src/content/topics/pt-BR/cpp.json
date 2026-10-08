@@ -1,0 +1,2643 @@
+{
+  "id": "cpp",
+  "title": "C++",
+  "icon": "C++",
+  "color": "#00599c",
+  "order": 14,
+  "category": "Programming",
+  "level": "Beginner",
+  "description": "Escreva C++20 moderno desde o primeiro programa: tipos, funções, referências, containers, classes, lambdas e memória segura com unique_ptr. A base 80/20 para código de jogos e de engines.",
+  "keyIdeas": [
+    "C++ é compilado: o compilador confere todos os tipos antes de qualquer coisa rodar, então corrija o primeiro erro primeiro e trate os avisos (warnings) como bugs.",
+    "A matemática de inteiros continua inteira (`7 / 2` é 3), e overflow com sinal, variáveis não inicializadas e `[]` fora do intervalo são comportamento indefinido.",
+    "Argumentos são copiados: receba `T&` para alterar o objeto de quem chamou e `const T&` para ler objetos grandes sem copiar.",
+    "`std::vector` para sequências, `std::array` para tamanhos fixos, `std::unordered_map` para busca por chave; use `.at()` e `contains` para ficar seguro.",
+    "Classes reúnem dados com as funções-membro que protegem suas regras, e `enum class` e `std::optional` deixam estados e valores ausentes explícitos.",
+    "Não escreva `delete`: os objetos se limpam nos seus destrutores, e `std::unique_ptr` dá a cada objeto do heap um único dono que o libera automaticamente (RAII)."
+  ],
+  "concepts": [
+    {
+      "id": "compilation",
+      "label": "Compilação e linkagem",
+      "lesson": "hello-compile",
+      "summary": "O compilador confere cada arquivo e o transforma em código de máquina; depois o linker junta as peças em um executável; nada roda até os dois terem sucesso.",
+      "aliases": [
+        "compilador",
+        "erro de compilação",
+        "linker",
+        "linkagem",
+        "ligação",
+        "build",
+        "compilar"
+      ]
+    },
+    {
+      "id": "static-types",
+      "label": "Tipos estáticos",
+      "lesson": "variables-types",
+      "summary": "Toda variável tem um único tipo fixado antes de o programa rodar, escrito por extenso ou deduzido com auto, então o compilador rejeita incompatibilidades.",
+      "aliases": [
+        "tipos",
+        "tipagem estática",
+        "auto",
+        "int e double",
+        "std::string"
+      ]
+    },
+    {
+      "id": "undefined-behaviour",
+      "label": "Comportamento indefinido",
+      "lesson": "variables-types",
+      "summary": "Operações como ler uma variável não inicializada, overflow com sinal, [] fora do intervalo ou desreferenciar um ponteiro nulo não têm resultado definido, então qualquer coisa pode acontecer.",
+      "aliases": [
+        "UB",
+        "comportamento indefinido",
+        "undefined behaviour",
+        "undefined behavior",
+        "variável não inicializada",
+        "lixo",
+        "valor lixo"
+      ]
+    },
+    {
+      "id": "integer-division",
+      "label": "Divisão inteira",
+      "lesson": "integer-math",
+      "summary": "Dividir dois inteiros descarta a fração (7 / 2 é 3); converta um dos operandos com static_cast<double> para ter a divisão real.",
+      "aliases": [
+        "divisão de inteiros",
+        "truncamento",
+        "static_cast",
+        "módulo",
+        "resto"
+      ]
+    },
+    {
+      "id": "integer-overflow",
+      "label": "Overflow de inteiros",
+      "lesson": "integer-math",
+      "summary": "Inteiros têm tamanhos fixos: o overflow com sinal é comportamento indefinido, enquanto valores sem sinal dão a volta.",
+      "aliases": [
+        "overflow",
+        "estouro",
+        "wraparound",
+        "dar a volta",
+        "unsigned",
+        "sem sinal",
+        "long long"
+      ]
+    },
+    {
+      "id": "conditions-loops",
+      "label": "Condições e loops",
+      "lesson": "control-flow",
+      "summary": "if/else if executa o primeiro ramo verdadeiro, while e for repetem enquanto uma condição vale, e == compara enquanto = atribui.",
+      "aliases": [
+        "if else",
+        "laço for",
+        "loop for",
+        "laço while",
+        "loop while",
+        "break continue"
+      ]
+    },
+    {
+      "id": "functions",
+      "label": "Funções",
+      "lesson": "functions",
+      "summary": "Uma função tem parâmetros tipados e um tipo de retorno, e precisa ser declarada antes do código que a chama.",
+      "aliases": [
+        "declaração de função",
+        "retorno",
+        "return",
+        "void",
+        "protótipo"
+      ]
+    },
+    {
+      "id": "overloading",
+      "label": "Sobrecarga",
+      "lesson": "functions",
+      "summary": "Funções podem compartilhar um nome quando seus parâmetros diferem; o compilador escolhe a melhor correspondência para os tipos dos argumentos, e argumentos padrão preenchem os que faltam.",
+      "aliases": [
+        "sobrecarga de função",
+        "overloading",
+        "argumentos padrão",
+        "default arguments"
+      ]
+    },
+    {
+      "id": "references",
+      "label": "Referências",
+      "lesson": "references-const",
+      "summary": "Uma referência (T&) é outro nome para um objeto que já existe, então um parâmetro por referência permite que uma função altere a variável de quem chamou.",
+      "aliases": [
+        "T&",
+        "passagem por referência",
+        "alias",
+        "apelido"
+      ]
+    },
+    {
+      "id": "const-reference",
+      "label": "Referências const",
+      "lesson": "references-const",
+      "summary": "Um parâmetro const T& lê um objeto grande sem copiá-lo, e o compilador proíbe alterá-lo.",
+      "aliases": [
+        "const&",
+        "const T&",
+        "passagem por referência const",
+        "referência constante"
+      ]
+    },
+    {
+      "id": "vector",
+      "label": "std::vector",
+      "lesson": "vectors-arrays",
+      "summary": "Um array que cresce, guardado de forma contígua, e o container padrão; std::array é seu primo de tamanho fixo.",
+      "aliases": [
+        "vector",
+        "std::array",
+        "push_back",
+        "array dinâmico",
+        "vetor"
+      ]
+    },
+    {
+      "id": "range-for",
+      "label": "Loops range-for",
+      "lesson": "vectors-arrays",
+      "summary": "for (T x : v) visita todos os elementos: uma variável simples é uma cópia, T& altera o elemento, const auto& lê sem copiar.",
+      "aliases": [
+        "for each",
+        "range-based for",
+        "for baseado em intervalo",
+        "for de intervalo"
+      ]
+    },
+    {
+      "id": "bounds-checking",
+      "label": ".at() vs []",
+      "lesson": "vectors-arrays",
+      "summary": "v[i] não é checado e acessar fora do intervalo é comportamento indefinido, enquanto v.at(i) lança std::out_of_range.",
+      "aliases": [
+        "fora dos limites",
+        "fora do intervalo",
+        "out of bounds",
+        "at()",
+        "off-by-one",
+        "erro por um",
+        "out_of_range"
+      ]
+    },
+    {
+      "id": "unordered-map",
+      "label": "std::unordered_map",
+      "lesson": "unordered-map",
+      "summary": "Uma tabela hash de chaves para valores; m[key] insere chaves ausentes, então confira com contains e leia com at.",
+      "aliases": [
+        "map",
+        "hash map",
+        "tabela hash",
+        "dicionário",
+        "contains"
+      ]
+    },
+    {
+      "id": "pointers",
+      "label": "Ponteiros",
+      "lesson": "pointers",
+      "summary": "Um ponteiro guarda um endereço: & o obtém, * e -> o seguem, e nullptr significa que ele não aponta para lugar nenhum.",
+      "aliases": [
+        "ponteiro",
+        "raw pointer",
+        "ponteiro cru",
+        "nullptr",
+        "endereço",
+        "operador de endereço",
+        "desreferência",
+        "desreferenciar"
+      ]
+    },
+    {
+      "id": "classes",
+      "label": "Structs e classes",
+      "lesson": "structs-classes",
+      "summary": "Tipos que reúnem dados com funções-membro; construtores os preparam e membros private protegem suas regras (encapsulamento).",
+      "aliases": [
+        "struct",
+        "class",
+        "classe",
+        "construtor",
+        "encapsulamento",
+        "public private"
+      ]
+    },
+    {
+      "id": "enum-class",
+      "label": "enum class",
+      "lesson": "enums-optional",
+      "summary": "Um tipo com escopo e um conjunto fixo de valores nomeados que nunca converte para int, normalmente tratado com um switch.",
+      "aliases": [
+        "enum",
+        "enumeração",
+        "switch",
+        "enum com escopo",
+        "scoped enum"
+      ]
+    },
+    {
+      "id": "optional",
+      "label": "std::optional",
+      "lesson": "enums-optional",
+      "summary": "Guarda um valor ou nada (std::nullopt), substituindo valores mágicos; leia com value_or ou depois de conferir.",
+      "aliases": [
+        "optional",
+        "opcional",
+        "nullopt",
+        "value_or"
+      ]
+    },
+    {
+      "id": "header-source",
+      "label": "Headers e sources",
+      "lesson": "headers-sources",
+      "summary": "Headers declaram o que existe e são incluídos onde necessário; os arquivos .cpp guardam as definições, compiladas separadamente e linkadas.",
+      "aliases": [
+        "arquivo de cabeçalho",
+        "cabeçalho",
+        "header",
+        "#include",
+        "#pragma once",
+        "erro de linker"
+      ]
+    },
+    {
+      "id": "lambdas",
+      "label": "Lambdas",
+      "lesson": "lambdas-algorithms",
+      "summary": "Funções anônimas escritas no próprio código, cuja lista de captura diz quais variáveis locais elas copiam ou referenciam.",
+      "aliases": [
+        "lambda",
+        "lista de captura",
+        "capture list",
+        "função anônima"
+      ]
+    },
+    {
+      "id": "algorithms",
+      "label": "Algoritmos padrão",
+      "lesson": "lambdas-algorithms",
+      "summary": "Loops prontos de <algorithm>, como sort, find_if e count_if, que trabalham sobre intervalos de iteradores e recebem lambdas.",
+      "aliases": [
+        "<algorithm>",
+        "algoritmos",
+        "std::sort",
+        "find_if",
+        "count_if",
+        "iteradores",
+        "iterators"
+      ]
+    },
+    {
+      "id": "templates",
+      "label": "Templates",
+      "lesson": "templates",
+      "summary": "Código escrito para um parâmetro de tipo T, que o compilador transforma em uma versão real para cada tipo usado.",
+      "aliases": [
+        "template de função",
+        "function template",
+        "generics",
+        "genéricos",
+        "typename T"
+      ]
+    },
+    {
+      "id": "stack-vs-heap",
+      "label": "Stack vs heap",
+      "lesson": "heap-unique-ptr",
+      "summary": "Variáveis locais vivem na stack e são destruídas no fim do escopo; objetos do heap criados com new vivem até alguém dar delete neles.",
+      "aliases": [
+        "new delete",
+        "vazamento de memória",
+        "memory leak",
+        "destrutor",
+        "escopo",
+        "stack",
+        "heap",
+        "pilha"
+      ]
+    },
+    {
+      "id": "unique-ptr",
+      "label": "unique_ptr e RAII",
+      "lesson": "heap-unique-ptr",
+      "summary": "std::unique_ptr é dono de um objeto do heap e o apaga quando sai de escopo, então a limpeza acontece em todos os caminhos.",
+      "aliases": [
+        "unique_ptr",
+        "make_unique",
+        "RAII",
+        "smart pointer",
+        "ponteiro inteligente"
+      ]
+    }
+  ],
+  "links": [
+    {
+      "from": "compilation",
+      "to": "static-types",
+      "label": "impõe"
+    },
+    {
+      "from": "static-types",
+      "to": "integer-division",
+      "label": "decidem o resultado de"
+    },
+    {
+      "from": "static-types",
+      "to": "integer-overflow",
+      "label": "definem os limites de"
+    },
+    {
+      "from": "integer-overflow",
+      "to": "undefined-behaviour",
+      "label": "pode ser"
+    },
+    {
+      "from": "undefined-behaviour",
+      "to": "compilation",
+      "label": "não é detectado por"
+    },
+    {
+      "from": "bounds-checking",
+      "to": "undefined-behaviour",
+      "label": "evita"
+    },
+    {
+      "from": "pointers",
+      "to": "undefined-behaviour",
+      "label": "podem causar"
+    },
+    {
+      "from": "range-for",
+      "to": "conditions-loops",
+      "label": "são uma forma mais simples de"
+    },
+    {
+      "from": "overloading",
+      "to": "functions",
+      "label": "estende"
+    },
+    {
+      "from": "functions",
+      "to": "references",
+      "label": "recebem parâmetros por"
+    },
+    {
+      "from": "const-reference",
+      "to": "references",
+      "label": "são uma forma somente leitura de"
+    },
+    {
+      "from": "pointers",
+      "to": "references",
+      "label": "são a versão anulável de"
+    },
+    {
+      "from": "vector",
+      "to": "range-for",
+      "label": "é percorrido com"
+    },
+    {
+      "from": "vector",
+      "to": "bounds-checking",
+      "label": "oferece checagem de limites com"
+    },
+    {
+      "from": "unordered-map",
+      "to": "vector",
+      "label": "busca por chave, e não por posição como"
+    },
+    {
+      "from": "classes",
+      "to": "functions",
+      "label": "reúnem dados com"
+    },
+    {
+      "from": "classes",
+      "to": "const-reference",
+      "label": "são passadas por"
+    },
+    {
+      "from": "enum-class",
+      "to": "conditions-loops",
+      "label": "é tratado com switch, como em"
+    },
+    {
+      "from": "optional",
+      "to": "pointers",
+      "label": "é uma alternativa mais segura a"
+    },
+    {
+      "from": "header-source",
+      "to": "compilation",
+      "label": "dividem"
+    },
+    {
+      "from": "header-source",
+      "to": "functions",
+      "label": "separam a declaração da definição de"
+    },
+    {
+      "from": "lambdas",
+      "to": "functions",
+      "label": "são versões sem nome de"
+    },
+    {
+      "from": "algorithms",
+      "to": "lambdas",
+      "label": "recebem"
+    },
+    {
+      "from": "algorithms",
+      "to": "vector",
+      "label": "trabalham sobre"
+    },
+    {
+      "from": "templates",
+      "to": "overloading",
+      "label": "generalizam"
+    },
+    {
+      "from": "vector",
+      "to": "templates",
+      "label": "é construído com"
+    },
+    {
+      "from": "stack-vs-heap",
+      "to": "pointers",
+      "label": "é acessado por meio de"
+    },
+    {
+      "from": "unique-ptr",
+      "to": "stack-vs-heap",
+      "label": "amarram o tempo de vida do heap ao escopo da stack em"
+    },
+    {
+      "from": "unique-ptr",
+      "to": "pointers",
+      "label": "substituem, como donos, os"
+    },
+    {
+      "from": "static-types",
+      "to": "python/types-conversion",
+      "label": "contrastam com"
+    },
+    {
+      "from": "references",
+      "to": "python/aliasing",
+      "label": "são a forma explícita de"
+    },
+    {
+      "from": "references",
+      "to": "game-engine-programming/references-pointers",
+      "label": "são aprofundadas em"
+    },
+    {
+      "from": "pointers",
+      "to": "game-engine-programming/dangling-reference",
+      "label": "podem virar"
+    },
+    {
+      "from": "undefined-behaviour",
+      "to": "game-engine-programming/undefined-behaviour",
+      "label": "é explorado em"
+    },
+    {
+      "from": "bounds-checking",
+      "to": "game-engine-programming/sanitizers",
+      "label": "é reforçado por"
+    },
+    {
+      "from": "classes",
+      "to": "game-engine-programming/value-semantics",
+      "label": "seguem"
+    },
+    {
+      "from": "const-reference",
+      "to": "game-engine-programming/const-correctness",
+      "label": "são o primeiro passo para"
+    },
+    {
+      "from": "stack-vs-heap",
+      "to": "game-engine-programming/stack-vs-heap",
+      "label": "é aprofundado em"
+    },
+    {
+      "from": "unique-ptr",
+      "to": "game-engine-programming/unique-ownership",
+      "label": "são aprofundados em"
+    },
+    {
+      "from": "unique-ptr",
+      "to": "game-engine-programming/raii",
+      "label": "aplicam"
+    },
+    {
+      "from": "classes",
+      "to": "java/encapsulation",
+      "label": "aplicam"
+    },
+    {
+      "from": "optional",
+      "to": "java/optional",
+      "label": "funciona como"
+    },
+    {
+      "from": "lambdas",
+      "to": "java/lambdas",
+      "label": "funcionam como"
+    },
+    {
+      "from": "templates",
+      "to": "java/collections-generics",
+      "label": "lembram"
+    },
+    {
+      "from": "unordered-map",
+      "to": "big-o/hash-map",
+      "label": "é um tipo de"
+    },
+    {
+      "from": "enum-class",
+      "to": "kotlin/enums",
+      "label": "é como"
+    }
+  ],
+  "units": [
+    {
+      "id": "first-programs",
+      "title": "Primeiros programas",
+      "description": "Compile e rode, tipos, matemática de inteiros, decisões, loops e funções.",
+      "lessons": [
+        {
+          "id": "hello-compile",
+          "title": "Seu primeiro programa",
+          "pareto": "core",
+          "minutes": 6,
+          "takeaway": "C++ é compilado: o compilador confere o programa inteiro e gera um executável antes de qualquer coisa rodar, então leia primeiro o primeiro erro.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Do texto a um programa em execução",
+              "body": "C++ é uma linguagem **compilada**. Você escreve o código-fonte em um arquivo de texto como `hello.cpp`, um **compilador** o confere e o traduz para código de máquina, e só então você executa o resultado.\n\n```cpp\n#include <iostream>\n\nint main() {\n    std::cout << \"Hello, world!\\n\";\n    return 0;\n}\n```\n\n- `#include <iostream>` traz a biblioteca padrão de entrada e saída.\n- `int main()` é onde todo programa começa.\n- `std::cout` é o console: `<<` envia valores para ele, e `\"\\n\"` encerra a linha.\n- Statements terminam com `;`, e chaves `{ }` os agrupam. `return 0;` informa sucesso (`main` pode omiti-lo).\n\nNum terminal, `clang++ -std=c++20 -Wall hello.cpp -o hello` compila o programa (g++ e Visual Studio funcionam do mesmo jeito) e `./hello` o executa."
+            },
+            {
+              "type": "order",
+              "id": "q-build-order",
+              "concepts": [
+                "compilation"
+              ],
+              "prompt": "Coloque em ordem o caminho do arquivo-fonte até o programa em execução.",
+              "items": [
+                "Você escreve `hello.cpp` em um editor",
+                "O compilador confere o código e para com um erro se alguma regra for quebrada",
+                "O compilador traduz o código para código de máquina (um arquivo objeto)",
+                "O linker o junta com o código de bibliotecas, como `std::cout`, em um executável",
+                "Você executa `./hello` e `main` começa"
+              ],
+              "explanation": "Nada roda até o arquivo inteiro passar nas checagens do compilador e ser linkado em um executável. Essa é a grande diferença para o Python, que lê e executa um script linha por linha: em C++, um erro de digitação na linha 300 interrompe a compilação antes de a linha 1 sequer rodar."
+            },
+            {
+              "type": "output",
+              "id": "q-cout-chain",
+              "concepts": [
+                "compilation"
+              ],
+              "prompt": "O que isto imprime? Preste atenção a onde estão os `\"\\n\"`.",
+              "language": "cpp",
+              "code": "#include <iostream>\n\nint main() {\n    std::cout << \"Score: \" << 3 + 4 << \"\\n\";\n    std::cout << \"Lives: \" << 3;\n    std::cout << \"!\\n\";\n}",
+              "output": "Score: 7\nLives: 3!",
+              "explanation": "`3 + 4` é calculado primeiro, então a primeira linha é `Score: 7`. O segundo statement imprime `Lives: 3` **sem** quebra de linha, então o próximo `std::cout` continua na mesma linha e acrescenta `!`. A saída só vai para uma nova linha quando você envia `\"\\n\"`."
+            },
+            {
+              "type": "explain",
+              "title": "Quando o compilador diz não",
+              "body": "Se o código quebra uma regra, o compilador imprime um **erro** e nenhum programa é gerado. Cada mensagem começa dizendo onde aconteceu, *arquivo:linha:coluna*:\n\n```\nhello.cpp:2:9: error: cannot initialize a variable of type 'int' with an lvalue of type 'const char[5]'\n```\n\n- Corrija primeiro o **primeiro** erro: os seguintes costumam ser efeitos colaterais dele.\n- A coluna aponta para onde o compilador se confundiu, que muitas vezes fica logo *depois* do erro de verdade.\n\n**Avisos** (warnings) não interrompem a compilação, mas, com `-Wall -Wextra`, sinalizam código que é válido e quase certamente errado. Trate-os como erros."
+            },
+            {
+              "type": "example",
+              "title": "Lendo um erro",
+              "problem": "Este programa não compila. O compilador diz `hello.cpp:4:5: error: use of undeclared identifier 'cout'; did you mean 'std::cout'?` Antes de revelar, decida qual linha mudar.\n\n```cpp\n#include <iostream>\n\nint main() {\n    cout << \"Hi\\n\";\n}\n```",
+              "steps": [
+                "`4:5` significa linha 4, coluna 5: o início de `cout`.",
+                "*Undeclared identifier* significa que o compilador não conhece esse nome aqui.",
+                "A biblioteca padrão coloca seus nomes no namespace `std`, então o console se chama `std::cout`. O compilador até sugere isso."
+              ],
+              "answer": "Mude a linha 4 para `std::cout << \"Hi\\n\";`. A maioria dos primeiros erros é desse tipo: um `std::` esquecido, um erro de digitação ou um `;` faltando."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-semicolon",
+              "concepts": [
+                "compilation"
+              ],
+              "prompt": "Isto deveria imprimir `Lives: 3`, mas não compila. Clique na linha com o erro.",
+              "language": "cpp",
+              "code": "#include <iostream>\n\nint main() {\n    int lives = 3\n    std::cout << \"Lives: \" << lives << \"\\n\";\n}",
+              "error": "error: expected ';' at end of declaration",
+              "lines": [
+                4
+              ],
+              "fixes": [
+                "Adicionar `;` no fim da linha 4: `int lives = 3;`",
+                "Mudar a linha 3 para `int main() {;`",
+                "Mudar a linha 5 para `std::cout << \"Lives: \" << 3 << \"\\n\";`",
+                "Mudar a linha 1 para `#include <string>`"
+              ],
+              "answer": 0,
+              "explanation": "Todo statement termina com `;`, e a linha 4 está sem um: a coluna do erro aponta para o fim dessa linha. Um `;` a mais na linha 3 é só um statement vazio, e mudar a linha 5 ou o `#include` deixa a linha 4 quebrada, então os três ainda falham com o mesmo erro."
+            },
+            {
+              "type": "buckets",
+              "id": "q-compile-or-run",
+              "concepts": [
+                "compilation",
+                "static-types"
+              ],
+              "prompt": "O compilador vai pegar isso, ou só vai aparecer quando o programa rodar?",
+              "buckets": [
+                "O compilador rejeita: nenhum programa é gerado",
+                "Compila: o problema só aparece quando roda"
+              ],
+              "items": [
+                {
+                  "text": "Um `;` faltando no fim de um statement",
+                  "bucket": 0
+                },
+                {
+                  "text": "`std::cot << \"hi\";` (um erro de digitação em um nome)",
+                  "bucket": 0
+                },
+                {
+                  "text": "`int n = \"five\";` (texto guardado em um `int`)",
+                  "bucket": 0
+                },
+                {
+                  "text": "Chamar `add(1)` quando `add` precisa de dois números",
+                  "bucket": 0
+                },
+                {
+                  "text": "Um loop que roda uma vez a mais",
+                  "bucket": 1
+                },
+                {
+                  "text": "Dividir por um número digitado pelo jogador, que por acaso é 0",
+                  "bucket": 1
+                },
+                {
+                  "text": "Imprimir “You win” quando o jogador na verdade perdeu",
+                  "bucket": 1
+                }
+              ],
+              "explanation": "O compilador confere ortografia, nomes, tipos e quantidade de argumentos, então isso nunca chega a um programa em execução: o clang diz *no member named 'cot' in namespace 'std'*, *cannot initialize a variable of type 'int' with an lvalue of type 'const char[5]'* e *no matching function for call to 'add'*. Ele não tem como saber o que o jogador vai digitar nem o que você quis dizer, então erros de lógica e valores ruins em tempo de execução ainda precisam de testes."
+            }
+          ]
+        },
+        {
+          "id": "variables-types",
+          "title": "Variáveis e tipos",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "Toda variável tem um único tipo fixo, decidido antes de o programa rodar; dê um valor a cada uma quando a declarar.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Toda variável tem um tipo",
+              "body": "```cpp\nint lives = 3;            // whole numbers\ndouble speed = 2.5;       // decimals\nfloat scale = 0.5f;       // smaller, less precise decimals: note the f\nbool alive = true;        // true or false\nchar grade = 'A';         // one character, in single quotes\nstd::string name = \"Ada\"; // text, in double quotes: #include <string>\n```\n\nO tipo de uma variável é fixo durante toda a vida dela. `lives = \"three\";` não compila: *assigning to 'int' from incompatible type 'const char[6]'*.\n\nIsso é **tipagem estática**: o compilador conhece todos os tipos antes de o programa rodar. Ela pega erros cedo e permite que o compilador gere código de máquina rápido. O Python, ao contrário, só confere os tipos conforme cada linha roda."
+            },
+            {
+              "type": "explain",
+              "title": "auto, e texto",
+              "body": "`auto` pede ao compilador que deduza o tipo a partir do valor inicial. A variável continua com tipagem estática:\n\n```cpp\nauto a = 7;      // int\nauto b = 7.0;    // double\nauto c = 2.5f;   // float\nauto d = 'x';    // char\nauto s = \"hi\";   // const char*, NOT std::string\n```\n\nEsse último é uma armadilha clássica: um literal entre aspas é um antigo array de caracteres no estilo C, e não uma `std::string`. Escreva `std::string s = \"hi\";` quando quiser um texto que possa ser juntado e alterado.\n\nO básico de `std::string`: `+` junta strings, `s.size()` é o tamanho, `s[0]` é o primeiro `char`, e `std::to_string(42)` transforma um número em texto."
+            },
+            {
+              "type": "buckets",
+              "id": "q-auto-type",
+              "concepts": [
+                "static-types"
+              ],
+              "prompt": "Que tipo o `auto` deduz? Separe cada declaração.",
+              "buckets": [
+                "int",
+                "double",
+                "char",
+                "bool"
+              ],
+              "items": [
+                {
+                  "text": "`auto a = 7;`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`auto c = 7 / 2;`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`auto b = 7.0;`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`auto d = 7 / 2.0;`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`auto g = 1e3;`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`auto e = 'x';`",
+                  "bucket": 2
+                },
+                {
+                  "text": "`auto f = 3 > 2;`",
+                  "bucket": 3
+                },
+                {
+                  "text": "`auto h = 'a' == 'b';`",
+                  "bucket": 3
+                }
+              ],
+              "explanation": "Um literal de número inteiro é um `int`, e qualquer coisa com ponto decimal ou expoente (`1e3`) é um `double`. `7 / 2` é int dividido por int, então continua `int`; um operando `double` torna `7 / 2.0` um `double`. Aspas simples criam um `char`, e uma comparação como `3 > 2` dá um `bool`. (Cada um destes foi conferido com `static_assert`.)"
+            },
+            {
+              "type": "output",
+              "id": "q-string-ops",
+              "concepts": [
+                "static-types"
+              ],
+              "prompt": "O que isto imprime?",
+              "language": "cpp",
+              "code": "#include <iostream>\n#include <string>\n\nint main() {\n    std::string name = \"Ada\";\n    int level = 7;\n    std::string tag = name + \"#\" + std::to_string(level);\n    std::cout << tag << \" \" << tag.size() << \"\\n\";\n    std::cout << tag[0] << \"\\n\";\n}",
+              "output": "Ada#7 5\nA",
+              "explanation": "`std::to_string(7)` transforma o número no texto `\"7\"`, então `tag` é `Ada#7`, que tem 5 caracteres. `tag[0]` é o primeiro caractere, o `char` `'A'`."
+            },
+            {
+              "type": "explain",
+              "title": "Sempre inicialize",
+              "body": "Um `int`, `double`, `bool`, `char` ou ponteiro local declarado sem valor fica **não inicializado**: guarda os bits que estavam sobrando naquela memória. Lê-lo é **comportamento indefinido** (UB): o padrão do C++ não diz nada sobre o que acontece. O programa pode imprimir lixo, imprimir 0 hoje e 6 amanhã, ou mudar de comportamento quando otimizado.\n\n```cpp\nint total;        // garbage\nint count = 0;    // 0\nint hits{};       // {} also means zero\nstd::string s;    // fine: strings and vectors start empty\n```\n\nO compilador não te impede, mas o `-Wall` avisa: *variable 'total' is uninitialized when used here*. Inicialize toda variável onde a declara."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-uninit",
+              "concepts": [
+                "undefined-behaviour"
+              ],
+              "prompt": "Isto deveria imprimir `5`. Em uma execução, imprimiu `6`. Clique na linha com o bug.",
+              "language": "cpp",
+              "code": "#include <iostream>\n\nint main() {\n    int coins;\n    int found = 5;\n    coins += found;\n    std::cout << coins << \"\\n\";\n}",
+              "error": "warning: variable 'coins' is uninitialized when used here [-Wuninitialized]\n...\n6",
+              "lines": [
+                4
+              ],
+              "fixes": [
+                "Mudar a linha 4 para `int coins = 0;`",
+                "Mudar a linha 5 para `int found = 0;`",
+                "Mudar a linha 6 para `coins += 5;`",
+                "Mudar a linha 4 para `auto coins;`"
+              ],
+              "answer": 0,
+              "hint": "Qual variável é lida antes de qualquer coisa ter sido guardada nela?",
+              "explanation": "`int coins;` deixa `coins` não inicializada, então `coins += found` soma 5 aos bits que estavam lá (nesta execução, 1). Dar um valor inicial na linha 4 resolve. Zerar `found` ou somar um `5` literal ainda lê o lixo, e o clang continua avisando. O `auto` não consegue deduzir um tipo a partir do nada: *declaration of variable 'coins' with deduced type 'auto' requires an initializer*."
+            },
+            {
+              "type": "output",
+              "id": "q-bool-char",
+              "concepts": [
+                "static-types"
+              ],
+              "prompt": "O que isto imprime?",
+              "language": "cpp",
+              "code": "#include <iostream>\n\nint main() {\n    bool ready = true;\n    char grade = 'A';\n    std::cout << ready << \" \" << grade << \" \" << grade + 1 << \"\\n\";\n}",
+              "output": "1 A 66",
+              "hint": "Um `char` é um inteiro pequeno. Qual é o tipo de `grade + 1`?",
+              "explanation": "`std::cout` imprime um `bool` como `1` ou `0` (envie `std::boolalpha` antes se quiser `true`). Um `char` é impresso como a letra, `A`. Mas `grade + 1` é uma conta: o `char` é promovido ao `int` 65 (o código do caractere), então imprime `66`. Para obter a letra `B`, converta de volta com `static_cast<char>(grade + 1)`."
+            }
+          ]
+        },
+        {
+          "id": "integer-math",
+          "title": "Matemática de inteiros e overflow",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "int dividido por int é um int (`7 / 2` é 3), e todo tipo inteiro tem um limite: passar dele com um tipo com sinal é comportamento indefinido.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Divisão inteira",
+              "body": "Quando os dois lados de `/` são inteiros, o C++ faz **divisão inteira** e descarta a fração (trunca em direção ao zero): `7 / 2` é `3` e `-7 / 2` é `-3`. `%` dá o resto: `7 % 2` é `1`.\n\nSe qualquer um dos lados é um `double`, você tem divisão real: `7 / 2.0` é `3.5`.\n\nOs **operandos** decidem o tipo, e não o lugar onde você guarda o resultado: `double avg = 7 / 2;` calcula primeiro o `int` 3 e só então guarda `3.0`. Para dividir duas variáveis `int` corretamente, converta uma delas antes:\n\n```cpp\ndouble avg = static_cast<double>(total) / count;\n```\n\n`static_cast<T>(x)` é a conversão explícita do C++."
+            },
+            {
+              "type": "output",
+              "id": "q-int-division",
+              "concepts": [
+                "integer-division"
+              ],
+              "prompt": "O que isto imprime?",
+              "language": "cpp",
+              "code": "#include <iostream>\n\nint main() {\n    std::cout << 7 / 2 << \" \" << 7 % 2 << \" \" << 7 / 2.0 << \"\\n\";\n    double average = 7 / 2;\n    std::cout << average << \"\\n\";\n}",
+              "output": "3 1 3.5\n3",
+              "explanation": "`7 / 2` é divisão inteira, `3`; `7 % 2` é o resto, `1`; `7 / 2.0` tem um operando `double`, então é `3.5`. Na linha seguinte, `7 / 2` ainda é `3` antes de ser guardado em `average`, e `std::cout` imprime o `double` 3.0 como `3`."
+            },
+            {
+              "type": "example",
+              "title": "Precisão dos acertos",
+              "problem": "`int hits = 7; int shots = 8;` Um programador escreve `double accuracy = hits / shots * 100;` e o HUD mostra `0`. Descubra o motivo antes de revelar e depois corrija.",
+              "steps": [
+                "`hits / shots` é `int / int`, então 7 / 8 é `0`: o 0,875 é jogado fora.",
+                "`0 * 100` é `0`, e guardar isso em um `double` só o transforma em `0.0`.",
+                "Converta antes de dividir: `static_cast<double>(hits) / shots * 100`. Agora 7,0 / 8 é 0,875, e o resultado é 87,5."
+              ],
+              "answer": "`double accuracy = static_cast<double>(hits) / shots * 100;` dá `87.5`. Converter o resultado, como em `static_cast<double>(hits / shots)`, é tarde demais: a fração já se perdeu."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-average",
+              "concepts": [
+                "integer-division"
+              ],
+              "prompt": "Isto deveria imprimir a vida média, `83.3333`. Imprime `83`. Clique na linha com o bug.",
+              "language": "cpp",
+              "code": "#include <iostream>\n\nint main() {\n    int total = 250;\n    int count = 3;\n    double average = total / count;\n    std::cout << average << \"\\n\";\n}",
+              "error": "83",
+              "lines": [
+                6
+              ],
+              "fixes": [
+                "Mudar a linha 6 para `double average = static_cast<double>(total) / count;`",
+                "Mudar a linha 6 para `double average = static_cast<double>(total / count);`",
+                "Mudar a linha 7 para `std::cout << static_cast<double>(average) << \"\\n\";`",
+                "Mudar a linha 6 para `auto average = total / count;`"
+              ],
+              "answer": 0,
+              "explanation": "`total / count` divide dois `int`s, então 250 / 3 é 83 antes mesmo de ser guardado no `double`. Converter `total` primeiro torna a conta uma divisão de `double`. Converter o quociente já pronto, fazer o cast na hora de imprimir ou usar `auto` (que deduz `int`) mantêm o resultado inteiro `83`."
+            },
+            {
+              "type": "explain",
+              "title": "Overflow",
+              "body": "Cada tipo inteiro tem um tamanho fixo. Em todas as plataformas comuns, `int` tem 32 bits, de -2.147.483.648 a 2.147.483.647, e `long long` tem 64 bits (até cerca de 9,2 × 10^18).\n\nPassar do topo é **overflow**, e os dois tipos de inteiro se comportam de forma diferente:\n\n- Tipos **com sinal** (`int`, `long long`): o overflow é **comportamento indefinido**. Não há promessa de que dê a volta, e o otimizador presume que isso nunca acontece.\n- Tipos **sem sinal** (`unsigned int` e `std::size_t`, que `.size()` devolve): a aritmética dá a volta. Para um `unsigned int` de 32 bits, `0u - 1` é 4.294.967.295.\n\nDê a contadores que não param de crescer, como pontuações ou milissegundos, um tipo com folga de sobra."
+            },
+            {
+              "type": "numeric",
+              "id": "q-ms-overflow",
+              "concepts": [
+                "integer-overflow"
+              ],
+              "prompt": "Um jogo guarda os milissegundos desde o lançamento em um `int`. Depois de quantos dias rodando ele passa do máximo do `int`, 2.147.483.647? Responda com uma casa decimal.",
+              "answer": 24.9,
+              "tolerance": 0.05,
+              "hint": "Divida por 1000 para ter segundos, depois por 60, 60 e 24.",
+              "explanation": "2.147.483.647 ms ÷ 1000 ÷ 60 ÷ 60 ÷ 24 ≈ **24,86 dias**. Um servidor ou console deixado ligado por um mês chegaria lá. O mesmo erro com um contador sem sinal de 32 bits dá a volta depois de cerca de 49,7 dias, um bug real que travava máquinas com Windows 95 e 98. Um `long long` de milissegundos dura cerca de 292 milhões de anos."
+            },
+            {
+              "type": "output",
+              "id": "q-unsigned-wrap",
+              "concepts": [
+                "integer-overflow"
+              ],
+              "prompt": "O que isto imprime?",
+              "language": "cpp",
+              "code": "#include <iostream>\n\nint main() {\n    unsigned int ammo = 2;\n    ammo = ammo - 3;\n    std::cout << ammo << \"\\n\";\n}",
+              "output": "4294967295",
+              "hint": "A aritmética sem sinal dá a volta. O maior valor de 32 bits sem sinal é 4.294.967.295.",
+              "explanation": "`ammo` não tem sinal, então `2 - 3` não pode ser -1. A aritmética sem sinal dá a volta módulo 2^32 e cai no maior valor, `4294967295`. É por isso que um código como `v.size() - 1` em um vector vazio dá um número enorme em vez de -1."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-overflow",
+              "concepts": [
+                "integer-overflow",
+                "undefined-behaviour"
+              ],
+              "prompt": "A pontuação deveria ir de 2147483000 até `2147484000`. Clique na linha com o bug.",
+              "language": "cpp",
+              "code": "#include <iostream>\n\nint main() {\n    int score = 2147483000;\n    score += 1000;\n    std::cout << score << \"\\n\";\n}",
+              "error": "-2147483296\n\nBuilt with -fsanitize=undefined:\nruntime error: signed integer overflow: 2147483000 + 1000 cannot be represented in type 'int'",
+              "lines": [
+                4,
+                5
+              ],
+              "fixes": [
+                "Mudar a linha 4 para `long long score = 2147483000;`",
+                "Mudar a linha 5 para `score = score + 1000;`",
+                "Mudar a linha 4 para `auto score = 2147483000;`",
+                "Mudar a linha 6 para `std::cout << static_cast<long long>(score) << \"\\n\";`"
+              ],
+              "answer": 0,
+              "hint": "Qual é o maior valor que um `int` consegue guardar?",
+              "explanation": "A soma é maior do que o maior `int`, então `score += 1000` estoura: comportamento indefinido, que nesta máquina resultou em um número negativo grande. O UndefinedBehaviorSanitizer (`-fsanitize=undefined`) o reporta. Um `long long` de 64 bits tem espaço. Reescrever a soma não muda nada, o `auto` ainda deduz `int` a partir do literal, e fazer o cast na hora de imprimir é tarde demais: o overflow já aconteceu."
+            }
+          ]
+        },
+        {
+          "id": "control-flow",
+          "title": "Decisões e loops",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "`if`/`else if` executa o primeiro ramo verdadeiro, os loops repetem enquanto uma condição vale, e `==` compara enquanto `=` atribui.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "if, else if, else",
+              "body": "```cpp\nif (hp <= 0) {\n    std::cout << \"Game over\\n\";\n} else if (hp < 20) {\n    std::cout << \"Low health!\\n\";\n} else {\n    std::cout << \"OK\\n\";\n}\n```\n\nA condição vai entre parênteses. Compare com `==`, `!=`, `<`, `<=`, `>` e `>=`, e combine condições com `&&` (e), `||` (ou) e `!` (não).\n\nOs ramos são verificados de cima para baixo, e só o **primeiro** verdadeiro roda. Um único `=` é atribuição, e não comparação: mais sobre essa armadilha logo abaixo."
+            },
+            {
+              "type": "explain",
+              "title": "Loops",
+              "body": "```cpp\nwhile (hp > 0) {            // repeat while the condition holds\n    hp -= 4;\n}\n\nfor (int i = 0; i < 5; ++i) {   // start; keep going while; step\n    std::cout << i << \" \";      // 0 1 2 3 4\n}\n```\n\n`++i` soma 1 a `i`. Dentro de qualquer loop, `break` sai do loop na hora e `continue` pula direto para a próxima volta. Uma variável declarada dentro de chaves, como `i` aqui, só existe dentro delas."
+            },
+            {
+              "type": "trace",
+              "id": "q-trace-while",
+              "concepts": [
+                "conditions-loops"
+              ],
+              "prompt": "Acompanhe o loop e preveja os valores.",
+              "language": "cpp",
+              "code": "int hp = 10;\nint turns = 0;\nwhile (hp > 0) {\n    hp -= 4;\n    ++turns;\n}\nbool dead = hp <= 0;",
+              "frames": [
+                {
+                  "line": 1,
+                  "vars": {
+                    "hp": "10"
+                  }
+                },
+                {
+                  "line": 2,
+                  "vars": {
+                    "hp": "10",
+                    "turns": "0"
+                  }
+                },
+                {
+                  "line": 4,
+                  "vars": {
+                    "hp": "6",
+                    "turns": "0"
+                  },
+                  "note": "`hp > 0` foi verdadeiro, então o corpo roda."
+                },
+                {
+                  "line": 5,
+                  "vars": {
+                    "hp": "6",
+                    "turns": "1"
+                  }
+                },
+                {
+                  "line": 4,
+                  "vars": {
+                    "hp": "2",
+                    "turns": "1"
+                  },
+                  "ask": "hp"
+                },
+                {
+                  "line": 5,
+                  "vars": {
+                    "hp": "2",
+                    "turns": "2"
+                  }
+                },
+                {
+                  "line": 4,
+                  "vars": {
+                    "hp": "-2",
+                    "turns": "2"
+                  },
+                  "ask": "hp"
+                },
+                {
+                  "line": 5,
+                  "vars": {
+                    "hp": "-2",
+                    "turns": "3"
+                  },
+                  "note": "`turns` é 3. De volta à linha 3, `hp > 0` agora é falso, então o loop termina."
+                },
+                {
+                  "line": 7,
+                  "vars": {
+                    "hp": "-2",
+                    "turns": "3",
+                    "dead": "true"
+                  },
+                  "ask": "dead"
+                }
+              ],
+              "hint": "Cada volta subtrai 4. O loop só percebe que `hp` deixou de ser positivo quando volta à linha 3.",
+              "explanation": "A condição é verificada no início de cada volta: 10 → 6 → 2 → -2 leva três voltas. Como a checagem só acontece antes de uma volta, `hp` pode terminar abaixo de zero. `hp <= 0` é então `true`."
+            },
+            {
+              "type": "output",
+              "id": "q-break-continue",
+              "concepts": [
+                "conditions-loops"
+              ],
+              "prompt": "O que isto imprime?",
+              "language": "cpp",
+              "code": "#include <iostream>\n\nint main() {\n    for (int i = 1; i <= 10; ++i) {\n        if (i % 4 == 0) {\n            break;\n        }\n        if (i % 2 == 0) {\n            continue;\n        }\n        std::cout << i << \"\\n\";\n    }\n}",
+              "output": "1\n3",
+              "explanation": "`i = 1` é impresso. `i = 2` é par, então `continue` pula o print. `i = 3` é impresso. Em `i = 4`, `4 % 4 == 0`, então `break` encerra o loop antes de 5 a 10 sequer rodarem."
+            },
+            {
+              "type": "example",
+              "title": "A ordem importa no else-if",
+              "problem": "Classifique um golpe: 50 ou mais é `\"critical\"`, 20 ou mais é `\"heavy\"`, o resto é `\"light\"`. Um colega escreveu primeiro a checagem `>= 20`. O que a versão dele diz para um golpe de 60?",
+              "steps": [
+                "Os ramos são testados de cima para baixo, e o primeiro verdadeiro vence.",
+                "Com `if (damage >= 20)` primeiro, 60 passa nesse teste, então devolve `\"heavy\"` e nunca chega à checagem `>= 50`.",
+                "Coloque primeiro o limite mais rigoroso: `>= 50`, depois `>= 20`, depois `else`."
+              ],
+              "answer": "```cpp\nstd::string label(int damage) {\n    if (damage >= 50) {\n        return \"critical\";\n    } else if (damage >= 20) {\n        return \"heavy\";\n    } else {\n        return \"light\";\n    }\n}\n```\n\n`label(60)` é `\"critical\"`, `label(35)` é `\"heavy\"` e `label(5)` é `\"light\"`. A versão do colega diz `\"heavy\"` para 60."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-assign",
+              "concepts": [
+                "conditions-loops"
+              ],
+              "prompt": "Com 3 vidas, isto deveria imprimir `Lives left: 3`. Clique na linha com o bug.",
+              "language": "cpp",
+              "code": "#include <iostream>\n\nint main() {\n    int lives = 3;\n    if (lives = 0) {\n        std::cout << \"Game over\\n\";\n    } else {\n        std::cout << \"Lives left: \" << lives << \"\\n\";\n    }\n}",
+              "error": "warning: using the result of an assignment as a condition without parentheses [-Wparentheses]\n...\nLives left: 0",
+              "lines": [
+                5
+              ],
+              "fixes": [
+                "Mudar a linha 5 para `if (lives == 0) {`",
+                "Mudar a linha 5 para `if ((lives = 0)) {`",
+                "Mudar a linha 5 para `if (lives = 3) {`",
+                "Mudar a linha 4 para `int lives = 0;`"
+              ],
+              "answer": 0,
+              "explanation": "`lives = 0` **atribui** 0, e o valor da condição é esse 0, que conta como falso. Então o ramo `else` roda e imprime as vidas que acabaram de ser zeradas. `==` é que compara. Parênteses extras só silenciam o aviso do clang, `lives = 3` é sempre verdadeiro e imprime `Game over`, e começar com 0 vidas muda a entrada, e não o bug."
+            },
+            {
+              "type": "numeric",
+              "id": "q-nested-stars",
+              "concepts": [
+                "conditions-loops"
+              ],
+              "prompt": "Quantos `*` isto imprime?\n\n```cpp\nfor (int i = 0; i < 3; ++i) {\n    for (int j = i; j < 3; ++j) {\n        std::cout << \"*\";\n    }\n}\n```",
+              "answer": 6,
+              "explanation": "O loop interno começa em `j = i`: quando `i` é 0, roda para j = 0, 1, 2 (3 estrelas); quando `i` é 1, para j = 1, 2 (2 estrelas); e quando `i` é 2, uma vez. 3 + 2 + 1 = **6**."
+            }
+          ]
+        },
+        {
+          "id": "functions",
+          "title": "Funções e sobrecarga",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "Uma função declara os tipos de seus parâmetros e de retorno e precisa ser declarada antes de ser chamada; sobrecargas compartilham o nome e diferem nos parâmetros.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Escrevendo uma função",
+              "body": "```cpp\nint square(int x) {        // return type, name, parameters\n    return x * x;\n}\n\nvoid greet(std::string name) {   // void: returns nothing\n    std::cout << \"Hi \" << name << \"\\n\";\n}\n```\n\nTodo parâmetro tem um tipo, e o resultado também. O C++ lê um arquivo **de cima para baixo**, então uma função precisa ser declarada antes da linha que a chama. Defina-a acima de `main` ou coloque uma **declaração** (a primeira linha mais `;`) perto do topo e a definição completa depois:\n\n```cpp\nint cube(int x);   // declaration: \"this exists\"\n```"
+            },
+            {
+              "type": "output",
+              "id": "q-functions",
+              "concepts": [
+                "functions"
+              ],
+              "prompt": "O que isto imprime?",
+              "language": "cpp",
+              "code": "#include <iostream>\n#include <string>\n\nint square(int x) {\n    return x * x;\n}\n\nvoid greet(std::string name) {\n    std::cout << \"Hi \" << name << \"\\n\";\n}\n\nint main() {\n    greet(\"Bo\");\n    std::cout << square(3) + square(4) << \"\\n\";\n}",
+              "output": "Hi Bo\n25",
+              "explanation": "`greet(\"Bo\")` imprime `Hi Bo`. Depois, `square(3) + square(4)` é 9 + 16, ou seja, `25`."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-declare",
+              "concepts": [
+                "functions"
+              ],
+              "prompt": "Isto deveria imprimir `42`, mas não compila. Clique na linha de que o compilador reclama.",
+              "language": "cpp",
+              "code": "#include <iostream>\n\nint main() {\n    std::cout << twice(21) << \"\\n\";\n}\n\nint twice(int x) {\n    return x * 2;\n}",
+              "error": "error: use of undeclared identifier 'twice'",
+              "lines": [
+                4
+              ],
+              "fixes": [
+                "Adicionar a declaração `int twice(int x);` acima de `main` (como uma nova linha 2)",
+                "Mudar a linha 7 para `auto twice(int x) {`",
+                "Mudar a linha 4 para `std::cout << std::twice(21) << \"\\n\";`",
+                "Mudar a linha 7 para `void twice(int x) {`"
+              ],
+              "answer": 0,
+              "explanation": "O compilador lê de cima para baixo. Na linha 4, ele ainda não viu `twice`, então o nome é desconhecido. Uma declaração acima de `main` avisa que a função existe, e o linker encontra a definição depois. `auto` ou `void` na linha 7 não mudam a ordem (e `void` acrescenta *void function 'twice' should not return a value*), e `twice` não faz parte da biblioteca padrão: *no member named 'twice' in namespace 'std'*."
+            },
+            {
+              "type": "explain",
+              "title": "Sobrecarga e argumentos padrão",
+              "body": "Várias funções podem compartilhar um nome se seus **tipos ou quantidades de parâmetros** diferirem. O compilador escolhe a melhor correspondência para os argumentos, em tempo de compilação:\n\n```cpp\nvoid show(int x);\nvoid show(double x);\nvoid show(std::string s);\n```\n\nSó o tipo de retorno não basta: `int load();` ao lado de `double load();` falha com *functions that differ only in their return type cannot be overloaded*.\n\nUm parâmetro pode ter um **valor padrão**, usado quando quem chama o omite. Os padrões vão no fim da lista:\n\n```cpp\nint damage(int base, int mult = 2);\ndamage(5);      // mult is 2\ndamage(5, 3);   // mult is 3\n```"
+            },
+            {
+              "type": "output",
+              "id": "q-overload-pick",
+              "concepts": [
+                "overloading",
+                "integer-division"
+              ],
+              "prompt": "Duas sobrecargas de `show`. O que isto imprime?",
+              "language": "cpp",
+              "code": "#include <iostream>\n\nvoid show(int x) {\n    std::cout << \"int \" << x << \"\\n\";\n}\n\nvoid show(double x) {\n    std::cout << \"double \" << x << \"\\n\";\n}\n\nint main() {\n    show(7 / 2);\n    show(7 / 2.0);\n    show('A');\n}",
+              "output": "int 3\ndouble 3.5\nint 65",
+              "hint": "Um `char` é um inteiro pequeno. Convertê-lo para `int` é uma correspondência melhor do que convertê-lo para `double`.",
+              "explanation": "`7 / 2` é um `int` (3), então `show(int)` roda. `7 / 2.0` é um `double` (3,5), então `show(double)` roda. `'A'` é um `char`: não existe `show(char)`, e promover um `char` para `int` é uma correspondência melhor do que convertê-lo para `double`, então imprime o código do caractere, `int 65`."
+            },
+            {
+              "type": "example",
+              "title": "Separando uma função",
+              "problem": "A armadura absorve dano: um golpe perde `armour` pontos, mas nunca pode curar o alvo. Escreva `damageAfterArmour(damage, armour)` e descubra o que ela devolve para (30, 12) e (5, 12) antes de revelar.",
+              "steps": [
+                "As duas entradas e o resultado são números inteiros, então a assinatura é `int damageAfterArmour(int damage, int armour)`.",
+                "Subtraia primeiro: `int result = damage - armour;`",
+                "Proteja o caso limite: se `result` for negativo, devolva 0; caso contrário, devolva `result`."
+              ],
+              "answer": "```cpp\nint damageAfterArmour(int damage, int armour) {\n    int result = damage - armour;\n    if (result < 0) {\n        return 0;\n    }\n    return result;\n}\n```\n\nEla devolve `18` para (30, 12) e `0` para (5, 12)."
+            },
+            {
+              "type": "numeric",
+              "id": "q-default-args",
+              "concepts": [
+                "overloading",
+                "functions"
+              ],
+              "prompt": "```cpp\nint dmg(int base, int mult = 2, int bonus = 0) {\n    return base * mult + bonus;\n}\n```\n\nQuanto é `dmg(5) + dmg(5, 3) + dmg(5, 1, 4)`?",
+              "answer": 34,
+              "hint": "Os argumentos preenchem os parâmetros a partir da esquerda; o que sobrar usa o valor padrão.",
+              "explanation": "`dmg(5)` usa os dois padrões: 5 × 2 + 0 = 10. `dmg(5, 3)` sobrescreve `mult`: 15. `dmg(5, 1, 4)` sobrescreve os dois: 5 + 4 = 9. 10 + 15 + 9 = **34**. Os argumentos preenchem os parâmetros da esquerda para a direita, então você não pode pular `mult` e definir só `bonus`."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "data-and-memory",
+      "title": "Dados e memória",
+      "description": "Referências, vectors, maps e um primeiro contato com ponteiros.",
+      "lessons": [
+        {
+          "id": "references-const",
+          "title": "Referências e const&",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "Argumentos são copiados por padrão: receba `T&` para alterar o objeto de quem chamou e `const T&` para ler um objeto grande sem copiá-lo.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Cópias por padrão",
+              "body": "Passar um argumento **copia** o valor para o parâmetro, então alterar o parâmetro altera só a cópia:\n\n```cpp\nvoid healCopy(int hp) { hp += 10; }   // the caller's value is unchanged\n```\n\nUma **referência**, escrita `int&`, é outro nome para uma variável que já existe. Nenhuma cópia é feita: cada uso da referência *é* um uso do original.\n\n```cpp\nint gold = 100;\nint& purse = gold;   // purse is another name for gold\npurse -= 30;         // gold is now 70\n```\n\nUm parâmetro por referência, `void healRef(int& hp)`, permite que uma função altere a variável de quem chamou. Uma referência precisa ser vinculada quando é criada e sempre se refere ao mesmo objeto."
+            },
+            {
+              "type": "output",
+              "id": "q-copy-vs-ref",
+              "concepts": [
+                "references"
+              ],
+              "prompt": "O que isto imprime?",
+              "language": "cpp",
+              "code": "#include <iostream>\n\nvoid healCopy(int hp) {\n    hp += 10;\n}\n\nvoid healRef(int& hp) {\n    hp += 10;\n}\n\nint main() {\n    int a = 50;\n    healCopy(a);\n    std::cout << a << \"\\n\";\n    healRef(a);\n    std::cout << a << \"\\n\";\n}",
+              "output": "50\n60",
+              "explanation": "`healCopy` soma 10 à própria cópia, que desaparece quando a função retorna, então `a` continua `50`. O clang até avisa *parameter 'hp' set but not used*. `healRef` recebe `a` por referência, então o `+= 10` cai no próprio `a`: `60`."
+            },
+            {
+              "type": "trace",
+              "id": "q-trace-reference",
+              "concepts": [
+                "references"
+              ],
+              "prompt": "Acompanhe e preveja `gold` quando perguntarem.",
+              "language": "cpp",
+              "code": "int gold = 100;\nint& purse = gold;\npurse -= 30;\nint copy = gold;\ncopy += 5;\npurse = copy;",
+              "frames": [
+                {
+                  "line": 1,
+                  "vars": {
+                    "gold": "100"
+                  }
+                },
+                {
+                  "line": 2,
+                  "vars": {
+                    "gold": "100",
+                    "purse": "100"
+                  },
+                  "note": "`purse` é outro nome para `gold`, e não uma variável nova."
+                },
+                {
+                  "line": 3,
+                  "vars": {
+                    "gold": "70",
+                    "purse": "70"
+                  },
+                  "ask": "gold"
+                },
+                {
+                  "line": 4,
+                  "vars": {
+                    "gold": "70",
+                    "purse": "70",
+                    "copy": "70"
+                  },
+                  "note": "`copy` é um `int` separado que começa em 70."
+                },
+                {
+                  "line": 5,
+                  "vars": {
+                    "gold": "70",
+                    "purse": "70",
+                    "copy": "75"
+                  },
+                  "ask": "gold"
+                },
+                {
+                  "line": 6,
+                  "vars": {
+                    "gold": "75",
+                    "purse": "75",
+                    "copy": "75"
+                  },
+                  "ask": "gold"
+                }
+              ],
+              "hint": "Uma referência nunca pode ser reapontada: atribuir a ela atribui à variável que ela nomeia.",
+              "explanation": "Toda mudança feita por `purse` é uma mudança em `gold`, porque são a mesma variável: `purse -= 30` deixa `gold` em 70. `int copy = gold;` cria uma cópia independente, então `copy += 5` não mexe em `gold`. Por fim, `purse = copy` **atribui** 75 a `gold`; não faz `purse` passar a se referir a `copy`."
+            },
+            {
+              "type": "explain",
+              "title": "const& para ler coisas grandes",
+              "body": "Copiar um `int` é de graça, mas copiar um `std::vector` com 10.000 inimigos ou uma `std::string` longa significa alocar e copiar tudo, a cada chamada. Uma **referência const** evita a cópia *e* promete não alterar o original:\n\n```cpp\nint totalWeight(const std::vector<Item>& items);\n```\n\nSe a função tentar modificá-lo, a compilação falha: *cannot assign to variable 'score' with const-qualified type 'const int &'*.\n\nRegras práticas para parâmetros:\n- tipos básicos pequenos (`int`, `double`, `bool`, `char`): por valor\n- objetos maiores que você só lê (`std::string`, `std::vector`, suas próprias structs): `const T&`\n- tudo que a função precisa alterar para quem chamou: `T&`"
+            },
+            {
+              "type": "buckets",
+              "id": "q-param-choice",
+              "concepts": [
+                "const-reference",
+                "references"
+              ],
+              "prompt": "Escolha o estilo de parâmetro para o argumento de cada função.",
+              "buckets": [
+                "`T` (por valor)",
+                "`const T&`",
+                "`T&`"
+              ],
+              "items": [
+                {
+                  "text": "Um `double` de velocidade usado em uma fórmula",
+                  "bucket": 0
+                },
+                {
+                  "text": "Um `char` com a tecla que foi pressionada",
+                  "bucket": 0
+                },
+                {
+                  "text": "Um nome de jogador `std::string` que só é impresso",
+                  "bucket": 1
+                },
+                {
+                  "text": "Um `std::vector<Enemy>` que a função só conta",
+                  "bucket": 1
+                },
+                {
+                  "text": "Uma struct `Level` grande que a função só lê",
+                  "bucket": 1
+                },
+                {
+                  "text": "Uma pontuação `int` que a função precisa aumentar para quem chamou",
+                  "bucket": 2
+                },
+                {
+                  "text": "Um inventário `std::vector<Item>` ao qual a função adiciona um item",
+                  "bucket": 2
+                }
+              ],
+              "explanation": "Valores básicos pequenos são mais baratos de copiar do que de acessar por uma referência, então passe-os por valor. Qualquer coisa maior que só é lida vai por `const T&`: sem cópia, e o compilador garante o somente leitura. Quando quem chama precisa ver a mudança, use um `T&` simples."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-swap",
+              "concepts": [
+                "references"
+              ],
+              "prompt": "`swapValues` deveria trocar `x` e `y`, então isto deveria imprimir `2 1`. Clique na linha com o bug.",
+              "language": "cpp",
+              "code": "#include <iostream>\n\nvoid swapValues(int a, int b) {\n    int tmp = a;\n    a = b;\n    b = tmp;\n}\n\nint main() {\n    int x = 1;\n    int y = 2;\n    swapValues(x, y);\n    std::cout << x << \" \" << y << \"\\n\";\n}",
+              "error": "1 2",
+              "lines": [
+                3
+              ],
+              "fixes": [
+                "Mudar a linha 3 para `void swapValues(int& a, int& b) {`",
+                "Mudar a linha 3 para `void swapValues(const int& a, const int& b) {`",
+                "Mudar a linha 12 para `swapValues(y, x);`",
+                "Mudar a linha 3 para `void swapValues(int& a, int b) {`"
+              ],
+              "answer": 0,
+              "hint": "Quais variáveis `a = b;` altera?",
+              "explanation": "`a` e `b` são cópias, então a função troca as próprias cópias e as joga fora. `int& a, int& b` as tornam nomes para os `x` e `y` de quem chamou. `const int&` proíbe as atribuições (*cannot assign to variable 'a' with const-qualified type 'const int &'*), trocar os argumentos na chamada ainda troca cópias, e tornar só `a` uma referência define `x` como 2 mas deixa `y` em 2: `2 2`."
+            }
+          ]
+        },
+        {
+          "id": "vectors-arrays",
+          "title": "Vectors, arrays e range-for",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "`std::vector` é o container padrão, o range-for visita seus elementos (`&` para alterá-los), e `.at()` checa os índices onde `[]` não checa.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "std::vector",
+              "body": "```cpp\n#include <vector>\n\nstd::vector<int> hp = {30, 12, 7};\nhp.push_back(5);      // add to the end: {30, 12, 7, 5}\nhp.size();            // 4\nhp[0];                // 30, the first element\nhp.back();            // 5, the last element\nhp.pop_back();        // remove the last element\nhp.empty();           // false\n```\n\nUm `std::vector<T>` é um array que cresce, com `T`s guardados lado a lado na memória. É o container que você mais vai usar, e os jogos o adoram: a CPU lê mais rápido a memória que fica junta. O `<int>` fixa o tipo dos elementos: um vector guarda um único tipo. Os índices começam em 0, então o último válido é `size() - 1`."
+            },
+            {
+              "type": "explain",
+              "title": "Percorrendo um vector",
+              "body": "```cpp\nfor (int x : hp) { ... }           // x is a copy of each element\nfor (int& x : hp) { x *= 2; }      // x is the element itself\nfor (const auto& e : enemies) {}   // read big elements without copying\nfor (std::size_t i = 0; i < hp.size(); ++i) { hp[i]; }   // when you need the index\n```\n\nO loop **range-for** visita todos os elementos em ordem. A variável do loop segue as regras da última lição: um tipo simples é uma cópia, `&` se refere ao elemento de verdade e `const auto&` lê sem copiar."
+            },
+            {
+              "type": "output",
+              "id": "q-range-for",
+              "concepts": [
+                "range-for",
+                "references"
+              ],
+              "prompt": "O que isto imprime?",
+              "language": "cpp",
+              "code": "#include <iostream>\n#include <vector>\n\nint main() {\n    std::vector<int> hp = {30, 12, 7};\n    for (int x : hp) {\n        x -= 5;\n    }\n    for (int& x : hp) {\n        x *= 2;\n    }\n    hp.push_back(1);\n    for (int x : hp) {\n        std::cout << x << \" \";\n    }\n    std::cout << hp.size() << \"\\n\";\n}",
+              "output": "60 24 14 1 4",
+              "hint": "Qual loop altera o vector: o com `int x` ou o com `int& x`?",
+              "explanation": "O primeiro loop altera cópias, então nada acontece (o clang avisa *variable 'x' set but not used*). O `int& x` do segundo loop é cada elemento de verdade, então o vector vira 60, 24, 14. `push_back(1)` adiciona um quarto elemento, e o último loop imprime os quatro, seguidos de `size()`, 4."
+            },
+            {
+              "type": "trace",
+              "id": "q-trace-vector",
+              "concepts": [
+                "vector"
+              ],
+              "prompt": "Acompanhe e preveja o vector quando perguntarem.",
+              "language": "cpp",
+              "code": "std::vector<int> v;\nv.push_back(4);\nv.push_back(9);\nv.push_back(2);\nv[0] = v[1] + v[2];\nv.pop_back();\nint last = v.back();",
+              "frames": [
+                {
+                  "line": 1,
+                  "vars": {
+                    "v": "[]",
+                    "v.size()": "0"
+                  },
+                  "note": "Um vector novo começa vazio."
+                },
+                {
+                  "line": 2,
+                  "vars": {
+                    "v": "[4]",
+                    "v.size()": "1"
+                  }
+                },
+                {
+                  "line": 3,
+                  "vars": {
+                    "v": "[4, 9]",
+                    "v.size()": "2"
+                  }
+                },
+                {
+                  "line": 4,
+                  "vars": {
+                    "v": "[4, 9, 2]",
+                    "v.size()": "3"
+                  },
+                  "note": "Os índices 0, 1, 2 guardam 4, 9, 2."
+                },
+                {
+                  "line": 5,
+                  "vars": {
+                    "v": "[11, 9, 2]",
+                    "v.size()": "3"
+                  },
+                  "ask": "v"
+                },
+                {
+                  "line": 6,
+                  "vars": {
+                    "v": "[11, 9]",
+                    "v.size()": "2"
+                  },
+                  "ask": "v.size()"
+                },
+                {
+                  "line": 7,
+                  "vars": {
+                    "v": "[11, 9]",
+                    "v.size()": "2",
+                    "last": "9"
+                  },
+                  "ask": "last"
+                }
+              ],
+              "explanation": "`push_back` acrescenta, então o vector cresce para `[4, 9, 2]`. `v[0] = v[1] + v[2]` sobrescreve o primeiro elemento com 9 + 2 = 11. `pop_back` remove o último elemento (o 2), deixando dois, e `back()` lê o novo último elemento, 9."
+            },
+            {
+              "type": "explain",
+              "title": "`[]` vs `.at()`",
+              "body": "`v[i]` não confere `i`. Ler além do fim é **comportamento indefinido**: você pode receber lixo, um crash, ou um programa que parece bem até corromper outra coisa em silêncio.\n\n`v.at(i)` confere, e lança `std::out_of_range` se `i` não estiver entre `0` e `size() - 1`, então o programa para com uma mensagem clara:\n\n```\nlibc++abi: terminating due to uncaught exception of type std::out_of_range: vector\n```\n\nUse `.at()` enquanto aprende e sempre que um índice vier de fora (entrada do jogador, arquivos). As engines usam `[]` em loops quentes por velocidade e pegam os erros em builds de debug com o **AddressSanitizer** (`-fsanitize=address`), que reporta um *heap-buffer-overflow* na linha com o problema."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-off-by-one",
+              "concepts": [
+                "bounds-checking",
+                "range-for"
+              ],
+              "prompt": "Isto deveria imprimir a pontuação total, `19`. Quebra. Clique na linha com o bug.",
+              "language": "cpp",
+              "code": "#include <iostream>\n#include <vector>\n\nint main() {\n    std::vector<int> scores = {7, 3, 9};\n    int total = 0;\n    for (std::size_t i = 0; i <= scores.size(); ++i) {\n        total += scores.at(i);\n    }\n    std::cout << total << \"\\n\";\n}",
+              "error": "libc++abi: terminating due to uncaught exception of type std::out_of_range: vector",
+              "lines": [
+                7
+              ],
+              "fixes": [
+                "Mudar a linha 7 para `for (std::size_t i = 0; i < scores.size(); ++i) {`",
+                "Mudar a linha 8 para `total += scores[i];`",
+                "Mudar a linha 7 para `for (std::size_t i = 1; i <= scores.size(); ++i) {`",
+                "Mudar a linha 6 para `long long total = 0;`"
+              ],
+              "answer": 0,
+              "hint": "Com 3 elementos, quais índices são válidos?",
+              "explanation": "Com 3 notas, os índices válidos são 0, 1 e 2, mas `i <= scores.size()` também roda o corpo para `i = 3`, e `.at(3)` lança uma exceção. Use `<`. Trocar para `scores[i]` só esconde o crash: na nossa execução até imprimiu 19 por sorte, mas ler `scores[3]` é comportamento indefinido, e o AddressSanitizer reporta *heap-buffer-overflow*. Começar em 1 pula o 7 e ainda lê o índice 3, e o tipo de `total` não tem nada a ver com isso. (Um range-for, `for (int s : scores)`, não tem como errar os limites.)"
+            },
+            {
+              "type": "example",
+              "title": "std::array para tamanhos fixos",
+              "problem": "Uma cor sempre tem exatamente três canais. Ela deve ser um `std::vector<int>` ou um `std::array<int, 3>`? Decida e depois revele.",
+              "steps": [
+                "`std::array<T, N>` (`#include <array>`) tem um tamanho fixado na compilação: `std::array<int, 3> rgb = {255, 128, 0};`",
+                "Ele não tem `push_back`: `rgb.push_back(7)` falha com *no member named 'push_back' in 'std::array<int, 3>'*.",
+                "Ele guarda seus elementos diretamente, sem alocação separada no heap, e aceita `[]`, `.at()`, `.size()` e range-for exatamente como um vector."
+              ],
+              "answer": "`std::array<int, 3>`: a quantidade nunca muda. Use `std::vector` quando o número de elementos muda enquanto o programa roda."
+            },
+            {
+              "type": "buckets",
+              "id": "q-vector-or-array",
+              "concepts": [
+                "vector"
+              ],
+              "prompt": "Vector ou array?",
+              "buckets": [
+                "`std::vector`",
+                "`std::array`"
+              ],
+              "items": [
+                {
+                  "text": "Os inimigos vivos no momento",
+                  "bucket": 0
+                },
+                {
+                  "text": "As mensagens de chat recebidas nesta partida",
+                  "bucket": 0
+                },
+                {
+                  "text": "Os itens que o jogador já pegou",
+                  "bucket": 0
+                },
+                {
+                  "text": "Os valores x, y e z de uma posição",
+                  "bucket": 1
+                },
+                {
+                  "text": "Os quatro cantos de um retângulo",
+                  "bucket": 1
+                },
+                {
+                  "text": "Os nomes dos sete dias da semana",
+                  "bucket": 1
+                }
+              ],
+              "explanation": "Se a quantidade muda em tempo de execução (inimigos nascem e morrem, mensagens chegam, itens são pegos), use um `std::vector`. Se a quantidade faz parte do que a coisa *é* (3 coordenadas, 4 cantos, 7 dias), um `std::array` diz isso e não precisa de alocação no heap."
+            }
+          ]
+        },
+        {
+          "id": "unordered-map",
+          "title": "Maps: busca por chave",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "`std::unordered_map` encontra um valor pela chave em tempo praticamente constante, mas `m[key]` insere chaves ausentes: confira com `contains` e leia com `at`.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Busca por chave",
+              "body": "```cpp\n#include <unordered_map>\n\nstd::unordered_map<std::string, int> price;\nprice[\"sword\"] = 50;           // insert or overwrite\nprice[\"shield\"] = 30;\nprice.at(\"sword\");             // 50; throws if the key is missing\nprice.contains(\"bow\");         // false (C++20)\nprice.size();                  // 2\nprice.erase(\"shield\");         // remove a key\n\nfor (const auto& [name, cost] : price) {   // visit every pair\n    std::cout << name << \": \" << cost << \"\\n\";\n}\n```\n\nUm `std::unordered_map<K, V>` é uma tabela hash: buscar uma chave leva praticamente o mesmo tempo, não importa quantas entradas existam. A ordem do loop é **não especificada**, então nunca conte com ela. Se você precisa das chaves em ordem, `std::map` as mantém ordenadas (é uma árvore, e um pouco mais lento)."
+            },
+            {
+              "type": "explain",
+              "title": "A armadilha do `[]`",
+              "body": "`m[key]` nunca falha: se a chave está ausente, ele a **insere** com um valor padrão (`0` para números, `\"\"` para strings) e devolve esse valor. Isso é prático para contar, porque `++counts[word];` começa cada palavra nova em 0.\n\nMas está errado para *conferir*: perguntar por `price[\"bow\"]` adiciona um arco à loja sem avisar. Para conferir sem alterar o map, use `contains`; para ler uma chave que precisa existir, use `at`."
+            },
+            {
+              "type": "output",
+              "id": "q-map-insert",
+              "concepts": [
+                "unordered-map"
+              ],
+              "prompt": "O que isto imprime?",
+              "language": "cpp",
+              "code": "#include <iostream>\n#include <string>\n#include <unordered_map>\n\nint main() {\n    std::unordered_map<std::string, int> stock = {{\"apple\", 3}};\n    std::cout << stock[\"pear\"] << \" \";\n    std::cout << stock.size() << \" \";\n    std::cout << stock.contains(\"kiwi\") << \"\\n\";\n}",
+              "output": "0 2 0",
+              "explanation": "`stock[\"pear\"]` não encontra uma pera, então insere uma com o valor 0 e imprime `0`. Agora o map tem 2 chaves. `contains(\"kiwi\")` só confere, e `std::cout` imprime o `false` como `0`."
+            },
+            {
+              "type": "example",
+              "title": "Contando com um map",
+              "problem": "Conte quantas vezes cada tipo de inimigo aparece em `{\"orc\", \"elf\", \"orc\", \"imp\", \"orc\"}`. Preveja `counts[\"orc\"]` e `counts.size()` antes de revelar.",
+              "steps": [
+                "Comece com um `std::unordered_map<std::string, int> counts;` vazio.",
+                "Para cada palavra, `++counts[w];`. Na primeira vez que uma palavra aparece, `[]` a insere com 0 e `++` a faz valer 1.",
+                "Depois do loop: orc 3, elf 1, imp 1."
+              ],
+              "answer": "```cpp\nstd::vector<std::string> words = {\"orc\", \"elf\", \"orc\", \"imp\", \"orc\"};\nstd::unordered_map<std::string, int> counts;\nfor (const std::string& w : words) {\n    ++counts[w];\n}\n```\n\n`counts[\"orc\"]` é `3` e `counts.size()` é `3`: três chaves diferentes."
+            },
+            {
+              "type": "trace",
+              "id": "q-trace-kills",
+              "concepts": [
+                "unordered-map"
+              ],
+              "prompt": "Acompanhe e preveja os valores. (O map é mostrado ordenado por chave; a ordem real de um `unordered_map` não é especificada.)",
+              "language": "cpp",
+              "code": "std::unordered_map<std::string, int> kills;\nkills[\"orc\"] += 1;\nkills[\"elf\"] += 1;\nkills[\"orc\"] += 1;\nint orcs = kills[\"orc\"];\nint trolls = kills[\"troll\"];\nstd::size_t kinds = kills.size();",
+              "frames": [
+                {
+                  "line": 1,
+                  "vars": {
+                    "kills": "{}"
+                  }
+                },
+                {
+                  "line": 2,
+                  "vars": {
+                    "kills": "{\"orc\": 1}"
+                  },
+                  "note": "Uma chave ausente é inserida como 0, e então `+= 1` a faz valer 1."
+                },
+                {
+                  "line": 3,
+                  "vars": {
+                    "kills": "{\"elf\": 1, \"orc\": 1}"
+                  }
+                },
+                {
+                  "line": 4,
+                  "vars": {
+                    "kills": "{\"elf\": 1, \"orc\": 2}"
+                  }
+                },
+                {
+                  "line": 5,
+                  "vars": {
+                    "kills": "{\"elf\": 1, \"orc\": 2}",
+                    "orcs": "2"
+                  },
+                  "ask": "orcs"
+                },
+                {
+                  "line": 6,
+                  "vars": {
+                    "kills": "{\"elf\": 1, \"orc\": 2, \"troll\": 0}",
+                    "orcs": "2",
+                    "trolls": "0"
+                  }
+                },
+                {
+                  "line": 7,
+                  "vars": {
+                    "kills": "{\"elf\": 1, \"orc\": 2, \"troll\": 0}",
+                    "orcs": "2",
+                    "trolls": "0",
+                    "kinds": "3"
+                  },
+                  "ask": "kinds"
+                }
+              ],
+              "hint": "`kills[\"troll\"]` altera o map?",
+              "explanation": "Cada `kills[...] += 1` insere a chave em 0 na primeira vez, então orc termina em 2 e elf em 1. Ler `kills[\"troll\"]` devolve 0, mas também **insere** troll, então o map agora tem 3 chaves."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-map-check",
+              "concepts": [
+                "unordered-map"
+              ],
+              "prompt": "A loja vende 2 itens. Isto deveria imprimir `bow is not sold` e depois `2 items for sale`. Clique na linha com o bug.",
+              "language": "cpp",
+              "code": "#include <iostream>\n#include <string>\n#include <unordered_map>\n\nint main() {\n    std::unordered_map<std::string, int> price = {{\"sword\", 50}, {\"shield\", 30}};\n    std::string item = \"bow\";\n    if (price[item] == 0) {\n        std::cout << item << \" is not sold\\n\";\n    }\n    std::cout << price.size() << \" items for sale\\n\";\n}",
+              "error": "bow is not sold\n3 items for sale",
+              "lines": [
+                8
+              ],
+              "fixes": [
+                "Mudar a linha 8 para `if (!price.contains(item)) {`",
+                "Mudar a linha 8 para `if (price.at(item) == 0) {`",
+                "Mudar a linha 8 para `if (price[item] < 1) {`",
+                "Mudar a linha 8 para `if (price.contains(item)) {`"
+              ],
+              "answer": 0,
+              "hint": "O que o `[]` faz com uma chave que não está no map?",
+              "explanation": "`price[item]` não encontra um arco, então insere um com preço 0, e a loja passa a listar 3 itens. `contains` confere sem inserir. `at` lança uma exceção para uma chave ausente (*unordered_map::at: key not found*), `price[item] < 1` insere do mesmo jeito, e remover o `!` inverte o teste, então a mensagem nunca é impressa."
+            },
+            {
+              "type": "buckets",
+              "id": "q-pick-container",
+              "concepts": [
+                "unordered-map",
+                "vector"
+              ],
+              "prompt": "Escolha o container para cada tarefa.",
+              "buckets": [
+                "`std::vector`",
+                "`std::unordered_map`",
+                "`std::array`"
+              ],
+              "items": [
+                {
+                  "text": "A vida de cada inimigo, na ordem de criação",
+                  "bucket": 0
+                },
+                {
+                  "text": "Pontuações para ordenar em um ranking",
+                  "bucket": 0
+                },
+                {
+                  "text": "Preços de itens, buscados pelo nome do item",
+                  "bucket": 1
+                },
+                {
+                  "text": "Configurações buscadas por chave, como “volume”",
+                  "bucket": 1
+                },
+                {
+                  "text": "Quantas vezes cada palavra aparece em um log de chat",
+                  "bucket": 1
+                },
+                {
+                  "text": "Os canais vermelho, verde e azul de uma cor",
+                  "bucket": 2
+                },
+                {
+                  "text": "Os valores x e y de um ponto 2D",
+                  "bucket": 2
+                }
+              ],
+              "explanation": "Sequências ordenadas às quais você acrescenta itens ou que você ordena são vectors. Quando você encontra coisas por uma chave, e não por uma posição, use um map. Quando o número de elementos é fixado pelo que a coisa é, use um array."
+            }
+          ]
+        },
+        {
+          "id": "pointers",
+          "title": "Ponteiros, rapidamente",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "Um ponteiro guarda um endereço: `&` obtém um, `*` o segue, e `nullptr` significa que ele não aponta para lugar nenhum, então confira antes de segui-lo.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Endereços",
+              "body": "Toda variável vive em algum lugar da memória, em um **endereço**. `&x` dá esse endereço, e um **ponteiro** guarda um:\n\n```cpp\nint a = 5;\nint* p = &a;    // p holds the address of a\n*p = 6;         // * follows the pointer: a is now 6\n```\n\n`int*` se lê “ponteiro para int”. Ao contrário de uma referência, um ponteiro pode ser mudado para apontar para outro lugar, e pode apontar para **lugar nenhum**: `nullptr`. Seguir um ponteiro nulo é comportamento indefinido, geralmente um crash, então confira antes: `if (p != nullptr)`.\n\nImprimir o próprio `p` mostra um endereço bruto que muda de execução para execução, e é por isso que o trace abaixo mostra `&a` no lugar."
+            },
+            {
+              "type": "trace",
+              "id": "q-trace-pointer",
+              "concepts": [
+                "pointers"
+              ],
+              "prompt": "Acompanhe e preveja os valores.",
+              "language": "cpp",
+              "code": "int a = 5;\nint b = 8;\nint* p = &a;\n*p += 1;\np = &b;\n*p = *p * 2;\np = nullptr;",
+              "frames": [
+                {
+                  "line": 1,
+                  "vars": {
+                    "a": "5"
+                  }
+                },
+                {
+                  "line": 2,
+                  "vars": {
+                    "a": "5",
+                    "b": "8"
+                  }
+                },
+                {
+                  "line": 3,
+                  "vars": {
+                    "a": "5",
+                    "b": "8",
+                    "p": "&a",
+                    "*p": "5"
+                  },
+                  "note": "`p` guarda o endereço de `a`, então `*p` lê `a`."
+                },
+                {
+                  "line": 4,
+                  "vars": {
+                    "a": "6",
+                    "b": "8",
+                    "p": "&a",
+                    "*p": "6"
+                  },
+                  "ask": "a"
+                },
+                {
+                  "line": 5,
+                  "vars": {
+                    "a": "6",
+                    "b": "8",
+                    "p": "&b",
+                    "*p": "8"
+                  },
+                  "ask": "*p"
+                },
+                {
+                  "line": 6,
+                  "vars": {
+                    "a": "6",
+                    "b": "16",
+                    "p": "&b",
+                    "*p": "16"
+                  },
+                  "ask": "b"
+                },
+                {
+                  "line": 7,
+                  "vars": {
+                    "a": "6",
+                    "b": "16",
+                    "p": "nullptr"
+                  },
+                  "note": "`p` agora não aponta para lugar nenhum: `*p` seria comportamento indefinido."
+                }
+              ],
+              "hint": "`*p` é a variável que `p` estiver apontando no momento.",
+              "explanation": "`*p += 1` escreve através do ponteiro em `a`, fazendo-o valer 6. `p = &b` muda o **ponteiro**, e não um `int`: agora `*p` lê `b`, que é 8. `*p = *p * 2` dobra `b` para 16 e deixa `a` em paz."
+            },
+            {
+              "type": "explain",
+              "title": "`->`, e quando usar ponteiros",
+              "body": "Para um ponteiro para uma struct ou classe, `p->hp` é a forma abreviada de `(*p).hp`:\n\n```cpp\nPlayer hero;\nPlayer* p = &hero;\np->hp -= 25;   // same as (*p).hp -= 25\n```\n\nPrefira uma **referência** quando algo sempre precisa existir. Use um ponteiro quando ele pode estar ausente (`nullptr`) ou precisar ser reapontado depois, como o alvo atual de uma torreta.\n\nUm ponteiro para algo que foi destruído é **dangling** (pendente): ele ainda guarda o endereço antigo, e usá-lo é comportamento indefinido. Ponteiros que *possuem* memória são outra história, que vem na lição sobre o heap."
+            },
+            {
+              "type": "output",
+              "id": "q-pointer-reference",
+              "concepts": [
+                "pointers",
+                "references"
+              ],
+              "prompt": "O que isto imprime?",
+              "language": "cpp",
+              "code": "#include <iostream>\n\nint main() {\n    int score = 10;\n    int* p = &score;\n    int& r = score;\n    *p = 20;\n    r = r + 5;\n    std::cout << score << \" \" << *p << \" \" << (p == &r) << \"\\n\";\n}",
+              "output": "25 25 1",
+              "explanation": "`p` e `r` chegam ambos a `score`: `*p = 20` o define como 20 e `r = r + 5` o faz valer 25, então `score` e `*p` valem `25`. Uma referência não tem endereço próprio, então `&r` é o endereço de `score`, o mesmo de `p`: a comparação é verdadeira, impressa como `1`."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-nullptr",
+              "concepts": [
+                "pointers",
+                "undefined-behaviour"
+              ],
+              "prompt": "Isto deveria imprimir o primeiro valor negativo, ou não imprimir nada se não houver. Quebra. Clique na linha com o bug.",
+              "language": "cpp",
+              "code": "#include <iostream>\n#include <vector>\n\nint* findFirstNegative(std::vector<int>& values) {\n    for (int& x : values) {\n        if (x < 0) return &x;\n    }\n    return nullptr;\n}\n\nint main() {\n    std::vector<int> hp = {30, 12, 7};\n    int* hit = findFirstNegative(hp);\n    std::cout << *hit << \"\\n\";\n}",
+              "error": "Built with -fsanitize=address,undefined:\nruntime error: load of null pointer of type 'int'\n...\nERROR: AddressSanitizer: SEGV on unknown address 0x000000000000",
+              "lines": [
+                14
+              ],
+              "fixes": [
+                "Mudar a linha 14 para `if (hit != nullptr) std::cout << *hit << \"\\n\";`",
+                "Mudar a linha 14 para `std::cout << hit << \"\\n\";`",
+                "Mudar a linha 8 para `return 0;`",
+                "Mudar a linha 13 para `int* hit = &findFirstNegative(hp);`"
+              ],
+              "answer": 0,
+              "hint": "O que `findFirstNegative` devolve para `{30, 12, 7}`?",
+              "explanation": "Nenhum valor é negativo, então `findFirstNegative` devolve `nullptr`, e `*hit` segue um ponteiro nulo: comportamento indefinido, aqui uma falha de segmentação. Confira antes de desreferenciar. Imprimir o próprio `hit` imprime o ponteiro (`0`), e não nada. `return 0;` é só outra forma de escrever um ponteiro nulo, então quebra do mesmo jeito, e `&findFirstNegative(hp)` não compila: *cannot take the address of an rvalue of type 'int *'*."
+            },
+            {
+              "type": "buckets",
+              "id": "q-ref-or-pointer",
+              "concepts": [
+                "pointers",
+                "references"
+              ],
+              "prompt": "Referência ou ponteiro?",
+              "buckets": [
+                "Referência (`T&`)",
+                "Ponteiro (`T*`)"
+              ],
+              "items": [
+                {
+                  "text": "Precisa estar vinculada a um objeto quando é criada",
+                  "bucket": 0
+                },
+                {
+                  "text": "Todo uso é automaticamente um uso do original, sem precisar de `*`",
+                  "bucket": 0
+                },
+                {
+                  "text": "Um parâmetro que sempre precisa se referir a um jogador de verdade",
+                  "bucket": 0
+                },
+                {
+                  "text": "Pode ser `nullptr`",
+                  "bucket": 1
+                },
+                {
+                  "text": "Pode ser reapontado para outro objeto depois",
+                  "bucket": 1
+                },
+                {
+                  "text": "Acessa membros com `->`",
+                  "bucket": 1
+                },
+                {
+                  "text": "O alvo atual de uma torreta, que pode ser ninguém",
+                  "bucket": 1
+                }
+              ],
+              "explanation": "Uma referência é um segundo nome permanente: sempre vinculada, nunca nula, nunca reapontada, então é a escolha natural quando algo precisa existir. Um ponteiro é um valor que guarda um endereço: pode ser nulo ou mudar, o que combina com relações opcionais ou mutáveis, e precisa de `*` ou `->` para chegar ao objeto."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "own-types",
+      "title": "Seus próprios tipos",
+      "description": "Structs e classes, enum class, std::optional e como dividir o código em arquivos.",
+      "lessons": [
+        {
+          "id": "structs-classes",
+          "title": "Structs e classes",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Uma struct ou classe reúne dados com as funções-membro que os usam; membros private mais funções public mantêm suas regras verdadeiras, e os objetos são copiados como valores.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Agrupando dados com struct",
+              "body": "```cpp\nstruct Vec2 {\n    float x = 0;\n    float y = 0;\n\n    float length() const {\n        return std::sqrt(x * x + y * y);\n    }\n};\n```\n\n```cpp\nVec2 p{3, 4};\np.x;          // 3\np.length();   // 5 (std::sqrt needs #include <cmath>)\n```\n\nUma `struct` reúne **membros** nomeados em um só tipo. Funções declaradas dentro dela são **funções-membro** e usam os membros diretamente. O `const` depois dos parênteses promete que a função não altera o objeto.\n\nOs objetos são **valores**: `Vec2 q = p;` copia todos os membros, e a partir daí `p` e `q` são independentes. Isso vale para `struct` e `class` igualmente (ao contrário das classes do C# ou do Java, em que as variáveis compartilham um único objeto)."
+            },
+            {
+              "type": "output",
+              "id": "q-struct-copy",
+              "concepts": [
+                "classes"
+              ],
+              "prompt": "O que isto imprime?",
+              "language": "cpp",
+              "code": "#include <iostream>\n\nstruct Vec2 {\n    int x = 0;\n    int y = 0;\n};\n\nint main() {\n    Vec2 a{1, 2};\n    Vec2 b = a;\n    b.x = 10;\n    Vec2 c;\n    std::cout << a.x << \" \" << b.x << \" \" << c.y << \"\\n\";\n}",
+              "output": "1 10 0",
+              "explanation": "`Vec2 b = a;` copia `a`, então definir `b.x` como 10 deixa `a.x` em 1. `c` é criado sem argumentos, então seus membros assumem os valores padrão: `c.y` é `0`."
+            },
+            {
+              "type": "explain",
+              "title": "Classes protegem suas regras",
+              "body": "```cpp\nclass Player {\npublic:\n    Player(std::string name, int maxHp)\n        : name_(name), hp_(maxHp), maxHp_(maxHp) {}\n\n    void takeDamage(int amount) {\n        hp_ = std::max(0, hp_ - amount);\n    }\n    void heal(int amount) {\n        hp_ = std::min(maxHp_, hp_ + amount);\n    }\n    int hp() const { return hp_; }\n\nprivate:\n    std::string name_;\n    int hp_;\n    int maxHp_;\n};\n```\n\nOs membros `public:` são a interface que qualquer um pode usar; os membros `private:` só podem ser tocados pelas funções-membro da própria classe. Isso é **encapsulamento**: nenhum código de fora consegue definir `hp_` como -50 ou 9999, então a regra “0 ≤ hp ≤ máximo” vale em toda parte.\n\nO **construtor** tem o nome da classe e nenhum tipo de retorno, e roda quando um objeto é criado. A lista depois do `:` define cada membro. (`std::max` e `std::min` vêm de `<algorithm>`; o `_` no final é só um hábito comum de nomenclatura para membros private.)\n\n`struct` e `class` diferem apenas no padrão: os membros são public em uma struct e private em uma class."
+            },
+            {
+              "type": "trace",
+              "id": "q-trace-player",
+              "concepts": [
+                "classes"
+              ],
+              "prompt": "Usando a classe `Player` acima, preveja `kai.hp()` quando perguntarem.",
+              "language": "cpp",
+              "code": "Player kai(\"Kai\", 100);\nkai.takeDamage(30);\nkai.heal(50);\nkai.takeDamage(45);\nkai.takeDamage(200);\nkai.heal(15);",
+              "frames": [
+                {
+                  "line": 1,
+                  "vars": {
+                    "kai.hp()": "100"
+                  },
+                  "note": "O construtor define `hp_` e `maxHp_` como 100."
+                },
+                {
+                  "line": 2,
+                  "vars": {
+                    "kai.hp()": "70"
+                  },
+                  "note": "100 - 30."
+                },
+                {
+                  "line": 3,
+                  "vars": {
+                    "kai.hp()": "100"
+                  },
+                  "ask": "kai.hp()"
+                },
+                {
+                  "line": 4,
+                  "vars": {
+                    "kai.hp()": "55"
+                  }
+                },
+                {
+                  "line": 5,
+                  "vars": {
+                    "kai.hp()": "0"
+                  },
+                  "ask": "kai.hp()"
+                },
+                {
+                  "line": 6,
+                  "vars": {
+                    "kai.hp()": "15"
+                  },
+                  "ask": "kai.hp()"
+                }
+              ],
+              "hint": "`heal` nunca passa de `maxHp_`, e `takeDamage` nunca fica abaixo de 0.",
+              "explanation": "`heal(50)` chegaria a 120, mas `std::min(maxHp_, ...)` o limita a 100. Tomar 45 deixa 55, e tomar 200 ficaria negativo, então `std::max(0, ...)` para em 0. Curar 15 a partir de 0 dá 15. As regras ficam em duas funções-membro, e nada fora da classe consegue contorná-las."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-private",
+              "concepts": [
+                "classes"
+              ],
+              "prompt": "Isto deveria adicionar mais 25 moedas e imprimir `75`, mas não compila. Clique na linha com o erro.",
+              "language": "cpp",
+              "code": "#include <iostream>\n\nclass Wallet {\npublic:\n    void deposit(int amount) {\n        if (amount > 0) coins_ += amount;\n    }\n    int coins() const { return coins_; }\n\nprivate:\n    int coins_ = 0;\n};\n\nint main() {\n    Wallet w;\n    w.deposit(50);\n    w.coins_ += 25;\n    std::cout << w.coins() << \"\\n\";\n}",
+              "error": "error: 'coins_' is a private member of 'Wallet'",
+              "lines": [
+                17
+              ],
+              "fixes": [
+                "Mudar a linha 17 para `w.deposit(25);`",
+                "Mudar a linha 17 para `w.coins() += 25;`",
+                "Mudar a linha 17 para `Wallet::coins_ += 25;`",
+                "Mudar a linha 5 para `void deposit(int amount) const {`"
+              ],
+              "answer": 0,
+              "hint": "Quais membros o código de fora da classe pode usar?",
+              "explanation": "`coins_` é private, então só as funções-membro de `Wallet` podem tocá-lo. Passe pela interface pública: `w.deposit(25)`. `w.coins()` devolve uma cópia do número, à qual não se pode atribuir (*expression is not assignable*). `Wallet::coins_` continua private e não indica nenhuma carteira específica, e tornar `deposit` `const` a proíbe de alterar `coins_`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-struct-vs-class",
+              "concepts": [
+                "classes"
+              ],
+              "prompt": "Um programador de C# pergunta o que realmente difere entre `struct` e `class` em C++. Qual é a resposta?",
+              "choices": [
+                "Apenas o acesso padrão: os membros são public em uma `struct` e private em uma `class`",
+                "Uma `struct` é copiada na atribuição, enquanto um objeto de `class` é compartilhado por referência",
+                "Uma `struct` não pode ter construtores nem funções-membro",
+                "Objetos de `class` sempre vivem no heap, e objetos de `struct` na stack"
+              ],
+              "answer": 0,
+              "explanation": "Em C++, as duas palavras-chave criam o mesmo tipo de tipo. Ambas copiam na atribuição, ambas podem ter construtores e funções-membro, e qualquer uma pode viver na stack ou no heap. A única diferença é o acesso padrão, então, por convenção, `struct` é usada para dados simples e `class` para tipos com regras a proteger."
+            }
+          ]
+        },
+        {
+          "id": "enums-optional",
+          "title": "enum class e std::optional",
+          "pareto": "extra",
+          "minutes": 7,
+          "takeaway": "`enum class` dá um conjunto fixo de estados nomeados que um `switch` pode tratar, e `std::optional<T>` diz “um T, ou nada” sem valores mágicos.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "enum class e switch",
+              "body": "```cpp\nenum class State { Idle, Running, Jumping };\n```\n\n```cpp\nState s = State::Idle;\nswitch (s) {\n    case State::Idle:    speed = 0; break;\n    case State::Running: speed = 5; break;\n    case State::Jumping: speed = 3; break;\n}\n```\n\nUm `enum class` é um tipo com um conjunto fixo de valores nomeados. Os nomes têm escopo (`State::Idle`), e ele não converte silenciosamente de ou para `int`, então um `State` não pode ser confundido com uma pontuação.\n\nO `switch` pula para o `case` correspondente. Cada case precisa de um `break`, ou a execução **cai** no seguinte (*falls through*). Com `-Wall`, o clang avisa quando um switch sobre um enum esquece um valor: *enumeration value 'Jumping' not handled in switch*. Acrescente um estado depois, e o compilador aponta todos os switches que precisam de atualização."
+            },
+            {
+              "type": "output",
+              "id": "q-fallthrough",
+              "concepts": [
+                "enum-class"
+              ],
+              "prompt": "O que isto imprime?",
+              "language": "cpp",
+              "code": "#include <iostream>\n\nenum class Weapon { Sword, Bow, Staff };\n\nint damage(Weapon w) {\n    int d = 0;\n    switch (w) {\n        case Weapon::Sword:\n            d += 10;\n        case Weapon::Bow:\n            d += 5;\n            break;\n        case Weapon::Staff:\n            d += 1;\n            break;\n    }\n    return d;\n}\n\nint main() {\n    std::cout << damage(Weapon::Sword) << \" \" << damage(Weapon::Bow) << \" \" << damage(Weapon::Staff) << \"\\n\";\n}",
+              "output": "15 5 1",
+              "hint": "Qual case não tem `break`?",
+              "explanation": "`Weapon::Sword` não tem `break`, então depois de `d += 10` a execução cai no case `Bow` e soma mais 5: `15`. `Bow` dá `5` e `Staff` dá `1`. Um `break` esquecido é um bug clássico; quando você realmente quer deixar cair no próximo, escreva `[[fallthrough]];` para deixar isso claro."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-enum-int",
+              "concepts": [
+                "enum-class"
+              ],
+              "prompt": "Isto deveria imprimir `facing right`, mas não compila. Clique na linha com o erro.",
+              "language": "cpp",
+              "code": "#include <iostream>\n\nenum class Dir { Left, Right };\n\nint main() {\n    Dir facing = Dir::Right;\n    if (facing == 1) {\n        std::cout << \"facing right\\n\";\n    }\n}",
+              "error": "error: invalid operands to binary expression ('Dir' and 'int')",
+              "lines": [
+                7
+              ],
+              "fixes": [
+                "Mudar a linha 7 para `if (facing == Dir::Right) {`",
+                "Mudar a linha 7 para `if (facing == Right) {`",
+                "Mudar a linha 7 para `if (facing = Dir::Right) {`",
+                "Mudar a linha 7 para `if (facing == \"Right\") {`"
+              ],
+              "answer": 0,
+              "explanation": "Um `enum class` nunca converte para `int`, então `facing == 1` não faz sentido. Compare com um valor do mesmo tipo: `Dir::Right`. Os nomes têm escopo, então `Right` sozinho é um *undeclared identifier*; `=` atribui, e um `Dir` *is not contextually convertible to 'bool'*; e um literal de string também não é um `Dir`."
+            },
+            {
+              "type": "explain",
+              "title": "std::optional",
+              "body": "Algumas funções podem não ter resposta: achar um item que não está lá, ou ler o nome de uma fase que não existe. `std::optional<T>` (`#include <optional>`) guarda um `T` ou nada, escrito `std::nullopt`:\n\n```cpp\nstd::optional<int> parseLevel(const std::string& s) {\n    if (s == \"easy\") return 1;\n    if (s == \"hard\") return 3;\n    return std::nullopt;\n}\n```\n\nConfira antes de usar, com `if (opt)` ou `opt.has_value()`, e depois leia o valor com `*opt`. Ou diga o que usar no lugar: `opt.value_or(0)`. `opt.value()` lança `std::bad_optional_access` quando está vazio.\n\nEle é melhor do que valores mágicos como `-1`, que pode ser uma resposta de verdade, e é mais claro do que um ponteiro que pode ser nulo."
+            },
+            {
+              "type": "example",
+              "title": "Onde está a chave?",
+              "problem": "Escreva `findItem(bag, name)`, que devolve o compartimento onde um item está, ou nada. O que ela deve devolver, e como quem chama usa o resultado? Decida antes de revelar.",
+              "steps": [
+                "O resultado é um índice ou nada, então o tipo de retorno é `std::optional<std::size_t>`.",
+                "Percorra os compartimentos e dê `return i;` quando houver correspondência (ele converte para um optional que guarda `i`). Depois do loop, `return std::nullopt;`.",
+                "Quem chama pode testar direto no `if`: `if (auto slot = findItem(bag, \"key\"))`, e usar `*slot` lá dentro."
+              ],
+              "answer": "```cpp\nstd::optional<std::size_t> findItem(const std::vector<std::string>& bag, const std::string& name) {\n    for (std::size_t i = 0; i < bag.size(); ++i) {\n        if (bag[i] == name) return i;\n    }\n    return std::nullopt;\n}\n\nint main() {\n    std::vector<std::string> bag = {\"rope\", \"lamp\", \"key\"};\n    if (auto slot = findItem(bag, \"key\")) {\n        std::cout << \"key in slot \" << *slot << \"\\n\";\n    }\n    if (!findItem(bag, \"map\")) {\n        std::cout << \"no map\\n\";\n    }\n}\n```\n\nImprime `key in slot 2` e `no map`."
+            },
+            {
+              "type": "output",
+              "id": "q-optional",
+              "concepts": [
+                "optional"
+              ],
+              "prompt": "Usando o `parseLevel` de cima, o que isto imprime?",
+              "language": "cpp",
+              "code": "#include <iostream>\n#include <optional>\n#include <string>\n\nstd::optional<int> parseLevel(const std::string& s) {\n    if (s == \"easy\") return 1;\n    if (s == \"hard\") return 3;\n    return std::nullopt;\n}\n\nint main() {\n    auto a = parseLevel(\"hard\");\n    auto b = parseLevel(\"nightmare\");\n    std::cout << a.value_or(0) << \" \" << b.value_or(0) << \" \" << b.has_value() << \"\\n\";\n}",
+              "output": "3 0 0",
+              "explanation": "`\"hard\"` dá um optional que guarda 3, então `value_or(0)` devolve `3`. `\"nightmare\"` não combina com nada, então `b` está vazio: `value_or(0)` recorre a `0`, e `has_value()` é falso, impresso como `0`."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-bad-optional",
+              "concepts": [
+                "optional"
+              ],
+              "prompt": "Sem nenhuma pontuação ainda, isto deveria imprimir `Best: 0`. Quebra. Clique na linha com o bug.",
+              "language": "cpp",
+              "code": "#include <iostream>\n#include <optional>\n#include <vector>\n\nstd::optional<int> best(const std::vector<int>& scores) {\n    if (scores.empty()) return std::nullopt;\n    int top = scores[0];\n    for (int s : scores) {\n        if (s > top) top = s;\n    }\n    return top;\n}\n\nint main() {\n    std::vector<int> scores;\n    std::cout << \"Best: \" << best(scores).value() << \"\\n\";\n}",
+              "error": "libc++abi: terminating due to uncaught exception of type std::bad_optional_access: bad_optional_access",
+              "lines": [
+                16
+              ],
+              "fixes": [
+                "Mudar a linha 16 para `std::cout << \"Best: \" << best(scores).value_or(0) << \"\\n\";`",
+                "Mudar a linha 6 para `if (scores.empty()) return {};`",
+                "Mudar a linha 16 para `std::cout << \"Best: \" << best(scores) << \"\\n\";`",
+                "Mudar a linha 15 para `std::vector<int> scores = {};`"
+              ],
+              "answer": 0,
+              "hint": "O que `best` devolve para um vector vazio, e o que `.value()` faz com isso?",
+              "explanation": "`best` corretamente devolve um optional vazio para um vector vazio, mas `.value()` em um optional vazio lança `std::bad_optional_access`. `value_or(0)` fornece o valor reserva. `return {};` é só outra forma de escrever `std::nullopt`, um optional não pode ser impresso diretamente (*invalid operands to binary expression*), e `= {}` continua criando um vector vazio."
+            }
+          ]
+        },
+        {
+          "id": "headers-sources",
+          "title": "Headers e arquivos-fonte",
+          "pareto": "extra",
+          "minutes": 6,
+          "takeaway": "Headers declaram o que existe e arquivos `.cpp` definem como funciona; cada `.cpp` compila sozinho e o linker os junta.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Dividindo um programa em arquivos",
+              "body": "```cpp\n// ---- math.h ----\n#pragma once\nint add(int a, int b);\n\n// ---- math.cpp ----\n#include \"math.h\"\nint add(int a, int b) {\n    return a + b;\n}\n\n// ---- main.cpp ----\n#include <iostream>\n#include \"math.h\"\nint main() {\n    std::cout << add(2, 3) << \"\\n\";\n}\n```\n\nO `#include` cola literalmente o texto do arquivo no lugar. Aspas encontram os seus próprios headers; sinais de menor e maior encontram os de bibliotecas. O `#pragma once` impede que um header seja colado duas vezes no mesmo arquivo.\n\nCada arquivo `.cpp` é compilado **separadamente** em um arquivo objeto, e depois o **linker** os junta em um único programa:\n\n```\nclang++ -std=c++20 main.cpp math.cpp -o game\n```"
+            },
+            {
+              "type": "order",
+              "id": "q-build-steps",
+              "concepts": [
+                "header-source",
+                "compilation"
+              ],
+              "prompt": "Coloque em ordem o que acontece quando você roda `clang++ main.cpp math.cpp -o game`.",
+              "items": [
+                "O conteúdo de `math.h` é colado em cada arquivo `.cpp` que o inclui",
+                "`main.cpp` e `math.cpp` são compilados separadamente em dois arquivos objeto",
+                "O linker liga a chamada a `add` em um arquivo objeto à definição dela no outro",
+                "O linker escreve o executável `game`",
+                "Você executa `./game` e ele imprime 5"
+              ],
+              "explanation": "A inclusão acontece primeiro, como uma colagem de texto simples. Depois cada arquivo `.cpp` é compilado sozinho: ao compilar `main.cpp`, o compilador só conhece `add` pela declaração. Ligar a chamada ao corpo real da função é trabalho do linker, e só então existe um programa para rodar."
+            },
+            {
+              "type": "explain",
+              "title": "Erros de linker",
+              "body": "Um erro de **compilador** cita um arquivo e uma linha. Um erro de **linker** vem depois, quando todos os arquivos compilaram bem, mas as peças não se encaixam:\n\n- Algo é declarado e chamado, mas nunca definido, ou o arquivo `.cpp` dele ficou de fora da compilação:\n\n```\nUndefined symbols for architecture arm64:\n  \"add(int, int)\", referenced from:\n      _main in main-c7f57c.o\nld: symbol(s) not found for architecture arm64\n```\n\n- Algo é **definido** em um header que dois arquivos `.cpp` incluem, então passa a existir duas vezes: *duplicate symbol*.\n\nRegra prática: headers guardam declarações, definições de classes e templates. Corpos de funções vão em arquivos `.cpp`, escritos como `void Player::takeDamage(int amount) { ... }` para funções-membro, ou são marcados como `inline`."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-duplicate-symbol",
+              "concepts": [
+                "header-source"
+              ],
+              "prompt": "Três arquivos são mostrados juntos. `clang++ hud.cpp main.cpp -o game` deveria gerar um programa que imprime `30`, mas a linkagem falha. Clique na linha com o bug.",
+              "language": "cpp",
+              "code": "// ---- score.h ----\n#pragma once\n\nint bonus(int level) {\n    return level * 10;\n}\n\n// ---- hud.cpp ----\n#include \"score.h\"\n\nint hudBonus() {\n    return bonus(2);\n}\n\n// ---- main.cpp ----\n#include <iostream>\n#include \"score.h\"\n\nint hudBonus();\n\nint main() {\n    std::cout << bonus(1) + hudBonus() << \"\\n\";\n}",
+              "error": "duplicate symbol 'bonus(int)' in:\n    .../hud-5f71e5.o\n    .../main-f7fbeb.o\nld: 1 duplicate symbols",
+              "lines": [
+                4
+              ],
+              "fixes": [
+                "Mudar a linha 4 para `inline int bonus(int level) {`",
+                "Apagar a linha 2 (`#pragma once`)",
+                "Mudar a linha 17 para `#include <score.h>`",
+                "Apagar a linha 9 (`#include \"score.h\"` em hud.cpp)"
+              ],
+              "answer": 0,
+              "hint": "Quantos arquivos objeto acabam contendo o corpo de `bonus`?",
+              "explanation": "O `#pragma once` só impede uma colagem dupla *dentro de um arquivo*. Tanto `hud.cpp` quanto `main.cpp` incluem o header, então os dois arquivos objeto contêm uma definição completa de `bonus`, e o linker se recusa a escolher uma. `inline` permite definições idênticas em vários arquivos (a outra correção é deixar só a declaração no header e mover o corpo para um `score.cpp`). Remover o `#pragma once` não muda nada aqui, sinais de menor e maior não procuram na pasta atual (*'score.h' file not found with <angled> include*), e sem o include, `hud.cpp` nem conhece `bonus`."
+            },
+            {
+              "type": "buckets",
+              "id": "q-header-or-source",
+              "concepts": [
+                "header-source"
+              ],
+              "prompt": "Header ou arquivo-fonte?",
+              "buckets": [
+                "Header (`.h`)",
+                "Arquivo-fonte (`.cpp`)"
+              ],
+              "items": [
+                {
+                  "text": "`int add(int a, int b);`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`#pragma once`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`struct Vec2 { float x; float y; };`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`class Player { ... };` listando seus membros",
+                  "bucket": 0
+                },
+                {
+                  "text": "`int add(int a, int b) { return a + b; }`",
+                  "bucket": 1
+                },
+                {
+                  "text": "O corpo de `Player::takeDamage`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`int main() { ... }`",
+                  "bucket": 1
+                }
+              ],
+              "explanation": "Headers dizem *o que existe*: declarações e definições de tipos que todo arquivo que os usa precisa enxergar. Arquivos-fonte dizem *como funciona*: corpos de funções, que precisam existir exatamente uma vez no programa inteiro, e o `main`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-linker-meaning",
+              "concepts": [
+                "header-source",
+                "compilation"
+              ],
+              "prompt": "A compilação para com `Undefined symbols` para `\"takeDamage(int)\"`, sem arquivo nem número de linha. Qual é a causa mais provável?",
+              "choices": [
+                "`takeDamage` foi declarada e chamada, mas a definição dela nunca entrou na compilação",
+                "Há um erro de sintaxe dentro de `player.h`",
+                "Falta `#include \"player.h\"` em `main.cpp`",
+                "`takeDamage` foi chamada com um `double` em vez de um `int`"
+              ],
+              "answer": 0,
+              "explanation": "*Undefined symbols* é um erro de linker: todos os arquivos compilaram, mas nenhum arquivo objeto contém o corpo da função. Talvez ela nunca tenha sido escrita, ou o arquivo `.cpp` dela ficou de fora do comando de compilação. Um erro de sintaxe ou um include esquecido são erros do compilador, com arquivo e linha (uma declaração ausente dá *use of undeclared identifier*), e um argumento `double` simplesmente converte para `int`."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "modern-toolkit",
+      "title": "O kit de ferramentas moderno",
+      "description": "Lambdas e algoritmos, memória do heap com unique_ptr e templates.",
+      "lessons": [
+        {
+          "id": "lambdas-algorithms",
+          "title": "Lambdas e <algorithm>",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Uma lambda é uma função escrita no próprio código cujo `[]` diz quais variáveis locais ela captura; passe lambdas a `std::sort`, `std::count_if` e `std::find_if` em vez de escrever os loops.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Lambdas",
+              "body": "Uma **lambda** é uma pequena função escrita exatamente onde você precisa dela:\n\n```cpp\nauto twice = [](int x) { return x * 2; };\ntwice(4);   // 8\n```\n\nO `[]` é a **lista de captura**: as variáveis locais do código ao redor que a lambda pode usar.\n\n- `[limit]` copia `limit` para dentro da lambda quando ela é criada\n- `[&total]` se refere ao próprio `total`, então a lambda vê, e pode alterar, o valor atual dele\n- `[=]` copia tudo que a lambda usa; `[&]` se refere a tudo que ela usa\n\nUsar uma variável local comum que não foi capturada é um erro de compilação."
+            },
+            {
+              "type": "explain",
+              "title": "<algorithm>",
+              "body": "`#include <algorithm>` te dá versões testadas de loops comuns. Elas recebem um intervalo como dois **iteradores**, `v.begin()` e `v.end()`, e muitas recebem uma lambda:\n\n```cpp\nstd::sort(v.begin(), v.end());                        // ascending\nstd::sort(v.begin(), v.end(), [](int a, int b) { return a > b; });  // descending\nauto n = std::count_if(v.begin(), v.end(), [](int x) { return x < 0; });\nauto it = std::find_if(v.begin(), v.end(), [](int x) { return x > 10; });\nif (it != v.end()) { /* *it is the first match */ }\n```\n\n`find_if` devolve um iterador, uma posição no vector; `v.end()` significa “não encontrado”. `*it` lê o elemento, e `it - v.begin()` é o índice dele. O C++20 também oferece versões mais curtas, como `std::ranges::sort(v)`."
+            },
+            {
+              "type": "output",
+              "id": "q-sort-count",
+              "concepts": [
+                "algorithms",
+                "lambdas"
+              ],
+              "prompt": "O que isto imprime?",
+              "language": "cpp",
+              "code": "#include <algorithm>\n#include <iostream>\n#include <vector>\n\nint main() {\n    std::vector<int> hp = {40, 5, 75, 20};\n    std::sort(hp.begin(), hp.end(), [](int a, int b) { return a > b; });\n    auto low = std::count_if(hp.begin(), hp.end(), [](int h) { return h < 30; });\n    std::cout << hp[0] << \" \" << hp[3] << \" \" << low << \"\\n\";\n}",
+              "output": "75 5 2",
+              "explanation": "A lambda de comparação devolve `a > b`, então os valores maiores vêm primeiro: `75, 40, 20, 5`. `hp[0]` é `75` e `hp[3]` é `5`. `count_if` conta os elementos para os quais a lambda devolve verdadeiro: 20 e 5 estão abaixo de 30, então `2`."
+            },
+            {
+              "type": "example",
+              "title": "Encontrando um inimigo",
+              "problem": "Ache o primeiro inimigo com menos de 10 de hp em `{{\"orc\", 40}, {\"imp\", 8}, {\"elf\", 3}}` e imprima o nome dele. Qual inimigo é esse, e o que você precisa conferir antes de usar o resultado?",
+              "steps": [
+                "`std::find_if` com a lambda `[](const Enemy& e) { return e.hp < 10; }` percorre o vector a partir do início.",
+                "O orc falha no teste; o imp passa, então `find_if` para ali e devolve um iterador para ele. O elf também combina, mas nunca é alcançado.",
+                "Se nada combinasse, o iterador seria igual a `enemies.end()`, e usá-lo seria comportamento indefinido. Confira primeiro e depois leia o nome com `it->name`."
+              ],
+              "answer": "```cpp\nstd::vector<Enemy> enemies = {{\"orc\", 40}, {\"imp\", 8}, {\"elf\", 3}};\nauto it = std::find_if(enemies.begin(), enemies.end(),\n                       [](const Enemy& e) { return e.hp < 10; });\nif (it != enemies.end()) {\n    std::cout << \"finish off the \" << it->name << \"\\n\";\n}\n```\n\nImprime `finish off the imp`."
+            },
+            {
+              "type": "trace",
+              "id": "q-trace-capture",
+              "concepts": [
+                "lambdas"
+              ],
+              "prompt": "Duas lambdas capturam `bonus` de formas diferentes. Preveja os valores quando perguntarem.",
+              "language": "cpp",
+              "code": "int bonus = 5;\nauto byValue = [bonus](int x) { return x + bonus; };\nauto byRef = [&bonus](int x) { return x + bonus; };\nbonus = 100;\nint a = byValue(1);\nint b = byRef(1);",
+              "frames": [
+                {
+                  "line": 1,
+                  "vars": {
+                    "bonus": "5"
+                  }
+                },
+                {
+                  "line": 2,
+                  "vars": {
+                    "bonus": "5",
+                    "byValue(0)": "5"
+                  },
+                  "note": "`byValue` guardou a própria cópia de `bonus` (5) quando foi criada."
+                },
+                {
+                  "line": 3,
+                  "vars": {
+                    "bonus": "5",
+                    "byValue(0)": "5",
+                    "byRef(0)": "5"
+                  },
+                  "note": "`byRef` se refere ao `bonus` de verdade."
+                },
+                {
+                  "line": 4,
+                  "vars": {
+                    "bonus": "100",
+                    "byValue(0)": "5",
+                    "byRef(0)": "100"
+                  },
+                  "ask": "byValue(0)"
+                },
+                {
+                  "line": 5,
+                  "vars": {
+                    "bonus": "100",
+                    "byValue(0)": "5",
+                    "byRef(0)": "100",
+                    "a": "6"
+                  },
+                  "ask": "a"
+                },
+                {
+                  "line": 6,
+                  "vars": {
+                    "bonus": "100",
+                    "byValue(0)": "5",
+                    "byRef(0)": "100",
+                    "a": "6",
+                    "b": "101"
+                  },
+                  "ask": "b"
+                }
+              ],
+              "hint": "Uma captura por valor é feita uma única vez, quando a lambda é criada.",
+              "explanation": "`[bonus]` copiou o valor 5 quando `byValue` foi criada, então mudanças posteriores em `bonus` não a afetam: `byValue(1)` é 6. `[&bonus]` se refere à própria variável, então `byRef` enxerga o novo 100: `byRef(1)` é 101."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-capture",
+              "concepts": [
+                "lambdas",
+                "algorithms"
+              ],
+              "prompt": "Isto deveria contar os inimigos abaixo de `limit` e imprimir `2`, mas não compila. Clique na linha com o erro.",
+              "language": "cpp",
+              "code": "#include <algorithm>\n#include <iostream>\n#include <vector>\n\nint main() {\n    std::vector<int> hp = {40, 5, 75, 20};\n    int limit = 30;\n    auto low = std::count_if(hp.begin(), hp.end(), [](int h) { return h < limit; });\n    std::cout << low << \"\\n\";\n}",
+              "error": "error: variable 'limit' cannot be implicitly captured in a lambda with no capture-default specified",
+              "lines": [
+                8
+              ],
+              "fixes": [
+                "Na linha 8, mudar a lambda para `[limit](int h) { return h < limit; }`",
+                "Na linha 8, mudar a lambda para `[](int h, int limit) { return h < limit; }`",
+                "Na linha 8, mudar a lambda para `[h](int h) { return h < limit; }`",
+                "Na linha 8, passar `limit` como um argumento extra: `std::count_if(hp.begin(), hp.end(), [](int h) { return h < limit; }, limit)`"
+              ],
+              "answer": 0,
+              "explanation": "`limit` é uma variável local de `main`, e o `[]` vazio da lambda não a captura. `[limit]` a copia para dentro. Um segundo parâmetro não funciona porque `count_if` chama a lambda com um argumento, `[h]` tenta capturar uma variável que não existe (*use of undeclared identifier 'h'*), e `count_if` não aceita um quarto argumento (*no matching function for call to 'count_if'*)."
+            },
+            {
+              "type": "numeric",
+              "id": "q-find-if-index",
+              "concepts": [
+                "algorithms"
+              ],
+              "prompt": "O que isto imprime?\n\n```cpp\nstd::vector<int> v = {8, 3, 15, 4, 23, 42};\nauto it = std::find_if(v.begin(), v.end(), [](int x) { return x > 10; });\nstd::cout << it - v.begin() << \"\\n\";\n```",
+              "answer": 2,
+              "hint": "`it - v.begin()` é o índice do elemento para o qual `it` aponta.",
+              "explanation": "`find_if` para no primeiro elemento maior que 10. 8 e 3 falham; 15, no índice 2, é a primeira correspondência. `it - v.begin()` é a distância desde o início: **2**."
+            }
+          ]
+        },
+        {
+          "id": "heap-unique-ptr",
+          "title": "O heap, new/delete e unique_ptr",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Variáveis locais morrem no fim do escopo; para objetos do heap use `std::make_unique`, cujo dono os libera automaticamente em todos os caminhos (RAII), e nunca escreva `delete` você mesmo.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Stack e heap",
+              "body": "Variáveis locais vivem na **stack**. Cada uma é criada quando sua linha roda e destruída automaticamente na chave de fechamento do seu escopo, na ordem inversa da criação. Uma classe pode executar código nesse momento em seu **destrutor**, escrito `~Name()`.\n\nÀs vezes um objeto precisa sobreviver à função que o cria, ou quantos você precisa só é conhecido enquanto o programa roda. Então ele vai para o **heap**:\n\n```cpp\nEnemy* e = new Enemy();   // allocate on the heap; you get a pointer\n// ...\ndelete e;                 // you must free it yourself\n```\n\nO C++ não tem garbage collector. Cada `new` precisa de exatamente um `delete`: esqueça-o e a memória **vaza**; dê delete duas vezes, ou use o objeto depois do `delete`, e é comportamento indefinido. (`std::vector` e `std::string` também usam o heap, mas o liberam sozinhos em seus destrutores.)"
+            },
+            {
+              "type": "output",
+              "id": "q-scope-order",
+              "concepts": [
+                "stack-vs-heap"
+              ],
+              "prompt": "O construtor imprime `+name` e o destrutor imprime `-name`. O que este programa imprime?",
+              "language": "cpp",
+              "code": "#include <iostream>\n#include <string>\n\nstruct Noisy {\n    std::string name;\n    Noisy(std::string n) : name(n) { std::cout << \"+\" << name << \" \"; }\n    ~Noisy() { std::cout << \"-\" << name << \" \"; }\n};\n\nint main() {\n    Noisy a(\"a\");\n    {\n        Noisy b(\"b\");\n        Noisy c(\"c\");\n    }\n    Noisy d(\"d\");\n}",
+              "output": "+a +b +c -c -b +d -d -a",
+              "hint": "Os objetos são destruídos na chave de fechamento do escopo, o mais novo primeiro.",
+              "explanation": "`a` é criado, depois as chaves internas criam `b` e `c`. Na chave de fechamento interna eles são destruídos na ordem inversa: `-c -b`. Depois `d` é criado, e no fim de `main` os objetos restantes são destruídos na ordem inversa: `-d -a`."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-leak",
+              "concepts": [
+                "stack-vs-heap",
+                "unique-ptr"
+              ],
+              "prompt": "`draw(false)` deveria carregar a textura e liberá-la de novo, imprimindo `load` e depois `free`. Clique na linha por onde a textura escapa.",
+              "language": "cpp",
+              "code": "#include <iostream>\n#include <memory>\n\nstruct Texture {\n    Texture() { std::cout << \"load\\n\"; }\n    ~Texture() { std::cout << \"free\\n\"; }\n};\n\nbool draw(bool visible) {\n    Texture* t = new Texture();\n    if (!visible) {\n        return false;\n    }\n    delete t;\n    return true;\n}\n\nint main() {\n    draw(false);\n}",
+              "error": "load",
+              "lines": [
+                10,
+                12
+              ],
+              "fixes": [
+                "Mudar a linha 10 para `auto t = std::make_unique<Texture>();` e apagar a linha 14",
+                "Mudar a linha 14 para `delete t; delete t;`",
+                "Mudar a linha 10 para `Texture t = new Texture();`",
+                "Mudar a linha 12 para `return false; delete t;`"
+              ],
+              "answer": 0,
+              "hint": "Acompanhe `draw(false)` linha por linha. Qual linha sai da função, e o que ela pula?",
+              "explanation": "Quando `visible` é falso, o `return` antecipado da linha 12 pula o `delete`, então a textura nunca é liberada: um vazamento. Cada novo caminho de saída precisaria do próprio `delete`. Um `std::unique_ptr` libera a textura em todos os caminhos de saída de `draw`. Um segundo `delete` nunca é alcançado (e seria um double free se fosse), o código depois de `return` nunca roda, e um `Texture` não é um `Texture*`: *no viable conversion from 'Texture *' to 'Texture'*."
+            },
+            {
+              "type": "explain",
+              "title": "unique_ptr: o heap sem delete",
+              "body": "`std::unique_ptr<T>` (`#include <memory>`) é um objeto pequeno que é **dono** de um objeto do heap e o apaga no próprio destrutor:\n\n```cpp\n{\n    auto t = std::make_unique<Enemy>();   // new, wrapped\n    t->draw();                            // use it like a pointer\n}                                         // t's scope ends: the Enemy is deleted\n```\n\nComo o próprio `t` é uma variável local, ele é destruído em **todas** as formas de sair do escopo (o fim normal, um `return` antecipado, uma exceção), então o objeto não pode vazar. Prender um recurso ao tempo de vida de um objeto desse jeito se chama **RAII** (*resource acquisition is initialisation*, aquisição de recurso é inicialização). É assim que o C++ gerencia memória, arquivos e locks.\n\nHá exatamente um dono, então copiar falha: *call to implicitly-deleted copy constructor of 'unique_ptr<int>'*. Passar a posse adiante com `std::move` vem mais tarde na trilha. No C++ moderno, escreva `make_unique` em vez de `new`, e nunca escreva `delete` você mesmo."
+            },
+            {
+              "type": "output",
+              "id": "q-unique-scope",
+              "concepts": [
+                "unique-ptr"
+              ],
+              "prompt": "O destrutor imprime `free` e o nome. O que isto imprime?",
+              "language": "cpp",
+              "code": "#include <iostream>\n#include <memory>\n#include <string>\n\nstruct Texture {\n    std::string name;\n    Texture(std::string n) : name(n) {}\n    ~Texture() { std::cout << \"free \" << name << \"\\n\"; }\n};\n\nint main() {\n    auto hero = std::make_unique<Texture>(\"hero\");\n    {\n        auto tmp = std::make_unique<Texture>(\"tmp\");\n        std::cout << \"drawing\\n\";\n    }\n    std::cout << \"end\\n\";\n}",
+              "output": "drawing\nfree tmp\nend\nfree hero",
+              "explanation": "`tmp` pertence a um `unique_ptr` declarado dentro das chaves internas, então é liberado logo depois de `drawing`, naquela chave de fechamento. O dono de `hero` vive até o fim de `main`, então é liberado depois de `end`. Nenhum `delete` em lugar algum, e nada vaza."
+            },
+            {
+              "type": "buckets",
+              "id": "q-who-frees",
+              "concepts": [
+                "stack-vs-heap",
+                "unique-ptr"
+              ],
+              "prompt": "Quem libera?",
+              "buckets": [
+                "Liberado automaticamente",
+                "Você precisa liberar com `delete`"
+              ],
+              "items": [
+                {
+                  "text": "Um `int` local dentro de uma função",
+                  "bucket": 0
+                },
+                {
+                  "text": "Um `Player` declarado como variável local",
+                  "bucket": 0
+                },
+                {
+                  "text": "Um objeto de `std::make_unique<Enemy>()`",
+                  "bucket": 0
+                },
+                {
+                  "text": "Os elementos de um `std::vector<Enemy>`",
+                  "bucket": 0
+                },
+                {
+                  "text": "Um objeto de `new Enemy()` guardado em um `Enemy*`",
+                  "bucket": 1
+                },
+                {
+                  "text": "O `Enemy*` devolvido por uma função que chamou `new`",
+                  "bucket": 1
+                }
+              ],
+              "explanation": "Variáveis locais morrem no fim do escopo, e donos como `unique_ptr` e `std::vector` liberam a memória do heap em seus destrutores. Só um `new` cru deixa o trabalho para você, e é por isso que o código C++ moderno o evita."
+            },
+            {
+              "type": "mcq",
+              "id": "q-why-unique",
+              "concepts": [
+                "unique-ptr"
+              ],
+              "prompt": "Por que `auto t = std::make_unique<Texture>();` é melhor do que `Texture* t = new Texture();` com um `delete t;` no fim da função?",
+              "choices": [
+                "A textura é liberada em todos os caminhos de saída do escopo, incluindo returns antecipados e exceções",
+                "Ele liga um garbage collector para esse objeto",
+                "Vários donos podem compartilhar a textura, e ela é liberada quando o último termina",
+                "A textura fica guardada na stack, que é mais rápida"
+              ],
+              "answer": 0,
+              "explanation": "O `unique_ptr` é uma variável local, então seu destrutor roda seja qual for a forma de sair do escopo, e ele apaga a textura. Não há garbage collector envolvido. A posse compartilhada é o `std::shared_ptr`, uma ferramenta diferente. E a própria textura continua no heap: só o pequeno objeto dono fica na stack."
+            }
+          ]
+        },
+        {
+          "id": "templates",
+          "title": "Templates: código para qualquer tipo",
+          "pareto": "extra",
+          "minutes": 7,
+          "takeaway": "Um template é uma receita que o compilador transforma em código de verdade para cada tipo com que você o usa; `std::vector<int>` e companhia também são templates.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Uma função para muitos tipos",
+              "body": "```cpp\ntemplate <typename T>\nT biggest(T a, T b) {\n    return a > b ? a : b;   // condition ? if-true : if-false\n}\n```\n\n```cpp\nbiggest(3, 7);              // T is int: 7\nbiggest(2.5, 9.0);          // T is double: 9\nbiggest<double>(2, 2.5);    // T named explicitly: 2.5\n```\n\nUm **template de função** é uma receita. Quando você o chama, o compilador **deduz** `T` a partir dos argumentos e gera uma função de verdade para esse tipo, em tempo de compilação. Qualquer tipo serve, desde que o corpo compile para ele: aqui, `T` precisa de um `>`.\n\nVocê vem usando templates o tempo todo: `std::vector<int>`, `std::array<int, 3>`, `std::unordered_map<std::string, int>`, `std::optional<int>` e `std::unique_ptr<Texture>` são **templates de classe**, e os `<...>` são seus argumentos de template."
+            },
+            {
+              "type": "output",
+              "id": "q-template-calls",
+              "concepts": [
+                "templates"
+              ],
+              "prompt": "O que isto imprime?",
+              "language": "cpp",
+              "code": "#include <iostream>\n#include <string>\n\ntemplate <typename T>\nT biggest(T a, T b) {\n    return a > b ? a : b;\n}\n\nint main() {\n    std::cout << biggest(3, 7) << \" \" << biggest(2.5, 9.0) << \" \";\n    std::cout << biggest<std::string>(\"pear\", \"apple\") << \"\\n\";\n}",
+              "output": "7 9 pear",
+              "explanation": "`biggest(3, 7)` cria uma versão `int` e devolve 7. `biggest(2.5, 9.0)` cria uma versão `double` e devolve 9.0, impresso como `9`. Com `<std::string>`, os dois literais viram strings, que são comparadas em ordem alfabética, e “pear” vem depois de “apple”: `pear`."
+            },
+            {
+              "type": "buckets",
+              "id": "q-deduce-T",
+              "concepts": [
+                "templates"
+              ],
+              "prompt": "Em que `T` se transforma em cada chamada de `biggest`?",
+              "buckets": [
+                "`int`",
+                "`double`",
+                "`char`",
+                "`std::string`"
+              ],
+              "items": [
+                {
+                  "text": "`biggest(4, 9)`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`biggest(10 / 4, 3)`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`biggest<int>('a', 98)`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`biggest(1.5, 2.0)`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`biggest(10 / 4.0, 3.0)`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`biggest<double>(1, 2)`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`biggest('x', 'y')`",
+                  "bucket": 2
+                },
+                {
+                  "text": "`biggest(std::string(\"ab\"), std::string(\"b\"))`",
+                  "bucket": 3
+                }
+              ],
+              "explanation": "Sem `<...>`, `T` é o tipo dos argumentos, e os dois precisam concordar: `10 / 4` é um `int`, `10 / 4.0` um `double`, `'x'` um `char`. Com `<...>`, você escolhe `T` e os argumentos são convertidos para ele. (Cada resposta foi conferida com `static_assert`.)"
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-deduce",
+              "concepts": [
+                "templates"
+              ],
+              "prompt": "Isto deveria imprimir o maior número, `2.5`, mas não compila. Clique na linha com o erro.",
+              "language": "cpp",
+              "code": "#include <iostream>\n\ntemplate <typename T>\nT biggest(T a, T b) {\n    return a > b ? a : b;\n}\n\nint main() {\n    std::cout << biggest(2, 2.5) << \"\\n\";\n}",
+              "error": "error: no matching function for call to 'biggest'\nnote: candidate template ignored: deduced conflicting types for parameter 'T' ('int' vs. 'double')",
+              "lines": [
+                9
+              ],
+              "fixes": [
+                "Mudar a linha 9 para `std::cout << biggest<double>(2, 2.5) << \"\\n\";`",
+                "Mudar a linha 9 para `std::cout << biggest<int>(2, 2.5) << \"\\n\";`",
+                "Mudar a linha 4 para `int biggest(T a, T b) {`",
+                "Mudar a linha 3 para `template <typename T, typename T>`"
+              ],
+              "answer": 0,
+              "hint": "Que tipo o `2` sugere para `T`? E o `2.5`?",
+              "explanation": "Do `2` o compilador deduz `T = int` e do `2.5` deduz `T = double`, e um único `T` não pode ser os dois. Dar `double` como `T` converte o 2. `biggest<int>` compila, mas transforma 2.5 em 2 (o clang avisa *implicit conversion from 'double' to 'int' changes value from 2.5 to 2*) e imprime `2`. Mudar o tipo de retorno não afeta a dedução, e um template não pode ter dois parâmetros com o mesmo nome."
+            },
+            {
+              "type": "example",
+              "title": "A armadilha do texto",
+              "problem": "`biggest(\"pear\", \"apple\")` compila. Por que você não pode confiar na resposta dele? Pense bem e depois revele.",
+              "steps": [
+                "Literais entre aspas não são `std::string`s. Passados por valor, eles viram `const char*`, então `T` é deduzido como `const char*`.",
+                "`a > b` então compara dois **endereços**, e não as letras. Qual literal fica no endereço mais alto depende do compilador.",
+                "Peça strings de verdade: `biggest<std::string>(\"pear\", \"apple\")` devolve `\"pear\"`."
+              ],
+              "answer": "Com `T = const char*`, o template compila, mas compara ponteiros. Informe o tipo, ou passe `std::string`s, sempre que um template receber texto."
+            },
+            {
+              "type": "mcq",
+              "id": "q-when-instantiated",
+              "concepts": [
+                "templates"
+              ],
+              "prompt": "Quando a versão `double` de `biggest` é criada?",
+              "choices": [
+                "Em tempo de compilação, porque alguma chamada do programa precisa de `biggest<double>`",
+                "Em tempo de execução, na primeira vez que o programa o chama com doubles",
+                "Nunca: uma versão compartilhada trata todos os tipos, como nos generics do Java",
+                "Quando o `#include <iostream>` é processado"
+              ],
+              "answer": 0,
+              "explanation": "O compilador gera uma função separada e totalmente tipada para cada `T` que o programa usa, enquanto compila. É por isso que templates não custam nada em tempo de execução, e por isso os erros deles aparecem em tempo de compilação. Os generics do Java funcionam de outro jeito: uma única versão compilada trabalha com referências `Object` (type erasure)."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

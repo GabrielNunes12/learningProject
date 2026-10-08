@@ -1,0 +1,2843 @@
+{
+  "id": "game-development-cpp",
+  "title": "Game Development (C++)",
+  "icon": "GD++",
+  "color": "#0b7285",
+  "order": 22,
+  "category": "Programming",
+  "level": "Intermediate",
+  "description": "Make games in modern C++: run a frame-rate-independent game loop, move and collide things with a Vec2, build objects from components and state machines, and keep every frame inside its budget.",
+  "keyIdeas": [
+    "A game is a **loop**: read input, update, render, every frame, inside a budget of about 16.7 ms at 60 fps.",
+    "Write speeds **per second** and multiply by **delta time**; step physics on a **fixed timestep**.",
+    "A small **`Vec2`** value type with operators carries movement: normalise directions before scaling them, and use the **dot product** for \"in front of\".",
+    "Detect overlaps cheaply (boxes, circles), push out along the smaller overlap, and **sweep** fast movers so they cannot tunnel.",
+    "Build objects from small **components** owned by `unique_ptr`, and drive their behaviour with explicit **state machines** over an `enum class`.",
+    "Keep the frame budget: **pool** what you spawn, stop allocating every frame, use a **spatial grid**, and measure before optimising."
+  ],
+  "concepts": [
+    {
+      "id": "game-loop",
+      "label": "Game loop",
+      "lesson": "game-loop",
+      "summary": "Every frame the game reads input, updates the world and renders it; at 60 fps all of it must fit in about 16.7 ms.",
+      "aliases": [
+        "frame",
+        "main loop",
+        "frame budget",
+        "update and render",
+        "fps"
+      ]
+    },
+    {
+      "id": "value-semantics",
+      "label": "Copies and references",
+      "lesson": "cpp-for-games",
+      "summary": "Small values such as Vec2 are passed by value, big read-only things by const&, and things to change by &; a by-value loop variable or parameter changes only a copy.",
+      "aliases": [
+        "pass by value",
+        "const reference",
+        "const&",
+        "range-for copy",
+        "copy"
+      ]
+    },
+    {
+      "id": "callbacks",
+      "label": "Callbacks",
+      "lesson": "cpp-for-games",
+      "summary": "A list of std::function objects, usually lambdas, that an object calls to announce a change without knowing who listens.",
+      "aliases": [
+        "std::function",
+        "lambda",
+        "event",
+        "listener",
+        "observer",
+        "capture"
+      ]
+    },
+    {
+      "id": "delta-time",
+      "label": "Delta time",
+      "lesson": "delta-time",
+      "summary": "The seconds since the last frame; multiplying per-second rates by it makes movement and timers frame-rate independent.",
+      "aliases": [
+        "dt",
+        "frame time",
+        "steady_clock",
+        "frame-rate independence"
+      ]
+    },
+    {
+      "id": "fixed-timestep",
+      "label": "Fixed timestep",
+      "lesson": "fixed-timestep",
+      "summary": "Physics advances in equal steps fed by an accumulator of real time, so results do not depend on the frame rate.",
+      "aliases": [
+        "accumulator",
+        "physics step",
+        "interpolation",
+        "spiral of death",
+        "fixed update"
+      ]
+    },
+    {
+      "id": "vector",
+      "label": "Vectors",
+      "lesson": "vectors",
+      "summary": "Positions, velocities and accelerations are (x, y) pairs in a small Vec2 type with overloaded operators: velocity × dt moves the position and acceleration × dt changes the velocity.",
+      "aliases": [
+        "Vec2",
+        "velocity",
+        "acceleration",
+        "length",
+        "operator overloading"
+      ]
+    },
+    {
+      "id": "normalization",
+      "label": "Normalising",
+      "lesson": "vectors",
+      "summary": "Dividing a vector by its length gives a unit direction, so direction × speed has the right speed even diagonally.",
+      "aliases": [
+        "normalize",
+        "unit vector",
+        "normalized()",
+        "diagonal speed"
+      ]
+    },
+    {
+      "id": "dot-product",
+      "label": "Dot product",
+      "lesson": "facing-and-steering",
+      "summary": "a.x·b.x + a.y·b.y; for unit vectors it is the cosine of the angle, so its sign says in front or behind and a threshold gives a field of view.",
+      "aliases": [
+        "dot",
+        "in front of",
+        "field of view",
+        "cosine",
+        "FOV"
+      ]
+    },
+    {
+      "id": "steering",
+      "label": "Steering",
+      "lesson": "facing-and-steering",
+      "summary": "Turning gradually by adding (desired velocity − current velocity) a bit at a time, for smooth seek, flee and arrive.",
+      "aliases": [
+        "seek",
+        "flee",
+        "arrive",
+        "steering behaviour",
+        "desired velocity"
+      ]
+    },
+    {
+      "id": "input-edges",
+      "label": "Pressed vs held",
+      "lesson": "input",
+      "summary": "\"Pressed\" is down now and up last frame, so keep the previous state; buffers and coyote time forgive slightly early or late presses.",
+      "aliases": [
+        "IsKeyPressed",
+        "edge detection",
+        "polling",
+        "jump buffer",
+        "coyote time",
+        "input mapping"
+      ]
+    },
+    {
+      "id": "aabb",
+      "label": "AABB overlap",
+      "lesson": "collisions",
+      "summary": "Axis-aligned boxes overlap only when their ranges overlap on x and on y.",
+      "aliases": [
+        "bounding box",
+        "box collider",
+        "rectangle overlap",
+        "axis-aligned bounding box"
+      ]
+    },
+    {
+      "id": "circle-collision",
+      "label": "Circle overlap",
+      "lesson": "collisions",
+      "summary": "Two circles overlap when the squared distance between centres is less than the squared sum of their radii.",
+      "aliases": [
+        "circle collider",
+        "distance check",
+        "sphere collision",
+        "radius"
+      ]
+    },
+    {
+      "id": "collision-resolution",
+      "label": "Collision resolution",
+      "lesson": "collision-response",
+      "summary": "Push an overlapping mover out along the axis of smaller overlap, toward its own side, and stop its velocity on that axis.",
+      "aliases": [
+        "push out",
+        "minimum translation",
+        "collision response",
+        "separation"
+      ]
+    },
+    {
+      "id": "tunnelling",
+      "label": "Tunnelling",
+      "lesson": "collision-response",
+      "summary": "A fast object moves past a thin obstacle between two checks; sweeps, raycasts or substeps catch it.",
+      "aliases": [
+        "tunneling",
+        "bullet through paper",
+        "continuous collision detection",
+        "CCD",
+        "swept collision"
+      ]
+    },
+    {
+      "id": "components",
+      "label": "Components",
+      "lesson": "components",
+      "summary": "Game objects own small single-purpose components through unique_ptr to a common base, instead of deep or multiple inheritance.",
+      "aliases": [
+        "composition over inheritance",
+        "unique_ptr<Component>",
+        "slicing",
+        "entity component",
+        "game object"
+      ]
+    },
+    {
+      "id": "state-machine",
+      "label": "State machine",
+      "lesson": "state-machines",
+      "summary": "One current state from an enum class, with explicit transitions between states; replaces piles of boolean flags.",
+      "aliases": [
+        "FSM",
+        "finite state machine",
+        "enum class",
+        "switch",
+        "transitions",
+        "hysteresis"
+      ]
+    },
+    {
+      "id": "object-pool",
+      "label": "Object pooling",
+      "lesson": "pooling",
+      "summary": "Reuse inactive objects instead of creating and destroying them, and reset every field when one is reused.",
+      "aliases": [
+        "pool",
+        "free list",
+        "reuse objects",
+        "spawning"
+      ]
+    },
+    {
+      "id": "per-frame-allocation",
+      "label": "Allocation per frame",
+      "lesson": "pooling",
+      "summary": "Every new, make_unique, copied container or growing vector asks the general-purpose allocator for memory; doing it thousands of times a frame costs time, so reserve, reuse and pool.",
+      "aliases": [
+        "heap allocation",
+        "new",
+        "make_unique",
+        "reserve",
+        "vector growth",
+        "malloc"
+      ]
+    },
+    {
+      "id": "easing",
+      "label": "Lerp and easing",
+      "lesson": "game-feel",
+      "summary": "Lerp blends values, easing curves reshape the blend for feel, and 1 − e^(−k·dt) makes per-frame smoothing frame-rate independent.",
+      "aliases": [
+        "lerp",
+        "std::lerp",
+        "ease out",
+        "smoothing",
+        "camera follow",
+        "screen shake",
+        "trauma"
+      ]
+    },
+    {
+      "id": "bfs",
+      "label": "Breadth-first search",
+      "lesson": "pathfinding",
+      "summary": "Exploring a grid outward from the start with a queue, which finds a shortest path in steps.",
+      "aliases": [
+        "BFS",
+        "flood fill",
+        "flow field",
+        "std::queue",
+        "grid search"
+      ]
+    },
+    {
+      "id": "a-star",
+      "label": "A* search",
+      "lesson": "pathfinding",
+      "summary": "Expanding the tile with the lowest f = g + h, where h estimates the remaining distance, to find a shortest path while exploring less.",
+      "aliases": [
+        "A star",
+        "heuristic",
+        "Manhattan distance",
+        "Dijkstra",
+        "priority_queue"
+      ]
+    },
+    {
+      "id": "seeded-rng",
+      "label": "Seeded randomness",
+      "lesson": "seeds-and-saves",
+      "summary": "A pseudo-random generator such as std::mt19937 started from the same seed gives the same sequence, so procedural worlds can be rebuilt exactly.",
+      "aliases": [
+        "seed",
+        "PRNG",
+        "mt19937",
+        "procedural generation",
+        "deterministic random"
+      ]
+    },
+    {
+      "id": "save-state",
+      "label": "Save data",
+      "lesson": "seeds-and-saves",
+      "summary": "Save the data that cannot be rebuilt, with a version number, by writing a temporary file and renaming it; rebuild everything else on load.",
+      "aliases": [
+        "save file",
+        "serialization",
+        "fstream",
+        "save versioning",
+        "load game"
+      ]
+    },
+    {
+      "id": "spatial-partitioning",
+      "label": "Spatial grid",
+      "lesson": "performance",
+      "summary": "Bucketing objects into grid cells so each one is tested only against its neighbours instead of every other object.",
+      "aliases": [
+        "spatial hash",
+        "broad phase",
+        "uniform grid",
+        "quadtree",
+        "partitioning"
+      ]
+    }
+  ],
+  "links": [
+    {
+      "from": "game-loop",
+      "to": "delta-time",
+      "label": "measures"
+    },
+    {
+      "from": "delta-time",
+      "to": "fixed-timestep",
+      "label": "is refined by"
+    },
+    {
+      "from": "fixed-timestep",
+      "to": "tunnelling",
+      "label": "reduces"
+    },
+    {
+      "from": "delta-time",
+      "to": "vector",
+      "label": "scales"
+    },
+    {
+      "from": "normalization",
+      "to": "vector",
+      "label": "is applied to"
+    },
+    {
+      "from": "dot-product",
+      "to": "normalization",
+      "label": "needs"
+    },
+    {
+      "from": "steering",
+      "to": "vector",
+      "label": "builds on"
+    },
+    {
+      "from": "steering",
+      "to": "normalization",
+      "label": "needs"
+    },
+    {
+      "from": "value-semantics",
+      "to": "vector",
+      "label": "decides how to pass"
+    },
+    {
+      "from": "input-edges",
+      "to": "game-loop",
+      "label": "is read in"
+    },
+    {
+      "from": "input-edges",
+      "to": "fixed-timestep",
+      "label": "can be missed by"
+    },
+    {
+      "from": "circle-collision",
+      "to": "dot-product",
+      "label": "uses"
+    },
+    {
+      "from": "aabb",
+      "to": "circle-collision",
+      "label": "contrasts with"
+    },
+    {
+      "from": "collision-resolution",
+      "to": "aabb",
+      "label": "follows"
+    },
+    {
+      "from": "tunnelling",
+      "to": "delta-time",
+      "label": "grows with"
+    },
+    {
+      "from": "components",
+      "to": "callbacks",
+      "label": "communicate through"
+    },
+    {
+      "from": "components",
+      "to": "value-semantics",
+      "label": "avoid slicing by not copying into"
+    },
+    {
+      "from": "state-machine",
+      "to": "components",
+      "label": "is often a"
+    },
+    {
+      "from": "state-machine",
+      "to": "steering",
+      "label": "drives"
+    },
+    {
+      "from": "state-machine",
+      "to": "bfs",
+      "label": "can trigger"
+    },
+    {
+      "from": "object-pool",
+      "to": "per-frame-allocation",
+      "label": "removes"
+    },
+    {
+      "from": "per-frame-allocation",
+      "to": "game-loop",
+      "label": "eats into the budget of"
+    },
+    {
+      "from": "easing",
+      "to": "delta-time",
+      "label": "needs"
+    },
+    {
+      "from": "a-star",
+      "to": "bfs",
+      "label": "improves on"
+    },
+    {
+      "from": "bfs",
+      "to": "steering",
+      "label": "gives waypoints to"
+    },
+    {
+      "from": "seeded-rng",
+      "to": "save-state",
+      "label": "shrinks"
+    },
+    {
+      "from": "spatial-partitioning",
+      "to": "aabb",
+      "label": "cuts the number of"
+    },
+    {
+      "from": "spatial-partitioning",
+      "to": "game-loop",
+      "label": "protects the budget of"
+    },
+    {
+      "from": "value-semantics",
+      "to": "per-frame-allocation",
+      "label": "avoids accidental"
+    },
+    {
+      "from": "delta-time",
+      "to": "everyday-math/speed-distance-time",
+      "label": "applies"
+    },
+    {
+      "from": "game-loop",
+      "to": "game-engine-programming/profiling",
+      "label": "is kept in budget by"
+    },
+    {
+      "from": "fixed-timestep",
+      "to": "game-engine-programming/fixed-timestep-loop",
+      "label": "is implemented in full by"
+    },
+    {
+      "from": "value-semantics",
+      "to": "game-engine-programming/value-semantics",
+      "label": "is covered in depth by"
+    },
+    {
+      "from": "components",
+      "to": "game-engine-programming/ecs",
+      "label": "grow into"
+    },
+    {
+      "from": "object-pool",
+      "to": "game-engine-programming/pool-allocator",
+      "label": "is generalised by"
+    },
+    {
+      "from": "object-pool",
+      "to": "game-engine-programming/generational-handles",
+      "label": "is made safer by"
+    },
+    {
+      "from": "per-frame-allocation",
+      "to": "game-engine-programming/arena-allocator",
+      "label": "is removed for scratch data by"
+    },
+    {
+      "from": "seeded-rng",
+      "to": "game-engine-programming/determinism",
+      "label": "is one part of"
+    },
+    {
+      "from": "spatial-partitioning",
+      "to": "big-o/quadratic-time",
+      "label": "avoids"
+    },
+    {
+      "from": "spatial-partitioning",
+      "to": "big-o/hash-map",
+      "label": "can use"
+    },
+    {
+      "from": "object-pool",
+      "to": "big-o/space-time-tradeoff",
+      "label": "is a"
+    }
+  ],
+  "units": [
+    {
+      "id": "loop-and-time",
+      "title": "The loop and the clock",
+      "description": "How a game runs: one loop, many frames a second, the C++ that games lean on, and time measured so that speed is the same on every machine.",
+      "lessons": [
+        {
+          "id": "game-loop",
+          "title": "The loop that runs everything",
+          "pareto": "core",
+          "minutes": 6,
+          "takeaway": "A game is a loop that reads input, updates the world and renders it every frame, and at 60 fps all of that must fit in about 16.7 ms.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Meet Ember Run",
+              "body": "**Rin** has just learned C++ and wants to make games with it. **Dario** is a designer with a plan: **Ember Run**, a 2D game where a fox carries a lantern through a night forest, collects sparks and dodges slimes and bats.\n\nMost programs wait for something: a click, a request. A game never waits. It runs the same **loop** many times a second, and each pass is a **frame**:\n\n```cpp\nwhile (running) {\n    readInput();   // what is held, what was pressed\n    update();      // move, collide, think, count down timers\n    render();      // draw everything where it now is\n}\n```\n\n- **Input**: read the keyboard, mouse or gamepad.\n- **Update**: move things, check collisions, run enemy logic, count down timers.\n- **Render**: draw the world where everything now is.\n\nIn an engine such as Unreal or Godot the engine owns this loop and calls your code once per frame. In this course Rin writes the pieces in plain C++, so you see what the engine does for you."
+            },
+            {
+              "type": "order",
+              "id": "q-loop-order",
+              "concepts": [
+                "game-loop"
+              ],
+              "prompt": "Put the work of one Ember Run frame in order.",
+              "items": [
+                "Read which keys are held down",
+                "Move the fox using that input",
+                "Check whether the fox now overlaps a slime",
+                "Draw the forest, then the fox on top",
+                "Show the finished image on the screen"
+              ],
+              "hint": "You can only move with input you have read, and only draw positions you have computed.",
+              "explanation": "Input comes first, because the update needs it. The update moves things and *then* checks collisions, because collisions depend on the new positions. Rendering draws the result back to front, and the finished image is shown only when it's complete, so the player never sees a half-drawn frame."
+            },
+            {
+              "type": "explain",
+              "title": "The frame budget",
+              "body": "At **60 frames per second**, each frame gets 1000 ms ÷ 60 ≈ **16.7 ms** for input, update *and* render together. That time is the **frame budget**.\n\nIf a frame takes longer, the game shows fewer frames that second: at 25 ms a frame you get 40 fps, and the game feels less smooth. A single 200 ms frame is a visible **hitch**.\n\nHigher refresh rates shrink the budget. That is why game programmers think in milliseconds per frame, not just \"is it fast\"."
+            },
+            {
+              "type": "numeric",
+              "id": "q-frame-budget",
+              "concepts": [
+                "game-loop"
+              ],
+              "prompt": "Dario's new monitor refreshes **144** times a second. To keep up, how many **milliseconds** does each frame get?",
+              "answer": 6.94,
+              "tolerance": 0.01,
+              "unit": "ms",
+              "hint": "Divide one second, in milliseconds, by the number of frames.",
+              "explanation": "1000 ms ÷ 144 ≈ **6.94 ms** per frame, well under half the 16.7 ms of a 60 fps game. Everything the game does each frame has to fit in that, which is why per-frame costs matter so much later in this course."
+            },
+            {
+              "type": "output",
+              "id": "q-render-first",
+              "concepts": [
+                "game-loop"
+              ],
+              "prompt": "Rin wrote a test loop that **renders before it updates**. Each pass of the `for` loop is one frame. What does it print?",
+              "language": "cpp",
+              "code": "#include <cstdio>\n\nint main() {\n    bool rightHeld[] = {true, true, false, true};\n    float x = 0;\n\n    for (bool right : rightHeld) {\n        std::printf(\"%g\\n\", x);   // render: draw the fox\n        if (right) x += 2;        // update: move it\n    }\n}",
+              "output": "0\n2\n4\n4",
+              "hint": "Each frame prints `x` first, and only then moves the fox.",
+              "explanation": "Each frame draws the position from **before** this frame's input is applied: 0, then 2, then 4, and on the third frame the key is up so `x` stays 4, which the fourth frame draws. The final move to 6 is never drawn at all.\n\nRendering before updating shows the player everything one frame late, which feels like input lag. Read input, update, *then* render."
+            },
+            {
+              "type": "buckets",
+              "id": "q-update-or-render",
+              "concepts": [
+                "game-loop"
+              ],
+              "prompt": "Sort each piece of Ember Run code into the part of the frame it belongs to.",
+              "buckets": [
+                "Update (change the world)",
+                "Render (draw the world)"
+              ],
+              "items": [
+                {
+                  "text": "Move the fox by its velocity",
+                  "bucket": 0
+                },
+                {
+                  "text": "Check whether the fox touched a spark",
+                  "bucket": 0
+                },
+                {
+                  "text": "Count down the invincibility timer after a hit",
+                  "bucket": 0
+                },
+                {
+                  "text": "Decide whether a slime starts chasing",
+                  "bucket": 0
+                },
+                {
+                  "text": "Draw the fox sprite at its position",
+                  "bucket": 1
+                },
+                {
+                  "text": "Draw the health bar on top of everything",
+                  "bucket": 1
+                },
+                {
+                  "text": "Tint the screen darker as the lantern fades",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Would this still need to happen if nobody were looking at the screen?",
+              "explanation": "The **update** changes the state of the game: positions, timers, scores, decisions. The **render** only reads that state and turns it into pixels. Keeping them apart means drawing never changes the game, and the same update logic works whether a frame is drawn or skipped. In C++ you can make that rule checkable: give `render` a `const World&`, and the compiler rejects any attempt to change the world while drawing."
+            },
+            {
+              "type": "numeric",
+              "id": "q-per-frame-speed",
+              "concepts": [
+                "game-loop"
+              ],
+              "prompt": "Rin's first fox moves **2 pixels every frame**. On Rin's PC the game runs at 60 fps; on Dario's old laptop it manages only **30 fps**. How many **pixels per second** does the fox move on the laptop?",
+              "answer": 60,
+              "unit": "px/s",
+              "hint": "Pixels per frame × frames per second.",
+              "explanation": "2 px × 30 frames = **60 px/s** on the laptop, against 2 × 60 = 120 px/s on the PC. The same game runs at **half speed** on the slower machine, and twice as fast on a 120 Hz screen. Tying speed to frames is a bug, and the delta-time lesson fixes it."
+            }
+          ]
+        },
+        {
+          "id": "cpp-for-games",
+          "title": "The C++ that games lean on",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Pass small maths types by value, big things by const reference and things you change by reference, give vectors real operators, and announce changes through a list of std::function callbacks.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Copy, read or change",
+              "body": "Rin knows the basics of C++. Game code adds one constant worry: **every frame**, thousands of objects are passed around, so each copy has a cost and each accidental copy is a bug waiting to happen.\n\nThe usual rule for parameters and loop variables:\n\n- **By value** (`Vec2 v`, `float dt`): small things, a few numbers. Copying 8 bytes is as cheap as passing an address.\n- **By `const&`** (`const Level& level`): big things the code only reads, such as a level with 10,000 tiles or a `std::string`.\n- **By `&`** (`Enemy& e`): things the code must change.\n\nThe same rule applies to `for` loops: `for (Enemy e : enemies)` copies every enemy, one at a time."
+            },
+            {
+              "type": "buckets",
+              "id": "q-param-choice",
+              "concepts": [
+                "value-semantics"
+              ],
+              "prompt": "How should each of these be passed into a function in Ember Run?",
+              "buckets": [
+                "By value",
+                "By `const&`",
+                "By `&`"
+              ],
+              "items": [
+                {
+                  "text": "The frame time `dt`, a `float`",
+                  "bucket": 0
+                },
+                {
+                  "text": "A `Vec2` direction that the function only reads",
+                  "bucket": 0
+                },
+                {
+                  "text": "A tile coordinate: two `int`s",
+                  "bucket": 0
+                },
+                {
+                  "text": "The whole level (10,000 tiles) for a pathfinding query",
+                  "bucket": 1
+                },
+                {
+                  "text": "A `std::string` with the name of the sound to play",
+                  "bucket": 1
+                },
+                {
+                  "text": "The fox, whose health the slime's bite must lower",
+                  "bucket": 2
+                },
+                {
+                  "text": "The `std::vector` of bullets that the gun appends to",
+                  "bucket": 2
+                }
+              ],
+              "hint": "Is it a few numbers? Is it big? Does the function need to change it?",
+              "explanation": "A few numbers (`dt`, a `Vec2`, a tile coordinate) go **by value**: the copy is as cheap as passing an address, and the function can't disturb the caller's value. Big things that are only read (a level, a string) go by **`const&`**: no copy, and the compiler stops accidental writes. Anything the function must change goes by **`&`**: a copy of the fox would take the damage and be thrown away."
+            },
+            {
+              "type": "bug",
+              "id": "q-range-for-copy",
+              "concepts": [
+                "value-semantics"
+              ],
+              "prompt": "Each slime should move by `speed × dt`, so this should print `1.0 9.5`. Click the line with the bug.",
+              "language": "cpp",
+              "code": "#include <cstdio>\n#include <vector>\n\nstruct Slime { float x; float speed; };\n\nint main() {\n    std::vector<Slime> slimes{{0, 2}, {10, -1}};\n    float dt = 0.5f;\n    for (Slime s : slimes) {\n        s.x += s.speed * dt;\n    }\n    std::printf(\"%.1f %.1f\\n\", slimes[0].x, slimes[1].x);\n}",
+              "error": "0.0 10.0",
+              "lines": [
+                9
+              ],
+              "fixes": [
+                "Change line 9 to `for (Slime& s : slimes) {`",
+                "Change line 9 to `for (const Slime& s : slimes) {`",
+                "Change line 9 to `for (auto s : slimes) {`",
+                "Change line 10 to `s.x = s.x + s.speed * dt;`"
+              ],
+              "answer": 0,
+              "hint": "Which object does `s.x += ...` change: the slime in the vector, or something else?",
+              "explanation": "`Slime s` is a **copy** of each slime, made fresh for every pass of the loop. The loop moves the copy and throws it away, so the vector never changes. `Slime& s` makes `s` another name for the slime in the vector, and the program prints `1.0 9.5`.\n\n`const Slime&` avoids the copy but forbids the write: clang stops with *cannot assign to variable 's' with const-qualified type 'const Slime &'*. `auto s` deduces `Slime`, the same copy, and rewriting the addition still changes only the copy."
+            },
+            {
+              "type": "explain",
+              "title": "Operators for maths types",
+              "body": "Games are full of maths on small types: positions, velocities, colours. C++ lets those types use real operators, so `pos += vel * dt;` reads like the formula:\n\n```cpp\nstruct Vec2 {\n    float x = 0, y = 0;\n\n    Vec2& operator+=(Vec2 o) { x += o.x; y += o.y; return *this; }\n};\n\nVec2 operator+(Vec2 a, Vec2 b) { return {a.x + b.x, a.y + b.y}; }\nVec2 operator*(Vec2 v, float k) { return {v.x * k, v.y * k}; }\n```\n\n`operator+` and `operator*` take their arguments **by value** (a `Vec2` is just two floats) and return a **new** `Vec2`. `operator+=` is a member: it changes the object on its left and returns a reference to it. That is the standard pattern: `+` builds a new value, `+=` changes one in place."
+            },
+            {
+              "type": "output",
+              "id": "q-vec-ops",
+              "concepts": [
+                "vector",
+                "value-semantics"
+              ],
+              "prompt": "Using the `Vec2` above, what does this print?",
+              "language": "cpp",
+              "code": "#include <cstdio>\n\nstruct Vec2 {\n    float x = 0, y = 0;\n    Vec2& operator+=(Vec2 o) { x += o.x; y += o.y; return *this; }\n};\nVec2 operator+(Vec2 a, Vec2 b) { return {a.x + b.x, a.y + b.y}; }\nVec2 operator*(Vec2 v, float k) { return {v.x * k, v.y * k}; }\n\nint main() {\n    Vec2 pos{1, 2};\n    Vec2 vel{4, -2};\n    Vec2 next = pos + vel * 0.5f;\n    pos += vel;\n    std::printf(\"(%g, %g) (%g, %g)\\n\", next.x, next.y, pos.x, pos.y);\n}",
+              "output": "(3, 1) (5, 0)",
+              "hint": "`*` binds tighter than `+`. Which lines change `pos`, and which only build a new value?",
+              "explanation": "`vel * 0.5f` is (2, −1), and `pos + (2, −1)` builds a **new** vector (3, 1) for `next` without touching `pos`. Then `pos += vel` changes `pos` itself: (1 + 4, 2 − 2) = (5, 0). Same operator rules as `int`: `a + b` leaves `a` alone, `a += b` changes it."
+            },
+            {
+              "type": "explain",
+              "title": "Callbacks: lambdas in std::function",
+              "body": "When the fox is hurt, the health bar, a sound and the camera shake all need to react. `Health` shouldn't know about any of them. Instead it keeps a list of **callbacks**: `std::function<void(int)>` holds any callable that takes an `int`, usually a lambda.\n\n```cpp\nstruct Health {\n    int current = 3;\n    std::vector<std::function<void(int)>> onChanged;   // the listeners\n\n    void damage(int amount) {\n        current -= amount;\n        for (auto& listener : onChanged) listener(current);\n    }\n};\n```\n\nListeners subscribe with `health.onChanged.push_back([](int hp) { ... });`. A lambda that captures with `[&]` keeps references to local variables, so those variables must outlive the callback."
+            },
+            {
+              "type": "output",
+              "id": "q-event-order",
+              "concepts": [
+                "callbacks"
+              ],
+              "prompt": "Two listeners subscribe to `onChanged`, then the fox takes damage twice. What does this print?",
+              "language": "cpp",
+              "code": "#include <cstdio>\n#include <functional>\n#include <vector>\n\nstruct Health {\n    int current = 3;\n    std::vector<std::function<void(int)>> onChanged;\n\n    void damage(int amount) {\n        current -= amount;\n        for (auto& listener : onChanged) listener(current);\n    }\n};\n\nint main() {\n    Health health;\n    int hits = 0;\n    health.onChanged.push_back([&hits](int hp) { ++hits; std::printf(\"bar shows %d\\n\", hp); });\n    health.onChanged.push_back([](int hp) { if (hp <= 0) std::printf(\"game over\\n\"); });\n\n    health.damage(2);\n    health.damage(2);\n    std::printf(\"hits: %d\\n\", hits);\n}",
+              "output": "bar shows 1\nbar shows -1\ngame over\nhits: 2",
+              "hint": "Each `damage` call runs every listener, in the order they were added. The first lambda captures `hits` by reference.",
+              "explanation": "The first `damage(2)` takes health from 3 to 1 and calls both listeners: the bar prints `bar shows 1`, and the second one prints nothing because 1 > 0. The second `damage(2)` takes it to −1: `bar shows -1`, then `game over`. The first lambda captured `hits` **by reference**, so its `++hits` changed `main`'s variable: `hits: 2`. `Health` never mentions bars or game-over screens; it only announces the change."
+            },
+            {
+              "type": "output",
+              "id": "q-capture",
+              "concepts": [
+                "callbacks"
+              ],
+              "prompt": "Two lambdas read `sparks`: one captures it by value, one by reference. What does this print?",
+              "language": "cpp",
+              "code": "#include <cstdio>\n#include <functional>\n\nint main() {\n    int sparks = 0;\n    std::function<int()> byValue = [sparks] { return sparks; };\n    std::function<int()> byRef = [&sparks] { return sparks; };\n    sparks = 5;\n    std::printf(\"%d %d\\n\", byValue(), byRef());\n}",
+              "output": "0 5",
+              "hint": "A by-value capture copies the variable when the lambda is **created**.",
+              "explanation": "`[sparks]` copied the value 0 into the lambda when it was created, so later changes to `sparks` are invisible to it: **0**. `[&sparks]` holds a reference, so it reads the current value: **5**. Callbacks that should see live state capture by reference, and then the variable must still exist whenever the callback runs; capture by value when a snapshot is what you want."
+            }
+          ]
+        },
+        {
+          "id": "delta-time",
+          "title": "Same speed on every machine",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "Write speeds per second and multiply them by delta time, the seconds since the last frame, so movement takes the same real time at any frame rate.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Measure the frame",
+              "body": "Moving 2 pixels *per frame* ties speed to the frame rate. The fix: measure how long the last frame took, **delta time** or `dt`, in seconds, and write every speed **per second**: `x += speed * dt;`\n\n```cpp\nauto previous = std::chrono::steady_clock::now();\nwhile (running) {\n    auto now = std::chrono::steady_clock::now();\n    float dt = std::chrono::duration<float>(now - previous).count();   // seconds\n    previous = now;\n    update(dt);\n    render();\n}\n```\n\n`std::chrono::steady_clock` never jumps backwards, unlike the wall clock. Engines hand you the same number: Godot passes `delta` to `_process`, Unreal passes `DeltaTime` to `Tick`.\n\nAt 60 fps `dt` is about 0.0167 s and at 30 fps about 0.033 s. The slow machine takes bigger steps, but fewer of them, so both cover `speed` units every second: distance = speed × time, once per frame."
+            },
+            {
+              "type": "example",
+              "title": "Per frame, per second",
+              "problem": "The fox runs at **150 px/s**. How far does it move each frame at 25 fps and at 100 fps, and how far in one second on each?",
+              "steps": [
+                "At 25 fps, `dt` = 1 ÷ 25 = 0.04 s, so each frame moves 150 × 0.04 = **6 px**.",
+                "At 100 fps, `dt` = 1 ÷ 100 = 0.01 s, so each frame moves 150 × 0.01 = **1.5 px**.",
+                "In one second: 25 frames × 6 px = 150 px, and 100 frames × 1.5 px = 150 px."
+              ],
+              "answer": "Different steps, the **same 150 px every second** on both machines."
+            },
+            {
+              "type": "output",
+              "id": "q-dt-two-machines",
+              "concepts": [
+                "delta-time"
+              ],
+              "prompt": "Each function simulates **one second** at a given frame rate. The first moves 5 px per frame; the second moves 150 px per second using `dt`. What does it print?",
+              "language": "cpp",
+              "code": "#include <cstdio>\n\nfloat perFrame(int fps) {\n    float x = 0;\n    for (int frame = 0; frame < fps; ++frame)   // one second of frames\n        x += 5;                                 // 5 pixels per frame\n    return x;\n}\n\nfloat perSecond(int fps) {\n    float x = 0, dt = 1.0f / fps;\n    for (int frame = 0; frame < fps; ++frame)\n        x += 150 * dt;                          // 150 pixels per second\n    return x;\n}\n\nint main() {\n    std::printf(\"%.0f %.0f\\n\", perFrame(30), perFrame(60));\n    std::printf(\"%.0f %.0f\\n\", perSecond(30), perSecond(60));\n}",
+              "output": "150 300\n150 150",
+              "hint": "One second at 30 fps is 30 frames. What does each frame add in each version?",
+              "explanation": "`perFrame` adds 5 px per frame: 30 × 5 = **150** at 30 fps, but 60 × 5 = **300** at 60 fps. `perSecond` adds `150 * dt`, so 30 frames × 5 px and 60 frames × 2.5 px both make **150**. (`%.0f` rounds away float noise of a few millionths.)"
+            },
+            {
+              "type": "bug",
+              "id": "q-missing-dt",
+              "concepts": [
+                "delta-time"
+              ],
+              "prompt": "Dario drops a spark from a branch. After one second it should have fallen about **5 units** on both machines, but it falls much further, and further still at 60 fps. Click the line with the bug.",
+              "language": "cpp",
+              "code": "#include <cstdio>\n\nfloat fall(int fps) {\n    float dt = 1.0f / fps;\n    float y = 0, vy = 0;\n    for (int frame = 0; frame < fps; ++frame) {\n        vy += 10 * dt;   // gravity: vy grows by 10 units/s every second\n        y += vy;\n    }\n    return y;\n}\n\nint main() {\n    std::printf(\"30 fps: %.1f\\n\", fall(30));\n    std::printf(\"60 fps: %.1f\\n\", fall(60));\n}",
+              "error": "30 fps: 155.0\n60 fps: 305.0",
+              "lines": [
+                8
+              ],
+              "fixes": [
+                "Change line 8 to `y += vy * dt;`",
+                "Change line 7 to `vy += 10;`, so gravity matches the per-frame position update",
+                "Change line 4 to `float dt = 1.0f / 60;`, so both machines use the same step",
+                "Change line 6 to `for (int frame = 0; frame < 60; ++frame) {`, so both machines run the same number of frames"
+              ],
+              "answer": 0,
+              "hint": "Velocity is in units **per second**. What must a per-second value be multiplied by before it is added each frame?",
+              "explanation": "`vy` is a speed in units per second, but line 8 adds all of it **every frame**, so the fall grows with the number of frames. `y += vy * dt` adds only this frame's share. Removing `dt` from gravity, faking a constant `dt` or forcing 60 frames all leave the per-frame addition in place.\n\nThe fixed version prints 5.2 and 5.1, not exactly 5: stepping in chunks is an approximation, and smaller steps are more accurate. The fixed-timestep lesson removes even that difference."
+            },
+            {
+              "type": "explain",
+              "title": "Where dt goes",
+              "body": "A simple rule: **anything that changes continuously, at some rate per second, gets multiplied by `dt`**.\n\n- Position changes by velocity: `pos += vel * dt;`\n- Velocity changes by acceleration: `vel += accel * dt;`\n- Timers count real time: `cooldown -= dt;`\n\nThings that happen **once**, at an instant, do not: setting the jump velocity when the button is pressed, teleporting to a checkpoint, adding 1 to the score."
+            },
+            {
+              "type": "buckets",
+              "id": "q-needs-dt",
+              "concepts": [
+                "delta-time"
+              ],
+              "prompt": "Which Ember Run updates should be multiplied by `dt`?",
+              "buckets": [
+                "Multiply by dt (a rate per second)",
+                "No dt (happens once)"
+              ],
+              "items": [
+                {
+                  "text": "Run at 150 px per second",
+                  "bucket": 0
+                },
+                {
+                  "text": "The lantern loses 2 units of oil per second",
+                  "bucket": 0
+                },
+                {
+                  "text": "A turret rotates 90 degrees per second",
+                  "bucket": 0
+                },
+                {
+                  "text": "A 0.5 s dash cooldown counts down",
+                  "bucket": 0
+                },
+                {
+                  "text": "Set vertical velocity to 8 when jump is pressed",
+                  "bucket": 1
+                },
+                {
+                  "text": "Teleport the fox to the last checkpoint",
+                  "bucket": 1
+                },
+                {
+                  "text": "Add 1 to the score when a spark is collected",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Ask: is this described \"per second\", or does it happen at one instant?",
+              "explanation": "Speeds, drains, rotations and timers are **rates**: their effect must scale with how much time passed, so they use `dt`. A jump sets a velocity once (gravity then changes it with `dt`), a teleport is instant and a score bump is a single event. Multiplying those by `dt` would make jumps tiny and scores fractional."
+            },
+            {
+              "type": "numeric",
+              "id": "q-hitch",
+              "concepts": [
+                "delta-time"
+              ],
+              "prompt": "While a level loads, one frame takes **0.5 s**. The fox runs at **300 px/s**. How far does it move in that single frame?",
+              "answer": 150,
+              "unit": "px",
+              "hint": "Distance = speed × `dt`, with this frame's `dt`.",
+              "explanation": "300 × 0.5 = **150 px** in one step. With `dt` the fox still covers the right distance, but it **jumps** there instead of travelling, and could skip straight past a wall or a pit edge. Games therefore cap `dt` (`dt = std::min(dt, 0.1f);` is a common choice), and physics runs in small fixed steps, as the next lesson shows."
+            }
+          ]
+        },
+        {
+          "id": "fixed-timestep",
+          "title": "Fixed steps for physics",
+          "pareto": "extra",
+          "minutes": 8,
+          "takeaway": "Run physics in fixed-size steps fed by an accumulator of real time, so results are the same at any frame rate, and read one-frame input once per rendered frame.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Why a fixed step",
+              "body": "Variable `dt` still has two problems: results drift slightly with frame rate (the 5.2 vs 5.1 from the last lesson), and one huge `dt` can make objects skip through walls or bounce wildly.\n\nPhysics therefore advances in **fixed steps**, however fast the screen refreshes: Unity's `FixedUpdate` runs 50 times a second by default and Godot's `_physics_process` 60 times. Rendering still happens once per frame.\n\nThe trick is an **accumulator**: add each frame's real time to it, then run physics steps while it holds at least one step's worth, subtracting a step each time. Leftover time waits for the next frame."
+            },
+            {
+              "type": "trace",
+              "id": "q-accumulator",
+              "concepts": [
+                "fixed-timestep"
+              ],
+              "prompt": "Three rendered frames take 16, 16 and 50 ms. Step through the accumulator (times in whole milliseconds to keep the numbers clean) and predict the values.",
+              "language": "cpp",
+              "code": "const int stepMs = 20;                    // physics runs every 20 ms (50 Hz)\nstd::vector<int> frameTimes{16, 16, 50};  // how long each rendered frame took\nint accumulator = 0;\nint steps = 0;\n\nfor (int frameMs : frameTimes) {\n    accumulator += frameMs;\n    while (accumulator >= stepMs) {\n        ++steps;\n        accumulator -= stepMs;\n    }\n}\nstd::printf(\"%d\\n\", steps);",
+              "frames": [
+                {
+                  "line": 4,
+                  "vars": {
+                    "accumulator": "0",
+                    "steps": "0"
+                  }
+                },
+                {
+                  "line": 7,
+                  "vars": {
+                    "frameMs": "16",
+                    "accumulator": "16",
+                    "steps": "0"
+                  },
+                  "note": "Only 16 ms saved: not enough for a 20 ms step yet."
+                },
+                {
+                  "line": 7,
+                  "vars": {
+                    "frameMs": "16",
+                    "accumulator": "32",
+                    "steps": "0"
+                  }
+                },
+                {
+                  "line": 10,
+                  "vars": {
+                    "frameMs": "16",
+                    "accumulator": "12",
+                    "steps": "1"
+                  },
+                  "ask": "accumulator"
+                },
+                {
+                  "line": 7,
+                  "vars": {
+                    "frameMs": "50",
+                    "accumulator": "62",
+                    "steps": "1"
+                  },
+                  "note": "The slow third frame added 50 ms at once."
+                },
+                {
+                  "line": 10,
+                  "vars": {
+                    "frameMs": "50",
+                    "accumulator": "42",
+                    "steps": "2"
+                  },
+                  "ask": "accumulator"
+                },
+                {
+                  "line": 10,
+                  "vars": {
+                    "frameMs": "50",
+                    "accumulator": "22",
+                    "steps": "3"
+                  }
+                },
+                {
+                  "line": 10,
+                  "vars": {
+                    "frameMs": "50",
+                    "accumulator": "2",
+                    "steps": "4"
+                  },
+                  "ask": "steps"
+                },
+                {
+                  "line": 13,
+                  "vars": {
+                    "accumulator": "2",
+                    "steps": "4"
+                  },
+                  "out": "4"
+                }
+              ],
+              "hint": "The `while` runs as long as at least 20 ms is saved up, taking 20 ms each time.",
+              "explanation": "The first frame saves 16 ms: no step. The second brings it to 32, so one step runs and 12 ms is left over. The slow 50 ms frame brings it to 62, enough for **three** steps (62 → 42 → 22 → 2). Four physics steps in total, each exactly 20 ms long, no matter how uneven the frames were."
+            },
+            {
+              "type": "numeric",
+              "id": "q-fixed-per-second",
+              "concepts": [
+                "fixed-timestep"
+              ],
+              "prompt": "Rin's fixed step is **0.02 s**. On a laptop running at **30 fps**, how many physics steps run per second, on average?",
+              "answer": 50,
+              "unit": "steps",
+              "hint": "The fixed step does not depend on the frame rate at all.",
+              "explanation": "1 ÷ 0.02 = **50** physics steps per second at 30 fps, 60 fps or 144 fps alike. At 30 fps that averages 1.67 steps per rendered frame, so some frames run one step and some run two. At 144 fps most frames run **none**."
+            },
+            {
+              "type": "explain",
+              "title": "Leftovers and interpolation",
+              "body": "After the steps, some time is usually left in the accumulator: 2 ms in the trace. The screen is drawn *between* two physics states, so drawing the last state as-is makes motion stutter slightly.\n\nThe fix is to **interpolate**: with `alpha = accumulator / step`, draw objects at `previous + (current - previous) * alpha`.\n\nOne more danger: if a physics step takes longer to *compute* than the time it simulates, the accumulator grows every frame and the game freezes up (the *spiral of death*). Loops clamp how much time one frame may add. The Game Engine Programming course builds this loop in full."
+            },
+            {
+              "type": "numeric",
+              "id": "q-interpolate",
+              "concepts": [
+                "fixed-timestep"
+              ],
+              "prompt": "The physics step is 20 ms and **5 ms** is left in the accumulator. The bat was at x = **100** after the previous step and is at x = **110** after the latest one. Where should it be drawn?",
+              "answer": 102.5,
+              "tolerance": 0.01,
+              "hint": "`alpha` = leftover ÷ step. Then go that fraction of the way from the previous position to the current one.",
+              "explanation": "`alpha` = 5 ÷ 20 = 0.25, so draw it at 100 + (110 − 100) × 0.25 = **102.5**. Each rendered frame then shows a position that matches the real time since the last step, and motion stays smooth even though physics only updates 50 times a second."
+            },
+            {
+              "type": "buckets",
+              "id": "q-update-or-fixed",
+              "concepts": [
+                "fixed-timestep"
+              ],
+              "prompt": "Which of these belong in the per-frame update (once per rendered frame) and which in the fixed step (once per physics step)?",
+              "buckets": [
+                "Once per rendered frame",
+                "Once per fixed step"
+              ],
+              "items": [
+                {
+                  "text": "Check whether jump was pressed this frame",
+                  "bucket": 0
+                },
+                {
+                  "text": "Move the camera smoothly after the fox",
+                  "bucket": 0
+                },
+                {
+                  "text": "Animate the score counter ticking up",
+                  "bucket": 0
+                },
+                {
+                  "text": "Apply the wind force to the falling leaves",
+                  "bucket": 1
+                },
+                {
+                  "text": "Set the fox's physics velocity from the stored input",
+                  "bucket": 1
+                },
+                {
+                  "text": "Step a custom simulation of a swinging rope",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Does it affect the physics simulation, or is it about what the player sees and does each frame?",
+              "explanation": "Anything that feeds the **physics simulation** (forces, velocities, custom integration) goes in the fixed step, so it advances in the same equal steps as the physics. Per-frame things go in the per-frame update: reading one-frame input, the camera and UI animation should follow each rendered frame, or they would stutter at high refresh rates."
+            },
+            {
+              "type": "mcq",
+              "id": "q-missed-jump",
+              "concepts": [
+                "fixed-timestep",
+                "input-edges"
+              ],
+              "prompt": "Rin computes `jumpPressed` (true only on the frame Space goes down) once per rendered frame, but reads it inside the fixed-step `while` loop. At 144 fps, some jump presses do nothing at all. Why?",
+              "choices": [
+                "`jumpPressed` is true for only one rendered frame, and most frames at 144 fps run no fixed step",
+                "The fixed step runs so often that it reads each press twice and cancels it out",
+                "Physics code cannot read input variables while the accumulator is non-zero",
+                "The accumulator overflows when the frame rate is above 100"
+              ],
+              "answer": 0,
+              "hint": "At 144 fps, how many rendered frames are there per physics step?",
+              "explanation": "There are 144 rendered frames but only 50 physics steps per second, so roughly two frames in three run **no** fixed step. If the press lands on one of those, `jumpPressed` is true only during that frame and never seen. Store the press (`jumpQueued = true;`) when you read input, and clear it in the fixed step that consumes it."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "move-and-collide",
+      "title": "Moving and colliding",
+      "description": "Vectors for position, velocity and facing; reading input; and finding and fixing overlaps between things.",
+      "lessons": [
+        {
+          "id": "vectors",
+          "title": "Vectors: where and how fast",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Positions, velocities and accelerations are vectors: add velocity × dt to position, and normalise a direction before multiplying it by a speed.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "A small Vec2",
+              "body": "A **vector** is a pair of numbers (x, y). Games use it for a **position** (where), a **velocity** (how fast, and which way) and an **acceleration** (how the velocity changes). Every engine and maths library has one (`glm::vec2`, raylib's `Vector2`, Unreal's `FVector2D`); this course grows the `Vec2` from the C++ lesson into a small header, and the snippets from here on include it:\n\n```cpp\n// vec2.h\n#pragma once\n#include <cmath>\n#include <ostream>\n\nstruct Vec2 {\n    float x = 0, y = 0;\n\n    Vec2& operator+=(Vec2 o) { x += o.x; y += o.y; return *this; }\n    Vec2& operator-=(Vec2 o) { x -= o.x; y -= o.y; return *this; }\n\n    float length() const { return std::sqrt(x * x + y * y); }\n    Vec2 normalized() const {\n        float len = length();\n        return len > 0 ? Vec2{x / len, y / len} : *this;\n    }\n};\n\ninline Vec2 operator+(Vec2 a, Vec2 b) { return {a.x + b.x, a.y + b.y}; }\ninline Vec2 operator-(Vec2 a, Vec2 b) { return {a.x - b.x, a.y - b.y}; }\ninline Vec2 operator*(Vec2 v, float k) { return {v.x * k, v.y * k}; }\ninline Vec2 operator/(Vec2 v, float k) { return {v.x / k, v.y / k}; }\ninline float dot(Vec2 a, Vec2 b) { return a.x * b.x + a.y * b.y; }\n\ninline std::ostream& operator<<(std::ostream& os, Vec2 v) {\n    return os << '(' << v.x << \", \" << v.y << ')';\n}\n```\n\nIt is two floats, so it is passed **by value** everywhere, and `operator<<` prints it as `(x, y)`."
+            },
+            {
+              "type": "explain",
+              "title": "Moving with vectors",
+              "body": "The whole of basic motion is two lines per step:\n\n- `velocity += acceleration * dt;`\n- `position += velocity * dt;`\n\nGravity is an acceleration pointing down, such as (0, −10). A velocity of (4, 0) means 4 units per second to the right; its **length** √(x² + y²) is the speed.\n\nThis course uses **y up**, like most maths and physics. Many 2D screen APIs (SDL and raylib among them) count y **down** the screen, so always check which way your engine counts."
+            },
+            {
+              "type": "trace",
+              "id": "q-trace-projectile",
+              "concepts": [
+                "vector",
+                "delta-time"
+              ],
+              "prompt": "A spark is flung sideways and falls under gravity. Step through two half-second steps and predict the vectors.",
+              "language": "cpp",
+              "code": "Vec2 position{0, 0};\nVec2 velocity{4, 0};\nconst Vec2 gravity{0, -10};\nfloat dt = 0.5f;\n\nfor (int step = 0; step < 2; ++step) {\n    velocity += gravity * dt;\n    position += velocity * dt;\n}\nstd::cout << position << '\\n';",
+              "frames": [
+                {
+                  "line": 4,
+                  "vars": {
+                    "position": "(0, 0)",
+                    "velocity": "(4, 0)",
+                    "dt": "0.5"
+                  }
+                },
+                {
+                  "line": 7,
+                  "vars": {
+                    "step": "0",
+                    "position": "(0, 0)",
+                    "velocity": "(4, -5)",
+                    "dt": "0.5"
+                  },
+                  "ask": "velocity",
+                  "note": "Gravity changes the velocity first..."
+                },
+                {
+                  "line": 8,
+                  "vars": {
+                    "step": "0",
+                    "position": "(2, -2.5)",
+                    "velocity": "(4, -5)",
+                    "dt": "0.5"
+                  },
+                  "ask": "position",
+                  "note": "...then the new velocity moves the position."
+                },
+                {
+                  "line": 7,
+                  "vars": {
+                    "step": "1",
+                    "position": "(2, -2.5)",
+                    "velocity": "(4, -10)",
+                    "dt": "0.5"
+                  }
+                },
+                {
+                  "line": 8,
+                  "vars": {
+                    "step": "1",
+                    "position": "(4, -7.5)",
+                    "velocity": "(4, -10)",
+                    "dt": "0.5"
+                  },
+                  "ask": "position"
+                },
+                {
+                  "line": 10,
+                  "vars": {
+                    "position": "(4, -7.5)",
+                    "velocity": "(4, -10)",
+                    "dt": "0.5"
+                  },
+                  "out": "(4, -7.5)"
+                }
+              ],
+              "hint": "Vectors add component by component: (4, 0) + (0, −10) × 0.5 = (4 + 0, 0 − 5).",
+              "explanation": "Step 1: gravity × 0.5 = (0, −5), so the velocity becomes (4, −5); then velocity × 0.5 = (2, −2.5) moves the spark to **(2, −2.5)**. Step 2: velocity (4, −10), and the position gains (2, −5) to reach **(4, −7.5)**. x grows steadily while y falls faster each step: a curved arc from two lines of vector maths."
+            },
+            {
+              "type": "explain",
+              "title": "Diagonals are too fast",
+              "body": "Input usually arrives as a direction: right is (1, 0), up is (0, 1), and right + up together is (1, 1). Multiply that by the speed and the fox moves **faster diagonally**, because (1, 1) has length √2 ≈ 1.41.\n\nThe fix is to **normalise**: divide a vector by its own length to get a **unit vector**, length 1, pointing the same way. `direction.normalized() * speed` then always has length `speed`.\n\nA zero vector has no direction, so `normalized()` returns it unchanged rather than dividing by zero."
+            },
+            {
+              "type": "numeric",
+              "id": "q-diagonal-speed",
+              "concepts": [
+                "normalization"
+              ],
+              "prompt": "The fox moves at speed 5 and Rin multiplies the raw input (1, 1) by 5 without normalising. How fast does the fox actually move diagonally?",
+              "answer": 7.071,
+              "tolerance": 0.01,
+              "unit": "units/s",
+              "hint": "The velocity is (5, 5). Its length is √(5² + 5²).",
+              "explanation": "The velocity is (5, 5), with length √50 ≈ **7.07**: about 41% faster than moving straight. Players notice, and speedrunners exploit it. Normalising (1, 1) first gives (0.707, 0.707), and × 5 that has length exactly 5."
+            },
+            {
+              "type": "bug",
+              "id": "q-diagonal",
+              "concepts": [
+                "normalization"
+              ],
+              "prompt": "Both lines should print `5.00`: the fox runs at the same speed straight or diagonally. Click the line with the bug.",
+              "language": "cpp",
+              "code": "#include <cstdio>\n#include \"vec2.h\"\n\nVec2 velocity(bool left, bool right, bool down, bool up, float speed) {\n    Vec2 input{float(right) - float(left), float(up) - float(down)};\n    return input * speed;\n}\n\nint main() {\n    Vec2 straight = velocity(false, true, false, false, 5);   // right\n    Vec2 diagonal = velocity(false, true, false, true, 5);    // right + up\n    std::printf(\"%.2f\\n\", straight.length());\n    std::printf(\"%.2f\\n\", diagonal.length());\n}",
+              "error": "5.00\n7.07",
+              "lines": [
+                6
+              ],
+              "fixes": [
+                "Change line 6 to `return input.normalized() * speed;`",
+                "Change line 6 to `return (input * speed).normalized();`",
+                "Change line 6 to `return input * (speed / 1.414f);`"
+              ],
+              "answer": 0,
+              "hint": "Which vector needs length 1: the input direction, or the final velocity?",
+              "explanation": "Normalise the **direction**, then scale it by the speed. Normalising *after* multiplying throws the speed away, so both lengths become 1.00. Dividing by 1.414 fixes the diagonal but slows straight movement to 3.54."
+            },
+            {
+              "type": "example",
+              "title": "Aim at the mouse",
+              "problem": "The fox at (1, 1) throws a spark at the mouse cursor at (4, 5). Sparks fly at speed 10. What velocity should the spark get?",
+              "steps": [
+                "Direction = target − origin = (4 − 1, 5 − 1) = (3, 4).",
+                "Its length is √(3² + 4²) = 5, so the unit direction is (3, 4) ÷ 5 = (0.6, 0.8).",
+                "Velocity = unit direction × speed = (0.6, 0.8) × 10 = (6, 8). In code: `(target - origin).normalized() * 10`."
+              ],
+              "answer": "The spark gets velocity **(6, 8)**: pointing at the cursor, with length exactly 10."
+            },
+            {
+              "type": "numeric",
+              "id": "q-aim-velocity",
+              "concepts": [
+                "normalization",
+                "vector"
+              ],
+              "prompt": "A bat at (2, 3) dives at the fox at (14, −2) with speed **26**. What is the **y** component of its velocity?",
+              "answer": -10,
+              "hint": "Direction (12, −5) has length 13. Divide by it, then multiply by 26.",
+              "explanation": "Direction = (14 − 2, −2 − 3) = (12, −5), length √(144 + 25) = 13. Unit direction (12/13, −5/13), times 26 gives **(24, −10)**. The y component is **−10**: downward, because the fox is lower than the bat."
+            }
+          ]
+        },
+        {
+          "id": "facing-and-steering",
+          "title": "In front, behind, and turning to chase",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "The dot product of two directions says how much they agree (1 same way, 0 sideways, −1 opposite), and steering turns a velocity gradually toward a desired one.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "The dot product",
+              "body": "`dot(a, b) = a.x * b.x + a.y * b.y`. For two **unit** vectors, the result is the cosine of the angle between them:\n\n- **1**: same direction\n- **0**: at right angles\n- **−1**: opposite directions\n\nSo *\"is the fox in front of this guard?\"* is one line: `dot(facing, (fox - guard).normalized()) > 0`. A **field of view** is a stricter threshold: a 90° cone (45° each side) needs a dot of at least cos 45° ≈ 0.707.\n\nFor *in front or behind*, the sign is all you need, so you can even skip normalising."
+            },
+            {
+              "type": "numeric",
+              "id": "q-dot-value",
+              "concepts": [
+                "dot-product"
+              ],
+              "prompt": "A guard faces **(0, 1)**. The fox is at offset **(3, 4)** from the guard. What is `dot(facing, offset.normalized())`?",
+              "answer": 0.8,
+              "tolerance": 0.001,
+              "hint": "Normalise (3, 4) first: its length is 5.",
+              "explanation": "(3, 4) ÷ 5 = (0.6, 0.8), and dot((0, 1), (0.6, 0.8)) = 0 × 0.6 + 1 × 0.8 = **0.8**. That is cos 37°: the fox is in front of the guard, 37° off the line it is looking along."
+            },
+            {
+              "type": "buckets",
+              "id": "q-in-front",
+              "concepts": [
+                "dot-product"
+              ],
+              "prompt": "A guard stands at (0, 0) facing **(1, 1)**. For each offset of the fox from the guard, compute the dot product and sort it.",
+              "buckets": [
+                "In front (dot > 0)",
+                "Behind (dot < 0)",
+                "Exactly to the side (dot = 0)"
+              ],
+              "items": [
+                {
+                  "text": "(3, −1)",
+                  "bucket": 0
+                },
+                {
+                  "text": "(0, 5)",
+                  "bucket": 0
+                },
+                {
+                  "text": "(1, 0)",
+                  "bucket": 0
+                },
+                {
+                  "text": "(−2, 1)",
+                  "bucket": 1
+                },
+                {
+                  "text": "(−1, −4)",
+                  "bucket": 1
+                },
+                {
+                  "text": "(−3, 2)",
+                  "bucket": 1
+                },
+                {
+                  "text": "(2, −2)",
+                  "bucket": 2
+                },
+                {
+                  "text": "(4, −4)",
+                  "bucket": 2
+                }
+              ],
+              "hint": "With facing (1, 1), the dot product is just x + y.",
+              "explanation": "dot((1, 1), (x, y)) = x + y. (3, −1), (0, 5) and (1, 0) give 2, 5 and 1: in front. (−2, 1), (−1, −4) and (−3, 2) give −1, −5 and −1: behind. (2, −2) and (4, −4) give exactly 0: they are on the line through the guard at right angles to its facing. Only the **sign** mattered, so there was no need to normalise."
+            },
+            {
+              "type": "output",
+              "id": "q-fov",
+              "concepts": [
+                "dot-product"
+              ],
+              "prompt": "`canSee` returns true when the dot product reaches `minDot`. The guard faces right. What does this print?",
+              "language": "cpp",
+              "code": "#include <iostream>\n#include \"vec2.h\"\n\nbool canSee(Vec2 guard, Vec2 facing, Vec2 target, float minDot) {\n    Vec2 toTarget = (target - guard).normalized();\n    return dot(facing, toTarget) >= minDot;\n}\n\nint main() {\n    Vec2 guard{0, 0};\n    Vec2 facing{1, 0};   // already length 1\n    std::cout << std::boolalpha;\n    std::cout << canSee(guard, facing, {5, 5}, 0.5f) << '\\n';\n    std::cout << canSee(guard, facing, {0, 5}, 0.5f) << '\\n';\n    std::cout << canSee(guard, facing, {-5, 1}, -0.5f) << '\\n';\n}",
+              "output": "true\nfalse\nfalse",
+              "hint": "Work out the angle to each target: 45°, 90°, and almost straight behind. Then compare cosines.",
+              "explanation": "(5, 5) is 45° off the facing: dot ≈ 0.707 ≥ 0.5, so **true** (a 0.5 threshold is a 120° cone). (0, 5) is at 90°: dot 0 < 0.5, **false**. (−5, 1) is almost directly behind: dot ≈ −0.98, which fails even the very wide −0.5 threshold (a 240° cone), so **false**."
+            },
+            {
+              "type": "explain",
+              "title": "Steering instead of snapping",
+              "body": "A slime that sets `velocity = toFox * maxSpeed` every frame turns instantly, like a robot. **Steering** turns gradually:\n\n- **desired** = (target − position).normalized() × maxSpeed\n- **steering** = desired − velocity\n- velocity += steering × turnRate (a fraction, or a capped force × `dt`)\n\nThe velocity bends toward the desired one over several frames, which makes curved, believable chases. Flip the desired direction to **flee**; shrink the desired speed near the target to **arrive** without overshooting."
+            },
+            {
+              "type": "example",
+              "title": "One steering step",
+              "problem": "A slime at (0, 0) is moving with velocity (0, 2). The fox is at (10, 0). Max speed is 2 and the slime closes **half** the gap to its desired velocity each step. What is its new velocity?",
+              "steps": [
+                "Desired velocity = (10, 0).normalized() × 2 = (1, 0) × 2 = (2, 0).",
+                "Steering = desired − velocity = (2, 0) − (0, 2) = (2, −2).",
+                "New velocity = (0, 2) + (2, −2) × 0.5 = (1, 1)."
+              ],
+              "answer": "The slime now moves at **(1, 1)**: halfway between going up and going toward the fox. Next step it bends further right."
+            },
+            {
+              "type": "numeric",
+              "id": "q-steer-step",
+              "concepts": [
+                "steering",
+                "normalization"
+              ],
+              "prompt": "A bat at (2, 2) flies left with velocity (−3, 0). The fox is at (2, 8). Max speed is 3 and the bat closes half the gap to its desired velocity each step. What is the **x** component of its new velocity?",
+              "answer": -1.5,
+              "hint": "The fox is straight above the bat, so the desired velocity is (0, 3).",
+              "explanation": "Desired = (0, 6).normalized() × 3 = (0, 3). Steering = (0, 3) − (−3, 0) = (3, 3). New velocity = (−3, 0) + (3, 3) × 0.5 = **(−1.5, 1.5)**. The bat is still drifting left but already turning upward toward the fox."
+            },
+            {
+              "type": "mcq",
+              "id": "q-snap-or-steer",
+              "concepts": [
+                "steering"
+              ],
+              "prompt": "Dario says the chasing slimes look robotic: the moment the fox passes them, they reverse direction instantly. What should Rin change?",
+              "choices": [
+                "Move the velocity a fraction of the way toward the desired velocity each frame, instead of setting it outright",
+                "Normalise the velocity twice so the direction is more accurate",
+                "Raise the frame rate so the turn takes less time",
+                "Check with a dot product whether the fox is in front before chasing"
+              ],
+              "answer": 0,
+              "hint": "The problem is how fast the direction changes, not which direction it changes to.",
+              "explanation": "Setting `velocity = desired` turns on the spot. Blending toward it (steering) spreads the turn over several frames, so slimes swing around in an arc. Normalising does not change direction, a faster frame rate makes the snap even quicker, and a field-of-view check decides *whether* to chase, not *how* to turn."
+            }
+          ]
+        },
+        {
+          "id": "input",
+          "title": "Pressed, held, released",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "\"Pressed this frame\" means down now and up last frame, so keep last frame's state, and use small buffers so presses a few frames early still count.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Polling the keyboard",
+              "body": "Most game input is **polled**: every frame you ask *\"is Space down right now?\"* Game libraries give three answers; raylib, for example, has:\n\n- `IsKeyDown(KEY_SPACE)`: held down this frame (move while held)\n- `IsKeyPressed(KEY_SPACE)`: **pressed** this frame (jump once)\n- `IsKeyReleased(KEY_SPACE)`: **released** this frame\n\nLower-level libraries such as SDL and GLFW report only whether a key is down, plus events when it changes. *Pressed* is an **edge**: down now **and** not down last frame. To compute it yourself, remember last frame's state."
+            },
+            {
+              "type": "trace",
+              "id": "q-trace-edge",
+              "concepts": [
+                "input-edges"
+              ],
+              "prompt": "Space is held down for two frames. Step through the edge detection and predict the values.",
+              "language": "cpp",
+              "code": "bool spaceDown[] = {false, true, true, false};   // key state on 4 frames\nbool wasDown = false;\nint jumps = 0;\n\nfor (bool down : spaceDown) {\n    bool pressed = down && !wasDown;\n    if (pressed) ++jumps;\n    wasDown = down;\n}\nstd::printf(\"%d\\n\", jumps);",
+              "frames": [
+                {
+                  "line": 3,
+                  "vars": {
+                    "wasDown": "false",
+                    "jumps": "0"
+                  }
+                },
+                {
+                  "line": 6,
+                  "vars": {
+                    "down": "false",
+                    "pressed": "false",
+                    "wasDown": "false",
+                    "jumps": "0"
+                  }
+                },
+                {
+                  "line": 8,
+                  "vars": {
+                    "down": "false",
+                    "pressed": "false",
+                    "wasDown": "false",
+                    "jumps": "0"
+                  }
+                },
+                {
+                  "line": 6,
+                  "vars": {
+                    "down": "true",
+                    "pressed": "true",
+                    "wasDown": "false",
+                    "jumps": "0"
+                  },
+                  "ask": "pressed",
+                  "note": "Down now, up last frame: an edge."
+                },
+                {
+                  "line": 8,
+                  "vars": {
+                    "down": "true",
+                    "pressed": "true",
+                    "wasDown": "true",
+                    "jumps": "1"
+                  },
+                  "ask": "jumps"
+                },
+                {
+                  "line": 6,
+                  "vars": {
+                    "down": "true",
+                    "pressed": "false",
+                    "wasDown": "true",
+                    "jumps": "1"
+                  },
+                  "ask": "pressed",
+                  "note": "Still held: no new press."
+                },
+                {
+                  "line": 8,
+                  "vars": {
+                    "down": "true",
+                    "pressed": "false",
+                    "wasDown": "true",
+                    "jumps": "1"
+                  }
+                },
+                {
+                  "line": 6,
+                  "vars": {
+                    "down": "false",
+                    "pressed": "false",
+                    "wasDown": "true",
+                    "jumps": "1"
+                  }
+                },
+                {
+                  "line": 8,
+                  "vars": {
+                    "down": "false",
+                    "pressed": "false",
+                    "wasDown": "false",
+                    "jumps": "1"
+                  }
+                },
+                {
+                  "line": 10,
+                  "vars": {
+                    "wasDown": "false",
+                    "jumps": "1"
+                  },
+                  "out": "1"
+                }
+              ],
+              "hint": "`pressed` needs `down` to be true and `wasDown` (last frame) to be false.",
+              "explanation": "Frame 2 is the only frame where the key is down **and** was up the frame before, so `pressed` is true once and `jumps` becomes 1. On frame 3 the key is still held, but `wasDown` is now true, so no second jump. Frame 4 is a release, not a press. Holding a key gives one jump, which is what players expect."
+            },
+            {
+              "type": "bug",
+              "id": "q-jump-never",
+              "concepts": [
+                "input-edges"
+              ],
+              "prompt": "The player presses Space twice (frames 2 and 6) and should get `jumps: 2`. Instead the fox never jumps. Click the line with the bug.",
+              "language": "cpp",
+              "code": "#include <cstdio>\n\nint main() {\n    bool spaceDown[] = {false, true, true, true, false, true};\n    bool wasDown = false;\n    int jumps = 0;\n\n    for (bool down : spaceDown) {\n        wasDown = down;\n        bool pressed = down && !wasDown;\n        if (pressed) ++jumps;\n    }\n    std::printf(\"jumps: %d\\n\", jumps);\n}",
+              "error": "jumps: 0",
+              "lines": [
+                9
+              ],
+              "fixes": [
+                "Move line 9 below line 11, so `wasDown` still holds last frame's state when `pressed` is computed",
+                "Change line 10 to `bool pressed = down || !wasDown;`",
+                "Change line 10 to `bool pressed = down;`",
+                "Change line 5 to `bool wasDown = true;`"
+              ],
+              "answer": 0,
+              "hint": "When line 10 runs, what is the value of `wasDown` compared with `down`?",
+              "explanation": "Line 9 overwrites `wasDown` with this frame's state **before** line 10 reads it, so `down && !wasDown` is always `down && !down`: false. Update the history **after** using it. `down || !wasDown` is now always true (6 jumps), `pressed = down` jumps on every held frame (4), and starting with `wasDown = true` changes nothing."
+            },
+            {
+              "type": "explain",
+              "title": "Forgiving input",
+              "body": "Players press jump a few frames **before** landing and expect it to work. Two small timers make controls feel fair:\n\n- **Jump buffer**: when jump is pressed, set `bufferTimer = 0.1f;`. Count it down with `dt`; if the fox lands while it is above zero, jump.\n- **Coyote time**: after walking off a ledge, allow a jump for about 0.1 s, as if still on the ground.\n\nBoth are just `float`s counted down with `dt`, checked alongside the state of the fox."
+            },
+            {
+              "type": "numeric",
+              "id": "q-buffer-frames",
+              "concepts": [
+                "input-edges",
+                "delta-time"
+              ],
+              "prompt": "The jump buffer is **0.1 s** and the game runs at **60 fps**. Up to how many frames before landing can the player press jump and still get the jump?",
+              "answer": 6,
+              "unit": "frames",
+              "hint": "How many frames fit into 0.1 s?",
+              "explanation": "0.1 s × 60 frames per second = **6 frames**. Because the timer counts real time with `dt`, it is also 0.1 s at 144 fps (about 14 frames): the same forgiveness in time on every machine."
+            },
+            {
+              "type": "order",
+              "id": "q-input-pipeline",
+              "concepts": [
+                "input-edges"
+              ],
+              "prompt": "Put the journey of one jump press in order, from finger to fox.",
+              "items": [
+                "The keyboard reports that Space went down",
+                "The input layer records Space as \"down this frame\"",
+                "The game maps Space to the action \"Jump\", so players can rebind it",
+                "The player code sees Jump was pressed and starts the jump buffer",
+                "The fox is on the ground (or in coyote time), so its vertical velocity is set upward"
+              ],
+              "hint": "Hardware first, then the input layer, then your game's own meaning for the key, then the fox.",
+              "explanation": "The device reports a raw key state, the input layer turns it into per-frame states (held, pressed, released), the game maps keys to **actions** so the same code works for a rebound key or a gamepad, and only then does the player's own logic decide whether this jump is allowed right now."
+            },
+            {
+              "type": "buckets",
+              "id": "q-poll-or-event",
+              "concepts": [
+                "input-edges"
+              ],
+              "prompt": "Which inputs are best **read every frame** (polled), and which are best **handled when they happen** (an event or a one-frame press)?",
+              "buckets": [
+                "Read every frame",
+                "Handle when it happens"
+              ],
+              "items": [
+                {
+                  "text": "The stick direction that moves the fox",
+                  "bucket": 0
+                },
+                {
+                  "text": "The mouse position for aiming the lantern",
+                  "bucket": 0
+                },
+                {
+                  "text": "How far the trigger is pulled, for running speed",
+                  "bucket": 0
+                },
+                {
+                  "text": "The pause button",
+                  "bucket": 1
+                },
+                {
+                  "text": "A letter typed into the save-name box",
+                  "bucket": 1
+                },
+                {
+                  "text": "The gamepad being unplugged",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Is it a value that keeps mattering every frame, or a moment that matters once?",
+              "explanation": "Continuous values (stick direction, aim position, trigger pressure) matter every frame, so read them each frame. Discrete moments (a pause press, a typed letter, a disconnect) should be handled once when they happen; polling them risks missing a short press or handling it twice."
+            }
+          ]
+        },
+        {
+          "id": "collisions",
+          "title": "Do these two touch?",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Two axis-aligned boxes overlap only if they overlap on x and on y; two circles overlap when the distance between centres is less than the sum of the radii.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Boxes",
+              "body": "The simplest collider is an **AABB**, an *axis-aligned bounding box*: a rectangle that never rotates, stored as its min and max corners. Two AABBs overlap only if they overlap **on both axes**:\n\n```cpp\nstruct Box { float minX, minY, maxX, maxY; };\n\nbool overlaps(Box a, Box b) {\n    return a.minX < b.maxX && a.maxX > b.minX &&   // overlap on x\n           a.minY < b.maxY && a.maxY > b.minY;     // and on y\n}\n\nint main() {\n    Box fox{0, 0, 1, 1};\n    std::cout << std::boolalpha;\n    std::cout << overlaps(fox, {0.5f, 0.5f, 2, 2}) << '\\n';   // true\n    std::cout << overlaps(fox, {1, 0, 2, 1}) << '\\n';         // false: edges only touch\n}\n```\n\nIt prints `true` and `false`. Strict `<` and `>` mean boxes whose edges merely touch do not count, which lets the fox stand *on* a platform without being \"inside\" it. A `Box` is four floats, so it is passed by value."
+            },
+            {
+              "type": "buckets",
+              "id": "q-aabb-cases",
+              "concepts": [
+                "aabb"
+              ],
+              "prompt": "Sort each pair of boxes A and B. Edges that only touch do not count as overlapping.",
+              "buckets": [
+                "Overlap",
+                "No overlap"
+              ],
+              "items": [
+                {
+                  "text": "A: x 0 to 4, y 0 to 2 | B: x 3 to 6, y 1 to 5",
+                  "bucket": 0
+                },
+                {
+                  "text": "A: x 0 to 4, y 0 to 2 | B: x 4 to 6, y 0 to 2",
+                  "bucket": 1
+                },
+                {
+                  "text": "A: x 0 to 4, y 0 to 2 | B: x 1 to 3, y 3 to 5",
+                  "bucket": 1
+                },
+                {
+                  "text": "A: x 0 to 10, y 0 to 10 | B: x 2 to 3, y 2 to 3",
+                  "bucket": 0
+                },
+                {
+                  "text": "A: x 0 to 2, y 0 to 8 | B: x −3 to 1, y 6 to 7",
+                  "bucket": 0
+                },
+                {
+                  "text": "A: x 0 to 2, y 0 to 2 | B: x 3 to 5, y 3 to 5",
+                  "bucket": 1
+                },
+                {
+                  "text": "A: x 0 to 6, y 0 to 1 | B: x 5 to 7, y −2 to 0.5",
+                  "bucket": 0
+                },
+                {
+                  "text": "A: x 0 to 3, y 0 to 3 | B: x 1 to 2, y 3 to 4",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Check x first: do the ranges overlap? Then y. Both must.",
+              "explanation": "Overlap needs both ranges to overlap. The first pair shares x 3 to 4 and y 1 to 2. The second only touches at x = 4. The third overlaps on x but not on y. A small box fully inside a big one overlaps. The fifth shares x 0 to 1 and y 6 to 7, and the seventh shares x 5 to 6 and y 0 to 0.5. The sixth misses on both axes, and the last only touches along y = 3."
+            },
+            {
+              "type": "bug",
+              "id": "q-aabb-or",
+              "concepts": [
+                "aabb"
+              ],
+              "prompt": "The branch is high above the fox, so this should print `false`. clang warned, and the program printed `true`. Click the line with the bug.",
+              "language": "cpp",
+              "code": "#include <iostream>\n\nstruct Box { float minX, minY, maxX, maxY; };\n\nbool overlaps(Box a, Box b) {\n    return a.minX < b.maxX && a.maxX > b.minX ||\n           a.minY < b.maxY && a.maxY > b.minY;\n}\n\nint main() {\n    Box fox{0, 0, 1, 1};\n    Box branch{0.5f, 5, 2, 6};   // high above the fox\n    std::cout << std::boolalpha << overlaps(fox, branch) << '\\n';\n}",
+              "error": "warning: '&&' within '||' [-Wlogical-op-parentheses]\ntrue",
+              "lines": [
+                6
+              ],
+              "fixes": [
+                "Change the `||` at the end of line 6 to `&&`",
+                "Put parentheses around each axis test on lines 6 and 7, as the warning suggests",
+                "Change line 6 to use `<=` and `>=`, so touching edges count too",
+                "Swap lines 6 and 7, so the y test comes first"
+              ],
+              "answer": 0,
+              "hint": "The fox and the branch overlap on x. Should overlapping on one axis be enough?",
+              "explanation": "With `||`, overlapping on **either** axis counts, and the fox overlaps the branch on x (0 to 1 against 0.5 to 2), so the test says `true` although they are 4 units apart vertically. Separate on any one axis means no collision, so the axes must be joined with `&&`. The warning was a real clue, but its suggested parentheses only make the `||` explicit: the program still prints `true`. `<=` loosens the test further, and swapping the order changes nothing."
+            },
+            {
+              "type": "explain",
+              "title": "Circles",
+              "body": "Round things, and characters, are often **circles**: a centre and a radius. Two circles overlap when the distance between their centres is less than the sum of their radii.\n\nComputing a distance needs `std::sqrt`, which is slower than everything else here. Compare **squared** values instead: `dot(d, d) < (ra + rb) * (ra + rb)`, where `d` is the vector between the centres. Both sides are non-negative, so the comparison gives the same answer.\n\nCircles have a bonus: rotating a circle does not change it."
+            },
+            {
+              "type": "output",
+              "id": "q-circles",
+              "concepts": [
+                "circle-collision"
+              ],
+              "prompt": "`touch` compares the squared distance with the squared sum of the radii. What does this print?",
+              "language": "cpp",
+              "code": "#include <iostream>\n#include \"vec2.h\"\n\nbool touch(Vec2 a, float ra, Vec2 b, float rb) {\n    Vec2 d = b - a;\n    return dot(d, d) < (ra + rb) * (ra + rb);   // squared distance vs squared radii\n}\n\nint main() {\n    std::cout << std::boolalpha;\n    std::cout << touch({0, 0}, 1, {3, 0}, 1.5f) << '\\n';\n    std::cout << touch({0, 0}, 1, {3, 4}, 4.5f) << '\\n';\n    std::cout << touch({0, 0}, 2, {3, 4}, 3) << '\\n';\n}",
+              "output": "false\ntrue\nfalse",
+              "hint": "The distances are 3, 5 and 5. Compare each with the sum of the two radii.",
+              "explanation": "First: distance 3, radii 1 + 1.5 = 2.5, so 9 < 6.25 is **false**. Second: distance 5, radii 1 + 4.5 = 5.5, and 25 < 30.25 is **true**. Third: distance 5, radii 2 + 3 = 5, and 25 < 25 is **false**: they touch at exactly one point, which this strict test does not count as overlapping."
+            },
+            {
+              "type": "numeric",
+              "id": "q-circle-gap",
+              "concepts": [
+                "circle-collision"
+              ],
+              "prompt": "A spark at (1, 2) has radius 2. A slime at (7, 10) has radius 3. How wide is the **gap** between their edges?",
+              "answer": 5,
+              "unit": "units",
+              "hint": "Find the distance between the centres, then subtract both radii.",
+              "explanation": "The centres differ by (6, 8), so they are √(36 + 64) = 10 apart. The radii cover 2 + 3 = 5 of that, leaving a gap of **5**. A negative result would mean they overlap by that much."
+            },
+            {
+              "type": "mcq",
+              "id": "q-shape-choice",
+              "concepts": [
+                "circle-collision",
+                "aabb"
+              ],
+              "prompt": "Dario adds a boulder that rolls and spins down a hill. Which collider stays correct while it spins, with no extra work?",
+              "choices": [
+                "A circle, because rotating a circle leaves it unchanged",
+                "An AABB the size of the boulder sprite",
+                "An AABB recomputed only when the boulder stops",
+                "No collider: check the sprite's pixels against the fox every frame"
+              ],
+              "answer": 0,
+              "hint": "Which shape looks the same at every angle?",
+              "explanation": "A circle is the same at every angle, so spinning never invalidates it, and the test stays a few multiplications and a comparison. An AABB cannot rotate, so a spinning box would either stick out or leave gaps. Pixel tests are far too slow to run every frame for every pair. AABBs remain ideal for tiles, walls and platforms that never rotate."
+            }
+          ]
+        },
+        {
+          "id": "collision-response",
+          "title": "Pushing apart and passing through",
+          "pareto": "extra",
+          "minutes": 8,
+          "takeaway": "Resolve an overlap by pushing out along the axis with the smaller overlap, and sweep fast movers over their whole path so they cannot tunnel through thin walls.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Detection is not resolution",
+              "body": "Detecting an overlap says the fox is *inside* the wall. **Resolution** puts it back outside.\n\nFor two AABBs, measure the overlap on each axis: `std::min(maxes) − std::max(mins)`. Then push the mover out along the axis with the **smaller** overlap, toward its own side. That is the shortest way out, often called the *minimum translation*. Finally, zero the velocity on that axis: pushed up out of the floor means *landed*.\n\nPushing along the larger overlap would teleport the fox to the far side of the wall."
+            },
+            {
+              "type": "example",
+              "title": "Into the wall",
+              "problem": "The fox spans x 0 to 2, y 0 to 2. A wall spans x 1.5 to 5, y −1 to 3. How should the fox be pushed out?",
+              "steps": [
+                "Overlap on x = min(2, 5) − max(0, 1.5) = 2 − 1.5 = 0.5.",
+                "Overlap on y = min(2, 3) − max(0, −1) = 2 − 0 = 2.",
+                "The x overlap is smaller, so push along x. The fox's centre (x = 1) is left of the wall's (x = 3.25), so push it left."
+              ],
+              "answer": "Move the fox **0.5 units left**, back to x −0.5 to 1.5, and zero its horizontal velocity."
+            },
+            {
+              "type": "numeric",
+              "id": "q-push-out",
+              "concepts": [
+                "collision-resolution"
+              ],
+              "prompt": "Falling fast, the fox now spans x 4 to 6, y 3 to 5, and a platform spans x 0 to 10, y 0 to 3.25. By how many units must the fox be pushed out?",
+              "answer": 0.25,
+              "tolerance": 0.001,
+              "unit": "units",
+              "hint": "Compute both overlaps and take the smaller one.",
+              "explanation": "Overlap on x = min(6, 10) − max(4, 0) = 2. Overlap on y = min(5, 3.25) − max(3, 0) = **0.25**, the smaller one. The fox's centre is above the platform's, so it is pushed **up** by 0.25 and lands on top, with its vertical velocity set to 0."
+            },
+            {
+              "type": "output",
+              "id": "q-resolve",
+              "concepts": [
+                "collision-resolution"
+              ],
+              "prompt": "`pushOut` returns how far to move the mover out of the wall. What does this print?",
+              "language": "cpp",
+              "code": "#include <algorithm>\n#include <iostream>\n#include \"vec2.h\"\n\nstruct Box { float minX, minY, maxX, maxY; };\n\nVec2 pushOut(Box mover, Box wall) {\n    float overlapX = std::min(mover.maxX, wall.maxX) - std::max(mover.minX, wall.minX);\n    float overlapY = std::min(mover.maxY, wall.maxY) - std::max(mover.minY, wall.minY);\n    if (overlapX <= 0 || overlapY <= 0) return {0, 0};   // not touching\n\n    bool moverIsLeft = mover.minX + mover.maxX < wall.minX + wall.maxX;\n    bool moverIsBelow = mover.minY + mover.maxY < wall.minY + wall.maxY;\n    if (overlapX < overlapY) return {moverIsLeft ? -overlapX : overlapX, 0};\n    return {0, moverIsBelow ? -overlapY : overlapY};\n}\n\nint main() {\n    std::cout << pushOut({6, 1, 8, 3}, {2, 0, 6.75f, 6}) << '\\n';\n    std::cout << pushOut({1, -1, 3, 1}, {0, 0.5f, 10, 4}) << '\\n';\n}",
+              "output": "(0.75, 0)\n(0, -0.5)",
+              "hint": "For each pair, compute the overlap on x and on y, pick the smaller, then decide the sign from which side the mover is on.",
+              "explanation": "First pair: overlap x = min(8, 6.75) − max(6, 2) = 0.75, overlap y = min(3, 6) − max(1, 0) = 2. Push along x; the mover's centre (7) is right of the wall's (4.375), so push **right**: (0.75, 0). Second pair: overlap x = 2, overlap y = min(1, 4) − max(−1, 0.5) = 0.5. Push along y; the mover is below, so push **down**: (0, −0.5), the fox bumping its head on a ledge."
+            },
+            {
+              "type": "explain",
+              "title": "Tunnelling",
+              "body": "Collision checks run at discrete moments. If something moves farther in one step than the thickness of a wall, it can be in front of the wall on one step and behind it on the next, and **no check ever sees an overlap**. That is **tunnelling**.\n\nFast bullets, dashes, thin walls and big `dt` values all make it likelier. Fixes:\n\n- **Sweep**: test the whole path from the old position to the new one (a raycast or swept shape). Physics engines such as Box2D offer continuous collision for fast bodies, which does this.\n- **Substeps**: split a big move into several small ones.\n- Thicker colliders or a speed cap."
+            },
+            {
+              "type": "numeric",
+              "id": "q-tunnel-speed",
+              "concepts": [
+                "tunnelling"
+              ],
+              "prompt": "A wall is **0.2** units thick and physics steps every **0.02 s**. Above what speed, in units per second, can a tiny bullet jump over the wall in a single step?",
+              "answer": 10,
+              "unit": "units/s",
+              "hint": "The bullet tunnels when its distance per step exceeds the wall's thickness.",
+              "explanation": "Distance per step = speed × 0.02. That exceeds 0.2 when speed > 0.2 ÷ 0.02 = **10 units/s**. That is slow for a bullet, which is why bullets are usually raycasts or use continuous collision detection rather than plain overlap tests."
+            },
+            {
+              "type": "bug",
+              "id": "q-tunnel",
+              "concepts": [
+                "tunnelling"
+              ],
+              "prompt": "The bullet moves 2 units per frame toward a wall from x 9.2 to 9.8. It should print `hit on frame 5`, but it prints `missed`. Click the line with the bug.",
+              "language": "cpp",
+              "code": "#include <cstdio>\n\nint main() {\n    float wallMin = 9.2f, wallMax = 9.8f;       // a thin wall\n    float x = 0, speed = 120, dt = 1.0f / 60;   // 2 units per frame\n    int frame = 0;\n    bool hit = false;\n\n    while (frame < 10 && !hit) {\n        ++frame;\n        x += speed * dt;\n        hit = x >= wallMin && x <= wallMax;\n    }\n    if (hit) std::printf(\"hit on frame %d\\n\", frame);\n    else std::printf(\"missed\\n\");\n}",
+              "error": "missed",
+              "lines": [
+                12
+              ],
+              "fixes": [
+                "Change line 12 to `hit = x - speed * dt <= wallMax && x >= wallMin;`, testing the whole stretch covered this frame",
+                "Change line 5 to `float x = 0, speed = 240, dt = 1.0f / 60;`, so the bullet reaches the wall sooner",
+                "Change line 9 to `while (frame < 20 && !hit) {`, so it runs for more frames",
+                "Change line 12 to `hit = x >= wallMin || x <= wallMax;`"
+              ],
+              "answer": 0,
+              "hint": "List the positions the check sees: 2, 4, 6, 8, 10... Is any of them inside the wall?",
+              "explanation": "The check only looks at where the bullet **is**: 8 is before the wall and 10 is past it, so it never sees an overlap. Testing the segment from the previous position (`x - speed * dt`) to the new one catches the wall on frame 5. More speed makes it skip more, more frames just let it fly on, and `||` is true for every position, reporting a hit on frame 1."
+            },
+            {
+              "type": "mcq",
+              "id": "q-tunnel-fix",
+              "concepts": [
+                "tunnelling"
+              ],
+              "prompt": "The fox's dash moves 3 tiles in a single frame, and sometimes goes straight through 1-tile walls. Which fix deals with the cause?",
+              "choices": [
+                "Check the whole dash path, with a raycast or by splitting it into steps smaller than a tile",
+                "Raise the frame-rate cap, so frames are shorter",
+                "Make the wall sprites look thicker",
+                "Check for collisions twice per frame at the final position"
+              ],
+              "answer": 0,
+              "hint": "The problem is what happens between the start and the end of the dash.",
+              "explanation": "The dash covers more distance in one step than a wall is thick, so only the path between the two positions can reveal the wall: a raycast or sweep, or substeps smaller than a tile. The dash moves 3 tiles in one frame however short the frame is, a sprite does not change the collider, and checking the same final position twice sees the same thing."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "structure-and-feel",
+      "title": "Structure and feel",
+      "description": "Build objects from components, give them explicit states, spawn them without allocating every frame, and make movement feel good.",
+      "lessons": [
+        {
+          "id": "components",
+          "title": "Build with components, not family trees",
+          "pareto": "core",
+          "minutes": 9,
+          "takeaway": "Make a game object out of small components that each do one job, owned through unique_ptr, instead of a deep class tree, and keep per-object state in members.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "The family tree trap",
+              "body": "Rin starts with inheritance: `Enemy`, then `FlyingEnemy` and `ShootingEnemy`. Then Dario wants a bat that flies **and** shoots, a turret that shoots but never moves, and a slime that hops and splits. Every new mix needs a new class, and shared code ends up copied or pushed into a bloated base class.\n\nThe common answer is **composition**. A game object is a container; what it *does* comes from the **components** attached to it: one to move, one to draw, one to hold health. Unreal builds actors from components, and Godot builds scenes from small child nodes in the same spirit. A shooting bat is just an object with a flying component and a shooting component."
+            },
+            {
+              "type": "mcq",
+              "id": "q-diamond",
+              "concepts": [
+                "components"
+              ],
+              "prompt": "C++, unlike Java and C#, allows `struct Bat : FlyingEnemy, ShootingEnemy {};`, where both bases extend `Enemy` (which has an `int hp`). What goes wrong?",
+              "choices": [
+                "The bat contains two separate `Enemy` parts with two `hp` values, so `bat.hp -= 5;` does not even compile",
+                "Nothing: the two bases share one `Enemy`, and the bat simply has both behaviours",
+                "C++ allows only one base class with data members, so the declaration is rejected",
+                "Virtual functions stop working in any class with two base classes"
+              ],
+              "answer": 0,
+              "hint": "Each base class brings its own copy of everything it inherited.",
+              "explanation": "Each of `FlyingEnemy` and `ShootingEnemy` contains its own `Enemy`, so a `Bat` has **two** of them: `bat.FlyingEnemy::hp` and `bat.ShootingEnemy::hp` are different variables (5 and 10 after damaging one). Plain `bat.hp` is ambiguous, and clang stops with *non-static member 'hp' found in multiple base-class subobjects of type 'Enemy'*. `virtual` inheritance can merge the two, at the cost of more rules to learn, and the tree still needs a new class for every combination. With components, the bat simply gets a `Flyer` and a `Shooter`."
+            },
+            {
+              "type": "explain",
+              "title": "A tiny component system",
+              "body": "Here is a minimal version, used in the snippets that follow. Each frame the game calls `update(dt)` on every object, which calls it on each of its components:\n\n```cpp\n// gameobject.h\n#pragma once\n#include <memory>\n#include <string>\n#include <utility>\n#include <vector>\n#include \"vec2.h\"\n\nstruct GameObject;\n\nstruct Component {\n    virtual ~Component() = default;\n    virtual void update(GameObject& owner, float dt) = 0;\n};\n\nstruct GameObject {\n    std::string name;\n    Vec2 position;\n    std::vector<std::unique_ptr<Component>> components;\n\n    explicit GameObject(std::string n) : name(std::move(n)) {}\n\n    template <class T>\n    T& add() {\n        components.push_back(std::make_unique<T>());\n        return static_cast<T&>(*components.back());\n    }\n\n    template <class T>\n    T* get() {\n        for (auto& c : components)\n            if (auto* found = dynamic_cast<T*>(c.get())) return found;\n        return nullptr;\n    }\n\n    void update(float dt) {\n        for (auto& c : components) c->update(*this, dt);\n    }\n};\n```\n\nThe components have different types, so the object stores **pointers to the base class**, and `std::unique_ptr` makes the object their single owner: they are deleted with it. `add<Mover>()` creates one and returns a reference to it; `get<T>()` finds one with `dynamic_cast`, which returns `nullptr` when a component is not a `T`."
+            },
+            {
+              "type": "output",
+              "id": "q-components-run",
+              "concepts": [
+                "components"
+              ],
+              "prompt": "A slime gets two components: one moves it, one makes it hop every second. After three half-second frames, what does this print?",
+              "language": "cpp",
+              "code": "#include <iostream>\n#include \"gameobject.h\"\n\nstruct Mover : Component {\n    Vec2 velocity;\n    void update(GameObject& owner, float dt) override { owner.position += velocity * dt; }\n};\n\nstruct Hopper : Component {\n    float timer = 0;\n    void update(GameObject& owner, float dt) override {\n        timer += dt;\n        if (timer >= 1) { timer = 0; owner.position += Vec2{0, 3}; }\n    }\n};\n\nint main() {\n    GameObject slime{\"slime\"};\n    slime.add<Mover>().velocity = {2, 0};\n    slime.add<Hopper>();\n\n    for (int frame = 0; frame < 3; ++frame) slime.update(0.5f);\n    std::cout << slime.position << '\\n';\n}",
+              "output": "(3, 3)",
+              "hint": "Each frame runs `Mover` then `Hopper`. Track x and the hop timer separately.",
+              "explanation": "`Mover` adds (2, 0) × 0.5 = (1, 0) per frame: three frames give x = 3. `Hopper` adds 0.5 s per frame; on the second frame its timer reaches 1, so the slime hops up 3 once and the timer resets. Final position **(3, 3)**. Neither component knows the other exists; both just change their owner's position."
+            },
+            {
+              "type": "bug",
+              "id": "q-static-timer",
+              "concepts": [
+                "components"
+              ],
+              "prompt": "Two slimes each get their own `Hopper`. After 1 second, each should have hopped once: `A hopped 1, B hopped 1`. Click the line with the bug.",
+              "language": "cpp",
+              "code": "#include <cstdio>\n#include \"gameobject.h\"\n\nstruct Hopper : Component {\n    int hops = 0;\n    void update(GameObject&, float dt) override {\n        static float timer = 0;\n        timer += dt;\n        if (timer >= 1) { timer = 0; ++hops; }\n    }\n};\n\nint main() {\n    GameObject a{\"slime A\"}, b{\"slime B\"};\n    Hopper& hopA = a.add<Hopper>();\n    Hopper& hopB = b.add<Hopper>();\n\n    for (int frame = 0; frame < 2; ++frame) {\n        a.update(0.5f);\n        b.update(0.5f);\n    }\n    std::printf(\"A hopped %d, B hopped %d\\n\", hopA.hops, hopB.hops);\n}",
+              "error": "A hopped 0, B hopped 2",
+              "lines": [
+                7
+              ],
+              "fixes": [
+                "Delete line 7 and add a member `float timer = 0;` after line 5, so every Hopper has its own timer",
+                "Swap lines 19 and 20, so slime A updates after slime B",
+                "Change line 8 to `timer += dt / 2;`, since two slimes add to it",
+                "Change line 9 to hop when `timer >= 2`"
+              ],
+              "answer": 0,
+              "hint": "How many `timer` variables exist when there are two `Hopper` objects?",
+              "explanation": "A `static` local variable is created once and shared by **every call** of the function, whichever object it is called on. Both Hoppers add to one timer, which reaches 1 on every second update, always slime B's: A 0 hops, B 2. A member variable gives each component its own timer. Swapping the order just hands both hops to A, and halving the increment or doubling the threshold still shares one timer between the two (B hops once, A never)."
+            },
+            {
+              "type": "bug",
+              "id": "q-slicing",
+              "concepts": [
+                "components"
+              ],
+              "prompt": "Rin tries storing components by value. The mover should move `x` by 2 × 0.5, printing `x = 1`. Click the line with the bug.",
+              "language": "cpp",
+              "code": "#include <cstdio>\n#include <memory>\n#include <vector>\n\nstruct Component {\n    virtual ~Component() = default;\n    virtual void update(float&, float) {}\n};\n\nstruct Mover : Component {\n    float speed = 2;\n    void update(float& x, float dt) override { x += speed * dt; }\n};\n\nint main() {\n    std::vector<Component> parts;\n    parts.push_back(Mover{});\n    float x = 0;\n    for (auto& p : parts) p.update(x, 0.5f);\n    std::printf(\"x = %g\\n\", x);\n}",
+              "error": "x = 0",
+              "lines": [
+                16,
+                17
+              ],
+              "fixes": [
+                "Change line 16 to `std::vector<std::unique_ptr<Component>> parts;`, line 17 to `parts.push_back(std::make_unique<Mover>());` and line 19 to call `p->update(x, 0.5f)`",
+                "Change line 17 to `parts.emplace_back(Mover{});`",
+                "Change line 12 to `void update(float& x, float dt) final { x += speed * dt; }`",
+                "Change line 19 to `for (Component p : parts) p.update(x, 0.5f);`"
+              ],
+              "answer": 0,
+              "hint": "A `std::vector<Component>` holds objects of exactly one type. What happens to the `Mover` part when a `Mover` is copied into it?",
+              "explanation": "A `std::vector<Component>` stores plain `Component` objects. Pushing a `Mover` copies only its `Component` part and drops the rest, including `speed` and the `Mover` behaviour: this is **slicing**. Every element is now a base `Component`, whose `update` does nothing, so `x` stays 0. Different component types must live behind pointers to the base, owned here by `std::unique_ptr`.\n\n`emplace_back` slices just the same, `final` changes nothing about the copy, and a by-value loop variable slices a second time."
+            },
+            {
+              "type": "explain",
+              "title": "Components talking",
+              "body": "Components on the same object find each other with `get<T>()`. It searches the list with `dynamic_cast`, so do it once when the object is set up and keep the pointer. That pointer stays valid as more components are added: the vector moves its `unique_ptr`s when it grows, but the components themselves never move.\n\nAcross objects, prefer **callbacks**: `Health` keeps a list of `onDied` functions, and the score, the sound and the spawner each add one. `Health` never needs to know they exist, so adding a new reaction never means editing it.\n\nEach component should have **one job**: things that change for the same reason live together."
+            },
+            {
+              "type": "buckets",
+              "id": "q-which-component",
+              "concepts": [
+                "components"
+              ],
+              "prompt": "Rin is splitting the fox's 600-line class into components. Put each piece where it belongs.",
+              "buckets": [
+                "Health",
+                "Mover",
+                "SpriteView"
+              ],
+              "items": [
+                {
+                  "text": "Current and maximum hit points",
+                  "bucket": 0
+                },
+                {
+                  "text": "The `damage(int amount)` member function",
+                  "bucket": 0
+                },
+                {
+                  "text": "The `onDied` callbacks",
+                  "bucket": 0
+                },
+                {
+                  "text": "Velocity and maximum speed",
+                  "bucket": 1
+                },
+                {
+                  "text": "Applying velocity × dt to the position",
+                  "bucket": 1
+                },
+                {
+                  "text": "Which image to draw",
+                  "bucket": 2
+                },
+                {
+                  "text": "The red flash shown when hurt",
+                  "bucket": 2
+                },
+                {
+                  "text": "The drawing layer, so the fox appears in front of grass",
+                  "bucket": 2
+                }
+              ],
+              "hint": "Ask what each piece is about: staying alive, moving, or looking a certain way.",
+              "explanation": "**Health** owns hit points, damage and the death announcement. **Mover** owns velocity and moving. **SpriteView** owns everything about appearance, including the hurt flash, which it can show by adding a callback to `Health`. Each component now changes for one reason, and the same `Health` can go on slimes, crates and the boss."
+            }
+          ]
+        },
+        {
+          "id": "state-machines",
+          "title": "State machines for players and enemies",
+          "pareto": "core",
+          "minutes": 9,
+          "takeaway": "Give each character one explicit current state, an enum class value such as Patrol, Chase or Attack, and let only the listed transitions change it.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Booleans breed bugs",
+              "body": "Rin's fox has `isJumping`, `isDashing`, `isAttacking` and `isDead`. Soon it can dash while dead and attack mid-jump in ways nobody designed, and every new feature checks five flags.\n\nA **finite state machine** replaces the flags with **one** current state from a fixed list, an `enum class` in C++. Each state has its own behaviour, and only specific **transitions** move between states: Grounded → Jumping when jump is pressed, Jumping → Falling when the upward velocity runs out, Falling → Grounded on landing.\n\nEnemies too. A slime patrols, chases when the fox comes within 5 tiles, attacks within 1, and gives up when the fox is farther than 7."
+            },
+            {
+              "type": "trace",
+              "id": "q-trace-fsm",
+              "concepts": [
+                "state-machine"
+              ],
+              "prompt": "The slime's state machine as a `switch`: only the `case` for the current state runs, and its `if`s decide the next state. Predict the state after each frame.",
+              "language": "cpp",
+              "code": "enum class State { Patrol, Chase, Attack };\n\nfloat distances[] = {8, 4, 0.5f, 3, 9};   // fox distance on 5 frames\nState state = State::Patrol;\n\nfor (float d : distances) {\n    switch (state) {\n    case State::Patrol:\n        if (d < 5) state = State::Chase;\n        break;\n    case State::Chase:\n        if (d < 1) state = State::Attack;\n        else if (d > 7) state = State::Patrol;\n        break;\n    case State::Attack:\n        if (d >= 1) state = State::Chase;\n        break;\n    }\n}",
+              "frames": [
+                {
+                  "line": 4,
+                  "vars": {
+                    "state": "State::Patrol"
+                  }
+                },
+                {
+                  "line": 9,
+                  "vars": {
+                    "d": "8",
+                    "state": "State::Patrol"
+                  },
+                  "note": "Too far away: Patrol's `if` needs d < 5, so the state stays."
+                },
+                {
+                  "line": 9,
+                  "vars": {
+                    "d": "4",
+                    "state": "State::Chase"
+                  },
+                  "ask": "state"
+                },
+                {
+                  "line": 12,
+                  "vars": {
+                    "d": "0.5",
+                    "state": "State::Attack"
+                  },
+                  "ask": "state"
+                },
+                {
+                  "line": 16,
+                  "vars": {
+                    "d": "3",
+                    "state": "State::Chase"
+                  }
+                },
+                {
+                  "line": 13,
+                  "vars": {
+                    "d": "9",
+                    "state": "State::Patrol"
+                  },
+                  "ask": "state"
+                }
+              ],
+              "hint": "Only the case for the **current** state runs. In Chase, the fox must be closer than 1 to attack, or farther than 7 to give up.",
+              "explanation": "At 8 the slime keeps patrolling. At 4 (< 5) it starts chasing. At 0.5 (< 1) it attacks. At 3 the fox has backed off (≥ 1), so it chases again. At 9 (> 7) it gives up and patrols. Every change follows a listed transition, and a slime can never be chasing and patrolling at once. Because `State` is an `enum class`, clang also warns (`-Wswitch`) if a new state is added and a `switch` forgets it."
+            },
+            {
+              "type": "explain",
+              "title": "One state at a time",
+              "body": "Each frame, the update does the current state's job, then checks that state's transitions:\n\n- **Patrol**: walk between waypoints; if the fox is near, switch to Chase.\n- **Chase**: steer toward the fox; if very close, Attack; if far, Patrol.\n- **Attack**: play the bite; when it ends, Chase.\n\nMany machines also run **enter** and **exit** actions on a transition: start the chase animation, reset the attack timer. A small `changeState(State next)` function that runs them is the usual place. Engines' animation systems (Unreal's Animation Blueprints, Godot's `AnimationTree`) include visual state machines built on the same idea."
+            },
+            {
+              "type": "bug",
+              "id": "q-double-jump",
+              "concepts": [
+                "state-machine"
+              ],
+              "prompt": "The second press happens in mid-air and should do nothing, so this should print `Jumping, jumps: 1`. Click the line with the bug.",
+              "language": "cpp",
+              "code": "#include <cstdio>\n\nenum class Move { Grounded, Jumping, Falling };\nenum class Button { Jump, Dash };\nconst char* names[] = {\"Grounded\", \"Jumping\", \"Falling\"};\n\nstruct Player {\n    Move state = Move::Grounded;\n    int jumps = 0;\n\n    void press(Button b) {\n        if (b == Button::Jump) {\n            state = Move::Jumping;\n            ++jumps;\n        }\n    }\n};\n\nint main() {\n    Player player;\n    player.press(Button::Jump);   // on the ground: should jump\n    player.press(Button::Jump);   // already in the air: should do nothing\n    std::printf(\"%s, jumps: %d\\n\", names[static_cast<int>(player.state)], player.jumps);\n}",
+              "error": "Jumping, jumps: 2",
+              "lines": [
+                12
+              ],
+              "fixes": [
+                "Change line 12 to `if (b == Button::Jump && state == Move::Grounded) {`",
+                "Change line 12 to `if (b == Button::Jump && state != Move::Falling) {`",
+                "Add `state = Move::Grounded;` after line 14",
+                "Change line 8 so the player starts in `Move::Falling`"
+              ],
+              "answer": 0,
+              "hint": "Which state is the only one where a jump is allowed?",
+              "explanation": "The jump transition fires from **any** state, so a second press in mid-air jumps again. A transition should name the state it starts from: Grounded → Jumping. Excluding only Falling still allows jumping from Jumping. Resetting to Grounded inside the jump makes every press a jump (`Grounded, jumps: 2`), and starting in Falling just changes the first state."
+            },
+            {
+              "type": "numeric",
+              "id": "q-flag-combos",
+              "concepts": [
+                "state-machine"
+              ],
+              "prompt": "The fox has three `bool`s: `isJumping`, `isDashing` and `isDead`. How many combinations of values can they hold?",
+              "answer": 8,
+              "hint": "Each boolean doubles the number of combinations.",
+              "explanation": "2 × 2 × 2 = **8** combinations, including nonsense such as dashing while dead, and each one is a case some code might meet. With `enum class Move { Idle, Jumping, Dashing, Dead }` there are exactly the 4 states you designed, and adding a feature adds one state, not a doubling."
+            },
+            {
+              "type": "explain",
+              "title": "Thresholds that do not flicker",
+              "body": "If a slime starts chasing at distance < 5 and stops at > 5, a fox standing right at 5 makes it flip between Patrol and Chase every frame, twitching on the spot.\n\nThe fix is **hysteresis**: different thresholds for entering and leaving a state. Chase when closer than 5, but give up only when farther than 7. Between 5 and 7, the slime keeps doing whatever it was doing.\n\nTimers help too: stay in Attack for at least 0.4 s, or ignore the fox for a second after losing it."
+            },
+            {
+              "type": "mcq",
+              "id": "q-hysteresis",
+              "concepts": [
+                "state-machine"
+              ],
+              "prompt": "A bat switches between Patrol and Chase every frame whenever the fox hovers near 6 tiles away, where its only rule flips. What is the best fix?",
+              "choices": [
+                "Start chasing below 6 tiles but stop only beyond 8, so there is a band where the state does not change",
+                "Check the distance only every other frame",
+                "Change `<` to `<=` in the chase condition",
+                "Add a third state between Patrol and Chase that does the same as Patrol"
+              ],
+              "answer": 0,
+              "hint": "The problem is a single threshold used in both directions.",
+              "explanation": "One threshold in both directions means any jitter around it flips the state. Separate enter and exit thresholds (**hysteresis**) give the state room to settle. Checking less often only slows the flicker, `<=` moves the threshold without removing it, and an extra state with the same threshold flickers just the same."
+            },
+            {
+              "type": "buckets",
+              "id": "q-state-or-transition",
+              "concepts": [
+                "state-machine"
+              ],
+              "prompt": "Dario sketched the slime's behaviour on a whiteboard. Which notes are **states**, and which are **transitions** (the conditions that move between states)?",
+              "buckets": [
+                "State",
+                "Transition"
+              ],
+              "items": [
+                {
+                  "text": "Patrol",
+                  "bucket": 0
+                },
+                {
+                  "text": "Chase",
+                  "bucket": 0
+                },
+                {
+                  "text": "Stunned",
+                  "bucket": 0
+                },
+                {
+                  "text": "Attack",
+                  "bucket": 0
+                },
+                {
+                  "text": "The fox comes within 5 tiles",
+                  "bucket": 1
+                },
+                {
+                  "text": "Hit by the lantern flash",
+                  "bucket": 1
+                },
+                {
+                  "text": "The stun timer reaches 0",
+                  "bucket": 1
+                },
+                {
+                  "text": "The bite animation finishes",
+                  "bucket": 1
+                }
+              ],
+              "hint": "States are what the slime is doing for a while. Transitions are things that happen at a moment.",
+              "explanation": "States last: patrolling, chasing, stunned, attacking. Transitions are events or conditions checked from a particular state: the fox coming near (Patrol → Chase), a lantern flash (any state → Stunned), a timer running out (Stunned → Patrol), an animation ending (Attack → Chase). Drawing states as boxes and transitions as labelled arrows is the usual way to design them."
+            }
+          ]
+        },
+        {
+          "id": "pooling",
+          "title": "Spawning without stutter",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Every new and every growing vector asks the general-purpose allocator for memory, so reserve capacity up front, reuse containers across frames, and keep a pool of objects whose every field is reset on reuse.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Every new has a price",
+              "body": "C++ has no garbage collector to pause the game: memory is freed the moment its owner lets go, when a `unique_ptr` goes out of scope or a vector is destroyed. But **allocating** still costs.\n\nEach `new` or `std::make_unique` asks the general-purpose allocator for a block, which must find free space of the right size and later take it back; now and then it has to ask the operating system for more. One allocation is cheap. Thousands per frame, for every bullet, particle and temporary list, add up, and they scatter objects all over memory.\n\nContainers allocate too. When `push_back` finds a `std::vector` full, it allocates a bigger block, moves every element across and frees the old one."
+            },
+            {
+              "type": "output",
+              "id": "q-vector-growth",
+              "concepts": [
+                "per-frame-allocation"
+              ],
+              "prompt": "With Apple clang's standard library (libc++), a full `std::vector` **doubles** its capacity when it grows (other standard libraries may grow differently). The second vector calls `reserve` first. What does this print?",
+              "language": "cpp",
+              "code": "#include <cstdio>\n#include <vector>\n\nint countGrowths(std::vector<int>& v, int n) {\n    int growths = 0;\n    for (int i = 0; i < n; ++i) {\n        auto before = v.capacity();\n        v.push_back(i);\n        if (v.capacity() != before) ++growths;   // a new, bigger block\n    }\n    return growths;\n}\n\nint main() {\n    std::vector<int> plain;\n    std::vector<int> reserved;\n    reserved.reserve(100);\n    std::printf(\"%d %zu\\n\", countGrowths(plain, 100), plain.capacity());\n    std::printf(\"%d %zu\\n\", countGrowths(reserved, 100), reserved.capacity());\n}",
+              "output": "8 128\n0 100",
+              "hint": "An empty vector has capacity 0. List the capacities as it doubles: 1, 2, 4, ... until there is room for 100.",
+              "explanation": "The plain vector grows to 1, 2, 4, 8, 16, 32, 64 and 128: **8** allocations (each copying everything so far) to hold 100 numbers, ending with capacity 128. The reserved vector allocated room for 100 once, before the loop, so the loop itself allocates **0** times. When you know roughly how many items a frame will produce, `reserve` once; better still, keep the vector between frames and `clear()` it, which keeps its capacity."
+            },
+            {
+              "type": "numeric",
+              "id": "q-alloc-rate",
+              "concepts": [
+                "per-frame-allocation"
+              ],
+              "prompt": "The spark effect calls `std::make_unique<Particle>()` for **200** new particles every frame, and frees as many old ones. At **60 fps**, how many heap allocations is that per second?",
+              "answer": 12000,
+              "unit": "allocations",
+              "hint": "Allocations per frame × frames per second.",
+              "explanation": "200 × 60 = **12,000** allocations a second, plus 12,000 frees, from one effect. Each one is a trip through the general-purpose allocator, and the particles end up wherever there was free space. A pool, which reuses the same particles over and over, brings that to zero after the first few frames."
+            },
+            {
+              "type": "explain",
+              "title": "An object pool",
+              "body": "A **pool** keeps objects that are not in use and hands them out again instead of creating new ones:\n\n```cpp\n// pool.h\n#pragma once\n#include <cstddef>\n#include <memory>\n#include <vector>\n\ntemplate <class T>\nclass Pool {\n    std::vector<std::unique_ptr<T>> all;   // owns every object ever created\n    std::vector<T*> freeList;              // the ones not in use right now\n\npublic:\n    T* get() {\n        if (!freeList.empty()) {\n            T* item = freeList.back();\n            freeList.pop_back();\n            return item;                   // reuse: no allocation\n        }\n        all.push_back(std::make_unique<T>());\n        return all.back().get();\n    }\n\n    void release(T* item) { freeList.push_back(item); }\n\n    std::size_t created() const { return all.size(); }\n};\n```\n\n`get` reuses a free object if there is one and creates a new one only when the pool is empty. `release` puts an object back. After a short warm-up the game stops allocating bullets entirely. Each object lives in its own `unique_ptr`, so a `T*` stays valid while `all` grows.\n\nEngine code goes further: one preallocated block of slots, with handles that notice when a slot has been reused (see the Game Engine Programming course)."
+            },
+            {
+              "type": "output",
+              "id": "q-pool-created",
+              "concepts": [
+                "object-pool"
+              ],
+              "prompt": "Using the `Pool<T>` above, what does this print?",
+              "language": "cpp",
+              "code": "#include <iostream>\n#include \"pool.h\"\n\nstruct Bullet { float x = 0, y = 0; };\n\nint main() {\n    Pool<Bullet> pool;\n    Bullet* a = pool.get();\n    Bullet* b = pool.get();\n    pool.release(a);\n    Bullet* c = pool.get();\n    Bullet* d = pool.get();\n\n    std::cout << pool.created() << '\\n';\n    std::cout << std::boolalpha << (a == c) << '\\n';\n    std::cout << (b == d) << '\\n';\n}",
+              "output": "3\ntrue\nfalse",
+              "hint": "Track the free list: what is in it before each `get`?",
+              "explanation": "`a` and `b` are new (2 created). Releasing `a` puts it on the free list, so `c` **is** `a` again: `a == c` is **true**. The free list is then empty, so `d` is new: **3** created in total for four `get` calls, and `d` is a different bullet from `b`, which is still in use."
+            },
+            {
+              "type": "bug",
+              "id": "q-pool-reset",
+              "concepts": [
+                "object-pool"
+              ],
+              "prompt": "A pooled bullet expires after 2 seconds. The second shot reuses the first bullet and should print `flying`, but it prints `expired`. Click the line with the bug.",
+              "language": "cpp",
+              "code": "#include <cstdio>\n#include \"pool.h\"\n#include \"vec2.h\"\n\nstruct Bullet {\n    Vec2 position;\n    float age = 0;\n    bool active = false;\n\n    void fire(Vec2 at) { position = at; active = true; }\n    void update(float dt) {\n        age += dt;\n        if (age >= 2) active = false;\n    }\n};\n\nint main() {\n    Pool<Bullet> pool;\n\n    Bullet* first = pool.get();\n    first->fire({0, 0});\n    for (int i = 0; i < 5; ++i) first->update(0.5f);   // lives 2 s, then expires\n    pool.release(first);\n\n    Bullet* second = pool.get();                       // reuses the same object\n    second->fire({5, 5});\n    second->update(0.5f);\n    std::printf(\"%s\\n\", second->active ? \"flying\" : \"expired\");\n}",
+              "error": "expired",
+              "lines": [
+                10
+              ],
+              "fixes": [
+                "Change line 10 to `void fire(Vec2 at) { position = at; age = 0; active = true; }`",
+                "Add a constructor after line 8: `Bullet() { age = 0; }`",
+                "Change line 13 to `if (age > 2) active = false;`",
+                "Change line 7 to `float age{};`"
+              ],
+              "answer": 0,
+              "hint": "The second shot is the same object as the first. What is its `age` when it is fired again?",
+              "explanation": "A pooled object comes back with **all of its old state**. `fire` resets the position and `active` but not `age`, which is still 2.5 from the first shot, so one update later the bullet is past its lifetime. Every field must be reset when an object is reused. A constructor and a default member initializer both run only when the object is first created, never on reuse, and `>` instead of `>=` still sees an age of 3."
+            },
+            {
+              "type": "order",
+              "id": "q-bullet-lifecycle",
+              "concepts": [
+                "object-pool"
+              ],
+              "prompt": "Put the life of a pooled bullet in order.",
+              "items": [
+                "Take a bullet from the pool (or create one if the pool is empty)",
+                "Reset every field: position, velocity, age, damage",
+                "Activate it so it is updated and drawn",
+                "Move it each frame until it hits something or expires",
+                "Deactivate it so it is no longer updated or drawn",
+                "Release it back to the pool for the next shot"
+              ],
+              "hint": "Reset comes before the bullet is used, and it leaves the game before it goes back in the pool.",
+              "explanation": "Get, **reset**, activate, use, deactivate, release. Resetting on the way out of the pool guarantees no stale state leaks into the next shot, and deactivating before release means a pooled bullet never keeps flying or colliding while it waits. Anything still holding a pointer to a released bullet must drop it too: the next shot will reuse that object."
+            }
+          ]
+        },
+        {
+          "id": "game-feel",
+          "title": "Smoothing, camera and shake",
+          "pareto": "extra",
+          "minutes": 8,
+          "takeaway": "Lerp blends between values, easing curves reshape the blend, and smoothing per frame must use 1 − e^(−k·dt) to behave the same at every frame rate.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Lerp and easing",
+              "body": "**Lerp** (linear interpolation) blends two values: `lerp(a, b, t) = a + (b − a) * t`. At `t = 0` you get `a`, at `t = 1` you get `b`, and in between a straight mix. C++20 has it as `std::lerp` in `<cmath>`.\n\nAnimate `t` from 0 to 1 over a duration and something slides at constant speed, which looks mechanical. **Easing** reshapes `t` first:\n\n- **Ease out**, `1 − (1 − t)²`: starts fast, settles gently, good for menus and pickups flying to the HUD.\n- **Ease in**, `t²`: starts slow and speeds up.\n- **Smoothstep**, `3t² − 2t³`: gentle at both ends.\n\n```cpp\nfloat a = std::lerp(10.0f, 30.0f, 0.5f);    // 20\nfloat t = 0.5f;\nfloat eased = 1 - (1 - t) * (1 - t);        // ease out: 0.75\nfloat b = std::lerp(0.0f, 200.0f, eased);   // 150\n```"
+            },
+            {
+              "type": "numeric",
+              "id": "q-lerp",
+              "concepts": [
+                "easing"
+              ],
+              "prompt": "What is `std::lerp(10.0f, 30.0f, 0.25f)`?",
+              "answer": 15,
+              "hint": "Start at 10 and go a quarter of the way to 30.",
+              "explanation": "The gap is 30 − 10 = 20, and a quarter of it is 5, so **15**."
+            },
+            {
+              "type": "numeric",
+              "id": "q-ease-out",
+              "concepts": [
+                "easing"
+              ],
+              "prompt": "A collected spark flies 200 px to the HUD using ease-out, `1 − (1 − t)²`. A quarter of the way through the animation (`t = 0.25`), how far has it travelled?",
+              "answer": 87.5,
+              "tolerance": 0.01,
+              "unit": "px",
+              "hint": "Ease `t` first: 1 − 0.75². Then lerp from 0 to 200.",
+              "explanation": "Eased t = 1 − (0.75)² = 1 − 0.5625 = 0.4375, and lerp(0, 200, 0.4375) = **87.5 px**. Almost half the distance in a quarter of the time: the spark leaps away, then slows into place. Linear motion would be at 50 px."
+            },
+            {
+              "type": "explain",
+              "title": "Camera follow",
+              "body": "A camera locked to the fox jerks with every step. A common trick moves it a fraction of the remaining gap each frame:\n\n`camera += (target - camera) * 0.1f;`\n\nThe camera glides and eases into place. But that 0.1 is **per frame**, so a faster machine closes the gap more times per second."
+            },
+            {
+              "type": "output",
+              "id": "q-follow-fps",
+              "concepts": [
+                "easing",
+                "delta-time"
+              ],
+              "prompt": "Both calls simulate the same tenth of a second, at 20 fps (2 frames) and at 40 fps (4 frames). What does this print?",
+              "language": "cpp",
+              "code": "#include <cstdio>\n\nfloat follow(int frames) {\n    float camera = 0, target = 100;\n    for (int frame = 0; frame < frames; ++frame)\n        camera += (target - camera) * 0.5f;   // close half the gap each frame\n    return camera;\n}\n\nint main() {\n    std::printf(\"%g\\n\", follow(2));   // 1/10 s at 20 fps\n    std::printf(\"%g\\n\", follow(4));   // 1/10 s at 40 fps\n}",
+              "output": "75\n93.75",
+              "hint": "Each frame halves the remaining gap to 100.",
+              "explanation": "The gap halves every frame: 100 → 50 → 25 after two frames (camera at **75**), and on to 12.5 → 6.25 after four (camera at **93.75**). Same real time, very different camera: the fast machine feels tighter. The fraction must depend on `dt`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-follow-fix",
+              "concepts": [
+                "easing",
+                "delta-time"
+              ],
+              "prompt": "Which per-frame blend `t` makes `camera += (target - camera) * t` close the **same share of the gap per second** at every frame rate? (`k` sets how snappy it is.)",
+              "choices": [
+                "`1 - std::exp(-k * dt)`",
+                "`0.1f`",
+                "`0.1f * fps`",
+                "`std::exp(-k * dt)`"
+              ],
+              "answer": 0,
+              "hint": "Each frame keeps a fraction (1 − t) of the gap. Over one second those fractions multiply together.",
+              "explanation": "Each frame keeps `e^(−k·dt)` of the gap, and over a second the kept fractions multiply to `e^(−k)`, whatever the number of frames. With k = 5, a camera starting 100 units behind is 0.67 units short after one second at 30, 60 and 144 fps alike (checked by simulation). A constant `0.1f` depends on frame count, `0.1f * fps` is even worse, and `std::exp(-k * dt)` is the share *kept*, not closed."
+            },
+            {
+              "type": "explain",
+              "title": "Screen shake",
+              "body": "Juice makes hits feel heavy: a brief **hit-stop** freeze, particles, a squash of the sprite, and **screen shake**.\n\nA good shake uses **trauma**, a number from 0 to 1. Each hit adds some; it drains every frame with `trauma = std::max(0.0f, trauma - decay * dt);`. The camera's offset is `maxOffset * trauma * trauma` times a random or noise value from −1 to 1.\n\nSquaring is an easing curve (ease-in): small hits barely wobble and big ones really shake, and the shake fades out smoothly. Shake the camera, never the world, so collisions are not affected."
+            },
+            {
+              "type": "numeric",
+              "id": "q-shake",
+              "concepts": [
+                "easing",
+                "delta-time"
+              ],
+              "prompt": "A slime bite sets trauma to **0.6**. Max offset is **10 px** and trauma decays by **1.5 per second**. What is the largest possible shake offset **0.2 s later**?",
+              "answer": 0.9,
+              "tolerance": 0.01,
+              "unit": "px",
+              "hint": "First drain the trauma: 0.6 − 1.5 × 0.2. Then square it and multiply by 10.",
+              "explanation": "Trauma drops to 0.6 − 1.5 × 0.2 = 0.3, and 10 × 0.3² = **0.9 px**. Right after the bite it was 10 × 0.6² = 3.6 px, so in a fifth of a second the shake has faded to a quarter of its size. Squaring is what makes it fade fast at the end instead of wobbling on."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "worlds-and-speed",
+      "title": "Paths, worlds and speed",
+      "description": "Find paths around walls, generate and save worlds reproducibly, and keep the frame budget with fewer allocations and fewer checks.",
+      "lessons": [
+        {
+          "id": "pathfinding",
+          "title": "Finding a path on a grid",
+          "pareto": "core",
+          "minutes": 10,
+          "takeaway": "Breadth-first search explores a grid in rings from the start with a queue and finds a shortest path; A* adds a distance estimate so it explores far less.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "When steering is not enough",
+              "body": "Steering heads straight for the fox, so a slime behind a wall just pushes against it forever. **Pathfinding** plans a route around obstacles first.\n\nTreat the level as a **grid**: each open tile is a node, connected to its open neighbours up, down, left and right. **Breadth-first search (BFS)** explores outward from the start in rings: every tile 1 step away, then every tile 2 steps away, and so on. A **queue** (first in, first out) keeps that order. The first time BFS reaches the goal, it has found a shortest path, measured in steps."
+            },
+            {
+              "type": "order",
+              "id": "q-bfs-steps",
+              "concepts": [
+                "bfs"
+              ],
+              "prompt": "Put the steps of breadth-first search in order.",
+              "items": [
+                "Put the start tile in the queue and mark it visited, at distance 0",
+                "Take the oldest tile out of the queue",
+                "If it is the goal, stop: its distance is the length of a shortest path",
+                "For each open neighbour not yet visited, mark it visited with distance + 1 and add it to the queue",
+                "Go back for the next tile; if the queue empties first, there is no path"
+              ],
+              "hint": "Nothing can be taken out of the queue before something is put in.",
+              "explanation": "Start, take the oldest tile, check for the goal, expand its unvisited neighbours, repeat. Marking tiles visited **when they are queued** stops a tile from entering the queue twice. Recording which tile each neighbour came from as well lets you walk back from the goal to rebuild the route."
+            },
+            {
+              "type": "explain",
+              "title": "BFS in C++",
+              "body": "The same steps in C++, on a 5×5 map where `#` is a wall:\n\n```cpp\nstruct Tile { int r, c; };\n\nint steps(const std::vector<std::string>& map) {\n    int rows = static_cast<int>(map.size()), cols = static_cast<int>(map[0].size());\n    std::vector<std::vector<int>> dist(rows, std::vector<int>(cols, -1));   // -1: not visited\n    std::queue<Tile> frontier;\n    dist[0][0] = 0;                               // S is in the top-left corner\n    frontier.push({0, 0});\n\n    while (!frontier.empty()) {\n        Tile t = frontier.front();                // oldest tile first\n        frontier.pop();\n        if (map[t.r][t.c] == 'G') return dist[t.r][t.c];\n        Tile next[] = {{t.r - 1, t.c}, {t.r + 1, t.c}, {t.r, t.c - 1}, {t.r, t.c + 1}};\n        for (Tile n : next) {\n            bool open = n.r >= 0 && n.r < rows && n.c >= 0 && n.c < cols && map[n.r][n.c] != '#';\n            if (open && dist[n.r][n.c] == -1) {   // not visited yet\n                dist[n.r][n.c] = dist[t.r][t.c] + 1;\n                frontier.push(n);\n            }\n        }\n    }\n    return -1;                                    // no path\n}\n\nint main() {\n    std::vector<std::string> map{\n        \"S.#..\",\n        \"..#..\",\n        \"....G\",\n        \".###.\",\n        \".....\",\n    };\n    std::printf(\"%d\\n\", steps(map));\n}\n```\n\nIt prints `6`. `dist` starts at −1 everywhere, so \"visited\" just means \"has a distance\". `std::queue` hands tiles back in the order they went in."
+            },
+            {
+              "type": "numeric",
+              "id": "q-bfs-distance",
+              "concepts": [
+                "bfs"
+              ],
+              "prompt": "Using moves up, down, left and right only, how many steps is the shortest path from S to G?\n\n```text\nS . # . .\n. . # . .\n# . # . G\n. . . . #\n. # . . .\n```",
+              "answer": 8,
+              "hint": "The wall down the middle column only has a gap at the bottom. Count the moves around it.",
+              "explanation": "The middle column is wall down to row 2, so the route must pass under it in row 3: right 1 (column 0 is blocked two tiles below S), down 3 to row 3, right 2 under the wall, up 1, and right 1 onto G. That is 1 + 3 + 2 + 1 + 1 = **8** moves, and the `steps` function above, run on this map, prints 8. BFS finds it because it reaches every tile at distance 8 before any tile at distance 9."
+            },
+            {
+              "type": "bug",
+              "id": "q-stack-not-queue",
+              "concepts": [
+                "bfs"
+              ],
+              "prompt": "Rin's search finds a path, but it is not the shortest: the goal is **5** steps away and it prints `9`. Click a line with the bug.",
+              "language": "cpp",
+              "code": "#include <cstdio>\n#include <stack>\n#include <string>\n#include <vector>\n\nstruct Tile { int r, c; };\n\nint steps(const std::vector<std::string>& map) {\n    int rows = static_cast<int>(map.size()), cols = static_cast<int>(map[0].size());\n    std::vector<std::vector<int>> dist(rows, std::vector<int>(cols, -1));\n    std::stack<Tile> frontier;\n    dist[0][0] = 0;\n    frontier.push({0, 0});\n\n    while (!frontier.empty()) {\n        Tile t = frontier.top();\n        frontier.pop();\n        if (map[t.r][t.c] == 'G') return dist[t.r][t.c];\n        Tile next[] = {{t.r - 1, t.c}, {t.r + 1, t.c}, {t.r, t.c - 1}, {t.r, t.c + 1}};\n        for (Tile n : next) {\n            bool open = n.r >= 0 && n.r < rows && n.c >= 0 && n.c < cols && map[n.r][n.c] != '#';\n            if (open && dist[n.r][n.c] == -1) {\n                dist[n.r][n.c] = dist[t.r][t.c] + 1;\n                frontier.push(n);\n            }\n        }\n    }\n    return -1;\n}\n\nint main() {\n    std::vector<std::string> map{\"S....\", \".....\", \".##..\", \"..G..\", \".....\"};\n    std::printf(\"%d\\n\", steps(map));\n}",
+              "error": "9",
+              "lines": [
+                11,
+                16
+              ],
+              "fixes": [
+                "Use `std::queue<Tile>` on line 11 (with `#include <queue>` on line 2) and `frontier.front()` on line 16, so the oldest tile is expanded first",
+                "Reverse the neighbour order on line 19, so the search tries right and down first",
+                "Keep searching after reaching G and return the smallest distance seen (line 18), with `return best;` on line 28"
+              ],
+              "answer": 0,
+              "hint": "A stack hands back the tile added **most recently**. Which tiles does that explore first?",
+              "explanation": "`std::stack` pops the newest tile, so the search dives down one corridor as far as it can: that is **depth-first** search. Distances are fixed when a tile is first discovered, so a long detour gets recorded for G before the short route is ever explored. A queue expands tiles in order of distance, which is what makes BFS find a shortest path. A different neighbour order just picks a different detour (it prints 7), and taking the minimum does not help because G's distance is set once (still 9)."
+            },
+            {
+              "type": "explain",
+              "title": "A*: aim the search",
+              "body": "BFS spreads evenly in every direction, even away from the goal. **A\\*** explores the most promising tile first, scoring each by `f = g + h`:\n\n- `g`: steps taken from the start so far\n- `h`: an **estimate** of steps left to the goal\n\nOn a 4-direction grid, a good `h` is the **Manhattan distance** `|dx| + |dy|`. A* keeps its waiting tiles in a `std::priority_queue` ordered by `f`. As long as `h` never *overestimates*, A* still finds a shortest path while exploring far fewer tiles. Different tile costs (mud costs 3, road costs 1) also need A* or Dijkstra's algorithm, which is A* with `h = 0`; plain BFS only counts steps."
+            },
+            {
+              "type": "numeric",
+              "id": "q-manhattan",
+              "concepts": [
+                "a-star"
+              ],
+              "prompt": "On a 4-direction grid, what is the Manhattan estimate `h` from tile (2, 7) to the goal at (9, 3)?",
+              "answer": 11,
+              "hint": "|9 − 2| + |3 − 7|.",
+              "explanation": "|9 − 2| + |3 − 7| = 7 + 4 = **11**. With no walls in the way, it is exactly the number of moves needed; walls only make the real path longer, so the estimate never overestimates."
+            },
+            {
+              "type": "numeric",
+              "id": "q-f-score",
+              "concepts": [
+                "a-star"
+              ],
+              "prompt": "A* has two tiles waiting. Tile T was reached in **6** steps and has `h` = **4**. Tile U was reached in **3** steps and has `h` = **9**. What is the `f` score of the tile A* expands next?",
+              "answer": 10,
+              "hint": "Compute `f = g + h` for both. A* expands the lowest.",
+              "explanation": "f(T) = 6 + 4 = 10 and f(U) = 3 + 9 = 12, so A* expands **T** (f = **10**) next. BFS would have taken U first, because it is fewer steps from the start, even though U is heading the wrong way."
+            },
+            {
+              "type": "buckets",
+              "id": "q-bfs-or-astar",
+              "concepts": [
+                "bfs",
+                "a-star"
+              ],
+              "prompt": "For each job in Ember Run, is plain BFS enough, or is A* (or Dijkstra) the better tool?",
+              "buckets": [
+                "BFS is enough",
+                "Use A* or Dijkstra"
+              ],
+              "items": [
+                {
+                  "text": "One slime crossing a 20 × 20 room where every tile costs the same",
+                  "bucket": 0
+                },
+                {
+                  "text": "One search from the fox's tile that tells 200 bats their distance to the fox",
+                  "bucket": 0
+                },
+                {
+                  "text": "Find the nearest spark, wherever it is",
+                  "bucket": 0
+                },
+                {
+                  "text": "One unit crossing a 1000 × 1000 map to a known goal",
+                  "bucket": 1
+                },
+                {
+                  "text": "Swamp tiles cost 3 moves and road tiles cost 1",
+                  "bucket": 1
+                },
+                {
+                  "text": "A turn-based tactics map with hills that cost extra",
+                  "bucket": 1
+                }
+              ],
+              "hint": "BFS counts steps and spreads in all directions. When do those two facts become a problem?",
+              "explanation": "BFS is ideal on small, uniform grids, and when you **want** the whole map: one search from the fox gives every bat its distance (a *flow field*), and the first spark reached is the nearest. A* wins when one known goal is far away on a big map, because it heads toward it, and whenever tiles have different costs, because BFS cannot count them."
+            }
+          ]
+        },
+        {
+          "id": "seeds-and-saves",
+          "title": "Seeds and save files",
+          "pareto": "extra",
+          "minutes": 9,
+          "takeaway": "A seeded generator makes the same sequence every time, so a world can be rebuilt from its seed; save the data you cannot rebuild, with a version number.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Random, but repeatable",
+              "body": "Computer random numbers are **pseudo-random**: a formula turns a **seed** into a long sequence that looks random. Same seed, same sequence, same world. That gives you daily levels every player shares, replays, and bug reports that say *\"seed 1234 crashes\"*.\n\n`std::mt19937` from `<random>` is fully specified by the C++ standard (it even states that the 10,000th number from the default seed is 4123659995), so a seed gives the same raw numbers with every compiler. The **distributions**, such as `std::uniform_int_distribution`, are not specified that exactly, so different standard libraries may turn those numbers into different results. For worlds that must regenerate identically everywhere, map the raw numbers yourself:\n\n```cpp\nstruct Rng {\n    std::mt19937 engine;\n    explicit Rng(std::uint32_t seed) : engine(seed) {}\n\n    // A whole number from min up to (not including) max.\n    int range(int min, int max) {\n        return min + static_cast<int>(engine() % static_cast<std::uint32_t>(max - min));\n    }\n};\n```\n\nThe `%` makes some values very slightly more likely than others, which is fine for a level generator."
+            },
+            {
+              "type": "output",
+              "id": "q-reshuffle",
+              "concepts": [
+                "seeded-rng"
+              ],
+              "prompt": "Version 2 of the level generator adds a rock between the two trees, using the same `Rng` and the same seed. What does this print?",
+              "language": "cpp",
+              "code": "#include <cstdint>\n#include <iostream>\n#include <random>\n\nstruct Rng {\n    std::mt19937 engine;\n    explicit Rng(std::uint32_t seed) : engine(seed) {}\n    int range(int min, int max) { return min + static_cast<int>(engine() % static_cast<std::uint32_t>(max - min)); }\n};\n\nint main() {\n    Rng before(42);                 // version 1: two trees\n    int treeA = before.range(0, 100);\n    int treeB = before.range(0, 100);\n\n    Rng after(42);                  // version 2: same seed, a rock added in between\n    int treeA2 = after.range(0, 100);\n    int rock = after.range(0, 100);\n    int treeB2 = after.range(0, 100);\n\n    std::cout << std::boolalpha;\n    std::cout << (treeA == treeA2) << '\\n';\n    std::cout << (rock == treeB) << '\\n';\n    std::cout << (treeB == treeB2) << '\\n';\n}",
+              "output": "true\ntrue\nfalse",
+              "hint": "Both generators produce the same sequence of numbers. Which draw does each variable get: the 1st, 2nd or 3rd?",
+              "explanation": "`treeA` and `treeA2` are both the **first** draw: true. The rock now takes the **second** draw, which used to be `treeB`: true. `treeB2` gets the **third** draw, a different number (for this seed, it is): false. Adding one random call shifted every tree after it, so old seeds now produce different forests. Give each system, or each chunk of the world, its own generator."
+            },
+            {
+              "type": "explain",
+              "title": "Generating worlds",
+              "body": "**Procedural generation** builds content from rules plus random numbers: caves from a random walk, terrain heights from smooth noise, loot from weighted tables.\n\nTo keep it reproducible:\n\n- Derive a seed per **chunk** from the world seed and the chunk's coordinates, for example by hashing them together, so chunks can be generated in any order and each always comes out the same.\n- Give separate systems (terrain, loot, enemies) separate generators, so a new feature does not shift the others.\n- Never seed from the clock or `std::random_device` if the result must be repeatable."
+            },
+            {
+              "type": "buckets",
+              "id": "q-reproducible",
+              "concepts": [
+                "seeded-rng"
+              ],
+              "prompt": "Dario wants a world that is exactly the same every time it is loaded from the same seed, on every platform. Which approaches deliver that?",
+              "buckets": [
+                "Same world every time",
+                "Not reproducible"
+              ],
+              "items": [
+                {
+                  "text": "Each chunk gets its own generator, seeded from the world seed and the chunk's coordinates",
+                  "bucket": 0
+                },
+                {
+                  "text": "The save file stores the seed, and the map is regenerated on load",
+                  "bucket": 0
+                },
+                {
+                  "text": "Terrain and loot use separate generators made from the same seed",
+                  "bucket": 0
+                },
+                {
+                  "text": "One shared generator, with chunks generated in whatever order the player explores",
+                  "bucket": 1
+                },
+                {
+                  "text": "The generator is seeded from `std::random_device`",
+                  "bucket": 1
+                },
+                {
+                  "text": "Terrain and loot share one generator, and a new loot roll is added in an update",
+                  "bucket": 1
+                },
+                {
+                  "text": "Tree positions come from `std::uniform_int_distribution`, and the PC and console builds use different standard libraries",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Ask whether anything other than the seed can change which number each part of the world receives.",
+              "explanation": "Reproducible means every random draw depends only on the seed (and fixed inputs like coordinates). Per-chunk and per-system generators do that. A shared generator makes results depend on the **order** of calls: exploring a different way, or adding one new roll, hands later draws to different things. `std::random_device` is meant to be unpredictable, and a standard distribution may map the same raw numbers differently in another standard library."
+            },
+            {
+              "type": "explain",
+              "title": "What goes in a save file",
+              "body": "Save **data**, not live objects: the seed, the fox's position and health, item ids in the inventory, which chests are open. Rebuild everything else on load: the generated map, textures, pointers between objects (an address means nothing in the next run).\n\nThree habits prevent pain:\n\n- Put a **version** number in every save, and upgrade old versions when loading.\n- Use a plain format: one `key value` per line, written with `<fstream>` and read back with `>>`, is enough for a small game.\n- Write to a temporary file, then replace the old save in one step, so a crash mid-save cannot leave a half-written file:\n\n```cpp\nvoid save(const SaveData& s) {\n    {\n        std::ofstream out(\"save.tmp\");\n        out << \"version \" << s.version << '\\n'\n            << \"seed \" << s.seed << '\\n'\n            << \"health \" << s.health << '\\n';\n    }                                               // the file is closed here\n    std::filesystem::rename(\"save.tmp\", \"save.txt\");\n}\n```\n\nOn Linux and macOS, `rename` swaps the new file in with a single operation."
+            },
+            {
+              "type": "output",
+              "id": "q-load-old-save",
+              "concepts": [
+                "save-state"
+              ],
+              "prompt": "Version 1 saves had no `maxHealth`. Keys missing from the file keep their default, 0. What does this print?",
+              "language": "cpp",
+              "code": "#include <iostream>\n#include <sstream>\n#include <string>\n\nstruct SaveData { int version = 0, seed = 0, health = 0, maxHealth = 0; };\n\nSaveData load(std::istream& in) {\n    SaveData s;\n    std::string key;\n    while (in >> key) {\n        if (key == \"version\") in >> s.version;\n        else if (key == \"seed\") in >> s.seed;\n        else if (key == \"health\") in >> s.health;\n        else if (key == \"maxHealth\") in >> s.maxHealth;\n    }\n    if (s.version < 2) { s.version = 2; s.maxHealth = 5; }   // version 1 had no maxHealth\n    return s;\n}\n\nint main() {\n    std::istringstream oldSave(\"version 1\\nseed 42\\nhealth 3\\n\");\n    std::istringstream newSave(\"version 2\\nseed 42\\nhealth 3\\nmaxHealth 8\\n\");\n    for (SaveData s : {load(oldSave), load(newSave)})\n        std::cout << 'v' << s.version << ' ' << s.health << '/' << s.maxHealth << '\\n';\n}",
+              "output": "v2 3/5\nv2 3/8",
+              "hint": "Which of the two saves has `version < 2`?",
+              "explanation": "The old save has no `maxHealth`, so it stays 0; its `version` is 1, so `load` upgrades it to version 2 with `maxHealth = 5`: **v2 3/5**. The new save already has version 2 and `maxHealth` 8, so it passes through: **v2 3/8**. Without the version check, old players would load with 0 maximum health. Taking `std::istream&` means the same `load` reads a file (`std::ifstream`) or, as here, a string."
+            },
+            {
+              "type": "buckets",
+              "id": "q-save-or-rebuild",
+              "concepts": [
+                "save-state",
+                "seeded-rng"
+              ],
+              "prompt": "Rin is writing the save file. Which things should be **saved**, and which **rebuilt** on load?",
+              "buckets": [
+                "Save it",
+                "Rebuild it on load"
+              ],
+              "items": [
+                {
+                  "text": "The world seed",
+                  "bucket": 0
+                },
+                {
+                  "text": "Which chests have been opened",
+                  "bucket": 0
+                },
+                {
+                  "text": "The fox's position and health",
+                  "bucket": 0
+                },
+                {
+                  "text": "The ids of the items in the inventory",
+                  "bucket": 0
+                },
+                {
+                  "text": "The generated tile map",
+                  "bucket": 1
+                },
+                {
+                  "text": "A slime's `Fox*` pointer to the fox",
+                  "bucket": 1
+                },
+                {
+                  "text": "The textures and sounds",
+                  "bucket": 1
+                },
+                {
+                  "text": "The bats' current paths to the fox",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Could you recreate it exactly from the other saved things and the game files?",
+              "explanation": "Save the **choices and changes** that cannot be recomputed: the seed, opened chests, position, health, inventory. The map regenerates from the seed, pointers are reconnected when objects are created (a saved address would point at nothing next run), assets ship with the game, and paths are recomputed in a frame. Smaller saves load faster and break less when the game is updated."
+            },
+            {
+              "type": "mcq",
+              "id": "q-save-crash",
+              "concepts": [
+                "save-state"
+              ],
+              "prompt": "Players report that their save is corrupted when the game crashes **while** saving. What is the best fix?",
+              "choices": [
+                "Write the new save to a temporary file, then replace the old file with it in one `std::filesystem::rename`",
+                "Save more often, so less progress is lost",
+                "Call `out.flush()` after every line written to the save file",
+                "Switch from text to a binary format, so writing takes less time"
+              ],
+              "answer": 0,
+              "hint": "The danger is the moment when the old save is half overwritten.",
+              "explanation": "Opening the save with `std::ofstream` empties it at once, so if the game dies mid-write only part of the new data is there. Writing a complete new file first and then swapping it in with a single rename means the save on disk is always either the old one or the new one. Saving more often, flushing more often or changing format all still overwrite the old save in place."
+            }
+          ]
+        },
+        {
+          "id": "performance",
+          "title": "Fast enough: allocations and grids",
+          "pareto": "extra",
+          "minutes": 9,
+          "takeaway": "Measure an optimised build with a profiler first, stop allocating every frame, and use a spatial grid so each object is only checked against its neighbours instead of everything.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Measure first",
+              "body": "When the game stutters, run a **profiler** on an **optimised** build (`-O2`, the way it ships): Instruments on macOS, `perf` on Linux, the Visual Studio profiler on Windows, or an in-game one such as Tracy. It shows which functions each frame's time goes to. Guessing wastes days, and a debug build is slow in different places.\n\nTwo culprits come up again and again:\n\n- **Allocating every frame**: new containers, strings and objects built and thrown away each frame.\n- **Checking everything against everything**: with n objects, testing every pair is n(n − 1)/2 checks, which grows with n²."
+            },
+            {
+              "type": "numeric",
+              "id": "q-pairs",
+              "concepts": [
+                "spatial-partitioning"
+              ],
+              "prompt": "A bullet-hell level has **1000** bullets and enemies, and every pair is tested for collision each frame. How many pair tests is that per frame?",
+              "answer": 499500,
+              "hint": "n(n − 1) / 2 with n = 1000.",
+              "explanation": "1000 × 999 ÷ 2 = **499,500** tests per frame, about 30 million a second at 60 fps. Double the objects and the work roughly quadruples. Most of those pairs are on opposite sides of the screen and could never touch."
+            },
+            {
+              "type": "sim",
+              "sim": "growth",
+              "title": "n versus n²",
+              "body": "Drag the slider to see how checking every pair (n²) pulls away from touching each object once (n) as the number of objects grows. A spatial grid aims to bring collision checks back toward the n curve.",
+              "curves": [
+                "n",
+                "n^2"
+              ],
+              "maxN": 5000
+            },
+            {
+              "type": "explain",
+              "title": "A spatial grid",
+              "body": "Split the world into square **cells**, about as big as the largest object. Each frame, put every object into the cell its position falls in: for a bounded level, a `std::vector` of cells indexed by `cy * width + cx` works, and an `std::unordered_map` keyed on the cell suits an endless world. Keep the cells between frames and `clear()` them, so their capacity is reused. To find what might touch an object, look only in its own cell and the 8 around it.\n\nThe cell of a position is the **floor** of `x / size` on each axis:\n\n```cpp\nint cellOf(float x, float size) {\n    return static_cast<int>(std::floor(x / size));   // floor, not a plain cast\n}\n```\n\nA plain `static_cast<int>` chops toward zero, so −0.25 becomes 0 instead of −1. Physics engines run a *broad phase* like this for their own bodies (Box2D uses a tree of boxes rather than a grid); you need one for your own queries, such as *which bats are near the lantern*."
+            },
+            {
+              "type": "bug",
+              "id": "q-cell-truncate",
+              "concepts": [
+                "spatial-partitioning"
+              ],
+              "prompt": "Cells are 4 units wide, so x from −4 up to 0 is cell −1 and x from 0 up to 4 is cell 0. This should print `(2, 0)`, `(-1, 0)` and `(0, 0)`. Click the line with the bug.",
+              "language": "cpp",
+              "code": "#include <cmath>\n#include <cstdio>\n#include \"vec2.h\"\n\nstruct Cell { int x, y; };\n\nCell cellOf(Vec2 p, float size) {\n    return {static_cast<int>(p.x / size), static_cast<int>(p.y / size)};\n}\n\nint main() {\n    Vec2 points[] = {{9.5f, 2}, {-1, 2}, {1, 2}};\n    for (Vec2 p : points) {\n        Cell c = cellOf(p, 4);\n        std::printf(\"(%d, %d)\\n\", c.x, c.y);\n    }\n}",
+              "error": "(2, 0)\n(0, 0)\n(0, 0)",
+              "lines": [
+                8
+              ],
+              "fixes": [
+                "Change line 8 to apply `std::floor(...)` to each division before the cast",
+                "Change line 8 to apply `std::round(...)` to each division before the cast",
+                "Change line 8 to apply `std::ceil(...)` to each division before the cast",
+                "Change line 8 to apply `std::abs(...)` to each division before the cast, so negative positions work"
+              ],
+              "answer": 0,
+              "hint": "What is −1 ÷ 4, and what does a cast to `int` do with −0.25?",
+              "explanation": "Casting to `int` **truncates toward zero**, so −0.25 becomes 0 and cell 0 secretly covers x from −4 to 4, twice as wide as every other cell. `std::floor` always rounds down, giving −1. `std::round` and `std::ceil` shift every cell boundary (9.5 lands in cell 2 with round but 3 with ceil, and y = 2 moves to cell 1), and `std::abs` folds the left half of the world onto the right half."
+            },
+            {
+              "type": "numeric",
+              "id": "q-grid-pairs",
+              "concepts": [
+                "spatial-partitioning"
+              ],
+              "prompt": "The same 1000 objects are spread evenly over a grid, about **10 per cell**. Each object is tested only against the others in its own cell and the 8 around it, about **90** objects. Counting each pair once, roughly how many tests is that per frame?",
+              "answer": 45000,
+              "tolerance": 1000,
+              "hint": "1000 objects × 90 neighbours, then halve it because each pair would otherwise be counted twice.",
+              "explanation": "1000 × 90 ÷ 2 ≈ **45,000** tests, about a tenth of the 499,500 before, and it now grows in proportion to the number of objects rather than its square. Ten times more objects in a ten times bigger level means ten times the work, not a hundred."
+            },
+            {
+              "type": "buckets",
+              "id": "q-allocates",
+              "concepts": [
+                "per-frame-allocation"
+              ],
+              "prompt": "Which lines, run every frame, allocate heap memory? (Measured by replacing the global `operator new` with one that counts its calls, at `-O0` and `-O2`, with Apple clang and libc++.)",
+              "buckets": [
+                "Allocates every time",
+                "No allocation"
+              ],
+              "items": [
+                {
+                  "text": "`std::vector<Enemy*> nearby; nearby.push_back(e);`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`std::string label = \"Sparks collected this run: \" + std::to_string(n);`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`auto p = std::make_unique<Particle>();`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`std::vector<int> ids = level.enemyIds;`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`Vec2 offset{1, 2};`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`kept.clear(); kept.push_back(id);` on a vector created once at startup",
+                  "bucket": 1
+                },
+                {
+                  "text": "`std::sort(ids.begin(), ids.end());`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`for (const Enemy& e : enemies) total += e.hp;`",
+                  "bucket": 1
+                }
+              ],
+              "hint": "A new container, a long string, `make_unique` or a **copy** of a vector all need a fresh block. Plain values, reused containers and in-place algorithms do not.",
+              "explanation": "A vector created inside the frame allocates on its first `push_back`; a long concatenated `std::string`, `make_unique` and copying a vector (easy to do by accident with `=` or a by-value parameter) all allocate every time. A `Vec2` is a plain local value, a cleared vector keeps its capacity, `std::sort` works in place, and a loop over `const&` copies nothing. Create containers once, reuse them, and pass big things by reference."
+            },
+            {
+              "type": "mcq",
+              "id": "q-measure-first",
+              "concepts": [
+                "per-frame-allocation",
+                "game-loop"
+              ],
+              "prompt": "Ember Run runs smoothly but **hitches every few seconds**. What should Rin do first?",
+              "choices": [
+                "Record the hitch with a profiler on an optimised build and see what runs in the slow frames",
+                "Rewrite the collision code with a spatial grid, since collisions are usually the problem",
+                "Lower the target frame rate to 30 fps, so every frame gets twice the budget",
+                "Replace every `std::vector` with a raw array, since vectors allocate"
+              ],
+              "answer": 0,
+              "hint": "Regular, occasional hitches have a cause you can see in the slow frames themselves.",
+              "explanation": "A smooth game with periodic spikes points at something that happens occasionally: a burst of allocations when a vector outgrows its capacity, a file loaded on the game thread, a big spawn wave. Only the profiler shows which one it is. Rewriting collisions is a guess, halving the frame rate hides the problem and makes every frame worse, and raw arrays throw away safety without touching the cause."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
