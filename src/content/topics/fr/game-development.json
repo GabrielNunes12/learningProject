@@ -1,0 +1,2887 @@
+{
+  "id": "game-development",
+  "title": "Développement de jeux",
+  "icon": "Δt",
+  "color": "#5f3dc4",
+  "order": 19,
+  "category": "Programming",
+  "level": "Intermediate",
+  "description": "Crée des jeux en C# comme le fait Unity : une game loop indépendante du frame rate, des déplacements et des collisions avec des vecteurs, des objets construits avec des composants et des machines à états, et un jeu qui reste fluide.",
+  "keyIdeas": [
+    "Un jeu est une **boucle** : lire les entrées, mettre à jour, afficher, à chaque frame, dans un budget d'environ 16,7 ms à 60 fps.",
+    "Exprime les vitesses **par seconde** et multiplie par le **delta time** ; fais avancer la physique avec un **pas de temps fixe**.",
+    "Les **vecteurs** portent le mouvement : normalise les directions avant de les multiplier, et utilise le **produit scalaire** pour savoir ce qui est « devant ».",
+    "Détecte les chevauchements à bas coût (boîtes, cercles), repousse selon le plus petit chevauchement, et **balaie** la trajectoire des objets rapides pour qu'ils ne traversent pas les obstacles.",
+    "Construis les objets à partir de petits **composants** et pilote leur comportement avec des **machines à états** explicites.",
+    "Respecte le budget de la frame : utilise un **pool** pour ce que tu fais apparaître, évite les déchets mémoire à chaque frame, mise sur une **grille spatiale**, et mesure avant d'optimiser."
+  ],
+  "concepts": [
+    {
+      "id": "game-loop",
+      "label": "Boucle de jeu",
+      "lesson": "game-loop",
+      "summary": "À chaque frame, le jeu lit les entrées, met à jour le monde puis l'affiche ; à 60 fps, tout doit tenir en environ 16,7 ms.",
+      "aliases": [
+        "game loop",
+        "frame",
+        "boucle principale",
+        "main loop",
+        "budget de frame",
+        "frame budget",
+        "mise à jour et rendu",
+        "update et render",
+        "fps",
+        "images par seconde"
+      ]
+    },
+    {
+      "id": "value-semantics",
+      "label": "Les structs sont des valeurs",
+      "lesson": "csharp-for-games",
+      "summary": "Un struct C# comme Vector2 est copié à l'affectation et renvoyé sous forme de copie par une propriété, alors qu'une classe est partagée par référence.",
+      "aliases": [
+        "struct",
+        "type valeur",
+        "value type",
+        "type référence",
+        "reference type",
+        "CS1612",
+        "copie de propriété",
+        "sémantique de valeur"
+      ]
+    },
+    {
+      "id": "csharp-events",
+      "label": "Lambdas et événements",
+      "lesson": "csharp-for-games",
+      "summary": "Un événement C# contient une liste de fonctions abonnées (souvent des lambdas) que son propriétaire appelle pour annoncer un changement, sans savoir qui écoute.",
+      "aliases": [
+        "événement",
+        "event",
+        "delegate",
+        "délégué",
+        "Action",
+        "lambda",
+        "abonnement",
+        "s'abonner",
+        "subscribe",
+        "observateur",
+        "observer"
+      ]
+    },
+    {
+      "id": "delta-time",
+      "label": "Delta time",
+      "lesson": "delta-time",
+      "summary": "Les secondes écoulées depuis la dernière frame ; multiplier les vitesses par seconde par cette valeur rend mouvements et minuteurs indépendants du frame rate.",
+      "aliases": [
+        "dt",
+        "Time.deltaTime",
+        "temps delta",
+        "indépendance du frame rate",
+        "frame-rate independence",
+        "durée d'une frame",
+        "frame time"
+      ]
+    },
+    {
+      "id": "fixed-timestep",
+      "label": "Pas de temps fixe",
+      "lesson": "fixed-timestep",
+      "summary": "La physique avance par pas égaux alimentés par un accumulateur de temps réel, si bien que les résultats ne dépendent pas du frame rate.",
+      "aliases": [
+        "FixedUpdate",
+        "fixed timestep",
+        "accumulateur",
+        "accumulator",
+        "pas de physique",
+        "physics step",
+        "interpolation",
+        "spirale de la mort",
+        "spiral of death"
+      ]
+    },
+    {
+      "id": "vector",
+      "label": "Vecteurs",
+      "lesson": "vectors",
+      "summary": "Positions, vitesses et accélérations sont des paires (x, y) : vitesse × dt déplace la position et accélération × dt modifie la vitesse.",
+      "aliases": [
+        "Vector2",
+        "vecteur",
+        "vitesse",
+        "velocity",
+        "accélération",
+        "acceleration",
+        "norme",
+        "magnitude",
+        "longueur"
+      ]
+    },
+    {
+      "id": "normalization",
+      "label": "Normalisation",
+      "lesson": "vectors",
+      "summary": "Diviser un vecteur par sa longueur donne une direction unitaire, si bien que direction × vitesse a la bonne vitesse même en diagonale.",
+      "aliases": [
+        "normaliser",
+        "normalize",
+        "vecteur unitaire",
+        "unit vector",
+        "Normalized",
+        "vitesse en diagonale"
+      ]
+    },
+    {
+      "id": "dot-product",
+      "label": "Produit scalaire",
+      "lesson": "facing-and-steering",
+      "summary": "a.x·b.x + a.y·b.y ; pour des vecteurs unitaires, c'est le cosinus de l'angle : son signe dit « devant » ou « derrière », et un seuil donne un champ de vision.",
+      "aliases": [
+        "dot product",
+        "dot",
+        "devant",
+        "in front of",
+        "champ de vision",
+        "field of view",
+        "cosinus",
+        "FOV"
+      ]
+    },
+    {
+      "id": "steering",
+      "label": "Guidage",
+      "lesson": "facing-and-steering",
+      "summary": "Tourner progressivement en ajoutant petit à petit (vitesse voulue − vitesse actuelle), pour des comportements fluides de poursuite, de fuite et d'arrivée.",
+      "aliases": [
+        "steering",
+        "seek",
+        "poursuite",
+        "flee",
+        "fuite",
+        "arrive",
+        "arrivée",
+        "comportement de guidage",
+        "steering behaviour",
+        "vitesse voulue",
+        "desired velocity"
+      ]
+    },
+    {
+      "id": "input-edges",
+      "label": "Appui vs maintien",
+      "lesson": "input",
+      "summary": "« Appuyé » signifie enfoncé maintenant et relâché à la frame précédente, donc il faut garder l'état précédent ; les tampons et le coyote time pardonnent un appui un peu trop tôt ou trop tard.",
+      "aliases": [
+        "GetKeyDown",
+        "détection de front",
+        "edge detection",
+        "polling",
+        "interrogation",
+        "jump buffer",
+        "tampon de saut",
+        "coyote time",
+        "mappage des touches",
+        "input mapping",
+        "appui",
+        "maintien"
+      ]
+    },
+    {
+      "id": "aabb",
+      "label": "Chevauchement AABB",
+      "lesson": "collisions",
+      "summary": "Deux boîtes alignées sur les axes se chevauchent seulement quand leurs intervalles se chevauchent à la fois sur x et sur y.",
+      "aliases": [
+        "AABB",
+        "boîte englobante",
+        "bounding box",
+        "box collider",
+        "hitbox",
+        "chevauchement de rectangles",
+        "rectangle overlap",
+        "axis-aligned bounding box"
+      ]
+    },
+    {
+      "id": "circle-collision",
+      "label": "Chevauchement de cercles",
+      "lesson": "collisions",
+      "summary": "Deux cercles se chevauchent quand le carré de la distance entre leurs centres est inférieur au carré de la somme de leurs rayons.",
+      "aliases": [
+        "circle collider",
+        "collision de cercles",
+        "test de distance",
+        "distance check",
+        "collision de sphères",
+        "rayon"
+      ]
+    },
+    {
+      "id": "collision-resolution",
+      "label": "Résolution des collisions",
+      "lesson": "collision-response",
+      "summary": "Repousse un objet mobile en chevauchement le long de l'axe du plus petit chevauchement, vers son propre côté, et annule sa vitesse sur cet axe.",
+      "aliases": [
+        "repousser",
+        "push out",
+        "translation minimale",
+        "minimum translation",
+        "réponse à la collision",
+        "collision response",
+        "séparation"
+      ]
+    },
+    {
+      "id": "tunnelling",
+      "label": "Effet tunnel",
+      "lesson": "collision-response",
+      "summary": "Un objet rapide passe de l'autre côté d'un obstacle fin entre deux vérifications ; les balayages, les raycasts ou les sous-pas le rattrapent.",
+      "aliases": [
+        "tunnelling",
+        "tunneling",
+        "traverser un mur",
+        "balle qui traverse du papier",
+        "détection continue des collisions",
+        "continuous collision detection",
+        "CCD",
+        "collision par balayage",
+        "swept collision"
+      ]
+    },
+    {
+      "id": "components",
+      "label": "Composants",
+      "lesson": "components",
+      "summary": "Les objets de jeu se construisent à partir de petits composants à responsabilité unique plutôt que de profondes hiérarchies d'héritage : la composition plutôt que l'héritage.",
+      "aliases": [
+        "components",
+        "composition plutôt qu'héritage",
+        "composition over inheritance",
+        "MonoBehaviour",
+        "GetComponent",
+        "entité composant",
+        "entity component",
+        "GameObject",
+        "objet de jeu"
+      ]
+    },
+    {
+      "id": "state-machine",
+      "label": "Machine à états",
+      "lesson": "state-machines",
+      "summary": "Un état courant pris dans une liste fixe, avec des transitions explicites entre les états ; remplace les piles de booléens.",
+      "aliases": [
+        "state machine",
+        "FSM",
+        "machine à états finis",
+        "finite state machine",
+        "états",
+        "states",
+        "transitions",
+        "patrouille poursuite attaque",
+        "patrol chase attack",
+        "hystérésis",
+        "hysteresis"
+      ]
+    },
+    {
+      "id": "object-pool",
+      "label": "Pooling d'objets",
+      "lesson": "pooling",
+      "summary": "Réutilise des objets inactifs au lieu de les créer et de les détruire, et réinitialise chaque champ quand l'un d'eux est réutilisé.",
+      "aliases": [
+        "object pooling",
+        "pool",
+        "ObjectPool",
+        "réutiliser les objets",
+        "reuse objects",
+        "spawn",
+        "spawning",
+        "apparition des objets"
+      ]
+    },
+    {
+      "id": "garbage-collection",
+      "label": "Déchets mémoire et pics de GC",
+      "lesson": "pooling",
+      "summary": "Les allocations sur le tas à chaque frame accumulent des déchets, et leur collecte peut figer le jeu assez longtemps pour provoquer des saccades.",
+      "aliases": [
+        "GC",
+        "ramasse-miettes",
+        "garbage collector",
+        "allocation",
+        "GC Alloc",
+        "saccade",
+        "hitch",
+        "à-coup",
+        "stutter",
+        "garbage"
+      ]
+    },
+    {
+      "id": "easing",
+      "label": "Lerp et easing",
+      "lesson": "game-feel",
+      "summary": "Lerp mélange des valeurs, les courbes d'easing remodèlent ce mélange pour le ressenti, et 1 − e^(−k·dt) rend le lissage par frame indépendant du frame rate.",
+      "aliases": [
+        "lerp",
+        "interpolation linéaire",
+        "interpolation",
+        "ease out",
+        "easing",
+        "lissage",
+        "smoothing",
+        "suivi de caméra",
+        "camera follow",
+        "screen shake",
+        "tremblement d'écran",
+        "trauma"
+      ]
+    },
+    {
+      "id": "bfs",
+      "label": "Parcours en largeur",
+      "lesson": "pathfinding",
+      "summary": "Explorer une grille vers l'extérieur depuis le départ avec une file, ce qui trouve un plus court chemin en nombre de pas.",
+      "aliases": [
+        "BFS",
+        "breadth-first search",
+        "remplissage par diffusion",
+        "flood fill",
+        "flow field",
+        "champ de flux",
+        "file",
+        "queue",
+        "recherche sur grille",
+        "grid search"
+      ]
+    },
+    {
+      "id": "a-star",
+      "label": "Recherche A*",
+      "lesson": "pathfinding",
+      "summary": "Développer la case dont f = g + h est le plus petit, où h estime la distance restante, pour trouver un plus court chemin en explorant moins.",
+      "aliases": [
+        "A*",
+        "A star",
+        "A étoile",
+        "heuristique",
+        "heuristic",
+        "distance de Manhattan",
+        "Manhattan distance",
+        "Dijkstra",
+        "f = g + h"
+      ]
+    },
+    {
+      "id": "seeded-rng",
+      "label": "Aléa à graine",
+      "lesson": "seeds-and-saves",
+      "summary": "Un générateur pseudo-aléatoire lancé avec la même graine donne la même suite, si bien que des mondes procéduraux peuvent être reconstruits à l'identique.",
+      "aliases": [
+        "seed",
+        "graine",
+        "PRNG",
+        "génération procédurale",
+        "procedural generation",
+        "aléa déterministe",
+        "deterministic random",
+        "xorshift"
+      ]
+    },
+    {
+      "id": "save-state",
+      "label": "Données de sauvegarde",
+      "lesson": "seeds-and-saves",
+      "summary": "Sauvegarde ce qui ne peut pas être reconstruit, avec un numéro de version, et écris-le de façon sûre ; reconstruis tout le reste au chargement.",
+      "aliases": [
+        "save data",
+        "fichier de sauvegarde",
+        "save file",
+        "sérialisation",
+        "serialization",
+        "sauvegarde JSON",
+        "JSON save",
+        "version de sauvegarde",
+        "save versioning",
+        "charger une partie",
+        "load game"
+      ]
+    },
+    {
+      "id": "spatial-partitioning",
+      "label": "Grille spatiale",
+      "lesson": "performance",
+      "summary": "Ranger les objets dans les cellules d'une grille pour ne tester chacun que contre ses voisins, au lieu de tous les autres objets.",
+      "aliases": [
+        "spatial grid",
+        "spatial hash",
+        "hachage spatial",
+        "broad phase",
+        "phase large",
+        "grille uniforme",
+        "uniform grid",
+        "quadtree",
+        "partitionnement"
+      ]
+    }
+  ],
+  "links": [
+    {
+      "from": "game-loop",
+      "to": "delta-time",
+      "label": "mesure"
+    },
+    {
+      "from": "delta-time",
+      "to": "fixed-timestep",
+      "label": "est affiné par"
+    },
+    {
+      "from": "fixed-timestep",
+      "to": "tunnelling",
+      "label": "réduit"
+    },
+    {
+      "from": "delta-time",
+      "to": "vector",
+      "label": "met à l'échelle"
+    },
+    {
+      "from": "normalization",
+      "to": "vector",
+      "label": "s'applique à"
+    },
+    {
+      "from": "dot-product",
+      "to": "normalization",
+      "label": "nécessite"
+    },
+    {
+      "from": "steering",
+      "to": "vector",
+      "label": "s'appuie sur"
+    },
+    {
+      "from": "steering",
+      "to": "normalization",
+      "label": "nécessite"
+    },
+    {
+      "from": "value-semantics",
+      "to": "vector",
+      "label": "explique la copie de"
+    },
+    {
+      "from": "input-edges",
+      "to": "game-loop",
+      "label": "est lu dans"
+    },
+    {
+      "from": "input-edges",
+      "to": "fixed-timestep",
+      "label": "peut être manqué par"
+    },
+    {
+      "from": "circle-collision",
+      "to": "dot-product",
+      "label": "utilise"
+    },
+    {
+      "from": "aabb",
+      "to": "circle-collision",
+      "label": "s'oppose à"
+    },
+    {
+      "from": "collision-resolution",
+      "to": "aabb",
+      "label": "vient après"
+    },
+    {
+      "from": "tunnelling",
+      "to": "delta-time",
+      "label": "augmente avec"
+    },
+    {
+      "from": "components",
+      "to": "csharp-events",
+      "label": "communiquent via"
+    },
+    {
+      "from": "state-machine",
+      "to": "components",
+      "label": "prend souvent la forme de"
+    },
+    {
+      "from": "state-machine",
+      "to": "steering",
+      "label": "pilote"
+    },
+    {
+      "from": "state-machine",
+      "to": "bfs",
+      "label": "peut déclencher"
+    },
+    {
+      "from": "object-pool",
+      "to": "garbage-collection",
+      "label": "réduit"
+    },
+    {
+      "from": "garbage-collection",
+      "to": "game-loop",
+      "label": "dépasse le budget de"
+    },
+    {
+      "from": "easing",
+      "to": "delta-time",
+      "label": "nécessite"
+    },
+    {
+      "from": "a-star",
+      "to": "bfs",
+      "label": "améliore"
+    },
+    {
+      "from": "bfs",
+      "to": "steering",
+      "label": "fournit des points de passage à"
+    },
+    {
+      "from": "seeded-rng",
+      "to": "save-state",
+      "label": "allège"
+    },
+    {
+      "from": "spatial-partitioning",
+      "to": "aabb",
+      "label": "réduit le nombre de"
+    },
+    {
+      "from": "spatial-partitioning",
+      "to": "game-loop",
+      "label": "protège le budget de"
+    },
+    {
+      "from": "value-semantics",
+      "to": "garbage-collection",
+      "label": "évite"
+    },
+    {
+      "from": "delta-time",
+      "to": "everyday-math/speed-distance-time",
+      "label": "s'applique à"
+    },
+    {
+      "from": "game-loop",
+      "to": "system-design/latency-budget",
+      "label": "ressemble à"
+    },
+    {
+      "from": "value-semantics",
+      "to": "python/aliasing",
+      "label": "est l'inverse de"
+    },
+    {
+      "from": "csharp-events",
+      "to": "java/lambdas",
+      "label": "utilise"
+    },
+    {
+      "from": "csharp-events",
+      "to": "software-architecture/domain-event",
+      "label": "est une version miniature de"
+    },
+    {
+      "from": "components",
+      "to": "software-architecture/coupling",
+      "label": "réduit"
+    },
+    {
+      "from": "components",
+      "to": "software-architecture/single-responsibility",
+      "label": "s'appuie sur"
+    },
+    {
+      "from": "spatial-partitioning",
+      "to": "big-o/quadratic-time",
+      "label": "évite"
+    },
+    {
+      "from": "spatial-partitioning",
+      "to": "big-o/hash-map",
+      "label": "utilise"
+    },
+    {
+      "from": "object-pool",
+      "to": "big-o/space-time-tradeoff",
+      "label": "est un exemple de"
+    },
+    {
+      "from": "seeded-rng",
+      "to": "unit-testing/flaky-test",
+      "label": "évite"
+    },
+    {
+      "from": "save-state",
+      "to": "software-architecture/api-contract",
+      "label": "ressemble à"
+    }
+  ],
+  "units": [
+    {
+      "id": "loop-and-time",
+      "title": "La boucle et l'horloge",
+      "description": "Comment tourne un jeu : une seule boucle, plusieurs frames par seconde, et un temps mesuré pour que la vitesse soit la même sur toutes les machines.",
+      "lessons": [
+        {
+          "id": "game-loop",
+          "title": "La boucle qui fait tout tourner",
+          "pareto": "core",
+          "minutes": 6,
+          "takeaway": "Un jeu est une boucle qui lit les entrées, met à jour le monde et l'affiche à chaque frame, et à 60 fps tout cela doit tenir en environ 16,7 ms.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Voici Ember Run",
+              "body": "**Rin** connaît Python et Java et veut faire des jeux. **Dario** est un designer qui a un projet : **Ember Run**, un jeu 2D où un renard porte une lanterne dans une forêt de nuit, ramasse des étincelles et esquive des slimes et des chauves-souris.\n\nLa plupart des programmes attendent quelque chose : un clic, une requête. Un jeu, lui, n'attend jamais. Il exécute la même **boucle** plusieurs fois par seconde, et chaque passage est une **frame** :\n\n- **Entrées** : lire le clavier, la souris ou la manette.\n- **Mise à jour** : déplacer les objets, vérifier les collisions, exécuter la logique des ennemis, décompter les minuteurs.\n- **Rendu** : dessiner le monde là où tout se trouve désormais.\n\nDans Unity, tu n'écris jamais cette boucle : c'est le moteur qui l'exécute et qui appelle le `Update()` de tes scripts une fois par frame."
+            },
+            {
+              "type": "order",
+              "id": "q-loop-order",
+              "concepts": [
+                "game-loop"
+              ],
+              "prompt": "Remets dans l'ordre le travail d'une frame d'Ember Run.",
+              "items": [
+                "Lire quelles touches sont enfoncées",
+                "Déplacer le renard avec ces entrées",
+                "Vérifier si le renard chevauche maintenant un slime",
+                "Dessiner la forêt, puis le renard par-dessus",
+                "Afficher l'image terminée à l'écran"
+              ],
+              "hint": "On ne peut se déplacer qu'avec des entrées déjà lues, et ne dessiner que des positions déjà calculées.",
+              "explanation": "Les entrées viennent en premier, car la mise à jour en a besoin. La mise à jour déplace les objets *puis* vérifie les collisions, parce que les collisions dépendent des nouvelles positions. Le rendu dessine le résultat de l'arrière vers l'avant, et l'image terminée n'est affichée que lorsqu'elle est complète : le joueur ne voit donc jamais une frame à moitié dessinée."
+            },
+            {
+              "type": "explain",
+              "title": "Le budget de la frame",
+              "body": "À **60 images par seconde**, chaque frame dispose de 1000 ms ÷ 60 ≈ **16,7 ms** pour les entrées, la mise à jour *et* le rendu réunis. Ce temps, c'est le **budget de la frame**.\n\nSi une frame dure plus longtemps, le jeu affiche moins de frames cette seconde-là : à 25 ms par frame, tu obtiens 40 fps et le jeu paraît moins fluide. Une seule frame de 200 ms est une **saccade** bien visible.\n\nLes taux de rafraîchissement plus élevés réduisent le budget. C'est pourquoi les programmeurs de jeux raisonnent en millisecondes par frame, et pas seulement en « est-ce rapide ? »."
+            },
+            {
+              "type": "numeric",
+              "id": "q-frame-budget",
+              "concepts": [
+                "game-loop"
+              ],
+              "prompt": "Le nouvel écran de Dario se rafraîchit **144** fois par seconde. Pour suivre, combien de **millisecondes** chaque frame dispose-t-elle ?",
+              "answer": 6.94,
+              "tolerance": 0.01,
+              "unit": "ms",
+              "hint": "Divise une seconde, en millisecondes, par le nombre de frames.",
+              "explanation": "1000 ms ÷ 144 ≈ **6,94 ms** par frame, bien moins de la moitié des 16,7 ms d'un jeu à 60 fps. Tout ce que fait le jeu à chaque frame doit tenir là-dedans, ce qui explique pourquoi les coûts par frame comptent autant plus loin dans ce cours."
+            },
+            {
+              "type": "output",
+              "id": "q-render-first",
+              "concepts": [
+                "game-loop"
+              ],
+              "prompt": "Rin a écrit une boucle de test qui **affiche avant de mettre à jour**. Chaque passage du `foreach` est une frame. Qu'est-ce qui s'affiche ?",
+              "language": "csharp",
+              "code": "bool[] rightHeld = { true, true, false, true };\nfloat x = 0;\n\nforeach (bool right in rightHeld)\n{\n    Console.WriteLine(x);   // render: draw the fox\n    if (right) x += 2;      // update: move it\n}",
+              "output": "0\n2\n4\n4",
+              "hint": "Chaque frame affiche d'abord `x`, et ne déplace le renard qu'ensuite.",
+              "explanation": "Chaque frame dessine la position d'**avant** l'application des entrées de cette frame : 0, puis 2, puis 4, et à la troisième frame la touche est relâchée, donc `x` reste à 4, ce que dessine la quatrième frame. Le dernier déplacement jusqu'à 6 n'est jamais dessiné.\n\nAfficher avant de mettre à jour montre tout au joueur avec une frame de retard, ce qui donne une impression de latence des commandes. Lis les entrées, mets à jour, *puis* affiche."
+            },
+            {
+              "type": "buckets",
+              "id": "q-update-or-render",
+              "concepts": [
+                "game-loop"
+              ],
+              "prompt": "Classe chaque morceau de code d'Ember Run dans la partie de la frame à laquelle il appartient.",
+              "buckets": [
+                "Mise à jour (change le monde)",
+                "Rendu (dessine le monde)"
+              ],
+              "items": [
+                {
+                  "text": "Déplacer le renard selon sa vitesse",
+                  "bucket": 0
+                },
+                {
+                  "text": "Vérifier si le renard a touché une étincelle",
+                  "bucket": 0
+                },
+                {
+                  "text": "Décompter le minuteur d'invincibilité après un coup",
+                  "bucket": 0
+                },
+                {
+                  "text": "Décider si un slime se met à poursuivre le joueur",
+                  "bucket": 0
+                },
+                {
+                  "text": "Dessiner le sprite du renard à sa position",
+                  "bucket": 1
+                },
+                {
+                  "text": "Dessiner la barre de vie par-dessus tout le reste",
+                  "bucket": 1
+                },
+                {
+                  "text": "Assombrir l'écran à mesure que la lanterne s'éteint",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Est-ce que cela devrait quand même se produire si personne ne regardait l'écran ?",
+              "explanation": "La **mise à jour** modifie l'état du jeu : positions, minuteurs, scores, décisions. Le **rendu** se contente de lire cet état et de le transformer en pixels. Les séparer garantit que dessiner ne change jamais le jeu, et que la même logique de mise à jour fonctionne qu'une frame soit dessinée ou non."
+            },
+            {
+              "type": "numeric",
+              "id": "q-per-frame-speed",
+              "concepts": [
+                "game-loop"
+              ],
+              "prompt": "Le premier renard de Rin se déplace de **2 pixels à chaque frame**. Sur le PC de Rin, le jeu tourne à 60 fps ; sur le vieil ordinateur portable de Dario, il n'atteint que **30 fps**. Combien de **pixels par seconde** le renard parcourt-il sur le portable ?",
+              "answer": 60,
+              "unit": "px/s",
+              "hint": "Pixels par frame × frames par seconde.",
+              "explanation": "2 px × 30 frames = **60 px/s** sur le portable, contre 2 × 60 = 120 px/s sur le PC. Le même jeu tourne à **mi-vitesse** sur la machine la plus lente, et deux fois plus vite sur un écran à 120 Hz. Lier la vitesse aux frames est un bug, et les prochaines leçons le corrigent avec le delta time."
+            }
+          ]
+        },
+        {
+          "id": "csharp-for-games",
+          "title": "C# pour les gens venus de Java et de Python",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Les structs comme Vector2 sont copiés à chaque affectation : modifie une propriété de type struct en lui affectant une valeur entièrement nouvelle, et utilise des événements pour annoncer les changements à ceux qui écoutent.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Juste assez de C#",
+              "body": "Les jeux Unity s'écrivent en **C#**. Si tu connais Java, l'essentiel te sera familier : classes, types statiques, accolades, commentaires `//`. Comme en Python, un fichier C# peut commencer directement par du code (les *instructions de niveau supérieur*), et les chaînes `$\"...\"` fonctionnent comme les f-strings.\n\n```csharp\nvar name = \"Ember\";        // var: the compiler infers string\nint sparks = 3;\nfloat speed = 2.5f;        // f marks a float literal, as in Java\nConsole.WriteLine($\"{name} has {sparks} sparks at speed {speed}\");\n```\n\nCe code affiche `Ember has 3 sparks at speed 2.5`. `var` demande au compilateur d'inférer le type, mais la variable reste typée statiquement : `name` est un `string` pour toujours. Unity utilise `float` pour presque tout, tu verras donc très souvent le suffixe `f`.\n\nCette leçon ne couvre que les quatre notions sur lesquelles repose ce cours : les structs, les propriétés, les lambdas et les événements."
+            },
+            {
+              "type": "explain",
+              "title": "Les structs sont des valeurs",
+              "body": "Une `class` est un **type référence**, comme les objets en Java et en Python : une variable contient une référence, et `b = a` crée un second nom pour le même objet.\n\nUn `struct` est un **type valeur**, comme un `int` : `b = a` **copie le tout**. Modifie `b` et `a` reste tel qu'il était.\n\nLes `Vector2`, `Vector3`, `Color` et `Quaternion` d'Unity sont tous des structs. Un jeu crée des millions de ces petites valeurs chaque seconde ; en tant que structs, elles vivent « sur place », dans les variables locales et les tableaux, et ne créent aucun déchet que le ramasse-miettes devrait nettoyer."
+            },
+            {
+              "type": "output",
+              "id": "q-struct-copy",
+              "concepts": [
+                "value-semantics"
+              ],
+              "prompt": "`Point` est un struct et `Box` est une classe, avec les mêmes champs. Qu'est-ce qui s'affiche ?",
+              "language": "csharp",
+              "code": "var p1 = new Point { X = 1, Y = 1 };\nvar p2 = p1;\np2.X = 5;\n\nvar b1 = new Box { X = 1, Y = 1 };\nvar b2 = b1;\nb2.X = 5;\n\nConsole.WriteLine(p1.X);\nConsole.WriteLine(b1.X);\n\nstruct Point { public float X, Y; }\nclass Box { public float X, Y; }",
+              "output": "1\n5",
+              "hint": "Après `var p2 = p1`, combien de valeurs `Point` existe-t-il ? Après `var b2 = b1`, combien d'objets `Box` ?",
+              "explanation": "`var p2 = p1` copie le struct : modifier `p2.X` ne change donc que la copie, et `p1.X` vaut toujours **1**. `var b2 = b1` copie une référence : les deux noms pointent vers un seul `Box`, donc `b1.X` vaut maintenant **5**. Même syntaxe, sens différent, décidé par `struct` ou `class` dans la déclaration du type."
+            },
+            {
+              "type": "explain",
+              "title": "Les propriétés ressemblent à des champs",
+              "body": "Une **propriété** comme `public Point Position { get; set; }` se lit comme un champ mais n'est en réalité qu'une paire de méthodes, un getter et un setter : le `getPosition()`/`setPosition()` de Java avec la syntaxe d'un champ, ou le `@property` de Python. `{ get; private set; }` permet à tout le monde de la lire, mais seule la classe peut la modifier.\n\nLe piège apparaît avec les structs. Lire une propriété **appelle le getter, qui renvoie une copie**. `transform.position` d'Unity est une propriété qui renvoie un struct `Vector3`, ce qui explique pourquoi le code Unity est plein de lignes comme `transform.position = new Vector3(...)`."
+            },
+            {
+              "type": "bug",
+              "id": "q-property-copy",
+              "concepts": [
+                "value-semantics"
+              ],
+              "prompt": "Rin veut déplacer le joueur à x = 5 et afficher `5`. Ça ne compile pas. Clique sur la ligne qui contient le bug.",
+              "language": "csharp",
+              "code": "var player = new Player();\nplayer.Position.X = 5;\nConsole.WriteLine(player.Position.X);\n\nclass Player\n{\n    public Point Position { get; set; }\n}\n\nstruct Point { public float X, Y; }",
+              "error": "error CS1612: Cannot modify the return value of 'Player.Position' because it is not a variable",
+              "lines": [
+                2
+              ],
+              "fixes": [
+                "Remplace la ligne 2 par `player.Position = new Point { X = 5, Y = player.Position.Y };`",
+                "Remplace la ligne 2 par `var p = player.Position; p.X = 5;`",
+                "Remplace la ligne 2 par `player.Position.X += 5;`",
+                "Remplace la ligne 10 par `readonly struct Point { public float X, Y; }`"
+              ],
+              "answer": 0,
+              "hint": "`player.Position` appelle un getter. Que renvoie un getter quand le type est un struct ?",
+              "explanation": "`player.Position` renvoie une **copie** du struct : `player.Position.X = 5` modifierait donc une copie temporaire avant de la jeter, et C# refuse de compiler. La correction construit un `Point` entièrement nouveau et l'affecte via le setter. Copier dans `p` et modifier `p.X` compile, mais seule la copie change et le programme affiche 0. `+=` est la même erreur, et un `readonly struct` doit avoir des champs `readonly`, donc il ne compile pas non plus."
+            },
+            {
+              "type": "explain",
+              "title": "Lambdas et événements",
+              "body": "Une **lambda** est une petite fonction écrite sur place : `hp => hp <= 0` en C#, `hp -> hp <= 0` en Java, `lambda hp: hp <= 0` en Python. `Action<int>` est le type d'une fonction qui prend un `int` et ne renvoie rien.\n\nUn **événement** est une liste de telles fonctions. Le reste du code s'y abonne avec `+=` (et se désabonne avec `-=`) ; le propriétaire appelle `Changed?.Invoke(value)` pour exécuter chaque abonné dans l'ordre. Le `?.` évite l'appel quand personne ne s'est abonné.\n\nLes événements permettent au joueur d'annoncer *« j'ai été touché »* sans savoir qu'une barre de vie, un son et un tremblement de caméra écoutent tous."
+            },
+            {
+              "type": "output",
+              "id": "q-event-order",
+              "concepts": [
+                "csharp-events"
+              ],
+              "prompt": "Deux écouteurs s'abonnent à `Health.Changed`, puis le renard subit deux fois des dégâts. Qu'est-ce qui s'affiche ?",
+              "language": "csharp",
+              "code": "var health = new Health();\nhealth.Changed += hp => Console.WriteLine($\"bar shows {hp}\");\nhealth.Changed += hp => { if (hp <= 0) Console.WriteLine(\"game over\"); };\n\nhealth.Damage(2);\nhealth.Damage(2);\n\nclass Health\n{\n    public int Current { get; private set; } = 3;\n    public event Action<int>? Changed;\n\n    public void Damage(int amount)\n    {\n        Current -= amount;\n        Changed?.Invoke(Current);\n    }\n}",
+              "output": "bar shows 1\nbar shows -1\ngame over",
+              "hint": "Chaque appel à `Damage` invoque tous les abonnés, dans l'ordre où ils se sont abonnés.",
+              "explanation": "Le premier `Damage(2)` fait passer la santé de 3 à 1 et appelle les deux abonnés : la barre affiche `bar shows 1`, et le second n'affiche rien car 1 > 0. Le second `Damage(2)` la fait passer à -1 : la barre affiche `bar shows -1`, puis le second abonné affiche `game over`. `Health` ne mentionne jamais de barres ni d'écrans de game over ; il se contente d'annoncer le changement."
+            },
+            {
+              "type": "buckets",
+              "id": "q-struct-or-class",
+              "concepts": [
+                "value-semantics"
+              ],
+              "prompt": "Rin définit les types d'Ember Run. Lesquels doivent être un **struct** et lesquels une **classe** ?",
+              "buckets": [
+                "struct (petite valeur, copiée sans souci)",
+                "class (objet avec identité, partagé par référence)"
+              ],
+              "items": [
+                {
+                  "text": "Une position 2D : deux floats",
+                  "bucket": 0
+                },
+                {
+                  "text": "Une couleur RGBA",
+                  "bucket": 0
+                },
+                {
+                  "text": "Un résultat de tir : le point et la distance d'une collision",
+                  "bucket": 0
+                },
+                {
+                  "text": "Le renard, avec sa santé, son inventaire et ses événements",
+                  "bucket": 1
+                },
+                {
+                  "text": "Un slime que la caméra et le spawner suivent tous les deux",
+                  "bucket": 1
+                },
+                {
+                  "text": "Le niveau, qui contient 10 000 tuiles",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Deux copies poseraient-elles un problème ? S'agit-il de quelques nombres, ou d'une chose qui a sa vie propre ?",
+              "explanation": "Les **structs** conviennent aux petites valeurs simples dont une copie vaut l'original : positions, couleurs, résultats de tir. Les **classes** conviennent aux choses qui ont une identité et auxquelles plusieurs parties du jeu se réfèrent, comme le renard ou tel slime en particulier, ainsi qu'aux grosses données trop coûteuses à copier à chaque affectation, comme un niveau."
+            }
+          ]
+        },
+        {
+          "id": "delta-time",
+          "title": "La même vitesse sur toutes les machines",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "Exprime les vitesses par seconde et multiplie-les par le delta time, les secondes écoulées depuis la dernière frame : le mouvement prend ainsi le même temps réel quel que soit le frame rate.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Mesurer la frame",
+              "body": "Se déplacer de 2 pixels *par frame* lie la vitesse au frame rate. La solution : mesurer la durée de la dernière frame, le **delta time** ou `dt` (le `Time.deltaTime` d'Unity, en secondes), et exprimer chaque vitesse **par seconde** :\n\n`x += speed * dt;`\n\nÀ 60 fps, `dt` vaut environ 0,0167 s, et à 30 fps environ 0,033 s. La machine lente fait de plus grands pas, mais moins nombreux : les deux parcourent `speed` unités chaque seconde. C'est la vieille règle distance = vitesse × temps, appliquée à chaque frame."
+            },
+            {
+              "type": "example",
+              "title": "Par frame, par seconde",
+              "problem": "Le renard court à **150 px/s**. De quelle distance avance-t-il à chaque frame à 25 fps et à 100 fps, et de combien en une seconde sur chacune ?",
+              "steps": [
+                "À 25 fps, `dt` = 1 ÷ 25 = 0,04 s, donc chaque frame avance de 150 × 0,04 = **6 px**.",
+                "À 100 fps, `dt` = 1 ÷ 100 = 0,01 s, donc chaque frame avance de 150 × 0,01 = **1,5 px**.",
+                "En une seconde : 25 frames × 6 px = 150 px, et 100 frames × 1,5 px = 150 px."
+              ],
+              "answer": "Des pas différents, mais **150 px chaque seconde** sur les deux machines."
+            },
+            {
+              "type": "output",
+              "id": "q-dt-two-machines",
+              "concepts": [
+                "delta-time"
+              ],
+              "prompt": "Chaque fonction simule **une seconde** à un frame rate donné. La première avance de 5 px par frame ; la seconde avance de 150 px par seconde grâce à `dt`. Qu'est-ce qui s'affiche ?",
+              "language": "csharp",
+              "code": "float PerFrame(int fps)\n{\n    float x = 0;\n    for (int frame = 0; frame < fps; frame++)   // one second of frames\n        x += 5;                                 // 5 pixels per frame\n    return x;\n}\n\nfloat PerSecond(int fps)\n{\n    float x = 0, dt = 1f / fps;\n    for (int frame = 0; frame < fps; frame++)\n        x += 150 * dt;                          // 150 pixels per second\n    return MathF.Round(x);\n}\n\nConsole.WriteLine($\"{PerFrame(30)} {PerFrame(60)}\");\nConsole.WriteLine($\"{PerSecond(30)} {PerSecond(60)}\");",
+              "output": "150 300\n150 150",
+              "hint": "Une seconde à 30 fps, ce sont 30 frames. Qu'ajoute chaque frame dans chaque version ?",
+              "explanation": "`PerFrame` ajoute 5 px par frame : 30 × 5 = **150** à 30 fps, mais 60 × 5 = **300** à 60 fps. `PerSecond` ajoute `150 * dt`, donc 30 frames × 5 px et 60 frames × 2,5 px donnent toutes deux **150**. (`MathF.Round` masque les erreurs d'arrondi des floats, de l'ordre de quelques millionièmes.)"
+            },
+            {
+              "type": "bug",
+              "id": "q-missing-dt",
+              "concepts": [
+                "delta-time"
+              ],
+              "prompt": "Dario laisse tomber une étincelle d'une branche. Au bout d'une seconde, elle devrait être tombée d'environ **5 unités** sur les deux machines, mais elle tombe bien plus loin, et encore plus loin à 60 fps. Clique sur la ligne qui contient le bug.",
+              "language": "csharp",
+              "code": "float Fall(int fps)\n{\n    float dt = 1f / fps;\n    float y = 0, vy = 0;\n    for (int frame = 0; frame < fps; frame++)\n    {\n        vy += 10 * dt;     // gravity: 10 units/s², so vy grows 10 units/s each second\n        y += vy;\n    }\n    return MathF.Round(y, 1);\n}\n\nConsole.WriteLine($\"30 fps: {Fall(30)}\");\nConsole.WriteLine($\"60 fps: {Fall(60)}\");",
+              "error": "30 fps: 155\n60 fps: 305",
+              "lines": [
+                8
+              ],
+              "fixes": [
+                "Remplace la ligne 8 par `y += vy * dt;`",
+                "Remplace la ligne 7 par `vy += 10;`, pour que la gravité corresponde à la mise à jour de position par frame",
+                "Remplace la ligne 3 par `float dt = 1f / 60;`, pour que les deux machines utilisent le même pas",
+                "Remplace la ligne 5 par `for (int frame = 0; frame < 60; frame++)`, pour que les deux machines exécutent le même nombre de frames"
+              ],
+              "answer": 0,
+              "hint": "La vitesse est en unités **par seconde**. Par quoi faut-il multiplier une valeur par seconde avant de l'ajouter à chaque frame ?",
+              "explanation": "`vy` est une vitesse en unités par seconde, mais la ligne 8 en ajoute la totalité **à chaque frame** : la chute croît donc avec le nombre de frames. `y += vy * dt` n'ajoute que la part de cette frame. Retirer `dt` de la gravité, simuler un `dt` constant ou forcer 60 frames laissent tous l'ajout par frame en place.\n\nLa version corrigée affiche 5.2 et 5.1, pas exactement 5 : avancer par morceaux est une approximation, et de plus petits pas sont plus précis. La prochaine leçon supprime même cette différence."
+            },
+            {
+              "type": "explain",
+              "title": "Où mettre dt",
+              "body": "Une règle simple : **tout ce qui change en continu, à un certain rythme par seconde, se multiplie par `dt`**.\n\n- La position change selon la vitesse : `pos += vel * dt`\n- La vitesse change selon l'accélération : `vel += accel * dt`\n- Les minuteurs comptent le temps réel : `cooldown -= dt`\n\nCe qui se produit **une seule fois**, à un instant donné, n'en a pas besoin : fixer la vitesse de saut quand on appuie sur le bouton, se téléporter à un point de contrôle, ajouter 1 au score."
+            },
+            {
+              "type": "buckets",
+              "id": "q-needs-dt",
+              "concepts": [
+                "delta-time"
+              ],
+              "prompt": "Parmi les mises à jour d'Ember Run, lesquelles doivent être multipliées par `dt` ?",
+              "buckets": [
+                "Multiplier par dt (un taux par seconde)",
+                "Pas de dt (se produit une fois)"
+              ],
+              "items": [
+                {
+                  "text": "Courir à 150 px par seconde",
+                  "bucket": 0
+                },
+                {
+                  "text": "La lanterne perd 2 unités d'huile par seconde",
+                  "bucket": 0
+                },
+                {
+                  "text": "Une tourelle tourne de 90 degrés par seconde",
+                  "bucket": 0
+                },
+                {
+                  "text": "Un cooldown de dash de 0,5 s se décompte",
+                  "bucket": 0
+                },
+                {
+                  "text": "Fixer la vitesse verticale à 8 quand on appuie sur saut",
+                  "bucket": 1
+                },
+                {
+                  "text": "Téléporter le renard au dernier point de contrôle",
+                  "bucket": 1
+                },
+                {
+                  "text": "Ajouter 1 au score quand une étincelle est ramassée",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Demande-toi : est-ce décrit « par seconde », ou cela se produit-il en un instant ?",
+              "explanation": "Les vitesses, les consommations, les rotations et les minuteurs sont des **taux** : leur effet doit croître avec le temps écoulé, donc ils utilisent `dt`. Un saut fixe une vitesse une seule fois (la gravité la modifie ensuite avec `dt`), une téléportation est instantanée et un point de score est un événement unique. Les multiplier par `dt` rendrait les sauts minuscules et les scores fractionnaires."
+            },
+            {
+              "type": "numeric",
+              "id": "q-hitch",
+              "concepts": [
+                "delta-time"
+              ],
+              "prompt": "Pendant le chargement d'un niveau, une frame dure **0,5 s**. Le renard court à **300 px/s**. De quelle distance avance-t-il pendant cette unique frame ?",
+              "answer": 150,
+              "unit": "px",
+              "hint": "Distance = vitesse × `dt`, avec le `dt` de cette frame.",
+              "explanation": "300 × 0,5 = **150 px** en un seul pas. Avec `dt`, le renard parcourt toujours la bonne distance, mais il y **saute** au lieu de s'y déplacer, et pourrait passer tout droit à travers un mur ou le bord d'un trou. Les moteurs plafonnent donc `dt` (le *Maximum Allowed Timestep* d'Unity vaut 1/3 s par défaut), et la physique avance par petits pas fixes, comme le montre la prochaine leçon."
+            }
+          ]
+        },
+        {
+          "id": "fixed-timestep",
+          "title": "Des pas fixes pour la physique",
+          "pareto": "extra",
+          "minutes": 8,
+          "takeaway": "Fais tourner la physique par pas de taille fixe alimentés par un accumulateur de temps réel, pour obtenir les mêmes résultats quel que soit le frame rate, et lis les entrées d'une seule frame dans la mise à jour par frame.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Pourquoi un pas fixe",
+              "body": "Un `dt` variable pose encore deux problèmes : les résultats dérivent légèrement avec le frame rate (le 5.2 contre 5.1 de la leçon précédente), et un seul `dt` énorme peut faire traverser les murs aux objets ou les faire rebondir n'importe comment.\n\nLes moteurs physiques avancent donc par **pas fixes**. Unity appelle `FixedUpdate()` toutes les **0,02 s** (50 fois par seconde) par défaut, quelle que soit la vitesse de rafraîchissement de l'écran, alors que `Update()` s'exécute une fois par frame affichée.\n\nL'astuce est un **accumulateur** : ajoute à chaque frame son temps réel, puis exécute des pas de physique tant qu'il contient au moins un pas, en soustrayant un pas à chaque fois. Le temps restant attend la frame suivante."
+            },
+            {
+              "type": "trace",
+              "id": "q-accumulator",
+              "concepts": [
+                "fixed-timestep"
+              ],
+              "prompt": "Trois frames affichées durent 16, 16 et 50 ms. Déroule l'accumulateur (temps en millisecondes entières pour garder des nombres simples) et prédis les valeurs.",
+              "language": "csharp",
+              "code": "const int StepMs = 20;              // physics runs every 20 ms (50 Hz)\nint[] frameTimes = { 16, 16, 50 };  // how long each rendered frame took\nint accumulator = 0;\nint steps = 0;\n\nforeach (int frameMs in frameTimes)\n{\n    accumulator += frameMs;\n    while (accumulator >= StepMs)\n    {\n        steps++;\n        accumulator -= StepMs;\n    }\n}\nConsole.WriteLine(steps);",
+              "frames": [
+                {
+                  "line": 4,
+                  "vars": {
+                    "accumulator": "0",
+                    "steps": "0"
+                  }
+                },
+                {
+                  "line": 8,
+                  "vars": {
+                    "frameMs": "16",
+                    "accumulator": "16",
+                    "steps": "0"
+                  },
+                  "note": "Seulement 16 ms accumulées : pas assez pour un pas de 20 ms."
+                },
+                {
+                  "line": 8,
+                  "vars": {
+                    "frameMs": "16",
+                    "accumulator": "32",
+                    "steps": "0"
+                  }
+                },
+                {
+                  "line": 12,
+                  "vars": {
+                    "frameMs": "16",
+                    "accumulator": "12",
+                    "steps": "1"
+                  },
+                  "ask": "accumulator"
+                },
+                {
+                  "line": 8,
+                  "vars": {
+                    "frameMs": "50",
+                    "accumulator": "62",
+                    "steps": "1"
+                  },
+                  "note": "La troisième frame, lente, a ajouté 50 ms d'un coup."
+                },
+                {
+                  "line": 12,
+                  "vars": {
+                    "frameMs": "50",
+                    "accumulator": "42",
+                    "steps": "2"
+                  },
+                  "ask": "accumulator"
+                },
+                {
+                  "line": 12,
+                  "vars": {
+                    "frameMs": "50",
+                    "accumulator": "22",
+                    "steps": "3"
+                  }
+                },
+                {
+                  "line": 12,
+                  "vars": {
+                    "frameMs": "50",
+                    "accumulator": "2",
+                    "steps": "4"
+                  },
+                  "ask": "steps"
+                },
+                {
+                  "line": 15,
+                  "vars": {
+                    "accumulator": "2",
+                    "steps": "4"
+                  },
+                  "out": "4"
+                }
+              ],
+              "hint": "Le `while` s'exécute tant qu'au moins 20 ms sont accumulées, en prélevant 20 ms à chaque tour.",
+              "explanation": "La première frame met 16 ms de côté : aucun pas. La deuxième l'amène à 32, donc un pas s'exécute et il reste 12 ms. La frame lente de 50 ms l'amène à 62, de quoi faire **trois** pas (62 → 42 → 22 → 2). Quatre pas de physique au total, chacun d'exactement 20 ms, quelle que soit l'irrégularité des frames."
+            },
+            {
+              "type": "numeric",
+              "id": "q-fixed-per-second",
+              "concepts": [
+                "fixed-timestep"
+              ],
+              "prompt": "`FixedUpdate` utilise le pas par défaut de 0,02 s. Sur un portable qui tourne à **30 fps**, combien de fois s'exécute-t-elle par seconde, en moyenne ?",
+              "answer": 50,
+              "unit": "fois",
+              "hint": "Le pas fixe ne dépend pas du tout du frame rate.",
+              "explanation": "1 ÷ 0,02 = **50** pas de physique par seconde, à 30 fps comme à 60 ou 144 fps. À 30 fps, cela fait en moyenne 1,67 pas par frame affichée : certaines frames exécutent un pas, d'autres en exécutent deux. À 144 fps, la plupart des frames n'en exécutent **aucun**."
+            },
+            {
+              "type": "explain",
+              "title": "Reste et interpolation",
+              "body": "Après les pas, il reste en général du temps dans l'accumulateur : 2 ms dans la trace. L'écran est dessiné *entre* deux états de la physique ; dessiner le dernier état tel quel rend donc le mouvement légèrement saccadé.\n\nLa solution est d'**interpoler** : avec `alpha = accumulator / step`, dessine les objets à `previous + (current - previous) * alpha`. Unity le fait quand l'option *Interpolate* d'un Rigidbody est activée.\n\nUn danger de plus : si un pas de physique met plus de temps à être *calculé* que le temps qu'il simule, l'accumulateur grossit à chaque frame et le jeu se fige (la *spirale de la mort*). Les moteurs plafonnent le nombre de pas qu'une frame peut exécuter."
+            },
+            {
+              "type": "numeric",
+              "id": "q-interpolate",
+              "concepts": [
+                "fixed-timestep"
+              ],
+              "prompt": "Le pas de physique est de 20 ms et il reste **5 ms** dans l'accumulateur. La chauve-souris était à x = **100** après le pas précédent et est à x = **110** après le dernier. Où faut-il la dessiner ?",
+              "answer": 102.5,
+              "tolerance": 0.01,
+              "hint": "`alpha` = reste ÷ pas. Avance ensuite de cette fraction du chemin entre la position précédente et la position actuelle.",
+              "explanation": "`alpha` = 5 ÷ 20 = 0,25, donc on la dessine à 100 + (110 − 100) × 0,25 = **102,5**. Chaque frame affichée montre alors une position qui correspond au temps réel écoulé depuis le dernier pas, et le mouvement reste fluide même si la physique ne se met à jour que 50 fois par seconde."
+            },
+            {
+              "type": "buckets",
+              "id": "q-update-or-fixed",
+              "concepts": [
+                "fixed-timestep"
+              ],
+              "prompt": "Dans Unity, lesquelles de ces tâches vont dans `Update` (à chaque frame affichée) et lesquelles dans `FixedUpdate` (à chaque pas de physique) ?",
+              "buckets": [
+                "Update",
+                "FixedUpdate"
+              ],
+              "items": [
+                {
+                  "text": "Vérifier si le saut a été pressé pendant cette frame",
+                  "bucket": 0
+                },
+                {
+                  "text": "Déplacer la caméra en douceur derrière le renard",
+                  "bucket": 0
+                },
+                {
+                  "text": "Animer le compteur de score qui s'incrémente",
+                  "bucket": 0
+                },
+                {
+                  "text": "Appliquer la force du vent à un Rigidbody",
+                  "bucket": 1
+                },
+                {
+                  "text": "Fixer la vitesse d'un Rigidbody à partir de l'entrée mémorisée",
+                  "bucket": 1
+                },
+                {
+                  "text": "Faire avancer une simulation personnalisée de corde qui se balance",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Cela agit-il sur la simulation physique, ou sur ce que le joueur voit et fait à chaque frame ?",
+              "explanation": "Tout ce qui alimente la **simulation physique** (forces, vitesses, intégration personnalisée) va dans `FixedUpdate`, pour avancer par les mêmes pas fixes que la physique. Ce qui se fait à chaque frame va dans `Update` : lire les entrées d'une seule frame, la caméra et les animations d'interface doivent suivre chaque frame affichée, sinon elles saccaderaient aux taux de rafraîchissement élevés."
+            },
+            {
+              "type": "mcq",
+              "id": "q-missed-jump",
+              "concepts": [
+                "fixed-timestep",
+                "input-edges"
+              ],
+              "prompt": "Rin teste `Input.GetKeyDown(KeyCode.Space)` dans `FixedUpdate`. À 144 fps, certains appuis sur la touche de saut ne font rien du tout. Pourquoi ?",
+              "choices": [
+                "`GetKeyDown` n'est vrai que pendant l'unique frame affichée de l'appui, et la plupart des frames à 144 fps n'exécutent aucun `FixedUpdate`",
+                "`FixedUpdate` s'exécute si souvent qu'il lit chaque appui deux fois et l'annule",
+                "Le code de physique n'a pas le droit de lire les entrées, donc Unity l'ignore à cet endroit",
+                "Le tampon d'entrée déborde quand le frame rate dépasse 100"
+              ],
+              "answer": 0,
+              "hint": "À 144 fps, combien de frames affichées y a-t-il par pas de physique ?",
+              "explanation": "Il y a 144 frames affichées mais seulement 50 pas de physique par seconde : environ deux frames sur trois n'exécutent **aucun** `FixedUpdate`. Si l'appui tombe sur l'une d'elles, `GetKeyDown` n'est vrai que pendant cette frame et n'est jamais vu. Lis l'appui dans `Update`, mémorise-le (`jumpQueued = true`), et consomme-le dans le `FixedUpdate` suivant."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "move-and-collide",
+      "title": "Déplacer et faire entrer en collision",
+      "description": "Les vecteurs pour la position, la vitesse et l'orientation ; la lecture des entrées ; et la détection et la correction des chevauchements entre objets.",
+      "lessons": [
+        {
+          "id": "vectors",
+          "title": "Vecteurs : où et à quelle vitesse",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Positions, vitesses et accélérations sont des vecteurs : ajoute vitesse × dt à la position, et normalise une direction avant de la multiplier par une vitesse.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Un petit Vector2",
+              "body": "Un **vecteur** est une paire de nombres (x, y). Les jeux l'utilisent pour une **position** (où), une **vitesse** (à quelle allure, et dans quelle direction) et une **accélération** (comment la vitesse change). Unity propose les structs `Vector2` et `Vector3` ; ce cours en utilise un petit qui lui est propre, et les extraits de code qui suivent s'appuient dessus :\n\n```csharp\npublic readonly struct Vector2\n{\n    public readonly float X, Y;\n    public Vector2(float x, float y) { X = x; Y = y; }\n\n    public static Vector2 operator +(Vector2 a, Vector2 b) => new(a.X + b.X, a.Y + b.Y);\n    public static Vector2 operator -(Vector2 a, Vector2 b) => new(a.X - b.X, a.Y - b.Y);\n    public static Vector2 operator *(Vector2 v, float k) => new(v.X * k, v.Y * k);\n    public static Vector2 operator /(Vector2 v, float k) => new(v.X / k, v.Y / k);\n\n    public float Length => MathF.Sqrt(X * X + Y * Y);\n    public Vector2 Normalized => Length > 0 ? this / Length : this;\n    public static float Dot(Vector2 a, Vector2 b) => a.X * b.X + a.Y * b.Y;\n\n    public override string ToString() => $\"({X}, {Y})\";\n}\n```\n\nC'est un `readonly struct` : un vecteur ne change donc jamais sur place, et `a + b` en construit un nouveau. Contrairement au `Vector2` d'Unity, cela écarte complètement le piège de la copie de propriété vu dans la leçon sur C#."
+            },
+            {
+              "type": "explain",
+              "title": "Se déplacer avec des vecteurs",
+              "body": "Tout le mouvement de base tient en deux lignes par pas :\n\n- `velocity += acceleration * dt;`\n- `position += velocity * dt;`\n\nLa gravité est une accélération dirigée vers le bas, par exemple (0, −10). Une vitesse de (4, 0) signifie 4 unités par seconde vers la droite ; sa **longueur** √(x² + y²) est la vitesse scalaire.\n\nCe cours utilise **y vers le haut**, comme Unity. Beaucoup d'API d'écran 2D utilisent y vers le bas : vérifie donc toujours dans quel sens compte ton moteur."
+            },
+            {
+              "type": "trace",
+              "id": "q-trace-projectile",
+              "concepts": [
+                "vector",
+                "delta-time"
+              ],
+              "prompt": "Une étincelle est lancée sur le côté et tombe sous l'effet de la gravité. Déroule deux pas d'une demi-seconde et prédis les vecteurs.",
+              "language": "csharp",
+              "code": "var position = new Vector2(0, 0);\nvar velocity = new Vector2(4, 0);\nvar gravity = new Vector2(0, -10);\nfloat dt = 0.5f;\n\nfor (int step = 0; step < 2; step++)\n{\n    velocity += gravity * dt;\n    position += velocity * dt;\n}\nConsole.WriteLine(position);",
+              "frames": [
+                {
+                  "line": 4,
+                  "vars": {
+                    "position": "(0, 0)",
+                    "velocity": "(4, 0)",
+                    "dt": "0.5"
+                  }
+                },
+                {
+                  "line": 8,
+                  "vars": {
+                    "step": "0",
+                    "position": "(0, 0)",
+                    "velocity": "(4, -5)",
+                    "dt": "0.5"
+                  },
+                  "ask": "velocity",
+                  "note": "La gravité modifie d'abord la vitesse..."
+                },
+                {
+                  "line": 9,
+                  "vars": {
+                    "step": "0",
+                    "position": "(2, -2.5)",
+                    "velocity": "(4, -5)",
+                    "dt": "0.5"
+                  },
+                  "ask": "position",
+                  "note": "...puis la nouvelle vitesse déplace la position."
+                },
+                {
+                  "line": 8,
+                  "vars": {
+                    "step": "1",
+                    "position": "(2, -2.5)",
+                    "velocity": "(4, -10)",
+                    "dt": "0.5"
+                  }
+                },
+                {
+                  "line": 9,
+                  "vars": {
+                    "step": "1",
+                    "position": "(4, -7.5)",
+                    "velocity": "(4, -10)",
+                    "dt": "0.5"
+                  },
+                  "ask": "position"
+                },
+                {
+                  "line": 11,
+                  "vars": {
+                    "position": "(4, -7.5)",
+                    "velocity": "(4, -10)",
+                    "dt": "0.5"
+                  },
+                  "out": "(4, -7.5)"
+                }
+              ],
+              "hint": "Les vecteurs s'additionnent composante par composante : (4, 0) + (0, −10) × 0,5 = (4 + 0, 0 − 5).",
+              "explanation": "Pas 1 : gravité × 0,5 = (0, −5), donc la vitesse devient (4, −5) ; puis vitesse × 0,5 = (2, −2.5) déplace l'étincelle en **(2, −2.5)**. Pas 2 : vitesse (4, −10), et la position gagne (2, −5) pour atteindre **(4, −7.5)**. x croît régulièrement tandis que y chute de plus en plus vite à chaque pas : un arc courbe obtenu avec deux lignes de calcul vectoriel."
+            },
+            {
+              "type": "explain",
+              "title": "Les diagonales sont trop rapides",
+              "body": "Les entrées arrivent généralement sous forme de direction : droite vaut (1, 0), haut vaut (0, 1), et droite + haut ensemble donnent (1, 1). Multiplie cela par la vitesse et le renard se déplace **plus vite en diagonale**, car (1, 1) a pour longueur √2 ≈ 1,41.\n\nLa solution est de **normaliser** : divise un vecteur par sa propre longueur pour obtenir un **vecteur unitaire**, de longueur 1, qui pointe dans la même direction. `direction.Normalized * speed` a alors toujours pour longueur `speed`.\n\nUn vecteur nul n'a pas de direction : `Normalized` le renvoie donc inchangé au lieu de diviser par zéro."
+            },
+            {
+              "type": "numeric",
+              "id": "q-diagonal-speed",
+              "concepts": [
+                "normalization"
+              ],
+              "prompt": "Le renard se déplace à la vitesse 5 et Rin multiplie l'entrée brute (1, 1) par 5 sans la normaliser. À quelle vitesse le renard avance-t-il réellement en diagonale ?",
+              "answer": 7.071,
+              "tolerance": 0.01,
+              "unit": "unités/s",
+              "hint": "La vitesse vaut (5, 5). Sa longueur est √(5² + 5²).",
+              "explanation": "La vitesse vaut (5, 5), de longueur √50 ≈ **7,07** : environ 41 % plus vite qu'en ligne droite. Les joueurs le remarquent, et les speedrunners l'exploitent. Normaliser (1, 1) d'abord donne (0.707, 0.707), et × 5 cela a exactement pour longueur 5."
+            },
+            {
+              "type": "bug",
+              "id": "q-diagonal",
+              "concepts": [
+                "normalization"
+              ],
+              "prompt": "Les deux lignes devraient afficher `5` : le renard court à la même vitesse en ligne droite ou en diagonale. Clique sur la ligne qui contient le bug.",
+              "language": "csharp",
+              "code": "Vector2 Velocity(bool left, bool right, bool down, bool up, float speed)\n{\n    var input = new Vector2((right ? 1 : 0) - (left ? 1 : 0), (up ? 1 : 0) - (down ? 1 : 0));\n    return input * speed;\n}\n\nvar straight = Velocity(false, true, false, false, 5);   // right\nvar diagonal = Velocity(false, true, false, true, 5);    // right + up\nConsole.WriteLine(MathF.Round(straight.Length, 2));\nConsole.WriteLine(MathF.Round(diagonal.Length, 2));",
+              "error": "5\n7.07",
+              "lines": [
+                4
+              ],
+              "fixes": [
+                "Remplace la ligne 4 par `return input.Normalized * speed;`",
+                "Remplace la ligne 4 par `return (input * speed).Normalized;`",
+                "Remplace la ligne 4 par `return input * (speed / 1.414f);`"
+              ],
+              "answer": 0,
+              "hint": "Quel vecteur doit avoir une longueur de 1 : la direction d'entrée, ou la vitesse finale ?",
+              "explanation": "Normalise la **direction**, puis multiplie-la par la vitesse. Normaliser *après* la multiplication fait perdre la vitesse : les deux longueurs deviennent 1. Diviser par 1,414 corrige toujours la diagonale mais ralentit le mouvement en ligne droite à environ 3,54."
+            },
+            {
+              "type": "example",
+              "title": "Viser la souris",
+              "problem": "Le renard, en (1, 1), lance une étincelle vers le curseur de la souris en (4, 5). Les étincelles volent à la vitesse 10. Quelle vitesse faut-il donner à l'étincelle ?",
+              "steps": [
+                "Direction = cible − origine = (4 − 1, 5 − 1) = (3, 4).",
+                "Sa longueur est √(3² + 4²) = 5, donc la direction unitaire est (3, 4) ÷ 5 = (0.6, 0.8).",
+                "Vitesse = direction unitaire × vitesse scalaire = (0.6, 0.8) × 10 = (6, 8)."
+              ],
+              "answer": "L'étincelle reçoit la vitesse **(6, 8)** : elle pointe vers le curseur, avec une longueur exactement égale à 10."
+            },
+            {
+              "type": "numeric",
+              "id": "q-aim-velocity",
+              "concepts": [
+                "normalization",
+                "vector"
+              ],
+              "prompt": "Une chauve-souris en (2, 3) plonge sur le renard en (14, −2) à la vitesse **26**. Quelle est la composante **y** de sa vitesse ?",
+              "answer": -10,
+              "hint": "La direction (12, −5) a pour longueur 13. Divise par cette longueur, puis multiplie par 26.",
+              "explanation": "Direction = (14 − 2, −2 − 3) = (12, −5), de longueur √(144 + 25) = 13. La direction unitaire (12/13, −5/13), multipliée par 26, donne **(24, −10)**. La composante y vaut **−10** : vers le bas, car le renard est plus bas que la chauve-souris."
+            }
+          ]
+        },
+        {
+          "id": "facing-and-steering",
+          "title": "Devant, derrière, et se tourner pour poursuivre",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Le produit scalaire de deux directions dit à quel point elles concordent (1 dans le même sens, 0 de côté, −1 en sens opposé), et le guidage fait tourner une vitesse progressivement vers une vitesse voulue.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Le produit scalaire",
+              "body": "`Dot(a, b) = a.X * b.X + a.Y * b.Y`. Pour deux vecteurs **unitaires**, le résultat est le cosinus de l'angle qui les sépare :\n\n- **1** : même direction\n- **0** : angle droit\n- **−1** : directions opposées\n\nSe demander *« le renard est-il devant ce garde ? »* tient donc en une ligne : `Dot(facing, (fox - guard).Normalized) > 0`. Un **champ de vision** est un seuil plus strict : un cône de 90° (45° de chaque côté) exige un produit scalaire d'au moins cos 45° ≈ 0,707.\n\nPour savoir *devant ou derrière*, le signe suffit : tu peux même te passer de normaliser."
+            },
+            {
+              "type": "numeric",
+              "id": "q-dot-value",
+              "concepts": [
+                "dot-product"
+              ],
+              "prompt": "Un garde regarde vers **(0, 1)**. Le renard se trouve au décalage **(3, 4)** par rapport au garde. Que vaut `Dot(facing, offset.Normalized)` ?",
+              "answer": 0.8,
+              "tolerance": 0.001,
+              "hint": "Normalise d'abord (3, 4) : sa longueur est 5.",
+              "explanation": "(3, 4) ÷ 5 = (0.6, 0.8), et Dot((0, 1), (0.6, 0.8)) = 0 × 0,6 + 1 × 0,8 = **0,8**. C'est cos 37° : le renard est devant le garde, à 37° de la ligne qu'il regarde."
+            },
+            {
+              "type": "buckets",
+              "id": "q-in-front",
+              "concepts": [
+                "dot-product"
+              ],
+              "prompt": "Un garde se tient en (0, 0) et regarde vers **(1, 1)**. Pour chaque décalage du renard par rapport au garde, calcule le produit scalaire et classe-le.",
+              "buckets": [
+                "Devant (dot > 0)",
+                "Derrière (dot < 0)",
+                "Exactement sur le côté (dot = 0)"
+              ],
+              "items": [
+                {
+                  "text": "(3, −1)",
+                  "bucket": 0
+                },
+                {
+                  "text": "(0, 5)",
+                  "bucket": 0
+                },
+                {
+                  "text": "(1, 0)",
+                  "bucket": 0
+                },
+                {
+                  "text": "(−2, 1)",
+                  "bucket": 1
+                },
+                {
+                  "text": "(−1, −4)",
+                  "bucket": 1
+                },
+                {
+                  "text": "(−3, 2)",
+                  "bucket": 1
+                },
+                {
+                  "text": "(2, −2)",
+                  "bucket": 2
+                },
+                {
+                  "text": "(4, −4)",
+                  "bucket": 2
+                }
+              ],
+              "hint": "Avec la direction (1, 1), le produit scalaire vaut simplement x + y.",
+              "explanation": "Dot((1, 1), (x, y)) = x + y. (3, −1), (0, 5) et (1, 0) donnent 2, 5 et 1 : devant. (−2, 1), (−1, −4) et (−3, 2) donnent −1, −5 et −1 : derrière. (2, −2) et (4, −4) donnent exactement 0 : ils sont sur la droite qui passe par le garde, à angle droit de son regard. Seul le **signe** comptait, il n'y avait donc pas besoin de normaliser."
+            },
+            {
+              "type": "output",
+              "id": "q-fov",
+              "concepts": [
+                "dot-product"
+              ],
+              "prompt": "`CanSee` renvoie vrai quand le produit scalaire atteint `minDot`. Le garde regarde vers la droite. Qu'est-ce qui s'affiche ?",
+              "language": "csharp",
+              "code": "bool CanSee(Vector2 guard, Vector2 facing, Vector2 target, float minDot)\n{\n    var toTarget = (target - guard).Normalized;\n    return Vector2.Dot(facing, toTarget) >= minDot;\n}\n\nvar guard = new Vector2(0, 0);\nvar facing = new Vector2(1, 0);   // already length 1\nConsole.WriteLine(CanSee(guard, facing, new Vector2(5, 5), 0.5f));\nConsole.WriteLine(CanSee(guard, facing, new Vector2(0, 5), 0.5f));\nConsole.WriteLine(CanSee(guard, facing, new Vector2(-5, 1), -0.5f));",
+              "output": "True\nFalse\nFalse",
+              "hint": "Calcule l'angle jusqu'à chaque cible : 45°, 90°, et presque pile derrière. Compare ensuite les cosinus.",
+              "explanation": "(5, 5) est à 45° de la direction du regard : dot ≈ 0,707 ≥ 0,5, donc **True** (un seuil de 0,5 correspond à un cône de 120°). (0, 5) est à 90° : dot 0 < 0,5, **False**. (−5, 1) est presque exactement derrière : dot ≈ −0,98, ce qui échoue même au seuil très large de −0,5 (un cône de 240°), donc **False**."
+            },
+            {
+              "type": "explain",
+              "title": "Guider au lieu de s'aligner d'un coup",
+              "body": "Un slime qui fixe `velocity = towardFox * maxSpeed` à chaque frame tourne instantanément, comme un robot. Le **guidage** (*steering*) tourne progressivement :\n\n- **voulue** = (cible − position).Normalized × maxSpeed\n- **guidage** = voulue − vitesse\n- vitesse += guidage × turnRate (une fraction, ou une force plafonnée × `dt`)\n\nLa vitesse s'incurve vers la vitesse voulue en plusieurs frames, ce qui donne des poursuites courbes et crédibles. Inverse la direction voulue pour **fuir** ; réduis la vitesse voulue près de la cible pour **arriver** sans la dépasser."
+            },
+            {
+              "type": "example",
+              "title": "Un pas de guidage",
+              "problem": "Un slime en (0, 0) se déplace avec la vitesse (0, 2). Le renard est en (10, 0). La vitesse maximale est 2 et le slime comble la **moitié** de l'écart avec sa vitesse voulue à chaque pas. Quelle est sa nouvelle vitesse ?",
+              "steps": [
+                "Vitesse voulue = (10, 0).Normalized × 2 = (1, 0) × 2 = (2, 0).",
+                "Guidage = voulue − vitesse = (2, 0) − (0, 2) = (2, −2).",
+                "Nouvelle vitesse = (0, 2) + (2, −2) × 0,5 = (1, 1)."
+              ],
+              "answer": "Le slime se déplace maintenant à **(1, 1)** : à mi-chemin entre aller vers le haut et aller vers le renard. Au pas suivant, il s'incurve encore plus vers la droite."
+            },
+            {
+              "type": "numeric",
+              "id": "q-steer-step",
+              "concepts": [
+                "steering",
+                "normalization"
+              ],
+              "prompt": "Une chauve-souris en (2, 2) vole vers la gauche avec la vitesse (−3, 0). Le renard est en (2, 8). La vitesse maximale est 3 et la chauve-souris comble la moitié de l'écart avec sa vitesse voulue à chaque pas. Quelle est la composante **x** de sa nouvelle vitesse ?",
+              "answer": -1.5,
+              "hint": "Le renard est pile au-dessus de la chauve-souris : la vitesse voulue est donc (0, 3).",
+              "explanation": "Voulue = (0, 6).Normalized × 3 = (0, 3). Guidage = (0, 3) − (−3, 0) = (3, 3). Nouvelle vitesse = (−3, 0) + (3, 3) × 0,5 = **(−1.5, 1.5)**. La chauve-souris dérive encore vers la gauche mais amorce déjà un virage vers le haut, en direction du renard."
+            },
+            {
+              "type": "mcq",
+              "id": "q-snap-or-steer",
+              "concepts": [
+                "steering"
+              ],
+              "prompt": "Dario trouve que les slimes qui poursuivent le joueur ont l'air de robots : dès que le renard les dépasse, ils font demi-tour instantanément. Que devrait changer Rin ?",
+              "choices": [
+                "Rapprocher la vitesse de la vitesse voulue d'une fraction à chaque frame, au lieu de la fixer d'un coup",
+                "Normaliser la vitesse deux fois pour que la direction soit plus précise",
+                "Augmenter le frame rate pour que le virage prenne moins de temps",
+                "Vérifier avec un produit scalaire que le renard est devant avant de poursuivre"
+              ],
+              "answer": 0,
+              "hint": "Le problème est la vitesse à laquelle la direction change, pas la direction vers laquelle elle change.",
+              "explanation": "Fixer `velocity = desired` tourne sur place. Se rapprocher de cette valeur par mélange (le guidage) étale le virage sur plusieurs frames, et les slimes décrivent un arc. Normaliser ne change pas la direction, un frame rate plus élevé rend le demi-tour encore plus brusque, et un test de champ de vision décide *s'il faut* poursuivre, pas *comment* tourner."
+            }
+          ]
+        },
+        {
+          "id": "input",
+          "title": "Appuyé, maintenu, relâché",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "« Appuyé à cette frame » signifie enfoncé maintenant et relâché à la frame précédente : garde donc l'état de la frame précédente, et utilise de petits tampons pour que les appuis faits quelques frames trop tôt comptent quand même.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Interroger le clavier",
+              "body": "La plupart des entrées de jeu sont **interrogées** (*polled*) : à chaque frame, tu demandes *« Espace est-il enfoncé en ce moment ? »* L'Input Manager classique d'Unity donne trois réponses :\n\n- `GetKey` : maintenue enfoncée pendant cette frame (avancer tant qu'elle est maintenue)\n- `GetKeyDown` : **appuyée** pendant cette frame (sauter une fois)\n- `GetKeyUp` : **relâchée** pendant cette frame\n\nEn coulisses, *appuyé* est un **front** : enfoncé maintenant **et** pas enfoncé à la frame précédente. Pour le calculer toi-même, mémorise l'état de la frame précédente. Le nouvel Input System d'Unity propose aussi des callbacks qui se déclenchent quand une action est exécutée."
+            },
+            {
+              "type": "trace",
+              "id": "q-trace-edge",
+              "concepts": [
+                "input-edges"
+              ],
+              "prompt": "La touche Espace reste enfoncée pendant deux frames. Déroule la détection de front et prédis les valeurs.",
+              "language": "csharp",
+              "code": "bool[] spaceDown = { false, true, true, false };   // key state on 4 frames\nbool wasDown = false;\nint jumps = 0;\n\nforeach (bool down in spaceDown)\n{\n    bool pressed = down && !wasDown;\n    if (pressed) jumps++;\n    wasDown = down;\n}\nConsole.WriteLine(jumps);",
+              "frames": [
+                {
+                  "line": 3,
+                  "vars": {
+                    "wasDown": "False",
+                    "jumps": "0"
+                  }
+                },
+                {
+                  "line": 7,
+                  "vars": {
+                    "down": "False",
+                    "pressed": "False",
+                    "wasDown": "False",
+                    "jumps": "0"
+                  }
+                },
+                {
+                  "line": 9,
+                  "vars": {
+                    "down": "False",
+                    "pressed": "False",
+                    "wasDown": "False",
+                    "jumps": "0"
+                  }
+                },
+                {
+                  "line": 7,
+                  "vars": {
+                    "down": "True",
+                    "pressed": "True",
+                    "wasDown": "False",
+                    "jumps": "0"
+                  },
+                  "ask": "pressed",
+                  "note": "Enfoncée maintenant, relâchée à la frame précédente : un front."
+                },
+                {
+                  "line": 9,
+                  "vars": {
+                    "down": "True",
+                    "pressed": "True",
+                    "wasDown": "True",
+                    "jumps": "1"
+                  },
+                  "ask": "jumps"
+                },
+                {
+                  "line": 7,
+                  "vars": {
+                    "down": "True",
+                    "pressed": "False",
+                    "wasDown": "True",
+                    "jumps": "1"
+                  },
+                  "ask": "pressed",
+                  "note": "Toujours maintenue : pas de nouvel appui."
+                },
+                {
+                  "line": 9,
+                  "vars": {
+                    "down": "True",
+                    "pressed": "False",
+                    "wasDown": "True",
+                    "jumps": "1"
+                  }
+                },
+                {
+                  "line": 7,
+                  "vars": {
+                    "down": "False",
+                    "pressed": "False",
+                    "wasDown": "True",
+                    "jumps": "1"
+                  }
+                },
+                {
+                  "line": 9,
+                  "vars": {
+                    "down": "False",
+                    "pressed": "False",
+                    "wasDown": "False",
+                    "jumps": "1"
+                  }
+                },
+                {
+                  "line": 11,
+                  "vars": {
+                    "wasDown": "False",
+                    "jumps": "1"
+                  },
+                  "out": "1"
+                }
+              ],
+              "hint": "`pressed` exige que `down` soit vrai et que `wasDown` (la frame précédente) soit faux.",
+              "explanation": "La frame 2 est la seule où la touche est enfoncée **et** était relâchée à la frame précédente : `pressed` vaut donc True une seule fois et `jumps` passe à 1. À la frame 3, la touche est toujours maintenue, mais `wasDown` est maintenant vrai, donc pas de second saut. La frame 4 est un relâchement, pas un appui. Maintenir une touche donne un seul saut, ce que les joueurs attendent."
+            },
+            {
+              "type": "bug",
+              "id": "q-jump-never",
+              "concepts": [
+                "input-edges"
+              ],
+              "prompt": "Le joueur appuie deux fois sur Espace (frames 2 et 6) et devrait obtenir `jumps: 2`. À la place, le renard ne saute jamais. Clique sur la ligne qui contient le bug.",
+              "language": "csharp",
+              "code": "bool[] spaceDown = { false, true, true, true, false, true };\nbool wasDown = false;\nint jumps = 0;\n\nforeach (bool down in spaceDown)\n{\n    wasDown = down;\n    bool pressed = down && !wasDown;\n    if (pressed) jumps++;\n}\nConsole.WriteLine($\"jumps: {jumps}\");",
+              "error": "jumps: 0",
+              "lines": [
+                7
+              ],
+              "fixes": [
+                "Déplace la ligne 7 sous la ligne 9, pour que `wasDown` contienne encore l'état de la frame précédente quand `pressed` est calculé",
+                "Remplace la ligne 8 par `bool pressed = down || !wasDown;`",
+                "Remplace la ligne 8 par `bool pressed = down;`",
+                "Remplace la ligne 2 par `bool wasDown = true;`"
+              ],
+              "answer": 0,
+              "hint": "Quand la ligne 8 s'exécute, que vaut `wasDown` par rapport à `down` ?",
+              "explanation": "La ligne 7 écrase `wasDown` avec l'état de cette frame **avant** que la ligne 8 le lise : `down && !wasDown` revient donc toujours à `down && !down`, soit faux. Mets l'historique à jour **après** l'avoir utilisé. `down || !wasDown` est maintenant toujours vrai (6 sauts), `pressed = down` saute à chaque frame maintenue (4), et commencer avec `wasDown = true` ne change rien."
+            },
+            {
+              "type": "explain",
+              "title": "Des commandes indulgentes",
+              "body": "Les joueurs appuient sur saut quelques frames **avant** d'atterrir et s'attendent à ce que ça marche. Deux petits minuteurs rendent les commandes équitables :\n\n- **Jump buffer** (tampon de saut) : quand on appuie sur saut, fixe `bufferTimer = 0.1f`. Décompte-le avec `dt` ; si le renard atterrit alors qu'il est encore au-dessus de zéro, saute.\n- **Coyote time** : après avoir quitté un rebord en marchant, autorise un saut pendant environ 0,1 s, comme si le renard était encore au sol.\n\nCe ne sont que des nombres décomptés avec `dt`, vérifiés en même temps que l'état du renard."
+            },
+            {
+              "type": "numeric",
+              "id": "q-buffer-frames",
+              "concepts": [
+                "input-edges",
+                "delta-time"
+              ],
+              "prompt": "Le tampon de saut est de **0,1 s** et le jeu tourne à **60 fps**. Jusqu'à combien de frames avant l'atterrissage le joueur peut-il appuyer sur saut et obtenir quand même le saut ?",
+              "answer": 6,
+              "unit": "frames",
+              "hint": "Combien de frames tiennent dans 0,1 s ?",
+              "explanation": "0,1 s × 60 frames par seconde = **6 frames**. Comme le minuteur compte le temps réel avec `dt`, il vaut aussi 0,1 s à 144 fps (environ 14 frames) : la même indulgence en durée sur toutes les machines."
+            },
+            {
+              "type": "order",
+              "id": "q-input-pipeline",
+              "concepts": [
+                "input-edges"
+              ],
+              "prompt": "Remets dans l'ordre le trajet d'un appui sur saut, du doigt jusqu'au renard.",
+              "items": [
+                "Le clavier signale que la touche Espace a été enfoncée",
+                "Le moteur enregistre Espace comme « enfoncée à cette frame »",
+                "Le jeu associe Espace à l'action « Jump », pour que les joueurs puissent la reconfigurer",
+                "Le code du joueur voit que Jump a été appuyée et démarre le tampon de saut",
+                "Le renard est au sol (ou dans le coyote time), donc sa vitesse verticale est fixée vers le haut"
+              ],
+              "hint": "D'abord le matériel, puis le moteur, puis le sens que ton jeu donne à la touche, puis le renard.",
+              "explanation": "Le périphérique signale l'état brut de la touche, le moteur le transforme en états par frame (maintenue, appuyée, relâchée), le jeu associe les touches à des **actions** pour que le même code fonctionne avec une touche reconfigurée ou une manette, et c'est seulement ensuite que la logique propre au joueur décide si ce saut est autorisé maintenant."
+            },
+            {
+              "type": "buckets",
+              "id": "q-poll-or-event",
+              "concepts": [
+                "input-edges"
+              ],
+              "prompt": "Quelles entrées se **lisent** le mieux **à chaque frame** (interrogées), et lesquelles se **traitent** le mieux **au moment où elles se produisent** (un événement ou un appui d'une seule frame) ?",
+              "buckets": [
+                "À lire à chaque frame",
+                "À traiter quand ça se produit"
+              ],
+              "items": [
+                {
+                  "text": "La direction du stick qui déplace le renard",
+                  "bucket": 0
+                },
+                {
+                  "text": "La position de la souris pour viser avec la lanterne",
+                  "bucket": 0
+                },
+                {
+                  "text": "L'enfoncement de la gâchette, pour la vitesse de course",
+                  "bucket": 0
+                },
+                {
+                  "text": "Le bouton pause",
+                  "bucket": 1
+                },
+                {
+                  "text": "Une lettre tapée dans le champ du nom de sauvegarde",
+                  "bucket": 1
+                },
+                {
+                  "text": "La manette qui est débranchée",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Est-ce une valeur qui compte à chaque frame, ou un moment qui ne compte qu'une fois ?",
+              "explanation": "Les valeurs continues (direction du stick, position de visée, pression de la gâchette) comptent à chaque frame : lis-les donc à chaque frame. Les moments ponctuels (un appui sur pause, une lettre tapée, une déconnexion) doivent être traités une seule fois quand ils se produisent ; les interroger risque de manquer un appui bref ou de le traiter deux fois."
+            }
+          ]
+        },
+        {
+          "id": "collisions",
+          "title": "Ces deux-là se touchent-ils ?",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Deux boîtes alignées sur les axes se chevauchent seulement si elles se chevauchent sur x et sur y ; deux cercles se chevauchent quand la distance entre les centres est inférieure à la somme des rayons.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Les boîtes",
+              "body": "Le collider le plus simple est une **AABB**, une *boîte englobante alignée sur les axes* : un rectangle qui ne tourne jamais, stocké par ses coins min et max. Deux AABB se chevauchent seulement si elles se chevauchent **sur les deux axes** :\n\n```csharp\nbool Overlaps(Box a, Box b) =>\n    a.MinX < b.MaxX && a.MaxX > b.MinX &&   // overlap on x\n    a.MinY < b.MaxY && a.MaxY > b.MinY;     // and on y\n\nvar fox = new Box(0, 0, 1, 1);\nConsole.WriteLine(Overlaps(fox, new Box(0.5f, 0.5f, 2, 2)));   // True\nConsole.WriteLine(Overlaps(fox, new Box(1, 0, 2, 1)));         // False: edges only touch\n\nrecord struct Box(float MinX, float MinY, float MaxX, float MaxY);\n```\n\nIl affiche `True` puis `False`. Les `<` et `>` stricts signifient que deux boîtes dont les bords ne font que se toucher ne comptent pas, ce qui permet au renard de se tenir *sur* une plateforme sans être « dedans »."
+            },
+            {
+              "type": "buckets",
+              "id": "q-aabb-cases",
+              "concepts": [
+                "aabb"
+              ],
+              "prompt": "Classe chaque paire de boîtes A et B. Les bords qui ne font que se toucher ne comptent pas comme un chevauchement.",
+              "buckets": [
+                "Chevauchement",
+                "Pas de chevauchement"
+              ],
+              "items": [
+                {
+                  "text": "A : x de 0 à 4, y de 0 à 2 | B : x de 3 à 6, y de 1 à 5",
+                  "bucket": 0
+                },
+                {
+                  "text": "A : x de 0 à 4, y de 0 à 2 | B : x de 4 à 6, y de 0 à 2",
+                  "bucket": 1
+                },
+                {
+                  "text": "A : x de 0 à 4, y de 0 à 2 | B : x de 1 à 3, y de 3 à 5",
+                  "bucket": 1
+                },
+                {
+                  "text": "A : x de 0 à 10, y de 0 à 10 | B : x de 2 à 3, y de 2 à 3",
+                  "bucket": 0
+                },
+                {
+                  "text": "A : x de 0 à 2, y de 0 à 8 | B : x de −3 à 1, y de 6 à 7",
+                  "bucket": 0
+                },
+                {
+                  "text": "A : x de 0 à 2, y de 0 à 2 | B : x de 3 à 5, y de 3 à 5",
+                  "bucket": 1
+                },
+                {
+                  "text": "A : x de 0 à 6, y de 0 à 1 | B : x de 5 à 7, y de −2 à 0,5",
+                  "bucket": 0
+                },
+                {
+                  "text": "A : x de 0 à 3, y de 0 à 3 | B : x de 1 à 2, y de 3 à 4",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Vérifie d'abord x : les intervalles se chevauchent-ils ? Puis y. Il faut les deux.",
+              "explanation": "Il faut que les deux intervalles se chevauchent. La première paire partage x de 3 à 4 et y de 1 à 2. La deuxième ne fait que se toucher en x = 4. La troisième se chevauche sur x mais pas sur y. Une petite boîte entièrement à l'intérieur d'une grande la chevauche. La cinquième partage x de 0 à 1 et y de 6 à 7, et la septième partage x de 5 à 6 et y de 0 à 0,5. La sixième est séparée sur les deux axes, et la dernière ne fait que se toucher le long de y = 3."
+            },
+            {
+              "type": "bug",
+              "id": "q-aabb-or",
+              "concepts": [
+                "aabb"
+              ],
+              "prompt": "La branche est bien au-dessus du renard : cela devrait donc afficher `False`. Clique sur la ligne qui contient le bug.",
+              "language": "csharp",
+              "code": "bool Overlaps(Box a, Box b) =>\n    a.MinX < b.MaxX && a.MaxX > b.MinX ||\n    a.MinY < b.MaxY && a.MaxY > b.MinY;\n\nvar fox = new Box(0, 0, 1, 1);\nvar branch = new Box(0.5f, 5, 2, 6);   // high above the fox\nConsole.WriteLine(Overlaps(fox, branch));\n\nrecord struct Box(float MinX, float MinY, float MaxX, float MaxY);",
+              "error": "True",
+              "lines": [
+                2
+              ],
+              "fixes": [
+                "Remplace le `||` en fin de ligne 2 par `&&`",
+                "Mets des parenthèses autour de chaque test d'axe aux lignes 2 et 3",
+                "Modifie la ligne 2 pour utiliser `<=` et `>=`, afin que les bords qui se touchent comptent aussi",
+                "Échange les lignes 2 et 3, pour que le test sur y vienne en premier"
+              ],
+              "answer": 0,
+              "hint": "Le renard et la branche se chevauchent sur x. Un chevauchement sur un seul axe devrait-il suffire ?",
+              "explanation": "Avec `||`, un chevauchement sur **l'un ou l'autre** des axes suffit, et le renard chevauche la branche sur x (de 0 à 1 contre de 0,5 à 2) : le test répond donc True alors qu'ils sont distants de 4 unités à la verticale. Être séparé sur un seul axe suffit à exclure la collision, donc les axes doivent être reliés par `&&`. Les parenthèses ne font que rendre le `||` explicite, `<=` l'assouplit encore, et échanger l'ordre ne change rien."
+            },
+            {
+              "type": "explain",
+              "title": "Les cercles",
+              "body": "Les objets ronds, et les personnages, sont souvent des **cercles** : un centre et un rayon. Deux cercles se chevauchent quand la distance entre leurs centres est inférieure à la somme de leurs rayons.\n\nCalculer une distance demande une racine carrée, plus lente que tout le reste ici. Compare plutôt les valeurs **au carré** : `Dot(d, d) < (ra + rb) * (ra + rb)`, où `d` est le vecteur entre les centres. Les deux côtés sont positifs ou nuls, donc la comparaison donne la même réponse.\n\nLes cercles ont un bonus : faire tourner un cercle ne le change pas."
+            },
+            {
+              "type": "output",
+              "id": "q-circles",
+              "concepts": [
+                "circle-collision"
+              ],
+              "prompt": "`Touch` compare la distance au carré au carré de la somme des rayons. Qu'est-ce qui s'affiche ?",
+              "language": "csharp",
+              "code": "bool Touch(Vector2 a, float ra, Vector2 b, float rb)\n{\n    var d = b - a;\n    return Vector2.Dot(d, d) < (ra + rb) * (ra + rb);   // squared distance vs squared radii\n}\n\nConsole.WriteLine(Touch(new(0, 0), 1, new(3, 0), 1.5f));\nConsole.WriteLine(Touch(new(0, 0), 1, new(3, 4), 4.5f));\nConsole.WriteLine(Touch(new(0, 0), 2, new(3, 4), 3));",
+              "output": "False\nTrue\nFalse",
+              "hint": "Les distances sont 3, 5 et 5. Compare chacune à la somme des deux rayons.",
+              "explanation": "Premier cas : distance 3, rayons 1 + 1,5 = 2,5, donc 9 < 6,25 est **False**. Deuxième : distance 5, rayons 1 + 4,5 = 5,5, et 25 < 30,25 est **True**. Troisième : distance 5, rayons 2 + 3 = 5, et 25 < 25 est **False** : les cercles se touchent en un seul point, ce que ce test strict ne compte pas comme un chevauchement."
+            },
+            {
+              "type": "numeric",
+              "id": "q-circle-gap",
+              "concepts": [
+                "circle-collision"
+              ],
+              "prompt": "Une étincelle en (1, 2) a un rayon de 2. Un slime en (7, 10) a un rayon de 3. Quel est l'**écart** entre leurs bords ?",
+              "answer": 5,
+              "unit": "unités",
+              "hint": "Trouve la distance entre les centres, puis soustrais les deux rayons.",
+              "explanation": "Les centres diffèrent de (6, 8) : ils sont donc distants de √(36 + 64) = 10. Les rayons en couvrent 2 + 3 = 5, ce qui laisse un écart de **5**. Un résultat négatif signifierait qu'ils se chevauchent d'autant."
+            },
+            {
+              "type": "mcq",
+              "id": "q-shape-choice",
+              "concepts": [
+                "circle-collision",
+                "aabb"
+              ],
+              "prompt": "Dario ajoute un rocher qui roule et tourne en descendant une colline. Quel collider reste correct pendant qu'il tourne, sans travail supplémentaire ?",
+              "choices": [
+                "Un cercle, car faire tourner un cercle le laisse inchangé",
+                "Une AABB de la taille du sprite du rocher",
+                "Une AABB recalculée seulement quand le rocher s'arrête",
+                "Aucun collider : comparer chaque frame les pixels du sprite avec ceux du renard"
+              ],
+              "answer": 0,
+              "hint": "Quelle forme est identique sous tous les angles ?",
+              "explanation": "Un cercle est identique sous tous les angles : tourner ne l'invalide donc jamais, et le test reste deux multiplications et une comparaison. Une AABB ne peut pas tourner, donc une boîte qui tourne dépasserait ou laisserait des vides. Les tests au pixel près sont bien trop lents pour être exécutés à chaque frame pour chaque paire. Les AABB restent idéales pour les tuiles, les murs et les plateformes qui ne tournent jamais."
+            }
+          ]
+        },
+        {
+          "id": "collision-response",
+          "title": "Repousser, et traverser",
+          "pareto": "extra",
+          "minutes": 8,
+          "takeaway": "Résous un chevauchement en repoussant selon l'axe du plus petit chevauchement, et balaie toute la trajectoire des objets rapides pour qu'ils ne traversent pas les murs fins.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Détecter n'est pas résoudre",
+              "body": "Détecter un chevauchement dit que le renard est *dans* le mur. La **résolution** le remet à l'extérieur.\n\nPour deux AABB, mesure le chevauchement sur chaque axe : `min(maxes) − max(mins)`. Repousse ensuite l'objet mobile le long de l'axe au **plus petit** chevauchement, vers son propre côté. C'est le chemin de sortie le plus court, souvent appelé la *translation minimale*. Enfin, annule la vitesse sur cet axe : repoussé vers le haut hors du sol, cela veut dire *atterri*.\n\nRepousser selon le plus grand chevauchement téléporterait le renard de l'autre côté du mur."
+            },
+            {
+              "type": "example",
+              "title": "Dans le mur",
+              "problem": "Le renard occupe x de 0 à 2, y de 0 à 2. Un mur occupe x de 1,5 à 5, y de −1 à 3. Comment faut-il repousser le renard ?",
+              "steps": [
+                "Chevauchement sur x = min(2, 5) − max(0, 1,5) = 2 − 1,5 = 0,5.",
+                "Chevauchement sur y = min(2, 3) − max(0, −1) = 2 − 0 = 2.",
+                "Le chevauchement sur x est le plus petit : on repousse donc selon x. Le centre du renard (x = 1) est à gauche de celui du mur (x = 3,25), on le repousse donc vers la gauche."
+              ],
+              "answer": "Déplace le renard de **0,5 unité vers la gauche**, de retour à x de −0,5 à 1,5, et annule sa vitesse horizontale."
+            },
+            {
+              "type": "numeric",
+              "id": "q-push-out",
+              "concepts": [
+                "collision-resolution"
+              ],
+              "prompt": "En chute rapide, le renard occupe maintenant x de 4 à 6, y de 3 à 5, et une plateforme occupe x de 0 à 10, y de 0 à 3,25. De combien d'unités faut-il repousser le renard ?",
+              "answer": 0.25,
+              "tolerance": 0.001,
+              "unit": "unités",
+              "hint": "Calcule les deux chevauchements et prends le plus petit.",
+              "explanation": "Chevauchement sur x = min(6, 10) − max(4, 0) = 2. Chevauchement sur y = min(5, 3,25) − max(3, 0) = **0,25**, le plus petit. Le centre du renard est au-dessus de celui de la plateforme : il est donc repoussé **vers le haut** de 0,25 et atterrit dessus, avec sa vitesse verticale remise à 0."
+            },
+            {
+              "type": "output",
+              "id": "q-resolve",
+              "concepts": [
+                "collision-resolution"
+              ],
+              "prompt": "`PushOut` renvoie de combien déplacer l'objet mobile pour le sortir du mur. Qu'est-ce qui s'affiche ?",
+              "language": "csharp",
+              "code": "Vector2 PushOut(Box mover, Box wall)\n{\n    float overlapX = MathF.Min(mover.MaxX, wall.MaxX) - MathF.Max(mover.MinX, wall.MinX);\n    float overlapY = MathF.Min(mover.MaxY, wall.MaxY) - MathF.Max(mover.MinY, wall.MinY);\n    if (overlapX <= 0 || overlapY <= 0) return new Vector2(0, 0);   // not touching\n\n    bool moverIsLeft = mover.MinX + mover.MaxX < wall.MinX + wall.MaxX;\n    bool moverIsBelow = mover.MinY + mover.MaxY < wall.MinY + wall.MaxY;\n    if (overlapX < overlapY) return new Vector2(moverIsLeft ? -overlapX : overlapX, 0);\n    return new Vector2(0, moverIsBelow ? -overlapY : overlapY);\n}\n\nConsole.WriteLine(PushOut(new Box(6, 1, 8, 3), new Box(2, 0, 6.75f, 6)));\nConsole.WriteLine(PushOut(new Box(1, -1, 3, 1), new Box(0, 0.5f, 10, 4)));\n\nrecord struct Box(float MinX, float MinY, float MaxX, float MaxY);",
+              "output": "(0.75, 0)\n(0, -0.5)",
+              "hint": "Pour chaque paire, calcule le chevauchement sur x et sur y, prends le plus petit, puis déduis le signe du côté où se trouve l'objet mobile.",
+              "explanation": "Première paire : chevauchement x = min(8, 6,75) − max(6, 2) = 0,75, chevauchement y = min(3, 6) − max(1, 0) = 2. On repousse selon x ; le centre de l'objet mobile (7) est à droite de celui du mur (4,375), on le repousse donc **vers la droite** : (0.75, 0). Seconde paire : chevauchement x = 2, chevauchement y = min(1, 4) − max(−1, 0,5) = 0,5. On repousse selon y ; l'objet mobile est en dessous, on le repousse donc **vers le bas** : (0, -0.5), le renard se cogne la tête contre un rebord."
+            },
+            {
+              "type": "explain",
+              "title": "L'effet tunnel",
+              "body": "Les tests de collision s'exécutent à des instants discrets. Si un objet avance plus loin en un pas que l'épaisseur d'un mur, il peut se trouver devant le mur à un pas et derrière au suivant, et **aucun test ne voit jamais de chevauchement**. C'est l'**effet tunnel** (*tunnelling*).\n\nLes balles rapides, les dashs, les murs fins et les gros `dt` le rendent tous plus probable. Les remèdes :\n\n- **Balayer** : tester tout le trajet de l'ancienne position à la nouvelle (un raycast ou une forme balayée). Le mode de collision *Continuous* du Rigidbody d'Unity fait cela.\n- **Sous-pas** : découper un grand déplacement en plusieurs petits.\n- Des colliders plus épais ou un plafond de vitesse."
+            },
+            {
+              "type": "numeric",
+              "id": "q-tunnel-speed",
+              "concepts": [
+                "tunnelling"
+              ],
+              "prompt": "Un mur fait **0,2** unité d'épaisseur et la physique avance toutes les **0,02 s**. Au-dessus de quelle vitesse, en unités par seconde, une minuscule balle peut-elle sauter par-dessus le mur en un seul pas ?",
+              "answer": 10,
+              "unit": "unités/s",
+              "hint": "La balle passe à travers quand sa distance par pas dépasse l'épaisseur du mur.",
+              "explanation": "Distance par pas = vitesse × 0,02. Elle dépasse 0,2 quand vitesse > 0,2 ÷ 0,02 = **10 unités/s**. C'est lent pour une balle, ce qui explique pourquoi les balles sont généralement des raycasts ou utilisent la détection continue des collisions plutôt que de simples tests de chevauchement."
+            },
+            {
+              "type": "bug",
+              "id": "q-tunnel",
+              "concepts": [
+                "tunnelling"
+              ],
+              "prompt": "La balle avance de 2 unités par frame vers un mur qui va de x 9,2 à 9,8. Elle devrait afficher `hit on frame 5`, mais elle affiche `missed`. Clique sur la ligne qui contient le bug.",
+              "language": "csharp",
+              "code": "float wallMin = 9.2f, wallMax = 9.8f;           // a thin wall\nfloat x = 0, speed = 120, dt = 1f / 60;          // 2 units per frame\nint frame = 0;\nbool hit = false;\n\nwhile (frame < 10 && !hit)\n{\n    frame++;\n    x += speed * dt;\n    hit = x >= wallMin && x <= wallMax;\n}\nConsole.WriteLine(hit ? $\"hit on frame {frame}\" : \"missed\");",
+              "error": "missed",
+              "lines": [
+                10
+              ],
+              "fixes": [
+                "Remplace la ligne 10 par `hit = x - speed * dt <= wallMax && x >= wallMin;`, pour tester toute la portion parcourue pendant cette frame",
+                "Remplace la ligne 2 par `speed = 240`, pour que la balle atteigne le mur plus tôt",
+                "Remplace la ligne 6 pour aller jusqu'à 20 frames : `while (frame < 20 && !hit)`",
+                "Remplace la ligne 10 par `hit = x >= wallMin || x <= wallMax;`"
+              ],
+              "answer": 0,
+              "hint": "Liste les positions que voit le test : 2, 4, 6, 8, 10... L'une d'elles est-elle dans le mur ?",
+              "explanation": "Le test ne regarde que l'endroit où la balle **se trouve** : 8 est avant le mur et 10 est au-delà, donc il ne voit jamais de chevauchement. Tester le segment depuis la position précédente (`x - speed * dt`) jusqu'à la nouvelle attrape le mur à la frame 5. Plus de vitesse la fait sauter davantage, plus de frames la laissent juste voler plus loin, et `||` est vrai pour toutes les positions, ce qui signale un impact dès la frame 1."
+            },
+            {
+              "type": "mcq",
+              "id": "q-tunnel-fix",
+              "concepts": [
+                "tunnelling"
+              ],
+              "prompt": "Le dash du renard avance de 3 tuiles en une seule frame, et passe parfois droit à travers des murs d'une tuile. Quelle solution s'attaque à la cause ?",
+              "choices": [
+                "Tester tout le trajet du dash, avec un raycast ou en le découpant en pas plus petits qu'une tuile",
+                "Relever le plafond de frame rate, pour que les frames soient plus courtes",
+                "Faire paraître les sprites de mur plus épais",
+                "Vérifier les collisions deux fois par frame à la position finale"
+              ],
+              "answer": 0,
+              "hint": "Le problème, c'est ce qui se passe entre le début et la fin du dash.",
+              "explanation": "Le dash couvre en un pas plus de distance que l'épaisseur d'un mur : seul le trajet entre les deux positions peut révéler le mur, avec un raycast ou un balayage, ou des sous-pas plus petits qu'une tuile. Le dash avance de 3 tuiles en une frame même si la frame est très courte, un sprite ne change pas le collider, et tester deux fois la même position finale revient à voir la même chose."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "structure-and-feel",
+      "title": "Structure et ressenti",
+      "description": "Construis les objets à partir de composants, donne-leur des états explicites, fais-les apparaître sans saccade, et rends les mouvements agréables.",
+      "lessons": [
+        {
+          "id": "components",
+          "title": "Construire avec des composants, pas des arbres généalogiques",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Construis un objet de jeu à partir de petits composants qui ont chacun une seule tâche, plutôt qu'un arbre de classes profond, et garde l'état propre à chaque objet dans des champs d'instance.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Le piège de l'arbre généalogique",
+              "body": "Rin commence par l'héritage : `Enemy`, puis `FlyingEnemy` et `ShootingEnemy`. Puis Dario veut une chauve-souris qui vole **et** tire, une tourelle qui tire mais ne bouge jamais, et un slime qui saute et se divise. Chaque nouveau mélange demande une nouvelle classe, et le code partagé finit copié ou poussé dans une classe de base obèse.\n\nLa réponse d'Unity est la **composition**. Un `GameObject` est un conteneur vide ; ce qu'il *fait* vient des **composants** qui lui sont attachés : un `Transform` pour la position, un `SpriteRenderer` pour dessiner, un `Rigidbody2D` pour la physique, et tes propres scripts dérivés de `MonoBehaviour`. Une chauve-souris tireuse est simplement un objet avec un composant de vol et un composant de tir."
+            },
+            {
+              "type": "mcq",
+              "id": "q-diamond",
+              "concepts": [
+                "components"
+              ],
+              "prompt": "Avec des classes `FlyingEnemy` et `ShootingEnemy` qui étendent toutes deux `Enemy`, Dario demande une chauve-souris qui vole **et** tire. Quel est le vrai problème ?",
+              "choices": [
+                "Une classe C# ne peut étendre qu'une seule classe : la chauve-souris doit donc copier l'un des deux comportements, ou il faut réorganiser l'arbre",
+                "C# ne permet pas plus de deux niveaux d'héritage",
+                "La chauve-souris serait plus lente, car les appels virtuels à travers un arbre sont coûteux",
+                "Rien : `class Bat : FlyingEnemy, ShootingEnemy` fonctionne très bien"
+              ],
+              "answer": 0,
+              "hint": "Combien de classes de base une classe C# peut-elle avoir ?",
+              "explanation": "C#, comme Java, n'autorise qu'une seule classe de base (les interfaces ne peuvent pas contenir les champs dont a besoin un comportement partagé). Mélanger deux branches de l'arbre revient donc à dupliquer du code ou à inventer `FlyingShootingEnemy`, et l'arbre grandit à chaque combinaison. Avec des composants, la chauve-souris reçoit simplement un `Flyer` et un `Shooter`."
+            },
+            {
+              "type": "explain",
+              "title": "Un minuscule système de composants",
+              "body": "Voici une version minimale du modèle d'Unity, utilisée dans les extraits suivants. À chaque frame, le jeu appelle `Update(dt)` sur chaque objet, qui l'appelle sur chacun de ses composants :\n\n```csharp\npublic abstract class Component\n{\n    public GameObject Owner { get; set; } = null!;\n    public virtual void Update(float dt) { }\n}\n\npublic class GameObject\n{\n    readonly List<Component> components = new();\n    public string Name { get; }\n    public Vector2 Position { get; set; }\n\n    public GameObject(string name) => Name = name;\n\n    public T Add<T>(T component) where T : Component\n    {\n        component.Owner = this;\n        components.Add(component);\n        return component;\n    }\n\n    public T? Get<T>() where T : Component => components.OfType<T>().FirstOrDefault();\n\n    public void Update(float dt)\n    {\n        foreach (var c in components) c.Update(dt);\n    }\n}\n```\n\nDans Unity, la position vit dans un composant `Transform` et `GetComponent<T>()` joue le rôle de `Get<T>()`."
+            },
+            {
+              "type": "output",
+              "id": "q-components-run",
+              "concepts": [
+                "components"
+              ],
+              "prompt": "Un slime reçoit deux composants : l'un le déplace, l'autre le fait sauter chaque seconde. Après trois frames d'une demi-seconde, qu'est-ce qui s'affiche ?",
+              "language": "csharp",
+              "code": "var slime = new GameObject(\"slime\");\nslime.Add(new Mover { Velocity = new Vector2(2, 0) });\nslime.Add(new Hopper());\n\nfor (int frame = 0; frame < 3; frame++) slime.Update(0.5f);\nConsole.WriteLine(slime.Position);\n\nclass Mover : Component\n{\n    public Vector2 Velocity;\n    public override void Update(float dt) => Owner.Position += Velocity * dt;\n}\n\nclass Hopper : Component\n{\n    float timer;\n    public override void Update(float dt)\n    {\n        timer += dt;\n        if (timer >= 1) { timer = 0; Owner.Position += new Vector2(0, 3); }\n    }\n}",
+              "output": "(3, 3)",
+              "hint": "Chaque frame exécute `Mover` puis `Hopper`. Suis x et le minuteur de saut séparément.",
+              "explanation": "`Mover` ajoute (2, 0) × 0,5 = (1, 0) par frame : trois frames donnent x = 3. `Hopper` ajoute 0,5 s par frame ; à la deuxième frame son minuteur atteint 1, donc le slime saute de 3 vers le haut une fois et le minuteur est remis à zéro. Position finale **(3, 3)**. Aucun des deux composants ne sait que l'autre existe ; tous deux modifient simplement la position de leur propriétaire."
+            },
+            {
+              "type": "bug",
+              "id": "q-static-timer",
+              "concepts": [
+                "components"
+              ],
+              "prompt": "Deux slimes ont chacun leur propre `Hopper`. Après 1 seconde, chacun devrait avoir sauté une fois : `A hopped 1, B hopped 1`. Clique sur la ligne qui contient le bug.",
+              "language": "csharp",
+              "code": "var a = new GameObject(\"slime A\");\nvar b = new GameObject(\"slime B\");\nvar hopA = a.Add(new Hopper());\nvar hopB = b.Add(new Hopper());\n\nfor (int frame = 0; frame < 2; frame++)\n{\n    a.Update(0.5f);\n    b.Update(0.5f);\n}\nConsole.WriteLine($\"A hopped {hopA.Hops}, B hopped {hopB.Hops}\");\n\nclass Hopper : Component\n{\n    static float timer;\n    public int Hops;\n\n    public override void Update(float dt)\n    {\n        timer += dt;\n        if (timer >= 1) { timer = 0; Hops++; }\n    }\n}",
+              "error": "A hopped 0, B hopped 2",
+              "lines": [
+                15
+              ],
+              "fixes": [
+                "Remplace la ligne 15 par `float timer;`, pour que chaque Hopper ait son propre minuteur",
+                "Échange les lignes 8 et 9, pour que le slime A se mette à jour après le slime B",
+                "Remplace la ligne 20 par `timer += dt / 2;`, puisque deux slimes y ajoutent",
+                "Modifie la ligne 21 pour sauter quand `timer >= 2`"
+              ],
+              "answer": 0,
+              "hint": "Combien de variables `timer` existe-t-il quand il y a deux objets `Hopper` ?",
+              "explanation": "Un champ `static` appartient à la **classe**, pas à chaque objet : les deux Hoppers ajoutent donc à un seul minuteur partagé. Il atteint 1 à chaque deuxième mise à jour, qui est toujours celle du slime B : A fait 0 saut et B en fait 2. Retirer `static` donne à chaque composant son propre minuteur. Inverser l'ordre donne simplement les deux sauts à A, et diviser l'incrément par deux ou doubler le seuil laisse toujours un seul minuteur partagé entre les deux."
+            },
+            {
+              "type": "explain",
+              "title": "Des composants qui se parlent",
+              "body": "Les composants d'un même objet se retrouvent avec `Get<T>()` (le `GetComponent<T>()` d'Unity). La recherche parcourt la liste : fais-la donc une fois au démarrage de l'objet et garde la référence, plutôt qu'à chaque frame.\n\nD'un objet à l'autre, préfère les **événements** : `Health` déclenche `Died`, et le score, le son et le spawner s'y abonnent. Health n'a jamais besoin de savoir qu'ils existent, donc ajouter une nouvelle réaction ne demande jamais de modifier `Health`.\n\nChaque composant doit avoir **une seule tâche** : ce qui change pour la même raison vit ensemble."
+            },
+            {
+              "type": "buckets",
+              "id": "q-which-component",
+              "concepts": [
+                "components"
+              ],
+              "prompt": "Rin découpe en composants la classe de 600 lignes du renard. Place chaque morceau là où il doit aller.",
+              "buckets": [
+                "Health",
+                "Mover",
+                "SpriteView"
+              ],
+              "items": [
+                {
+                  "text": "Les points de vie actuels et maximum",
+                  "bucket": 0
+                },
+                {
+                  "text": "La méthode `Damage(int amount)`",
+                  "bucket": 0
+                },
+                {
+                  "text": "L'événement `Died`",
+                  "bucket": 0
+                },
+                {
+                  "text": "La vitesse et la vitesse maximale",
+                  "bucket": 1
+                },
+                {
+                  "text": "Appliquer vitesse × dt à la position",
+                  "bucket": 1
+                },
+                {
+                  "text": "Quelle image dessiner",
+                  "bucket": 2
+                },
+                {
+                  "text": "Le flash rouge affiché quand le renard est touché",
+                  "bucket": 2
+                },
+                {
+                  "text": "La couche de dessin, pour que le renard apparaisse devant l'herbe",
+                  "bucket": 2
+                }
+              ],
+              "hint": "Demande-toi de quoi parle chaque morceau : rester en vie, bouger, ou avoir une certaine apparence.",
+              "explanation": "**Health** gère les points de vie, les dégâts et l'annonce de la mort. **Mover** gère la vitesse et le déplacement. **SpriteView** gère tout ce qui touche à l'apparence, y compris le flash de blessure, qu'il peut afficher en s'abonnant à un événement de santé. Chaque composant change désormais pour une seule raison, et le même `Health` peut aller sur des slimes, des caisses et le boss."
+            }
+          ]
+        },
+        {
+          "id": "state-machines",
+          "title": "Des machines à états pour joueurs et ennemis",
+          "pareto": "core",
+          "minutes": 9,
+          "takeaway": "Donne à chaque personnage un unique état courant explicite, comme Patrol, Chase ou Attack, et laisse seules les transitions listées le modifier.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Les booléens engendrent des bugs",
+              "body": "Le renard de Rin a `isJumping`, `isDashing`, `isAttacking` et `isDead`. Bientôt, il peut foncer alors qu'il est mort et attaquer en plein saut de façons que personne n'a prévues, et chaque nouvelle fonctionnalité vérifie cinq drapeaux.\n\nUne **machine à états finis** remplace les drapeaux par **un seul** état courant pris dans une liste fixe, généralement un `enum`. Chaque état a son propre comportement, et seules des **transitions** précises font passer d'un état à l'autre : Grounded → Jumping quand on appuie sur saut, Jumping → Falling quand la vitesse vers le haut s'épuise, Falling → Grounded à l'atterrissage.\n\nLes ennemis aussi. Un slime patrouille, poursuit le renard quand celui-ci passe à moins de 5 tuiles, attaque à moins de 1, et abandonne quand le renard est à plus de 7."
+            },
+            {
+              "type": "trace",
+              "id": "q-trace-fsm",
+              "concepts": [
+                "state-machine"
+              ],
+              "prompt": "La machine à états du slime écrite comme une expression `switch` C# : la première branche dont l'état et la condition `when` correspondent décide du prochain état, et `_` conserve l'état courant. Prédis l'état après chaque frame.",
+              "language": "csharp",
+              "code": "float[] distances = { 8, 4, 0.5f, 3, 9 };   // player distance on 5 frames\nvar state = State.Patrol;\n\nforeach (float d in distances)\n{\n    state = state switch\n    {\n        State.Patrol when d < 5 => State.Chase,\n        State.Chase when d < 1 => State.Attack,\n        State.Chase when d > 7 => State.Patrol,\n        State.Attack when d >= 1 => State.Chase,\n        _ => state,\n    };\n}\nConsole.WriteLine(state);\n\nenum State { Patrol, Chase, Attack }",
+              "frames": [
+                {
+                  "line": 2,
+                  "vars": {
+                    "state": "Patrol"
+                  }
+                },
+                {
+                  "line": 6,
+                  "vars": {
+                    "d": "8",
+                    "state": "Patrol"
+                  },
+                  "note": "Trop loin : la seule branche de Patrol exige d < 5, donc `_` conserve l'état."
+                },
+                {
+                  "line": 6,
+                  "vars": {
+                    "d": "4",
+                    "state": "Chase"
+                  },
+                  "ask": "state"
+                },
+                {
+                  "line": 6,
+                  "vars": {
+                    "d": "0.5",
+                    "state": "Attack"
+                  },
+                  "ask": "state"
+                },
+                {
+                  "line": 6,
+                  "vars": {
+                    "d": "3",
+                    "state": "Chase"
+                  }
+                },
+                {
+                  "line": 6,
+                  "vars": {
+                    "d": "9",
+                    "state": "Patrol"
+                  },
+                  "ask": "state"
+                },
+                {
+                  "line": 15,
+                  "vars": {
+                    "state": "Patrol"
+                  },
+                  "out": "Patrol"
+                }
+              ],
+              "hint": "Seules les branches de l'état **courant** peuvent se déclencher. En Chase, le renard doit être plus proche que 1 pour attaquer, ou plus loin que 7 pour que le slime abandonne.",
+              "explanation": "À 8, le slime continue de patrouiller. À 4 (< 5), il commence à poursuivre. À 0,5 (< 1), il attaque. À 3, le renard a reculé (≥ 1), donc il poursuit de nouveau. À 9 (> 7), il abandonne et patrouille : le programme affiche `Patrol`. Chaque changement suit une transition listée, et un slime ne peut jamais poursuivre et patrouiller en même temps."
+            },
+            {
+              "type": "explain",
+              "title": "Un seul état à la fois",
+              "body": "À chaque frame, la mise à jour accomplit la tâche de l'état courant, puis vérifie les transitions de cet état :\n\n- **Patrol** : marcher entre des points de passage ; si le renard est proche, passer en Chase.\n- **Chase** : se guider vers le renard ; s'il est très proche, passer en Attack ; s'il est loin, repasser en Patrol.\n- **Attack** : jouer la morsure ; quand elle se termine, repasser en Chase.\n\nBeaucoup de machines exécutent aussi des actions d'**entrée** et de **sortie** lors d'une transition : lancer l'animation de poursuite, réinitialiser le minuteur d'attaque. L'Animator d'Unity est une machine à états visuelle pour les animations, bâtie sur la même idée."
+            },
+            {
+              "type": "bug",
+              "id": "q-double-jump",
+              "concepts": [
+                "state-machine"
+              ],
+              "prompt": "Le second appui se produit en plein saut et ne devrait rien faire : cela devrait donc afficher `Jumping, jumps: 1`. Clique sur la ligne qui contient le bug.",
+              "language": "csharp",
+              "code": "var player = new Player();\nplayer.Press(\"jump\");   // on the ground: should jump\nplayer.Press(\"jump\");   // already in the air: should do nothing\nConsole.WriteLine($\"{player.State}, jumps: {player.Jumps}\");\n\nclass Player\n{\n    public MoveState State = MoveState.Grounded;\n    public int Jumps;\n\n    public void Press(string button)\n    {\n        if (button == \"jump\")\n        {\n            State = MoveState.Jumping;\n            Jumps++;\n        }\n    }\n}\n\nenum MoveState { Grounded, Jumping, Falling }",
+              "error": "Jumping, jumps: 2",
+              "lines": [
+                13
+              ],
+              "fixes": [
+                "Remplace la ligne 13 par `if (button == \"jump\" && State == MoveState.Grounded)`",
+                "Remplace la ligne 13 par `if (button == \"jump\" && State != MoveState.Falling)`",
+                "Ajoute `State = MoveState.Grounded;` après la ligne 16",
+                "Modifie la ligne 8 pour que le joueur démarre dans `MoveState.Falling`"
+              ],
+              "answer": 0,
+              "hint": "Quel est le seul état dans lequel un saut est autorisé ?",
+              "explanation": "La transition de saut se déclenche depuis **n'importe quel** état : un second appui en plein saut fait donc sauter de nouveau. Une transition doit nommer l'état dont elle part : Grounded → Jumping. N'exclure que Falling autorise encore le saut depuis Jumping. Remettre l'état à Grounded dans le saut transforme chaque appui en saut, et démarrer en Falling ne change que le premier état."
+            },
+            {
+              "type": "numeric",
+              "id": "q-flag-combos",
+              "concepts": [
+                "state-machine"
+              ],
+              "prompt": "Le renard a trois booléens : `isJumping`, `isDashing` et `isDead`. Combien de combinaisons de valeurs peuvent-ils former ?",
+              "answer": 8,
+              "hint": "Chaque booléen double le nombre de combinaisons.",
+              "explanation": "2 × 2 × 2 = **8** combinaisons, dont des absurdités comme foncer alors qu'on est mort, et chacune est un cas que du code peut rencontrer. Avec un `enum` Idle, Jumping, Dashing et Dead, il y a exactement les 4 états que tu as conçus, et ajouter une fonctionnalité ajoute un état, pas un doublement."
+            },
+            {
+              "type": "explain",
+              "title": "Des seuils qui ne clignotent pas",
+              "body": "Si un slime se met à poursuivre à une distance < 5 et s'arrête à > 5, un renard qui se tient pile à 5 le fait basculer entre Patrol et Chase à chaque frame, et il tressaute sur place.\n\nLa solution est l'**hystérésis** : des seuils différents pour entrer dans un état et pour en sortir. Poursuivre quand le renard est plus proche que 5, mais n'abandonner que lorsqu'il est plus loin que 7. Entre 5 et 7, le slime continue de faire ce qu'il faisait.\n\nLes minuteurs aident aussi : reste en Attack au moins 0,4 s, ou ignore le renard pendant une seconde après l'avoir perdu."
+            },
+            {
+              "type": "mcq",
+              "id": "q-hysteresis",
+              "concepts": [
+                "state-machine"
+              ],
+              "prompt": "Une chauve-souris bascule entre Patrol et Chase à chaque frame dès que le renard rôde autour de 6 tuiles, là où sa seule règle s'inverse. Quelle est la meilleure correction ?",
+              "choices": [
+                "Commencer la poursuite en dessous de 6 tuiles mais ne l'arrêter qu'au-delà de 8, pour créer une zone où l'état ne change pas",
+                "Vérifier la distance seulement une frame sur deux",
+                "Remplacer `<` par `<=` dans la condition de poursuite",
+                "Ajouter entre Patrol et Chase un troisième état qui fait la même chose que Patrol"
+              ],
+              "answer": 0,
+              "hint": "Le problème est un seul seuil utilisé dans les deux sens.",
+              "explanation": "Un seul seuil dans les deux sens fait que n'importe quelle oscillation autour de lui change l'état. Des seuils d'entrée et de sortie séparés (**hystérésis**) laissent à l'état la place de se stabiliser. Vérifier moins souvent ne fait que ralentir le clignotement, `<=` déplace le seuil sans le supprimer, et un état supplémentaire avec le même seuil clignote tout autant."
+            },
+            {
+              "type": "buckets",
+              "id": "q-state-or-transition",
+              "concepts": [
+                "state-machine"
+              ],
+              "prompt": "Dario a esquissé le comportement du slime sur un tableau blanc. Quelles notes sont des **états**, et lesquelles sont des **transitions** (les conditions qui font passer d'un état à l'autre) ?",
+              "buckets": [
+                "État",
+                "Transition"
+              ],
+              "items": [
+                {
+                  "text": "Patrouille",
+                  "bucket": 0
+                },
+                {
+                  "text": "Poursuite",
+                  "bucket": 0
+                },
+                {
+                  "text": "Étourdi",
+                  "bucket": 0
+                },
+                {
+                  "text": "Attaque",
+                  "bucket": 0
+                },
+                {
+                  "text": "Le renard passe à moins de 5 tuiles",
+                  "bucket": 1
+                },
+                {
+                  "text": "Touché par l'éclair de la lanterne",
+                  "bucket": 1
+                },
+                {
+                  "text": "Le minuteur d'étourdissement atteint 0",
+                  "bucket": 1
+                },
+                {
+                  "text": "L'animation de morsure se termine",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Les états, c'est ce que le slime fait pendant un moment. Les transitions, ce sont des choses qui arrivent à un instant.",
+              "explanation": "Les états durent : patrouiller, poursuivre, être étourdi, attaquer. Les transitions sont des événements ou des conditions vérifiés depuis un état précis : le renard qui s'approche (Patrouille → Poursuite), un éclair de lanterne (n'importe quel état → Étourdi), un minuteur qui arrive à zéro (Étourdi → Patrouille), une animation qui se termine (Attaque → Poursuite). Dessiner les états comme des boîtes et les transitions comme des flèches étiquetées est la manière habituelle de les concevoir."
+            }
+          ]
+        },
+        {
+          "id": "pooling",
+          "title": "Faire apparaître sans saccade",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Les objets créés puis jetés à chaque frame produisent des déchets qui causent des pauses de collecte : garde donc un pool d'objets, réutilise-les, et réinitialise chaque champ à la réutilisation.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Les déchets causent des saccades",
+              "body": "Dans Unity, on fait apparaître un objet avec `Instantiate(prefab)` et on le retire avec `Destroy(obj)`. En C# pur, chaque `new` d'une **classe** alloue de la mémoire sur le tas. Quand assez d'objets inaccessibles s'accumulent, le **ramasse-miettes** s'arrête pour les trouver et les libérer.\n\nUne collecte de quelques millisecondes est invisible dans un menu, mais à 60 fps elle peut faire exploser le budget de 16,7 ms de la frame et se manifester par une **saccade**. Le ramasse-miettes d'Unity peut s'exécuter de façon incrémentale, en répartissant le travail sur plusieurs frames, mais la solution la plus propre est de produire moins de déchets : un jeu qui tire 20 balles par seconde, chacune étant un nouvel objet, occupe sans cesse le ramasse-miettes."
+            },
+            {
+              "type": "numeric",
+              "id": "q-garbage-rate",
+              "concepts": [
+                "garbage-collection"
+              ],
+              "prompt": "Imagine que le HUD construise le texte `\"Sparks: \" + sparks` à chaque frame, en allouant environ **50 octets** à chaque fois. À 60 fps, combien de **kilooctets** de déchets cela représente-t-il par minute ? (Compte 1 Ko = 1000 octets.)",
+              "answer": 180,
+              "unit": "Ko",
+              "hint": "50 octets × frames par seconde × secondes par minute.",
+              "explanation": "50 × 60 × 60 = 180 000 octets, soit environ **180 Ko** par minute, pour une seule ligne de code de HUD. Quelques lignes comme celle-là et le ramasse-miettes tourne régulièrement. La solution habituelle est de reconstruire le texte seulement quand `sparks` change vraiment."
+            },
+            {
+              "type": "explain",
+              "title": "Un pool d'objets",
+              "body": "Un **pool** garde les objets inutilisés et les redistribue au lieu d'en créer de nouveaux. Unity en fournit un avec `UnityEngine.Pool.ObjectPool<T>` ; voici l'idée en quelques lignes :\n\n```csharp\npublic class Pool<T> where T : new()\n{\n    readonly Stack<T> free = new();\n    public int Created { get; private set; }\n\n    public T Get()\n    {\n        if (free.Count > 0) return free.Pop();\n        Created++;\n        return new T();\n    }\n\n    public void Release(T item) => free.Push(item);\n}\n```\n\n`Get` réutilise un objet libre s'il y en a un et n'en crée un nouveau que lorsque le pool est vide. `Release` remet un objet dans le pool. Après une courte période de préchauffage, le jeu cesse complètement d'allouer des balles."
+            },
+            {
+              "type": "output",
+              "id": "q-pool-created",
+              "concepts": [
+                "object-pool"
+              ],
+              "prompt": "Avec le `Pool<T>` ci-dessus, qu'est-ce qui s'affiche ?",
+              "language": "csharp",
+              "code": "var pool = new Pool<Bullet>();\nvar a = pool.Get();\nvar b = pool.Get();\npool.Release(a);\nvar c = pool.Get();\nvar d = pool.Get();\n\nConsole.WriteLine(pool.Created);\nConsole.WriteLine(ReferenceEquals(a, c));\n\nclass Bullet { }",
+              "output": "3\nTrue",
+              "hint": "Suis la pile des objets libres : que contient-elle avant chaque `Get` ?",
+              "explanation": "`a` et `b` sont neufs (2 créés). Libérer `a` le met sur la pile des objets libres, donc `c` **est** de nouveau `a` : `ReferenceEquals(a, c)` vaut **True**. La pile est alors vide, donc `d` est neuf : **3** créés au total pour quatre appels à `Get`."
+            },
+            {
+              "type": "bug",
+              "id": "q-pool-reset",
+              "concepts": [
+                "object-pool"
+              ],
+              "prompt": "Une balle du pool expire au bout de 2 secondes. Le deuxième tir réutilise la première balle et devrait afficher `flying`, mais il affiche `expired`. Clique sur la ligne qui contient le bug.",
+              "language": "csharp",
+              "code": "var pool = new Pool<Bullet>();\n\nvar first = pool.Get();\nfirst.Fire(new Vector2(0, 0));\nfor (int i = 0; i < 5; i++) first.Update(0.5f);   // lives 2 s, then expires\npool.Release(first);\n\nvar second = pool.Get();                          // reuses the same object\nsecond.Fire(new Vector2(5, 5));\nsecond.Update(0.5f);\nConsole.WriteLine(second.Active ? \"flying\" : \"expired\");\n\nclass Bullet\n{\n    public Vector2 Position;\n    public float Age;\n    public bool Active;\n\n    public void Fire(Vector2 at) { Position = at; Active = true; }\n\n    public void Update(float dt)\n    {\n        Age += dt;\n        if (Age >= 2) Active = false;\n    }\n}",
+              "error": "expired",
+              "lines": [
+                19
+              ],
+              "fixes": [
+                "Remplace la ligne 19 par `public void Fire(Vector2 at) { Position = at; Age = 0; Active = true; }`",
+                "Ajoute un constructeur après la ligne 17 : `public Bullet() { Age = 0; }`",
+                "Remplace la ligne 24 par `if (Age > 2) Active = false;`",
+                "Remplace la ligne 16 par une propriété : `public float Age { get; set; }`"
+              ],
+              "answer": 0,
+              "hint": "Le deuxième tir est le même objet que le premier. Quel est son `Age` quand il est tiré de nouveau ?",
+              "explanation": "Un objet du pool revient avec **tout son ancien état**. `Fire` réinitialise la position et `Active` mais pas `Age`, qui vaut toujours 2.5 depuis le premier tir : une mise à jour plus tard, la balle a dépassé sa durée de vie. Chaque champ doit être réinitialisé quand un objet est réutilisé. Un constructeur ne s'exécute qu'à la première création de l'objet, jamais à la réutilisation ; `>` au lieu de `>=` voit toujours un âge de 3 ; et une propriété stocke la même valeur périmée."
+            },
+            {
+              "type": "order",
+              "id": "q-bullet-lifecycle",
+              "concepts": [
+                "object-pool"
+              ],
+              "prompt": "Remets dans l'ordre la vie d'une balle du pool.",
+              "items": [
+                "Prendre une balle dans le pool (ou en créer une si le pool est vide)",
+                "Réinitialiser chaque champ : position, vitesse, âge, dégâts",
+                "L'activer pour qu'elle soit mise à jour et dessinée",
+                "La déplacer à chaque frame jusqu'à ce qu'elle touche quelque chose ou expire",
+                "La désactiver pour qu'elle ne soit plus mise à jour ni dessinée",
+                "La libérer vers le pool pour le tir suivant"
+              ],
+              "hint": "La réinitialisation vient avant l'utilisation de la balle, et la balle quitte le jeu avant de retourner dans le pool.",
+              "explanation": "Get, **réinitialiser**, activer, utiliser, désactiver, libérer. Réinitialiser à la sortie du pool garantit qu'aucun état périmé ne fuit vers le tir suivant, et désactiver avant de libérer fait qu'une balle du pool ne continue jamais de voler ni d'entrer en collision pendant qu'elle attend."
+            }
+          ]
+        },
+        {
+          "id": "game-feel",
+          "title": "Lissage, caméra et tremblement",
+          "pareto": "extra",
+          "minutes": 8,
+          "takeaway": "Lerp mélange deux valeurs, les courbes d'easing remodèlent ce mélange, et le lissage par frame doit utiliser 1 − e^(−k·dt) pour se comporter pareil à tous les frame rates.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Lerp et easing",
+              "body": "**Lerp** (interpolation linéaire) mélange deux valeurs : `Lerp(a, b, t) = a + (b − a) * t`. À `t = 0` tu obtiens `a`, à `t = 1` tu obtiens `b`, et entre les deux un mélange en ligne droite.\n\nAnime `t` de 0 à 1 sur une durée et quelque chose glisse à vitesse constante, ce qui paraît mécanique. L'**easing** remodèle d'abord `t` :\n\n- **Ease out**, `1 − (1 − t)²` : démarre vite, se pose en douceur, idéal pour les menus et les objets ramassés qui filent vers le HUD.\n- **Ease in**, `t²` : démarre lentement puis accélère.\n- **Smoothstep**, `3t² − 2t³` : doux aux deux extrémités."
+            },
+            {
+              "type": "numeric",
+              "id": "q-lerp",
+              "concepts": [
+                "easing"
+              ],
+              "prompt": "Que vaut `Lerp(10, 30, 0.25)` ?",
+              "answer": 15,
+              "hint": "Pars de 10 et avance du quart du chemin vers 30.",
+              "explanation": "L'écart est 30 − 10 = 20, et un quart de 20 vaut 5, donc **15**."
+            },
+            {
+              "type": "numeric",
+              "id": "q-ease-out",
+              "concepts": [
+                "easing"
+              ],
+              "prompt": "Une étincelle ramassée parcourt 200 px jusqu'au HUD avec un ease-out, `1 − (1 − t)²`. À la moitié de l'animation (`t = 0.5`), quelle distance a-t-elle parcourue ?",
+              "answer": 150,
+              "unit": "px",
+              "hint": "Applique d'abord l'easing à `t` : 1 − 0,5². Puis fais un lerp de 0 à 200.",
+              "explanation": "t après easing = 1 − (0,5)² = 0,75, et Lerp(0, 200, 0,75) = **150 px**. Les trois quarts de la distance en la moitié du temps : l'étincelle bondit, puis ralentit pour se poser. Un mouvement linéaire serait à 100 px."
+            },
+            {
+              "type": "explain",
+              "title": "Suivi de caméra",
+              "body": "Une caméra verrouillée sur le renard est secouée à chaque pas. Une astuce courante la déplace d'une fraction de l'écart restant à chaque frame :\n\n`camera += (target - camera) * 0.1f;`\n\nLa caméra glisse et se pose en douceur. Mais ce 0,1 est **par frame** : une machine plus rapide comble donc l'écart plus de fois par seconde."
+            },
+            {
+              "type": "output",
+              "id": "q-follow-fps",
+              "concepts": [
+                "easing",
+                "delta-time"
+              ],
+              "prompt": "Les deux appels simulent le même dixième de seconde, à 20 fps (2 frames) et à 40 fps (4 frames). Qu'est-ce qui s'affiche ?",
+              "language": "csharp",
+              "code": "float Follow(int frames)\n{\n    float camera = 0, target = 100;\n    for (int frame = 0; frame < frames; frame++)\n        camera += (target - camera) * 0.5f;   // close half the gap each frame\n    return camera;\n}\n\nConsole.WriteLine(Follow(2));   // 1/10 s at 20 fps\nConsole.WriteLine(Follow(4));   // 1/10 s at 40 fps",
+              "output": "75\n93.75",
+              "hint": "Chaque frame divise par deux l'écart restant à 100.",
+              "explanation": "L'écart est divisé par deux à chaque frame : 100 → 50 → 25 après deux frames (caméra à **75**), puis 12.5 → 6.25 après quatre (caméra à **93.75**). Même temps réel, caméra très différente : la machine rapide paraît plus nerveuse. La fraction doit dépendre de `dt`."
+            },
+            {
+              "type": "mcq",
+              "id": "q-follow-fix",
+              "concepts": [
+                "easing",
+                "delta-time"
+              ],
+              "prompt": "Quel mélange `t` par frame fait que `camera += (target - camera) * t` comble la **même part de l'écart par seconde** à tous les frame rates ? (`k` règle la nervosité.)",
+              "choices": [
+                "`1 - MathF.Exp(-k * dt)`",
+                "`0.1f`",
+                "`0.1f * fps`",
+                "`MathF.Exp(-k * dt)`"
+              ],
+              "answer": 0,
+              "hint": "Chaque frame conserve une fraction (1 − t) de l'écart. Sur une seconde, ces fractions se multiplient.",
+              "explanation": "Chaque frame conserve `e^(−k·dt)` de l'écart, et sur une seconde les fractions conservées se multiplient pour donner `e^(−k)`, quel que soit le nombre de frames. Avec k = 5, une caméra qui démarre 100 unités en retard est à 0,67 unité de la cible après une seconde à 30, 60 et 144 fps (vérifié par simulation). Un `0.1f` constant dépend du nombre de frames, `0.1f * fps` est pire encore, et `Exp(-k * dt)` est la part *conservée*, pas comblée."
+            },
+            {
+              "type": "explain",
+              "title": "Tremblement d'écran",
+              "body": "Le *juice* (le punch visuel et sonore) rend les coups lourds : un bref gel d'image (**hit-stop**), des particules, un écrasement du sprite, et le **tremblement d'écran**.\n\nUn bon tremblement utilise le **trauma**, un nombre de 0 à 1. Chaque coup en ajoute un peu ; il se vide à chaque frame avec `trauma -= decay * dt`. Le décalage de la caméra vaut `maxOffset * trauma²` fois une valeur aléatoire ou de bruit comprise entre −1 et 1.\n\nMettre au carré est une courbe d'easing (ease-in) : les petits coups font à peine vibrer et les gros secouent vraiment, et le tremblement s'éteint en douceur. Secoue la caméra, jamais le monde, pour que les collisions ne soient pas affectées."
+            },
+            {
+              "type": "numeric",
+              "id": "q-shake",
+              "concepts": [
+                "easing",
+                "delta-time"
+              ],
+              "prompt": "Une morsure de slime fixe le trauma à **0,6**. Le décalage maximal est de **10 px** et le trauma diminue de **1,5 par seconde**. Quel est le plus grand décalage de tremblement possible **0,2 s plus tard** ?",
+              "answer": 0.9,
+              "tolerance": 0.01,
+              "unit": "px",
+              "hint": "Vide d'abord le trauma : 0,6 − 1,5 × 0,2. Puis mets-le au carré et multiplie par 10.",
+              "explanation": "Le trauma tombe à 0,6 − 1,5 × 0,2 = 0,3, et 10 × 0,3² = **0,9 px**. Juste après la morsure, il valait 10 × 0,6² = 3,6 px : en un cinquième de seconde, le tremblement est donc retombé au quart de sa taille. C'est le carré qui le fait s'éteindre vite à la fin au lieu de vibrer longtemps."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "worlds-and-speed",
+      "title": "Chemins, mondes et performances",
+      "description": "Trouve des chemins autour des murs, génère et sauvegarde des mondes de façon reproductible, et respecte le budget de la frame avec moins de déchets mémoire et moins de vérifications.",
+      "lessons": [
+        {
+          "id": "pathfinding",
+          "title": "Trouver un chemin sur une grille",
+          "pareto": "core",
+          "minutes": 10,
+          "takeaway": "Le parcours en largeur explore une grille par anneaux depuis le départ avec une file et trouve un plus court chemin ; A* ajoute une estimation de la distance pour explorer beaucoup moins.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Quand le guidage ne suffit pas",
+              "body": "Le guidage se dirige tout droit vers le renard : un slime derrière un mur reste donc à pousser contre lui indéfiniment. Le **calcul d'itinéraire** (*pathfinding*) prévoit d'abord une route qui contourne les obstacles.\n\nConsidère le niveau comme une **grille** : chaque case libre est un nœud, relié à ses voisines libres du haut, du bas, de gauche et de droite. Le **parcours en largeur** (*breadth-first search*, BFS) explore vers l'extérieur depuis le départ par anneaux : toutes les cases à 1 pas, puis toutes les cases à 2 pas, et ainsi de suite. Une **file** (premier entré, premier sorti) conserve cet ordre. La première fois que le BFS atteint l'objectif, il a trouvé un plus court chemin, mesuré en pas."
+            },
+            {
+              "type": "order",
+              "id": "q-bfs-steps",
+              "concepts": [
+                "bfs"
+              ],
+              "prompt": "Remets dans l'ordre les étapes du parcours en largeur.",
+              "items": [
+                "Mettre la case de départ dans la file et la marquer visitée, à la distance 0",
+                "Retirer la case la plus ancienne de la file",
+                "Si c'est l'objectif, s'arrêter : sa distance est la longueur d'un plus court chemin",
+                "Pour chaque voisine libre pas encore visitée, la marquer visitée avec la distance + 1 et l'ajouter à la file",
+                "Revenir pour la case suivante ; si la file se vide avant, il n'y a pas de chemin"
+              ],
+              "hint": "On ne peut rien retirer de la file avant d'y avoir mis quelque chose.",
+              "explanation": "Départ, prendre la case la plus ancienne, vérifier si c'est l'objectif, développer ses voisines non visitées, recommencer. Marquer les cases comme visitées **au moment où elles sont mises en file** empêche une case d'entrer deux fois dans la file. Noter aussi d'où vient chaque voisine permet de remonter de l'objectif pour reconstruire la route."
+            },
+            {
+              "type": "explain",
+              "title": "Le BFS en C#",
+              "body": "Les mêmes étapes en C#, sur une carte 5×5 où `#` est un mur :\n\n```csharp\nstring[] map =\n{\n    \"S.#..\",\n    \"..#..\",\n    \"....G\",\n    \".###.\",\n    \".....\",\n};\nConsole.WriteLine(Steps(map));\n\nint Steps(string[] map)\n{\n    var start = (r: 0, c: 0);                    // S is in the top-left corner\n    var dist = new Dictionary<(int r, int c), int> { [start] = 0 };\n    var frontier = new Queue<(int r, int c)>();\n    frontier.Enqueue(start);\n\n    while (frontier.Count > 0)\n    {\n        var (r, c) = frontier.Dequeue();         // oldest tile first\n        if (map[r][c] == 'G') return dist[(r, c)];\n        foreach (var (nr, nc) in new[] { (r - 1, c), (r + 1, c), (r, c - 1), (r, c + 1) })\n        {\n            bool open = nr >= 0 && nr < map.Length && nc >= 0 && nc < map[nr].Length && map[nr][nc] != '#';\n            if (open && !dist.ContainsKey((nr, nc)))   // not visited yet\n            {\n                dist[(nr, nc)] = dist[(r, c)] + 1;\n                frontier.Enqueue((nr, nc));\n            }\n        }\n    }\n    return -1;                                   // no path\n}\n```\n\nIl affiche `6`. Un `Dictionary` stocke la distance de chaque case visitée : « visitée » signifie donc simplement « a une distance »."
+            },
+            {
+              "type": "numeric",
+              "id": "q-bfs-distance",
+              "concepts": [
+                "bfs"
+              ],
+              "prompt": "En utilisant seulement les déplacements haut, bas, gauche et droite, combien de pas fait le plus court chemin de S à G ?\n\n```text\nS . # . .\n. . # . .\n# . # . G\n. . . . #\n. # . . .\n```",
+              "answer": 8,
+              "hint": "Le mur de la colonne du milieu n'a de passage qu'en bas. Compte les déplacements pour le contourner.",
+              "explanation": "La colonne du milieu est un mur jusqu'à la ligne 2, donc la route doit passer dessous, ligne 3 : 1 à droite (la colonne 0 est bloquée deux cases sous S), 3 vers le bas jusqu'à la ligne 3, 2 à droite sous le mur, 1 vers le haut, et 1 à droite pour arriver sur G. Cela fait 1 + 3 + 2 + 1 + 1 = **8** déplacements, et le code BFS ci-dessus, exécuté sur cette carte, affiche 8. Le BFS le trouve parce qu'il atteint toutes les cases à distance 8 avant toute case à distance 9."
+            },
+            {
+              "type": "bug",
+              "id": "q-stack-not-queue",
+              "concepts": [
+                "bfs"
+              ],
+              "prompt": "La recherche de Rin trouve un chemin, mais pas le plus court : l'objectif est à **5** pas et elle affiche `9`. Clique sur une ligne qui contient le bug.",
+              "language": "csharp",
+              "code": "string[] map =\n{\n    \"S....\",\n    \".....\",\n    \".##..\",\n    \"..G..\",\n    \".....\",\n};\nConsole.WriteLine(Steps(map));\n\nint Steps(string[] map)\n{\n    var start = (r: 0, c: 0);\n    var dist = new Dictionary<(int r, int c), int> { [start] = 0 };\n    var frontier = new Stack<(int r, int c)>();\n    frontier.Push(start);\n\n    while (frontier.Count > 0)\n    {\n        var (r, c) = frontier.Pop();\n        if (map[r][c] == 'G') return dist[(r, c)];\n        foreach (var (nr, nc) in new[] { (r - 1, c), (r + 1, c), (r, c - 1), (r, c + 1) })\n        {\n            bool open = nr >= 0 && nr < map.Length && nc >= 0 && nc < map[nr].Length && map[nr][nc] != '#';\n            if (open && !dist.ContainsKey((nr, nc)))\n            {\n                dist[(nr, nc)] = dist[(r, c)] + 1;\n                frontier.Push((nr, nc));\n            }\n        }\n    }\n    return -1;\n}",
+              "error": "9",
+              "lines": [
+                15,
+                20
+              ],
+              "fixes": [
+                "Utilise une `Queue` à la ligne 15, avec `Enqueue` aux lignes 16 et 28 et `Dequeue` à la ligne 20, pour que la case la plus ancienne soit développée en premier",
+                "Inverse l'ordre des voisines à la ligne 22, pour que la recherche essaie d'abord la droite et le bas",
+                "Continue de chercher après avoir atteint G et renvoie la plus petite distance vue (ligne 21), avec `return best;` à la ligne 32"
+              ],
+              "answer": 0,
+              "hint": "Une pile rend la case ajoutée **le plus récemment**. Quelles cases cela fait-il explorer en premier ?",
+              "explanation": "Une `Stack` sort la case la plus récente, donc la recherche plonge le plus loin possible dans un couloir : c'est un parcours **en profondeur**. Les distances sont fixées à la première découverte d'une case, si bien qu'un long détour est enregistré pour G avant même que la route courte soit explorée. Une `Queue` développe les cases par ordre de distance, ce qui permet au BFS de trouver un plus court chemin. Un autre ordre des voisines choisit simplement un autre détour, et prendre le minimum n'aide pas car la distance de G n'est fixée qu'une fois."
+            },
+            {
+              "type": "explain",
+              "title": "A* : viser la recherche",
+              "body": "Le BFS s'étale uniformément dans toutes les directions, même à l'opposé de l'objectif. **A\\*** explore d'abord la case la plus prometteuse, en notant chacune par `f = g + h` :\n\n- `g` : les pas faits depuis le départ jusqu'ici\n- `h` : une **estimation** des pas restants jusqu'à l'objectif\n\nSur une grille à 4 directions, un bon `h` est la **distance de Manhattan** `|dx| + |dy|`. Tant que `h` ne *surestime* jamais, A* trouve toujours un plus court chemin en explorant bien moins de cases. Des coûts de case différents (la boue coûte 3, la route coûte 1) demandent aussi A* ou l'algorithme de Dijkstra, qui est A* avec `h = 0` ; le BFS pur ne compte que les pas."
+            },
+            {
+              "type": "numeric",
+              "id": "q-manhattan",
+              "concepts": [
+                "a-star"
+              ],
+              "prompt": "Sur une grille à 4 directions, quelle est l'estimation de Manhattan `h` de la case (2, 7) à l'objectif en (9, 3) ?",
+              "answer": 11,
+              "hint": "|9 − 2| + |3 − 7|.",
+              "explanation": "|9 − 2| + |3 − 7| = 7 + 4 = **11**. Sans mur sur le chemin, c'est exactement le nombre de déplacements nécessaires ; les murs ne font qu'allonger le vrai chemin, donc l'estimation ne surestime jamais."
+            },
+            {
+              "type": "numeric",
+              "id": "q-f-score",
+              "concepts": [
+                "a-star"
+              ],
+              "prompt": "A* a deux cases en attente. La case T a été atteinte en **6** pas et a `h` = **4**. La case U a été atteinte en **3** pas et a `h` = **9**. Quel est le score `f` de la case que A* développe ensuite ?",
+              "answer": 10,
+              "hint": "Calcule `f = g + h` pour les deux. A* développe la plus basse.",
+              "explanation": "f(T) = 6 + 4 = 10 et f(U) = 3 + 9 = 12, donc A* développe **T** (f = **10**) ensuite. Le BFS aurait pris U d'abord, parce qu'elle est à moins de pas du départ, même si U va dans la mauvaise direction."
+            },
+            {
+              "type": "buckets",
+              "id": "q-bfs-or-astar",
+              "concepts": [
+                "bfs",
+                "a-star"
+              ],
+              "prompt": "Pour chaque tâche d'Ember Run, le BFS pur suffit-il, ou A* (ou Dijkstra) est-il le meilleur outil ?",
+              "buckets": [
+                "Le BFS suffit",
+                "Utiliser A* ou Dijkstra"
+              ],
+              "items": [
+                {
+                  "text": "Un slime qui traverse une salle de 20 × 20 où chaque case coûte pareil",
+                  "bucket": 0
+                },
+                {
+                  "text": "Une recherche depuis la case du renard qui donne à 200 chauves-souris leur distance au renard",
+                  "bucket": 0
+                },
+                {
+                  "text": "Trouver l'étincelle la plus proche, où qu'elle soit",
+                  "bucket": 0
+                },
+                {
+                  "text": "Une unité qui traverse une carte de 1000 × 1000 jusqu'à un objectif connu",
+                  "bucket": 1
+                },
+                {
+                  "text": "Les cases de marais coûtent 3 déplacements et les cases de route coûtent 1",
+                  "bucket": 1
+                },
+                {
+                  "text": "Une carte de tactique au tour par tour avec des collines qui coûtent plus cher",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Le BFS compte les pas et s'étale dans toutes les directions. Quand ces deux faits deviennent-ils un problème ?",
+              "explanation": "Le BFS est idéal sur de petites grilles uniformes, et quand tu **veux** toute la carte : une seule recherche depuis le renard donne à chaque chauve-souris sa distance (un *champ de flux*), et la première étincelle atteinte est la plus proche. A* l'emporte quand un seul objectif connu est lointain sur une grande carte, parce qu'il se dirige vers lui, et dès que les cases ont des coûts différents, parce que le BFS ne sait pas les compter."
+            }
+          ]
+        },
+        {
+          "id": "seeds-and-saves",
+          "title": "Graines et fichiers de sauvegarde",
+          "pareto": "extra",
+          "minutes": 9,
+          "takeaway": "Un générateur à graine produit la même suite à chaque fois : un monde peut donc être reconstruit à partir de sa graine ; sauvegarde les données que tu ne peux pas reconstruire, avec un numéro de version.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Aléatoire, mais répétable",
+              "body": "Les nombres aléatoires d'un ordinateur sont **pseudo-aléatoires** : une formule transforme une **graine** (*seed*) en une longue suite qui a l'air aléatoire. Même graine, même suite, même monde. Cela te donne des niveaux quotidiens que tous les joueurs partagent, des rediffusions, et des rapports de bug qui disent *« la graine 1234 plante »*. Voici un générateur complet, *xorshift32* :\n\n```csharp\npublic class Rng\n{\n    uint state;\n    public Rng(uint seed) => state = seed == 0 ? 1 : seed;\n\n    // xorshift32: three shifts and XORs scramble the state into the next number.\n    public uint Next()\n    {\n        state ^= state << 13;\n        state ^= state >> 17;\n        state ^= state << 5;\n        return state;\n    }\n\n    public int Range(int min, int max) => min + (int)(Next() % (uint)(max - min));\n}\n```\n\n`System.Random` accepte aussi une graine, mais sa documentation ne promet pas la même suite d'une version de .NET à l'autre. Pour des mondes qui doivent se régénérer à l'identique pendant des années, embarque ton propre petit générateur comme celui-ci."
+            },
+            {
+              "type": "output",
+              "id": "q-reshuffle",
+              "concepts": [
+                "seeded-rng"
+              ],
+              "prompt": "La version 2 du générateur de niveau ajoute un rocher entre les deux arbres, avec le même `Rng` et la même graine. Qu'est-ce qui s'affiche ?",
+              "language": "csharp",
+              "code": "var before = new Rng(42);              // version 1: two trees\nint treeA = before.Range(0, 100);\nint treeB = before.Range(0, 100);\n\nvar after = new Rng(42);               // version 2: same seed, a rock added in between\nint treeA2 = after.Range(0, 100);\nint rock = after.Range(0, 100);\nint treeB2 = after.Range(0, 100);\n\nConsole.WriteLine(treeA == treeA2);\nConsole.WriteLine(rock == treeB);\nConsole.WriteLine(treeB == treeB2);",
+              "output": "True\nTrue\nFalse",
+              "hint": "Les deux générateurs produisent la même suite de nombres. Quel tirage reçoit chaque variable : le 1er, le 2e ou le 3e ?",
+              "explanation": "`treeA` et `treeA2` sont tous deux le **premier** tirage : True. Le rocher prend maintenant le **deuxième** tirage, qui était celui de `treeB` : True. `treeB2` reçoit le **troisième** tirage, un nombre différent (pour cette graine, c'est le cas) : False. Ajouter un seul appel aléatoire a décalé tous les arbres qui le suivent, donc les anciennes graines produisent maintenant d'autres forêts. Donne à chaque système, ou à chaque morceau du monde, son propre générateur."
+            },
+            {
+              "type": "explain",
+              "title": "Générer des mondes",
+              "body": "La **génération procédurale** construit du contenu à partir de règles et de nombres aléatoires : des grottes avec une marche aléatoire, des hauteurs de terrain avec un bruit lisse, du butin avec des tables pondérées.\n\nPour rester reproductible :\n\n- Dérive une graine par **morceau** (*chunk*) à partir de la graine du monde et des coordonnées du morceau, par exemple en les hachant ensemble : les morceaux peuvent alors être générés dans n'importe quel ordre et sortent toujours pareil.\n- Donne des générateurs séparés aux systèmes distincts (terrain, butin, ennemis), pour qu'une nouvelle fonctionnalité ne décale pas les autres.\n- N'initialise jamais la graine avec l'horloge si le résultat doit être répétable."
+            },
+            {
+              "type": "buckets",
+              "id": "q-reproducible",
+              "concepts": [
+                "seeded-rng"
+              ],
+              "prompt": "Dario veut un monde exactement identique à chaque chargement à partir de la même graine. Quelles approches y parviennent ?",
+              "buckets": [
+                "Même monde à chaque fois",
+                "Non reproductible"
+              ],
+              "items": [
+                {
+                  "text": "Chaque morceau a son propre générateur, initialisé avec la graine du monde et les coordonnées du morceau",
+                  "bucket": 0
+                },
+                {
+                  "text": "Le fichier de sauvegarde stocke la graine, et la carte est régénérée au chargement",
+                  "bucket": 0
+                },
+                {
+                  "text": "Le terrain et le butin utilisent des générateurs séparés créés à partir de la même graine",
+                  "bucket": 0
+                },
+                {
+                  "text": "Un seul générateur partagé, avec des morceaux générés dans l'ordre où le joueur les explore",
+                  "bucket": 1
+                },
+                {
+                  "text": "Le générateur est initialisé avec l'heure courante",
+                  "bucket": 1
+                },
+                {
+                  "text": "Le terrain et le butin partagent un générateur, et un nouveau tirage de butin est ajouté dans une mise à jour",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Demande-toi si autre chose que la graine peut changer le nombre que reçoit chaque partie du monde.",
+              "explanation": "Reproductible signifie que chaque tirage aléatoire ne dépend que de la graine (et d'entrées fixes comme les coordonnées). Les générateurs par morceau et par système y parviennent. Un générateur partagé rend les résultats dépendants de l'**ordre** des appels : explorer dans un autre sens, ou ajouter un seul nouveau tirage, donne les tirages suivants à d'autres éléments. Initialiser avec l'horloge donne un nouveau monde à chaque fois."
+            },
+            {
+              "type": "explain",
+              "title": "Ce qui va dans un fichier de sauvegarde",
+              "body": "Sauvegarde des **données**, pas des objets vivants : la graine, la position et la santé du renard, les identifiants des objets de l'inventaire, les coffres ouverts. Reconstruis tout le reste au chargement : la carte générée, les sprites, les références mises en cache entre objets.\n\nTrois habitudes évitent bien des ennuis :\n\n- Mets un numéro de **version** dans chaque sauvegarde, et mets à niveau les anciennes versions au chargement.\n- Utilise un format simple comme JSON (`System.Text.Json` dans .NET, `JsonUtility` dans Unity).\n- Écris dans un fichier temporaire, puis remplace l'ancienne sauvegarde en une seule opération, pour qu'un plantage en cours de sauvegarde ne laisse pas un fichier à moitié écrit."
+            },
+            {
+              "type": "output",
+              "id": "q-load-old-save",
+              "concepts": [
+                "save-state"
+              ],
+              "prompt": "Les sauvegardes de la version 1 n'avaient pas de `MaxHealth`. Un champ JSON manquant est lu comme la valeur par défaut, 0. Qu'est-ce qui s'affiche ?",
+              "language": "csharp",
+              "code": "using System.Text.Json;\n\nstring oldSave = \"\"\"{\"Version\":1,\"Seed\":42,\"Health\":3}\"\"\";\nstring newSave = \"\"\"{\"Version\":2,\"Seed\":42,\"Health\":3,\"MaxHealth\":8}\"\"\";\n\nConsole.WriteLine(Describe(Load(oldSave)));\nConsole.WriteLine(Describe(Load(newSave)));\n\nSaveData Load(string json)\n{\n    var save = JsonSerializer.Deserialize<SaveData>(json)!;\n    if (save.Version < 2) save = save with { Version = 2, MaxHealth = 5 };   // version 1 had no MaxHealth\n    return save;\n}\n\nstring Describe(SaveData s) => $\"v{s.Version} {s.Health}/{s.MaxHealth}\";\n\nrecord SaveData(int Version, uint Seed, int Health, int MaxHealth);",
+              "output": "v2 3/5\nv2 3/8",
+              "hint": "Laquelle des deux sauvegardes a `Version < 2` ?",
+              "explanation": "L'ancienne sauvegarde n'a pas de `MaxHealth`, donc il est désérialisé à 0 ; `Version` vaut 1, donc `Load` la met à niveau en version 2 avec `MaxHealth = 5` : **v2 3/5**. La nouvelle sauvegarde est déjà en version 2 avec `MaxHealth` 8, donc elle passe telle quelle : **v2 3/8**. Sans le test de version, les anciens joueurs chargeraient avec 0 de santé maximale."
+            },
+            {
+              "type": "buckets",
+              "id": "q-save-or-rebuild",
+              "concepts": [
+                "save-state",
+                "seeded-rng"
+              ],
+              "prompt": "Rin écrit le fichier de sauvegarde. Quelles choses faut-il **sauvegarder**, et lesquelles **reconstruire** au chargement ?",
+              "buckets": [
+                "À sauvegarder",
+                "À reconstruire au chargement"
+              ],
+              "items": [
+                {
+                  "text": "La graine du monde",
+                  "bucket": 0
+                },
+                {
+                  "text": "Les coffres qui ont été ouverts",
+                  "bucket": 0
+                },
+                {
+                  "text": "La position et la santé du renard",
+                  "bucket": 0
+                },
+                {
+                  "text": "Les identifiants des objets de l'inventaire",
+                  "bucket": 0
+                },
+                {
+                  "text": "La carte de tuiles générée",
+                  "bucket": 1
+                },
+                {
+                  "text": "La référence d'un slime vers l'objet renard",
+                  "bucket": 1
+                },
+                {
+                  "text": "Les sprites et les sons",
+                  "bucket": 1
+                },
+                {
+                  "text": "Les chemins actuels des chauves-souris vers le renard",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Pourrais-tu le recréer exactement à partir des autres éléments sauvegardés et des fichiers du jeu ?",
+              "explanation": "Sauvegarde les **choix et les changements** qui ne peuvent pas être recalculés : la graine, les coffres ouverts, la position, la santé, l'inventaire. La carte se régénère à partir de la graine, les références sont reconnectées à la création des objets, les assets sont livrés avec le jeu, et les chemins sont recalculés en une frame. Des sauvegardes plus petites se chargent plus vite et se cassent moins lors des mises à jour du jeu."
+            },
+            {
+              "type": "mcq",
+              "id": "q-save-crash",
+              "concepts": [
+                "save-state"
+              ],
+              "prompt": "Des joueurs signalent que leur sauvegarde est corrompue quand le jeu plante **pendant** la sauvegarde. Quelle est la meilleure correction ?",
+              "choices": [
+                "Écrire la nouvelle sauvegarde dans un fichier temporaire, puis remplacer l'ancien fichier par celui-ci en un seul renommage",
+                "Sauvegarder plus souvent, pour perdre moins de progression",
+                "Compresser la sauvegarde, pour que l'écriture prenne moins de temps",
+                "Passer de JSON à un format binaire"
+              ],
+              "answer": 0,
+              "hint": "Le danger, c'est le moment où l'ancienne sauvegarde est à moitié écrasée.",
+              "explanation": "Écraser sur place laisse un fichier à moitié écrit si le jeu meurt en pleine écriture. Écrire d'abord un fichier complet puis l'échanger d'un seul renommage garantit que la sauvegarde sur le disque est toujours soit l'ancienne, soit la nouvelle. Sauvegarder plus souvent, compresser ou changer de format écrasent tous encore sur place."
+            }
+          ]
+        },
+        {
+          "id": "performance",
+          "title": "Assez rapide : déchets et grilles",
+          "pareto": "extra",
+          "minutes": 9,
+          "takeaway": "Mesure d'abord avec un profileur, évite d'allouer à chaque frame, et utilise une grille spatiale pour que chaque objet ne soit testé que contre ses voisins au lieu de tout le reste.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Mesurer d'abord",
+              "body": "Quand le jeu saccade, ouvre le **profileur** (le Profiler d'Unity montre le temps CPU de chaque frame, quel code l'a consommé, et une colonne *GC Alloc* avec les octets alloués par frame). Deviner fait perdre des jours.\n\nDeux coupables reviennent sans cesse :\n\n- **Allouer à chaque frame**, ce qui alimente les pauses du ramasse-miettes.\n- **Tout tester contre tout** : avec n objets, tester chaque paire représente n(n − 1)/2 vérifications, ce qui croît comme n²."
+            },
+            {
+              "type": "numeric",
+              "id": "q-pairs",
+              "concepts": [
+                "spatial-partitioning"
+              ],
+              "prompt": "Un niveau de bullet hell compte **1000** balles et ennemis, et chaque paire est testée pour une collision à chaque frame. Combien de tests de paires cela fait-il par frame ?",
+              "answer": 499500,
+              "hint": "n(n − 1) / 2 avec n = 1000.",
+              "explanation": "1000 × 999 ÷ 2 = **499 500** tests par frame, soit environ 30 millions par seconde à 60 fps. Double le nombre d'objets et le travail est à peu près multiplié par quatre. La plupart de ces paires sont aux deux bouts de l'écran et ne pourraient jamais se toucher."
+            },
+            {
+              "type": "sim",
+              "sim": "growth",
+              "title": "n contre n²",
+              "body": "Fais glisser le curseur pour voir comment tester chaque paire (n²) s'éloigne du fait de toucher chaque objet une seule fois (n) quand le nombre d'objets augmente. Une grille spatiale vise à ramener les tests de collision vers la courbe de n.",
+              "curves": [
+                "n",
+                "n^2"
+              ],
+              "maxN": 5000
+            },
+            {
+              "type": "explain",
+              "title": "Une grille spatiale",
+              "body": "Découpe le monde en **cellules** carrées, à peu près aussi grandes que le plus grand objet. À chaque frame, range chaque objet dans la cellule où tombe sa position (un `Dictionary<(int, int), List<T>>` convient). Pour trouver ce qui pourrait toucher un objet, regarde seulement dans sa cellule et les 8 qui l'entourent.\n\nLa cellule d'une position est `floor(x / size)` sur chaque axe. Utilise **floor**, pas un cast vers `int` : le cast tronque vers zéro, donc −0,25 devient 0 au lieu de −1. Le moteur physique d'Unity fait ce genre de *broad phase* pour ses propres colliders ; il t'en faut une pour tes propres requêtes, par exemple *quelles chauves-souris sont près de la lanterne*."
+            },
+            {
+              "type": "bug",
+              "id": "q-cell-truncate",
+              "concepts": [
+                "spatial-partitioning"
+              ],
+              "prompt": "Les cellules font 4 unités de large : x de −4 inclus à 0 est la cellule −1 et x de 0 inclus à 4 est la cellule 0. Cela devrait afficher `(2, 0)`, `(-1, 0)` et `(0, 0)`. Clique sur la ligne qui contient le bug.",
+              "language": "csharp",
+              "code": "(int, int) Cell(Vector2 p, float size) =>\n    ((int)(p.X / size), (int)(p.Y / size));\n\nConsole.WriteLine(Cell(new Vector2(9.5f, 2), 4));\nConsole.WriteLine(Cell(new Vector2(-1, 2), 4));\nConsole.WriteLine(Cell(new Vector2(1, 2), 4));",
+              "error": "(2, 0)\n(0, 0)\n(0, 0)",
+              "lines": [
+                2
+              ],
+              "fixes": [
+                "Remplace la ligne 2 par `((int)MathF.Floor(p.X / size), (int)MathF.Floor(p.Y / size));`",
+                "Modifie la ligne 2 pour utiliser `(int)MathF.Round(...)` sur chaque axe",
+                "Modifie la ligne 2 pour utiliser `(int)MathF.Ceiling(...)` sur chaque axe",
+                "Modifie la ligne 2 pour utiliser `(int)MathF.Abs(...)` sur chaque axe, afin que les positions négatives fonctionnent"
+              ],
+              "answer": 0,
+              "hint": "Que vaut −1 ÷ 4, et que fait un cast vers `int` de −0,25 ?",
+              "explanation": "Un cast vers `int` **tronque vers zéro** : −0,25 devient 0, et la cellule 0 couvre en secret x de −4 à 4, deux fois plus large que toutes les autres. `Floor` arrondit toujours vers le bas, ce qui donne −1. `Round` et `Ceiling` décalent chaque frontière de cellule, et `Abs` replie la moitié gauche du monde sur la moitié droite."
+            },
+            {
+              "type": "numeric",
+              "id": "q-grid-pairs",
+              "concepts": [
+                "spatial-partitioning"
+              ],
+              "prompt": "Les mêmes 1000 objets sont répartis uniformément sur une grille, soit environ **10 par cellule**. Chaque objet n'est testé que contre les autres de sa cellule et des 8 qui l'entourent, soit environ **90** objets. En comptant chaque paire une seule fois, à peu près combien de tests cela fait-il par frame ?",
+              "answer": 45000,
+              "tolerance": 1000,
+              "hint": "1000 objets × 90 voisins, puis divise par deux, car sinon chaque paire serait comptée deux fois.",
+              "explanation": "1000 × 90 ÷ 2 ≈ **45 000** tests, environ un dixième des 499 500 d'avant, et cela croît désormais proportionnellement au nombre d'objets plutôt qu'à son carré. Dix fois plus d'objets dans un niveau dix fois plus grand, c'est dix fois plus de travail, pas cent."
+            },
+            {
+              "type": "buckets",
+              "id": "q-allocates",
+              "concepts": [
+                "garbage-collection"
+              ],
+              "prompt": "Quelles lignes, exécutées à chaque frame dans `Update`, allouent des déchets ? (Mesuré avec `GC.GetAllocatedBytesForCurrentThread` de .NET.)",
+              "buckets": [
+                "Alloue à chaque fois",
+                "Pas d'allocation"
+              ],
+              "items": [
+                {
+                  "text": "`var nearby = new List<Enemy>();`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`label = \"Score: \" + score;`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`var alive = enemies.Where(e => e.Hp > 0).ToList();`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`Func<Enemy, bool> isClose = e => e.Hp < range;` (capture `range`)",
+                  "bucket": 0
+                },
+                {
+                  "text": "`var offset = new Vector2(1, 2);`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`nearby.Clear();` sur une liste créée une fois au démarrage",
+                  "bucket": 1
+                },
+                {
+                  "text": "`score += 10;`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`foreach (var e in enemyArray) total += e.Hp;`",
+                  "bucket": 1
+                }
+              ],
+              "hint": "`new` sur un struct ne touche pas au tas. Une nouvelle liste, une nouvelle chaîne, un résultat LINQ ou une lambda qui capture, si.",
+              "explanation": "Une nouvelle `List`, une `string` concaténée, un pipeline LINQ avec `ToList()` et une lambda qui **capture** une variable créent tous des objets sur le tas à chaque exécution. `new Vector2` crée un struct sans allocation sur le tas, vider et réutiliser une liste conserve sa mémoire, et l'arithmétique simple ou un `foreach` sur un tableau n'allouent rien. Crée les collections une fois, réutilise-les, et reconstruis les chaînes seulement quand la valeur change."
+            },
+            {
+              "type": "mcq",
+              "id": "q-measure-first",
+              "concepts": [
+                "garbage-collection",
+                "game-loop"
+              ],
+              "prompt": "Ember Run tourne bien mais **saccade toutes les quelques secondes**. Que devrait faire Rin en premier ?",
+              "choices": [
+                "Enregistrer la saccade dans le profileur et regarder ce qui s'exécute dans les frames lentes, par exemple une collecte du ramasse-miettes",
+                "Réécrire le code de collision avec une grille spatiale, puisque les collisions sont généralement le problème",
+                "Baisser le frame rate cible à 30 fps, pour que chaque frame ait deux fois plus de budget",
+                "Désactiver le ramasse-miettes"
+              ],
+              "answer": 0,
+              "hint": "Des saccades régulières mais occasionnelles ont une cause que tu peux voir dans les frames lentes elles-mêmes.",
+              "explanation": "Un jeu fluide avec des pics périodiques pointe vers quelque chose qui se produit de temps en temps, et le ramasse-miettes est un candidat classique, mais seul le profileur montre la cause réelle dans les frames lentes. Réécrire les collisions est une supposition, diviser le frame rate par deux masque le problème et dégrade chaque frame, et on ne peut pas simplement désactiver le ramasse-miettes : la mémoire serait vite épuisée."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,2838 @@
+{
+  "id": "game-engine-programming",
+  "title": "Programación de motores de videojuegos",
+  "icon": "C++",
+  "color": "#364fc7",
+  "order": 20,
+  "category": "Programming",
+  "level": "Advanced",
+  "description": "Escribe el C++ que hay debajo de un motor de videojuegos: gestiona la memoria sin recolector de basura, evita el comportamiento indefinido que tumba los motores, organiza los datos para la caché y construye handles, allocators, un bucle de paso fijo y jobs sencillos.",
+  "keyIdeas": [
+    "Los objetos de C++ son **valores**: la asignación copia, y tú eliges referencias, punteros o movimientos para compartir o ceder un objeto.",
+    "Ata cada recurso a un scope con **RAII** y da a cada objeto del heap **un solo dueño** (`std::unique_ptr`); la propiedad compartida es la excepción.",
+    "El **comportamiento indefinido (UB)** es silencioso hasta que deja de serlo: prueba con sanitizers y no guardes nunca punteros a un contenedor que pueda crecer.",
+    "El acceso a memoria domina: mantén los datos calientes **contiguos**, sepáralos en **structs de arrays** y mide antes y después de cada cambio.",
+    "Los motores se refieren a los objetos con **handles generacionales**, reservan memoria de **arenas y pools** y avanzan la simulación con un **paso de tiempo fijo**.",
+    "El determinismo y los hilos exigen disciplina: orden fijo de operaciones en coma flotante y flags fijos, un RNG propio con semilla y jobs que nunca escriben los mismos datos."
+  ],
+  "concepts": [
+    {
+      "id": "value-semantics",
+      "label": "Semántica de valor",
+      "lesson": "values-and-references",
+      "summary": "Todo tipo de C++ se comporta como un valor: la asignación y los parámetros por valor copian el objeto entero.",
+      "aliases": [
+        "semántica de copia",
+        "valores",
+        "copias por defecto",
+        "tipos de valor",
+        "value semantics",
+        "copy semantics",
+        "value types"
+      ]
+    },
+    {
+      "id": "references-pointers",
+      "label": "Referencias y punteros",
+      "lesson": "values-and-references",
+      "summary": "Una referencia es otro nombre para un objeto existente; un puntero guarda una dirección que puede ser nula o cambiar de destino.",
+      "aliases": [
+        "referencia",
+        "puntero",
+        "reference",
+        "pointer",
+        "T&",
+        "T*",
+        "referencia const",
+        "const reference",
+        "dirección"
+      ]
+    },
+    {
+      "id": "stack-vs-heap",
+      "label": "Stack vs heap",
+      "lesson": "scope-and-raii",
+      "summary": "Las variables locales viven en el stack y mueren al acabar su scope; los objetos del heap viven hasta que su dueño los libera, sin recolector de basura.",
+      "aliases": [
+        "stack",
+        "heap",
+        "pila",
+        "montón",
+        "almacenamiento automático",
+        "automatic storage",
+        "new y delete",
+        "new and delete",
+        "free store"
+      ]
+    },
+    {
+      "id": "raii",
+      "label": "RAII",
+      "lesson": "scope-and-raii",
+      "summary": "Ata cada recurso a un objeto cuyo destructor lo libera, de modo que la limpieza se ejecuta en todos los caminos de salida.",
+      "aliases": [
+        "destructor",
+        "adquirir un recurso es inicializar",
+        "resource acquisition is initialization",
+        "scope guard",
+        "guardia de scope",
+        "temporizador de scope",
+        "scoped timer",
+        "lock_guard"
+      ]
+    },
+    {
+      "id": "unique-ownership",
+      "label": "Propiedad con unique_ptr",
+      "lesson": "owning-pointers",
+      "summary": "std::unique_ptr convierte a un objeto en el único dueño de un objeto del heap; se puede mover, pero no copiar.",
+      "aliases": [
+        "unique_ptr",
+        "make_unique",
+        "único dueño",
+        "single owner",
+        "propiedad",
+        "ownership",
+        "puntero propietario",
+        "owning pointer"
+      ]
+    },
+    {
+      "id": "shared-ownership",
+      "label": "Propiedad compartida",
+      "lesson": "owning-pointers",
+      "summary": "std::shared_ptr comparte un objeto mediante un contador de referencias atómico, que cuesta memoria y tiempo y difumina quién controla el tiempo de vida.",
+      "aliases": [
+        "shared_ptr",
+        "conteo de referencias",
+        "reference counting",
+        "use_count",
+        "refcount",
+        "contador de referencias",
+        "weak_ptr",
+        "propiedad compartida"
+      ]
+    },
+    {
+      "id": "move-semantics",
+      "label": "Semántica de movimiento",
+      "lesson": "moves-and-const",
+      "summary": "Mover transfiere los recursos de un objeto en lugar de copiarlos; std::move solo marca un objeto como seguro para robarle sus recursos.",
+      "aliases": [
+        "std::move",
+        "move semantics",
+        "mover",
+        "constructor de movimiento",
+        "move constructor",
+        "rvalue reference",
+        "referencia rvalue",
+        "noexcept move",
+        "emplace_back"
+      ]
+    },
+    {
+      "id": "const-correctness",
+      "label": "Corrección con const",
+      "lesson": "moves-and-const",
+      "summary": "Marcar parámetros y funciones miembro como const permite que el compilador haga cumplir qué código puede modificar un objeto.",
+      "aliases": [
+        "const",
+        "función miembro const",
+        "const member function",
+        "const correctness",
+        "referencia const",
+        "const reference",
+        "solo lectura",
+        "read-only"
+      ]
+    },
+    {
+      "id": "undefined-behaviour",
+      "label": "Comportamiento indefinido",
+      "lesson": "ub-and-sanitizers",
+      "summary": "Operaciones como acceder fuera de límites, el desbordamiento con signo o usar memoria liberada no tienen un resultado definido, y el optimizador asume que nunca ocurren.",
+      "aliases": [
+        "UB",
+        "comportamiento indefinido (UB)",
+        "undefined behaviour",
+        "undefined behavior",
+        "fuera de límites",
+        "out of bounds",
+        "desbordamiento con signo",
+        "signed overflow",
+        "variable sin inicializar",
+        "uninitialised variable"
+      ]
+    },
+    {
+      "id": "sanitizers",
+      "label": "Sanitizers",
+      "lesson": "ub-and-sanitizers",
+      "summary": "Comprobaciones en tiempo de ejecución que inserta el compilador (AddressSanitizer, UndefinedBehaviorSanitizer, ThreadSanitizer) y que informan de errores de memoria, UB y data races.",
+      "aliases": [
+        "sanitizer",
+        "sanitizers",
+        "ASan",
+        "UBSan",
+        "TSan",
+        "AddressSanitizer",
+        "-fsanitize"
+      ]
+    },
+    {
+      "id": "dangling-reference",
+      "label": "Punteros colgantes",
+      "lesson": "dangling-and-invalidation",
+      "summary": "Un puntero o una referencia a memoria que ya se liberó o se reutilizó; usarlo es comportamiento indefinido.",
+      "aliases": [
+        "puntero colgante",
+        "dangling pointer",
+        "use after free",
+        "uso tras liberar",
+        "referencia colgante",
+        "dangling reference",
+        "puntero obsoleto",
+        "stale pointer"
+      ]
+    },
+    {
+      "id": "iterator-invalidation",
+      "label": "Invalidación de iteradores",
+      "lesson": "dangling-and-invalidation",
+      "summary": "Las operaciones que reasignan o desplazan los elementos de un contenedor invalidan los punteros, referencias e iteradores que apuntaban a ellos.",
+      "aliases": [
+        "iterator invalidation",
+        "reasignación del vector",
+        "vector reallocation",
+        "crecimiento de capacidad",
+        "capacity growth",
+        "borrar mientras se itera",
+        "erase while iterating",
+        "iterador invalidado",
+        "invalidated iterator"
+      ]
+    },
+    {
+      "id": "profiling",
+      "label": "Mide primero",
+      "lesson": "measure-first",
+      "summary": "Perfila una build optimizada contra el presupuesto del frame para ver dónde se va el tiempo; después cambia una sola cosa y vuelve a medir.",
+      "aliases": [
+        "profiler",
+        "perfilador",
+        "presupuesto del frame",
+        "frame budget",
+        "benchmark",
+        "perfilar antes de optimizar",
+        "profile before optimising",
+        "16,7 ms",
+        "16.7 ms"
+      ]
+    },
+    {
+      "id": "cache-locality",
+      "label": "Localidad de caché",
+      "lesson": "cache-lines",
+      "summary": "La CPU carga líneas de caché enteras y precarga la memoria secuencial, así que los datos contiguos son rápidos y seguir punteros es lento.",
+      "aliases": [
+        "cache locality",
+        "línea de caché",
+        "cache line",
+        "fallo de caché",
+        "cache miss",
+        "memoria contigua",
+        "contiguous memory",
+        "prefetching",
+        "precarga",
+        "localidad",
+        "locality",
+        "las listas enlazadas son lentas"
+      ]
+    },
+    {
+      "id": "struct-of-arrays",
+      "label": "Struct de arrays",
+      "lesson": "aos-vs-soa",
+      "summary": "Guardar cada campo en su propio array, de modo que los bucles que tocan pocos campos de muchos objetos solo carguen bytes útiles.",
+      "aliases": [
+        "SoA",
+        "AoS",
+        "struct of arrays",
+        "array de structs",
+        "array of structs",
+        "separar datos calientes y fríos",
+        "hot/cold splitting",
+        "disposición de datos",
+        "data layout"
+      ]
+    },
+    {
+      "id": "struct-padding",
+      "label": "Padding y alineación",
+      "lesson": "struct-layout",
+      "summary": "Los miembros se colocan en múltiplos de su alineación y el compilador rellena los huecos, así que el orden de los miembros cambia el sizeof.",
+      "aliases": [
+        "padding",
+        "relleno",
+        "alineación",
+        "alignment",
+        "alignof",
+        "sizeof",
+        "orden de los miembros",
+        "member order",
+        "static_assert"
+      ]
+    },
+    {
+      "id": "ecs",
+      "label": "Entity component system",
+      "lesson": "entities-and-components",
+      "summary": "Las entidades son ids, los componentes son datos simples empaquetados en un array por tipo y los sistemas son bucles sobre esos arrays.",
+      "aliases": [
+        "ECS",
+        "sistema entidad-componente",
+        "entity component system",
+        "componentes",
+        "components",
+        "sistemas",
+        "systems",
+        "id de entidad",
+        "entity id",
+        "swap and pop",
+        "sparse set"
+      ]
+    },
+    {
+      "id": "generational-handles",
+      "label": "Handles generacionales",
+      "lesson": "generational-handles",
+      "summary": "Un índice más un contador de generación que permite al motor detectar referencias a objetos cuya ranura se ha reutilizado.",
+      "aliases": [
+        "handle",
+        "handles",
+        "generational handles",
+        "contador de generación",
+        "generation counter",
+        "handle obsoleto",
+        "stale handle",
+        "slot map",
+        "handle de entidad",
+        "entity handle"
+      ]
+    },
+    {
+      "id": "arena-allocator",
+      "label": "Allocator de arena",
+      "lesson": "arenas-and-pools",
+      "summary": "Reserva avanzando un desplazamiento alineado y lo libera todo de golpe al reiniciarlo, ideal para memoria temporal de cada frame.",
+      "aliases": [
+        "arena",
+        "arena allocator",
+        "allocator lineal",
+        "linear allocator",
+        "allocator de bump",
+        "bump allocator",
+        "allocator de frame",
+        "frame allocator",
+        "memoria temporal",
+        "scratch memory",
+        "allocator de pila",
+        "stack allocator"
+      ]
+    },
+    {
+      "id": "pool-allocator",
+      "label": "Allocator de pool",
+      "lesson": "arenas-and-pools",
+      "summary": "Ranuras de tamaño fijo reservadas de antemano y recicladas mediante una lista libre, con asignación y liberación en O(1) en cualquier orden.",
+      "aliases": [
+        "pool",
+        "pool allocator",
+        "pool de objetos",
+        "object pool",
+        "lista libre",
+        "free list",
+        "allocator de tamaño fijo",
+        "fixed-size allocator",
+        "slab"
+      ]
+    },
+    {
+      "id": "fixed-timestep-loop",
+      "label": "Bucle principal de paso fijo",
+      "lesson": "fixed-step-loop",
+      "summary": "Un acumulador convierte el tiempo de frame acotado en pasos enteros de simulación, y el renderizado interpola entre los dos últimos estados.",
+      "aliases": [
+        "fixed timestep",
+        "paso fijo",
+        "paso de tiempo fijo",
+        "fixed-step loop",
+        "acumulador",
+        "accumulator",
+        "interpolación",
+        "interpolation",
+        "alpha",
+        "espiral de la muerte",
+        "spiral of death",
+        "game loop",
+        "bucle del juego"
+      ]
+    },
+    {
+      "id": "determinism",
+      "label": "Determinismo",
+      "lesson": "determinism",
+      "summary": "Entradas idénticas que dan resultados de simulación idénticos bit a bit, lo que exige un orden fijo de operaciones en coma flotante, flags de compilador fijos y un RNG propio con semilla.",
+      "aliases": [
+        "determinism",
+        "determinista",
+        "lockstep",
+        "replays",
+        "repeticiones",
+        "coma flotante",
+        "floating point",
+        "RNG con semilla",
+        "seeded RNG",
+        "mt19937",
+        "fast-math"
+      ]
+    },
+    {
+      "id": "data-race",
+      "label": "Data race",
+      "lesson": "job-system",
+      "summary": "Dos hilos acceden a la misma memoria sin ningún orden entre ellos y al menos uno escribe: comportamiento indefinido que pierde actualizaciones.",
+      "aliases": [
+        "data race",
+        "carrera de datos",
+        "race",
+        "race condition",
+        "condición de carrera",
+        "seguridad entre hilos",
+        "thread safety",
+        "atomic",
+        "atómico",
+        "ThreadSanitizer"
+      ]
+    },
+    {
+      "id": "job-system",
+      "label": "Job system",
+      "lesson": "job-system",
+      "summary": "Los hilos trabajadores ejecutan pequeños jobs independientes sobre trozos de datos, con puntos de sincronización entre fases; la parte serial limita la aceleración.",
+      "aliases": [
+        "job system",
+        "jobs",
+        "hilos trabajadores",
+        "worker threads",
+        "parallel for",
+        "sistema de tareas",
+        "task system",
+        "ley de Amdahl",
+        "Amdahl's law"
+      ]
+    }
+  ],
+  "links": [
+    {
+      "from": "references-pointers",
+      "to": "value-semantics",
+      "label": "evitan las copias propias de"
+    },
+    {
+      "from": "value-semantics",
+      "to": "java/primitives-vs-references",
+      "label": "vale para todos los tipos, a diferencia de"
+    },
+    {
+      "from": "raii",
+      "to": "stack-vs-heap",
+      "label": "libera recursos del heap al acabar un scope del stack, uniendo"
+    },
+    {
+      "from": "raii",
+      "to": "java/try-with-resources",
+      "label": "es la respuesta de C++ a"
+    },
+    {
+      "from": "unique-ownership",
+      "to": "raii",
+      "label": "aplica"
+    },
+    {
+      "from": "shared-ownership",
+      "to": "unique-ownership",
+      "label": "cuesta más que"
+    },
+    {
+      "from": "move-semantics",
+      "to": "unique-ownership",
+      "label": "transfiere"
+    },
+    {
+      "from": "move-semantics",
+      "to": "value-semantics",
+      "label": "evita copias profundas en"
+    },
+    {
+      "from": "const-correctness",
+      "to": "references-pointers",
+      "label": "hace de solo lectura"
+    },
+    {
+      "from": "sanitizers",
+      "to": "undefined-behaviour",
+      "label": "detectan"
+    },
+    {
+      "from": "dangling-reference",
+      "to": "undefined-behaviour",
+      "label": "es un tipo de"
+    },
+    {
+      "from": "iterator-invalidation",
+      "to": "dangling-reference",
+      "label": "provoca"
+    },
+    {
+      "from": "iterator-invalidation",
+      "to": "references-pointers",
+      "label": "rompe lo almacenado en"
+    },
+    {
+      "from": "generational-handles",
+      "to": "dangling-reference",
+      "label": "detectan lo que serían"
+    },
+    {
+      "from": "generational-handles",
+      "to": "ecs",
+      "label": "identifican entidades en"
+    },
+    {
+      "from": "ecs",
+      "to": "struct-of-arrays",
+      "label": "guarda los componentes como"
+    },
+    {
+      "from": "ecs",
+      "to": "java/inheritance-interfaces",
+      "label": "favorece la composición frente a"
+    },
+    {
+      "from": "struct-of-arrays",
+      "to": "cache-locality",
+      "label": "mejora"
+    },
+    {
+      "from": "struct-padding",
+      "to": "cache-locality",
+      "label": "desperdicia"
+    },
+    {
+      "from": "cache-locality",
+      "to": "system-design/latency-numbers",
+      "label": "es el extremo en memoria de"
+    },
+    {
+      "from": "cache-locality",
+      "to": "big-o/big-o-notation",
+      "label": "es invisible para"
+    },
+    {
+      "from": "profiling",
+      "to": "cache-locality",
+      "label": "revela problemas de"
+    },
+    {
+      "from": "profiling",
+      "to": "system-design/latency-budget",
+      "label": "comprueba un frame contra"
+    },
+    {
+      "from": "profiling",
+      "to": "big-o/small-n-is-fine",
+      "label": "decide cuándo es cierto que"
+    },
+    {
+      "from": "arena-allocator",
+      "to": "stack-vs-heap",
+      "label": "reemplaza muchas asignaciones de heap descritas en"
+    },
+    {
+      "from": "arena-allocator",
+      "to": "dangling-reference",
+      "label": "provoca, si los punteros sobreviven a un reinicio,"
+    },
+    {
+      "from": "pool-allocator",
+      "to": "generational-handles",
+      "label": "se combina con"
+    },
+    {
+      "from": "pool-allocator",
+      "to": "arena-allocator",
+      "label": "complementa a"
+    },
+    {
+      "from": "fixed-timestep-loop",
+      "to": "determinism",
+      "label": "es requisito previo de"
+    },
+    {
+      "from": "fixed-timestep-loop",
+      "to": "profiling",
+      "label": "debe caber en el presupuesto que comprueba"
+    },
+    {
+      "from": "determinism",
+      "to": "unit-testing/flaky-test",
+      "label": "evita la versión en replays de un"
+    },
+    {
+      "from": "data-race",
+      "to": "determinism",
+      "label": "rompe"
+    },
+    {
+      "from": "data-race",
+      "to": "undefined-behaviour",
+      "label": "es"
+    },
+    {
+      "from": "data-race",
+      "to": "java/race-condition",
+      "label": "es la forma a nivel de memoria de una"
+    },
+    {
+      "from": "sanitizers",
+      "to": "data-race",
+      "label": "detectan (ThreadSanitizer)"
+    },
+    {
+      "from": "job-system",
+      "to": "data-race",
+      "label": "debe evitar"
+    },
+    {
+      "from": "job-system",
+      "to": "java/executor-service",
+      "label": "es la versión de motor de"
+    },
+    {
+      "from": "fixed-timestep-loop",
+      "to": "game-development/fixed-timestep",
+      "label": "es cómo un motor implementa"
+    },
+    {
+      "from": "ecs",
+      "to": "game-development/components",
+      "label": "guarda en arrays compactos lo que C# guarda en"
+    },
+    {
+      "from": "pool-allocator",
+      "to": "game-development/object-pool",
+      "label": "es el lado de memoria de"
+    },
+    {
+      "from": "value-semantics",
+      "to": "game-development/value-semantics",
+      "label": "cubre también las clases, a diferencia de"
+    },
+    {
+      "from": "determinism",
+      "to": "game-development/seeded-rng",
+      "label": "necesita algo más que"
+    }
+  ],
+  "units": [
+    {
+      "id": "cpp-without-gc",
+      "title": "C++ sin recolector de basura",
+      "description": "Valores, referencias y punteros, destructores y RAII, y cómo ser dueño de la memoria con unique_ptr en lugar de un GC.",
+      "lessons": [
+        {
+          "id": "values-and-references",
+          "title": "Todo es un valor",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "En C++ todo objeto es un valor que la asignación copia; una referencia es otro nombre para un objeto y un puntero guarda una dirección que puedes cambiar.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Conoce a Ember",
+              "body": "**Ember** es un estudio pequeño que escribe su propio motor en C++. **Rosa** es la programadora de motor principal. **Kai** escribe código de gameplay y ha publicado juegos en C#.\n\nLa primera sorpresa para Kai: en C#, una variable de tipo `class` guarda una *referencia* a un objeto del heap gestionado por el recolector de basura. En C++ no existe esa división. **Todo tipo es un tipo de valor**, tanto `struct` como `class`. Escribir `Enemy b = a;` copia el objeto entero, miembro a miembro, y a partir de ahí `a` y `b` son dos enemigos distintos.\n\nPara hablar del *mismo* objeto tienes que pedirlo de forma explícita, con una referencia o un puntero."
+            },
+            {
+              "type": "output",
+              "id": "q-copy-or-alias",
+              "concepts": [
+                "value-semantics",
+                "references-pointers"
+              ],
+              "prompt": "`Enemy& r = a` crea `r` como una **referencia**: otro nombre para `a`. ¿Qué imprime esto?",
+              "language": "cpp",
+              "code": "#include <cstdio>\n\nstruct Enemy { int hp; };\n\nint main() {\n    Enemy a{100};\n    Enemy b = a;\n    Enemy& r = a;\n    b.hp -= 30;\n    r.hp -= 10;\n    std::printf(\"%d %d\\n\", a.hp, b.hp);\n}",
+              "output": "90 70",
+              "hint": "¿Cuál de `b` y `r` es un objeto distinto y cuál es solo otro nombre para `a`?",
+              "explanation": "`Enemy b = a;` copia `a`, así que `b` es un segundo enemigo con su propio `hp`. Quitarle 30 a `b` no afecta a `a`: `b.hp` vale 70. `r` no es un objeto, es solo otro nombre para `a`, así que `r.hp -= 10` le quita 10 a `a`: 90.\n\nEn C# con `class Enemy`, las dos líneas habrían cambiado el mismo objeto."
+            },
+            {
+              "type": "explain",
+              "title": "Referencias y punteros",
+              "body": "Ambos te permiten llegar a un objeto sin copiarlo:\n\n- Una **referencia** `Enemy& r = a;` debe enlazarse al crearse, no puede ser nula y nunca se puede reapuntar. Cada uso de `r` *es* un uso de `a`.\n- Un **puntero** `Enemy* p = &a;` guarda una dirección. Puede ser `nullptr` y más adelante puedes apuntarlo a otro sitio. Accedes al objeto con `*p` o `p->hp`.\n\nLos parámetros de función siguen las mismas reglas. Un parámetro `Enemy e` normal es una **copia** hecha para la llamada; `Enemy& e` permite a la función cambiar el objeto de quien llama; `const Enemy& e` le permite leerlo sin copiarlo."
+            },
+            {
+              "type": "trace",
+              "id": "q-trace-pointer-reference",
+              "concepts": [
+                "references-pointers"
+              ],
+              "prompt": "Recorre el código y predice los valores. Fíjate en lo que pasa al asignar *a* una referencia.",
+              "language": "cpp",
+              "code": "int a = 1;\nint b = 2;\nint* p = &a;\n*p = 10;\np = &b;\n*p = 20;\nint& r = a;\nr = b;",
+              "frames": [
+                {
+                  "line": 1,
+                  "vars": {
+                    "a": "1"
+                  }
+                },
+                {
+                  "line": 2,
+                  "vars": {
+                    "a": "1",
+                    "b": "2"
+                  }
+                },
+                {
+                  "line": 3,
+                  "vars": {
+                    "a": "1",
+                    "b": "2",
+                    "p": "&a",
+                    "*p": "1"
+                  },
+                  "note": "`p` guarda la dirección de `a`."
+                },
+                {
+                  "line": 4,
+                  "vars": {
+                    "a": "10",
+                    "b": "2",
+                    "p": "&a",
+                    "*p": "10"
+                  },
+                  "ask": "a"
+                },
+                {
+                  "line": 5,
+                  "vars": {
+                    "a": "10",
+                    "b": "2",
+                    "p": "&b",
+                    "*p": "2"
+                  },
+                  "note": "El propio puntero se movió: ahora apunta a `b`."
+                },
+                {
+                  "line": 6,
+                  "vars": {
+                    "a": "10",
+                    "b": "20",
+                    "p": "&b",
+                    "*p": "20"
+                  },
+                  "ask": "b"
+                },
+                {
+                  "line": 7,
+                  "vars": {
+                    "a": "10",
+                    "b": "20",
+                    "p": "&b",
+                    "*p": "20",
+                    "r": "10"
+                  },
+                  "note": "`r` queda enlazada a `a` para siempre."
+                },
+                {
+                  "line": 8,
+                  "vars": {
+                    "a": "20",
+                    "b": "20",
+                    "p": "&b",
+                    "*p": "20",
+                    "r": "20"
+                  },
+                  "ask": "a"
+                }
+              ],
+              "hint": "Un puntero se puede reapuntar con `p = &b`. Una referencia no: `r = b` significa “asigna el valor de b al objeto que nombra r”.",
+              "explanation": "`*p = 10` escribe a través del puntero en `a`. `p = &b` cambia el **puntero**, así que `*p = 20` escribe en `b`. Una referencia no se puede reapuntar: `r = b` no hace que `r` se refiera a `b`, sino que **asigna** el valor de `b` (20) a `a`. Por eso las referencias se usan para “este es el objeto” y los punteros para “esto puede cambiar o ser nulo”."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-damage-copy",
+              "concepts": [
+                "value-semantics",
+                "references-pointers"
+              ],
+              "prompt": "`damage` debería quitarle 25 de vida al goblin, así que debería imprimir `75`. Haz clic en la línea con el error.",
+              "language": "cpp",
+              "code": "#include <cstdio>\n\nstruct Enemy { int hp; };\n\nvoid damage(Enemy e, int amount) {\n    e.hp -= amount;\n}\n\nint main() {\n    Enemy goblin{100};\n    damage(goblin, 25);\n    std::printf(\"%d\\n\", goblin.hp);\n}",
+              "error": "100",
+              "lines": [
+                5
+              ],
+              "fixes": [
+                "Cambia la línea 5 por `void damage(Enemy& e, int amount) {`",
+                "Cambia la línea 5 por `void damage(const Enemy& e, int amount) {`",
+                "Cambia la línea 5 por `void damage(Enemy* e, int amount) {`",
+                "Cambia la línea 11 por `damage(Enemy(goblin), 25);`"
+              ],
+              "answer": 0,
+              "hint": "¿Qué objeto cambia `e.hp -= amount`?",
+              "explanation": "`Enemy e` es una **copia** hecha para la llamada. La función daña la copia, que se descarta al volver, así que el goblin conserva sus 100 de vida. `Enemy& e` se enlaza al goblin de quien llama, y el programa imprime 75.\n\n`const Enemy&` evita la copia pero prohíbe la escritura: clang se detiene con *cannot assign to variable 'e' with const-qualified type 'const Enemy &'*. `Enemy*` necesitaría `e->hp` y una llamada con `&goblin`, así que tal como está no compila. `Enemy(goblin)` solo hace explícita la copia y sigue imprimiendo 100."
+            },
+            {
+              "type": "buckets",
+              "id": "q-param-types",
+              "concepts": [
+                "references-pointers",
+                "value-semantics"
+              ],
+              "prompt": "La regla práctica de Rosa para los parámetros. Clasifica cada caso según el tipo de parámetro que debería usar.",
+              "buckets": [
+                "`T` (copia)",
+                "`const T&`",
+                "`T&`",
+                "`T*`"
+              ],
+              "items": [
+                {
+                  "text": "Un número de nivel `int` de 4 bytes que la función solo lee",
+                  "bucket": 0
+                },
+                {
+                  "text": "Una dirección `Vec3` de 12 bytes que la función solo lee",
+                  "bucket": 0
+                },
+                {
+                  "text": "Un `Mesh` de 3 MB que el renderizador solo lee",
+                  "bucket": 1
+                },
+                {
+                  "text": "Un nombre de asset `std::string` para imprimir en una línea de log",
+                  "bucket": 1
+                },
+                {
+                  "text": "El `Transform` que el paso de física debe mover",
+                  "bucket": 2
+                },
+                {
+                  "text": "Un `std::vector<Enemy>` al que el spawner añade elementos",
+                  "bucket": 2
+                },
+                {
+                  "text": "Un objetivo que puede no existir (la función comprueba si hay “ningún objetivo”)",
+                  "bucket": 3
+                }
+              ],
+              "hint": "Pequeño y de solo lectura: cópialo. Grande y de solo lectura: `const&`. Debe cambiar: `&`. Puede faltar: puntero.",
+              "explanation": "Copiar unos pocos bytes cuesta lo mismo que pasar una dirección, así que los valores pequeños de solo lectura van **por valor**. Los objetos grandes de solo lectura van por **`const T&`**: sin copia, y el compilador impide escrituras accidentales. Usa **`T&`** cuando la función deba cambiar el objeto de quien llama. Un **puntero** dice “esto puede ser `nullptr`”; una referencia no puede expresarlo."
+            }
+          ]
+        },
+        {
+          "id": "scope-and-raii",
+          "title": "Scope, destructores y RAII",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Un destructor se ejecuta en un momento conocido, al final del scope de su dueño, así que ata cada recurso a un objeto y la limpieza nunca podrá saltarse.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Dos lugares donde vivir",
+              "body": "Una variable local vive en el **stack**. Se crea cuando se ejecuta su línea y se destruye cuando termina su scope (el `{ }` que la contiene). La memoria del stack es muy barata: reservarla es un simple avance de puntero que ya forma parte de la llamada a la función.\n\nTodo lo creado con `new` vive en el **heap** hasta que alguien llama a `delete`. **No hay recolector de basura**: si nadie lo borra, se fuga; si dos sitios lo borran, el programa tiene comportamiento indefinido.\n\nCuando se destruye un objeto, se ejecuta su **destructor** `~T()`. Las variables locales se destruyen en **orden inverso** al de creación."
+            },
+            {
+              "type": "output",
+              "id": "q-dtor-order",
+              "concepts": [
+                "raii",
+                "stack-vs-heap"
+              ],
+              "prompt": "El destructor imprime una línea. ¿Qué imprime este programa?",
+              "language": "cpp",
+              "code": "#include <cstdio>\n\nstruct Noisy {\n    const char* name;\n    ~Noisy() { std::printf(\"bye %s\\n\", name); }\n};\n\nint main() {\n    Noisy a{\"a\"};\n    {\n        Noisy b{\"b\"};\n        Noisy c{\"c\"};\n    }\n    Noisy d{\"d\"};\n}",
+              "output": "bye c\nbye b\nbye d\nbye a",
+              "hint": "El `{ }` interior termina antes de que `d` siquiera se cree. Dentro de un scope, el último en construirse es el primero en destruirse.",
+              "explanation": "`b` y `c` viven en el bloque interior, así que mueren cuando se cierra, el más nuevo primero: `c` y luego `b`. Después se crea `d`. Al final de `main`, las locales restantes mueren en orden inverso: `d` y luego `a`.\n\nEste momento está garantizado. En C# un finalizador se ejecuta cuando al GC le viene bien; un destructor de C++ se ejecuta exactamente en la llave de cierre."
+            },
+            {
+              "type": "explain",
+              "title": "RAII: deja que el destructor limpie",
+              "body": "**RAII** (*Resource Acquisition Is Initialization*) convierte esa garantía en un hábito: envuelve cada recurso en un objeto cuyo constructor lo adquiere y cuyo destructor lo libera.\n\n- `std::vector`, `std::string` y `std::unique_ptr` son dueños de memoria del heap.\n- `std::lock_guard` bloquea un mutex y lo desbloquea.\n- Un `GpuBuffer` del motor libera memoria de vídeo; un `ScopedTimer` registra cuánto tardó un bloque.\n\nEl destructor se ejecuta por cualquier vía de salida del scope: llegar al final, un `return` anticipado o una excepción. El código de motor escrito así rara vez contiene la palabra `delete`."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-leak",
+              "concepts": [
+                "raii",
+                "stack-vs-heap"
+              ],
+              "prompt": "Cargar un nivel que no existe debería limpiar y devolver `false`. La herramienta `leaks` de macOS informa de una fuga tras una carga fallida. Haz clic en la línea que la causa.",
+              "language": "cpp",
+              "code": "bool loadLevel(const char* path) {\n    char* buffer = new char[1 << 20];\n    if (!readFile(path, buffer)) return false;\n    parse(buffer);\n    delete[] buffer;\n    return true;\n}",
+              "error": "Process ...: 1 leak for 1064960 total leaked bytes.\nSTACK OF 1 INSTANCE OF 'ROOT LEAK: <malloc in loadLevel(char const*)>'",
+              "lines": [
+                2,
+                3
+              ],
+              "fixes": [
+                "Cambia la línea 2 por `auto buffer = std::make_unique<char[]>(1 << 20);`, pasa `buffer.get()` en las líneas 3 y 4, y borra la línea 5",
+                "Cambia la línea 3 por `if (!readFile(path, buffer)) { delete buffer; return false; }`",
+                "Intercambia las líneas 4 y 5, para liberar el buffer antes de parsear",
+                "Cambia la línea 5 por `delete buffer;`"
+              ],
+              "answer": 0,
+              "hint": "Sigue el camino en que `readFile` falla. ¿Qué línea libera el buffer en ese camino?",
+              "explanation": "El `return false` anticipado de la línea 3 se salta el `delete[]` de la línea 5, así que cada carga fallida fuga un megabyte. Con `std::make_unique<char[]>` el buffer pertenece a un objeto cuyo destructor lo libera en **todos** los caminos (`leaks` entonces informa de 0 fugas). `std::vector<char> buffer(1 << 20)` también funcionaría.\n\nLas otras correcciones son peores. La memoria de `new[]` debe liberarse con `delete[]`: un `delete` normal es comportamiento indefinido, y AddressSanitizer informa *alloc-dealloc-mismatch (operator new [] vs operator delete)*. Liberar antes de parsear hace que `parse` lea memoria liberada: *heap-use-after-free*."
+            },
+            {
+              "type": "buckets",
+              "id": "q-stack-or-heap",
+              "concepts": [
+                "stack-vs-heap"
+              ],
+              "prompt": "Dentro de una función, ¿dónde viven los **bytes** de cada uno de estos elementos?",
+              "buckets": [
+                "Stack (desaparece al final del scope)",
+                "Heap (vive hasta que su dueño lo libera)"
+              ],
+              "items": [
+                {
+                  "text": "Una local `Vec3 velocity{0, 0, 0};`",
+                  "bucket": 0
+                },
+                {
+                  "text": "Una local `std::array<int, 16> slots;`",
+                  "bucket": 0
+                },
+                {
+                  "text": "Una local `int count = 0;`",
+                  "bucket": 0
+                },
+                {
+                  "text": "El objeto creado por `new Texture()`",
+                  "bucket": 1
+                },
+                {
+                  "text": "Los elementos de un `std::vector<Enemy> enemies(100);` local",
+                  "bucket": 1
+                },
+                {
+                  "text": "El objeto creado por `std::make_unique<Level>()`",
+                  "bucket": 1
+                }
+              ],
+              "hint": "El objeto `std::vector` en sí es pequeño (tres punteros en el stack); ¿dónde van los elementos que gestiona?",
+              "explanation": "Las locales normales, incluidos los `std::array` de tamaño fijo, están en el stack frame de la función. Todo lo creado con `new` o `make_unique` está en el heap. Un `std::vector` es el caso interesante: el objeto vector (unos pocos punteros) está en el stack, pero sus **elementos** están en un bloque del heap que él reserva y libera, que es RAII haciendo su trabajo."
+            },
+            {
+              "type": "mcq",
+              "id": "q-scoped-timer",
+              "concepts": [
+                "raii"
+              ],
+              "prompt": "Kai mide `updatePhysics()`, que tiene cuatro sentencias `return`. Rosa sugiere poner `ScopedTimer t{\"physics\"};` en su primera línea en lugar de llamadas a `start()` y `stop()`. ¿Por qué es mejor?",
+              "choices": [
+                "El destructor del temporizador registra el tiempo en todos los caminos de salida, incluidos los retornos anticipados y las excepciones",
+                "La CPU mide con más precisión los objetos que están en el stack",
+                "El compilador elimina un `ScopedTimer` en las builds release, así que no cuesta nada",
+                "Un destructor se ejecuta en un hilo en segundo plano, así que medir no ralentiza el frame"
+              ],
+              "answer": 0,
+              "hint": "¿Qué pasa con las llamadas a `stop()` cuando más adelante se añade otro `return` anticipado?",
+              "explanation": "Con llamadas manuales a `stop()`, cada camino de salida necesita una, y el próximo `return` anticipado que alguien añada se la saltará. El destructor de un objeto con scope se ejecuta en **todos** los caminos de salida del scope. Es la misma idea de RAII que `std::lock_guard`. Los destructores se ejecutan en el mismo hilo, en la llave de cierre, y el compilador no elimina código con efectos visibles."
+            }
+          ]
+        },
+        {
+          "id": "owning-pointers",
+          "title": "Un solo dueño: unique_ptr",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Da a cada objeto del heap exactamente un dueño con std::unique_ptr, entrega punteros o referencias simples a quienes solo observan, y reserva shared_ptr para el caso raro en que no hay un último usuario claro.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "¿Quién lo borra?",
+              "body": "Cada objeto del heap necesita exactamente una respuesta a *¿quién libera esto?* `std::unique_ptr<T>` escribe esa respuesta en el tipo: es **dueño** del objeto y lo borra en su destructor.\n\n```cpp\nauto level = std::make_unique<Level>();  // level owns the Level\n```\n\nNo se puede copiar (dos dueños borrarían dos veces), solo **mover**: `auto next = std::move(level);` transfiere la propiedad y deja `level` vacío. En esta máquina `sizeof(std::unique_ptr<Mesh>)` es 8 bytes, igual que un `Mesh*` simple.\n\nEl código que solo *usa* el objeto recibe un simple `Mesh&` o `Mesh*`. Esos no son dueños de nada; solo observan."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-unique-copy",
+              "concepts": [
+                "unique-ownership",
+                "move-semantics"
+              ],
+              "prompt": "Kai quiere que la caché de texturas se haga dueña de una textura nueva. Esto no compila. Haz clic en la línea con el error.",
+              "language": "cpp",
+              "code": "#include <memory>\n#include <vector>\n\nstruct Texture { int width = 0, height = 0; };\n\nint main() {\n    std::vector<std::unique_ptr<Texture>> cache;\n    auto tex = std::make_unique<Texture>();\n    cache.push_back(tex);\n}",
+              "error": "error: no matching function for call to '__construct_at'\n  ...\nnote: candidate template ignored: substitution failure [...]: call to implicitly-deleted copy constructor of 'std::unique_ptr<Texture>'",
+              "lines": [
+                9
+              ],
+              "fixes": [
+                "Cambia la línea 9 por `cache.push_back(std::move(tex));`",
+                "Cambia la línea 9 por `cache.push_back(&tex);`",
+                "Cambia la línea 9 por `cache.push_back(tex.get());`",
+                "Cambia la línea 9 por `cache.push_back(std::ref(tex));`"
+              ],
+              "answer": 0,
+              "hint": "Un `unique_ptr` no tiene constructor de copia. ¿Cómo cedes entonces la propiedad?",
+              "explanation": "`push_back(tex)` le pide al vector que **copie** el `unique_ptr`, y su constructor de copia está eliminado: dos dueños borrarían la textura dos veces. `std::move(tex)` permite al vector **tomar** la propiedad; `tex` queda vacío.\n\n`&tex` es un puntero *al unique_ptr* y `tex.get()` es un `Texture*` simple; ninguno se convierte en `unique_ptr`, así que ambos fallan con *no matching member function for call to 'push_back'*. `std::ref(tex)` sigue acabando por pedir una copia."
+            },
+            {
+              "type": "explain",
+              "title": "shared_ptr y sus costes",
+              "body": "`std::shared_ptr<T>` permite que varios dueños compartan un objeto mediante un **contador de referencias**: cada copia suma uno, cada copia destruida resta uno, y la última borra el objeto.\n\nLos motores lo usan con moderación:\n\n- Aquí ocupa 16 bytes (puntero al objeto más puntero al contador), y el contador vive en un **bloque de control** asignado en el heap (justo junto al objeto si usas `std::make_shared`).\n- El contador se actualiza con instrucciones **atómicas** para que sea seguro entre hilos, y cada copia paga por ello.\n- La propiedad se difumina: cuando *todos* son dueños del nivel, nadie puede decir cuándo muere. Dos objetos que guardan `shared_ptr` el uno del otro nunca mueren."
+            },
+            {
+              "type": "output",
+              "id": "q-use-count",
+              "concepts": [
+                "shared-ownership"
+              ],
+              "prompt": "`use_count()` devuelve cuántos `shared_ptr` comparten ahora el objeto. ¿Qué imprime esto?",
+              "language": "cpp",
+              "code": "#include <cstdio>\n#include <memory>\n\nstruct Mesh { int vertices = 0; };\n\nint main() {\n    auto a = std::make_shared<Mesh>();\n    auto b = a;\n    {\n        auto c = a;\n        std::printf(\"%ld\\n\", a.use_count());\n    }\n    std::printf(\"%ld\\n\", a.use_count());\n    b.reset();\n    std::printf(\"%ld\\n\", a.use_count());\n}",
+              "output": "3\n2\n1",
+              "hint": "`c` solo existe dentro de las llaves interiores. `b.reset()` hace que `b` suelte el objeto.",
+              "explanation": "`a`, `b` y `c` comparten la malla: **3**. Cuando se cierra el bloque interior, `c` se destruye y el contador baja a **2**. `b.reset()` libera la parte de `b`: **1**. La malla solo se borra cuando `a` también desaparece.\n\nCada una de esas copias y liberaciones fue un incremento o decremento atómico."
+            },
+            {
+              "type": "buckets",
+              "id": "q-who-owns",
+              "concepts": [
+                "unique-ownership",
+                "shared-ownership"
+              ],
+              "prompt": "Elige la herramienta adecuada para cada relación en Ember.",
+              "buckets": [
+                "`std::unique_ptr` (el único dueño)",
+                "`T*` o `T&` simples (observa, nunca libera)",
+                "`std::shared_ptr` (sin un último usuario claro)"
+              ],
+              "items": [
+                {
+                  "text": "El `World` es dueño de cada `Level` que carga",
+                  "bucket": 0
+                },
+                {
+                  "text": "El sistema de física es dueño de su árbol de broadphase privado",
+                  "bucket": 0
+                },
+                {
+                  "text": "`drawMesh` recibe la malla que debe dibujar en este frame",
+                  "bucket": 1
+                },
+                {
+                  "text": "Una cámara sigue al jugador, que pertenece al mundo",
+                  "bucket": 1
+                },
+                {
+                  "text": "Una pista de música decodificada que usan el hilo de audio y un hilo de streaming, y que se libera cuando el último de los dos la suelta",
+                  "bucket": 2
+                }
+              ],
+              "hint": "Pregúntate: ¿hay un lugar obvio que decida cuándo muere este objeto?",
+              "explanation": "Cuando un solo lugar decide el tiempo de vida, ese lugar guarda un **`unique_ptr`** y todos los demás reciben un puntero o una referencia simple que **nunca libera**. `shared_ptr` es para el caso genuinamente poco claro, como dos hilos donde cualquiera puede terminar el último. Las cámaras y quienes llaman son observadores clásicos: no deben mantener vivo al jugador."
+            },
+            {
+              "type": "mcq",
+              "id": "q-shared-hot-loop",
+              "concepts": [
+                "shared-ownership"
+              ],
+              "prompt": "En el Apple M5 donde se comprobó este curso, 50 millones de llamadas a una función que recibía `std::shared_ptr<Mesh>` **por valor** tardaron unos 164 ms; las mismas llamadas recibiendo `const std::shared_ptr<Mesh>&` tardaron unos 23 ms (un hilo, `-O2`). ¿Qué explica la diferencia?",
+              "choices": [
+                "Cada llamada por valor copia el shared_ptr, haciendo un incremento atómico y más tarde un decremento atómico del contador",
+                "Pasar por valor copia el objeto Mesh entero en cada llamada",
+                "Un parámetro `const&` permite al compilador evitar llamar a la función",
+                "shared_ptr es lento porque ejecuta un recolector de basura en segundo plano"
+              ],
+              "answer": 0,
+              "hint": "¿Qué tiene que pasar con el contador de referencias cuando un `shared_ptr` se copia a un parámetro y se destruye al final de la llamada?",
+              "explanation": "Copiar un `shared_ptr` copia el **puntero**, no la malla, pero debe subir el contador compartido de forma atómica, y destruir el parámetro lo baja de nuevo de forma atómica. Pasa un `shared_ptr` por `const&` (o pasa el propio `Mesh&`) cuando solo necesites usar el objeto. No hay recolector de basura; el contador *es* todo el mecanismo."
+            }
+          ]
+        },
+        {
+          "id": "moves-and-const",
+          "title": "Movimientos y const",
+          "pareto": "extra",
+          "minutes": 8,
+          "takeaway": "Un movimiento roba las entrañas de un objeto en lugar de copiarlas (marca los constructores de movimiento como noexcept para que los contenedores los usen), y const convierte “no voy a cambiar esto” en algo que comprueba el compilador.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Robar en lugar de copiar",
+              "body": "Copiar un `std::vector` de un millón de vértices reserva un bloque nuevo y copia cada elemento. A menudo el origen se va a tirar de todos modos, así que C++ te permite **moverlo**: el vector nuevo se queda con el bloque de heap del viejo (cambian de manos tres punteros) y el viejo queda vacío.\n\n`std::move(x)` no mueve nada por sí mismo. Es un cast que dice *ya he terminado con `x`, puedes robarle*. El objeto movido sigue siendo válido pero su contenido no está especificado, así que solo debes asignarle algo o destruirlo. (`std::vector` garantiza que un vector del que has *construido por movimiento* queda vacío.)"
+            },
+            {
+              "type": "output",
+              "id": "q-moved-from",
+              "concepts": [
+                "move-semantics"
+              ],
+              "prompt": "¿Qué imprime esto?",
+              "language": "cpp",
+              "code": "#include <cstdio>\n#include <utility>\n#include <vector>\n\nint main() {\n    std::vector<int> a(1000, 7);\n    std::vector<int> b = a;\n    std::vector<int> c = std::move(a);\n    std::printf(\"%zu %zu %zu\\n\", a.size(), b.size(), c.size());\n}",
+              "output": "0 1000 1000",
+              "hint": "`b` es una copia. `c` se quedó con los elementos de `a`.",
+              "explanation": "`b = a` copia los 1000 elementos, así que ambos tienen tamaño 1000. `c = std::move(a)` se queda con el bloque de heap de `a`: `c` tiene los 1000 elementos y `a` queda vacío, con tamaño **0**. No se copió ningún elemento para `c`."
+            },
+            {
+              "type": "output",
+              "id": "q-copy-move-count",
+              "concepts": [
+                "move-semantics"
+              ],
+              "prompt": "Los constructores de copia y de movimiento imprimen lo que hacen. Con espacio reservado de antemano, ¿qué imprime esto?",
+              "language": "cpp",
+              "code": "#include <cstdio>\n#include <utility>\n#include <vector>\n\nstruct Tracked {\n    Tracked() {}\n    Tracked(const Tracked&) { std::puts(\"copy\"); }\n    Tracked(Tracked&&) noexcept { std::puts(\"move\"); }\n};\n\nint main() {\n    std::vector<Tracked> v;\n    v.reserve(4);\n    Tracked t;\n    v.push_back(t);\n    v.push_back(std::move(t));\n    v.push_back(Tracked{});\n    v.emplace_back();\n}",
+              "output": "copy\nmove\nmove",
+              "hint": "Una variable con nombre se copia a menos que uses `std::move`; un temporal se mueve; `emplace_back` construye el elemento en su sitio.",
+              "explanation": "`push_back(t)` copia la variable con nombre `t`. `push_back(std::move(t))` la mueve. `Tracked{}` es un temporal, así que se mueve automáticamente. `emplace_back()` construye el elemento nuevo **directamente dentro del vector**, sin ninguna copia ni movimiento, por lo que el código de motor lo prefiere para objetos grandes."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-noexcept",
+              "concepts": [
+                "move-semantics"
+              ],
+              "prompt": "Cuando `meshes` crece de 1 a 2 elementos debe reubicar `rock`. Rosa espera que **mueva** `rock`, pero el programa imprime `copy`. Haz clic en la línea con el error.",
+              "language": "cpp",
+              "code": "#include <cstdio>\n#include <string>\n#include <vector>\n\nstruct Mesh {\n    std::string name;\n    Mesh(std::string n) : name(std::move(n)) {}\n    Mesh(const Mesh& o) : name(o.name) { std::puts(\"copy\"); }\n    Mesh(Mesh&& o) : name(std::move(o.name)) { std::puts(\"move\"); }\n};\n\nint main() {\n    std::vector<Mesh> meshes;\n    meshes.emplace_back(\"rock\");\n    meshes.emplace_back(\"tree\");\n}",
+              "error": "copy",
+              "lines": [
+                9
+              ],
+              "fixes": [
+                "Cambia la línea 9 por `Mesh(Mesh&& o) noexcept : name(std::move(o.name)) { std::puts(\"move\"); }`",
+                "Cambia la línea 15 por `meshes.reserve(2); meshes.emplace_back(\"tree\");`",
+                "Cambia la línea 15 por `meshes.push_back(Mesh(\"tree\"));`",
+                "Cambia la línea 9 por `Mesh(const Mesh&& o) : name(std::move(o.name)) { std::puts(\"move\"); }`"
+              ],
+              "answer": 0,
+              "hint": "Cuando un vector reubica sus elementos no puede quedarse a medias si uno de ellos lanza una excepción. ¿En qué tipo de constructor de movimiento puede confiar?",
+              "explanation": "Cuando `std::vector` crece, mueve los elementos antiguos solo si el constructor de movimiento es **`noexcept`**. Si un movimiento pudiera lanzar a medias, los elementos antiguos ya estarían vaciados, así que sin `noexcept` el vector juega sobre seguro y **copia**. Al añadir `noexcept` imprime `move`.\n\n`reserve(2)` en la línea 15 se ejecuta cuando `rock` ya está dentro, así que reservar reubica `rock` y sigue copiando. `push_back(Mesh(\"tree\"))` mueve el temporal nuevo pero sigue copiando `rock` (imprime `move` y luego `copy`). A un `const Mesh&&` no se le puede robar, y tampoco es `noexcept`. Si no escribes ningún constructor de copia ni de movimiento, el compilador genera el movimiento por ti, y es `noexcept` siempre que lo sean los movimientos de los miembros (como el de `std::string`)."
+            },
+            {
+              "type": "explain",
+              "title": "const es una promesa que comprueba el compilador",
+              "body": "`const` marca lo que no va a cambiar:\n\n- `const Mesh& m` en un parámetro: la función puede leer `m` pero no modificarlo.\n- `float length() const` en una función miembro: llamarla no modifica el objeto, así que puede llamarse sobre un objeto `const`.\n\nEn un motor esto documenta la intención a gran escala. Una pasada de render que recibe `const World&` no puede mover nada por accidente, y eso lo comprueba el compilador, no la revisión de código."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-const-member",
+              "concepts": [
+                "const-correctness"
+              ],
+              "prompt": "Esto debería imprimir `5`, la longitud de (3, 4, 0). No compila. Haz clic en la línea con el error.",
+              "language": "cpp",
+              "code": "#include <cmath>\n#include <cstdio>\n\nstruct Vec3 {\n    float x, y, z;\n    float length() { return std::sqrt(x * x + y * y + z * z); }\n};\n\nfloat distanceFromOrigin(const Vec3& p) {\n    return p.length();\n}\n\nint main() {\n    std::printf(\"%g\\n\", distanceFromOrigin(Vec3{3, 4, 0}));\n}",
+              "error": "error: 'this' argument to member function 'length' has type 'const Vec3', but function is not marked const",
+              "lines": [
+                6
+              ],
+              "fixes": [
+                "Cambia la línea 6 por `float length() const { return std::sqrt(x * x + y * y + z * z); }`",
+                "Cambia la línea 6 por `const float length() { return std::sqrt(x * x + y * y + z * z); }`",
+                "Cambia la línea 5 por `mutable float x, y, z;`",
+                "Cambia la línea 9 por `float distanceFromOrigin(const Vec3 p) {`"
+              ],
+              "answer": 0,
+              "hint": "El error menciona el tipo de `this` dentro de la llamada. ¿Qué hay que marcar como `const`?",
+              "explanation": "`p` es un `const Vec3&`, así que solo se pueden llamar sobre él funciones miembro **marcadas como `const`**. `length` solo lee `x`, `y` y `z`, así que declararla `float length() const` es la corrección honesta e imprime 5.\n\n`const float` hace const el *valor devuelto* (clang avisa de que no tiene efecto) y no cambia nada. `mutable` permite que las funciones `const` cambien esos campos pero no convierte `length` en una función `const`. Recibir `const Vec3` por valor sigue siendo `const`, así que las tres siguen fallando con el mismo error."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "undefined-behaviour",
+      "title": "Comportamiento indefinido",
+      "description": "Los errores silenciosos que tumban los motores: accesos fuera de límites, desbordamientos, punteros colgantes e iteradores invalidados, y los sanitizers que los detectan.",
+      "lessons": [
+        {
+          "id": "ub-and-sanitizers",
+          "title": "Comportamiento indefinido y sanitizers",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "El comportamiento indefinido no da ningún error ni ninguna garantía, así que compila con avisos y ejecuta los tests bajo AddressSanitizer y UndefinedBehaviorSanitizer para convertir la corrupción silenciosa en un informe claro.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Sin excepción, sin garantía",
+              "body": "C# comprueba cada índice de array y lanza `IndexOutOfRangeException`. El `v[i]` de C++ no comprueba nada: leer más allá del final es **comportamiento indefinido (UB)**. El estándar del lenguaje *no exige nada en absoluto* sobre lo que ocurra a continuación. El programa puede imprimir basura, caerse o funcionar perfectamente hasta la build release.\n\nEsa última parte es la trampa. El optimizador puede asumir que el UB nunca ocurre y reorganizar el código sobre esa base, así que un error puede esconderse con `-O0` y aparecer con `-O2`, o mostrarse solo en una consola concreta.\n\nEl UB con el que de verdad se topan quienes programan motores: accesos fuera de límites, uso de memoria liberada, lectura de variables sin inicializar, desbordamiento de enteros con signo y data races."
+            },
+            {
+              "type": "buckets",
+              "id": "q-ub-or-defined",
+              "concepts": [
+                "undefined-behaviour"
+              ],
+              "prompt": "Clasifica cada línea según lo que C++ promete.",
+              "buckets": [
+                "Definido (un resultado que puedes predecir)",
+                "Comportamiento indefinido"
+              ],
+              "items": [
+                {
+                  "text": "Un `unsigned int` con 0 menos 1",
+                  "bucket": 0
+                },
+                {
+                  "text": "`v.at(10)` en un vector de 3 elementos",
+                  "bucket": 0
+                },
+                {
+                  "text": "`delete` sobre un puntero nulo",
+                  "bucket": 0
+                },
+                {
+                  "text": "Un `int` con 2.147.483.647 más 1",
+                  "bucket": 1
+                },
+                {
+                  "text": "`v[10]` en un vector de 3 elementos",
+                  "bucket": 1
+                },
+                {
+                  "text": "Leer una variable local `int` a la que nunca se dio valor",
+                  "bucket": 1
+                },
+                {
+                  "text": "Leer a través de un puntero después de hacerle `delete`",
+                  "bucket": 1
+                }
+              ],
+              "hint": "La aritmética sin signo da la vuelta por definición. `at()` comprueba el índice; `[]` no.",
+              "explanation": "La aritmética **sin signo** está definida para dar la vuelta (0 − 1 se convierte en el valor más grande). `at()` comprueba el índice y lanza `std::out_of_range`. Borrar `nullptr` no hace nada. El desbordamiento **con signo**, el acceso fuera de límites sin comprobar, las lecturas de variables sin inicializar y el use-after-free son todos indefinidos: no se promete ningún error, así que puede que no haya ninguno."
+            },
+            {
+              "type": "output",
+              "id": "q-unsigned-wrap",
+              "concepts": [
+                "undefined-behaviour"
+              ],
+              "prompt": "El wraparound sin signo está definido, lo que no significa que sea lo que querías. ¿Qué imprime esto?",
+              "language": "cpp",
+              "code": "#include <cstdint>\n#include <cstdio>\n\nint main() {\n    std::uint32_t ammo = 5;\n    ammo -= 10;\n    std::printf(\"%u\\n\", ammo);\n    std::uint8_t lives = 0;\n    lives -= 1;\n    std::printf(\"%d\\n\", lives);\n}",
+              "output": "4294967291\n255",
+              "hint": "Un valor sin signo de 32 bits da la vuelta módulo 2³², uno de 8 bits módulo 2⁸ = 256.",
+              "explanation": "5 − 10 da la vuelta hasta 2³² − 5 = **4294967291**: el jugador ahora tiene cuatro mil millones de balas. Un contador de 8 bits con 0 menos 1 da la vuelta hasta **255**. Ningún sanitizer se queja porque no ha ocurrido nada indefinido. Comprueba antes de restar (`if (ammo >= cost)`), o usa un tipo con signo para los valores que pueden ser negativos."
+            },
+            {
+              "type": "explain",
+              "title": "Los sanitizers lo encuentran por ti",
+              "body": "Clang puede añadir comprobaciones a tu programa en tiempo de compilación:\n\n```bash\nclang++ -std=c++20 -g -fsanitize=address,undefined game.cpp\n```\n\n- **AddressSanitizer** (ASan) detecta accesos fuera de límites, use-after-free y doble liberación, e imprime dónde se reservó y se liberó la memoria.\n- **UndefinedBehaviorSanitizer** (UBSan) detecta desbordamientos con signo, desplazamientos incorrectos, punteros mal alineados y más.\n\nEl programa se ejecuta más lento (la documentación de clang cifra la ralentización típica de ASan en unas 2 veces), así que úsalos en builds de depuración, tests y ejecuciones nocturnas, no en las builds que se distribuyen. Compila también con `-Wall -Wextra`: clang avisó *variable 'spawned' is uninitialized when used here* para un `int` al que nunca se dio valor."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-off-by-one",
+              "concepts": [
+                "undefined-behaviour",
+                "sanitizers"
+              ],
+              "prompt": "`totalWeight` debería sumar tres pesos y devolver `1`. Bajo AddressSanitizer aborta. Haz clic en la línea con el error.",
+              "language": "cpp",
+              "code": "float totalWeight(const std::vector<float>& weights) {\n    float total = 0;\n    for (int i = 0; i <= (int)weights.size(); ++i) {\n        total += weights[i];\n    }\n    return total;\n}",
+              "error": "ERROR: AddressSanitizer: heap-buffer-overflow on address ...\nREAD of size 4 at ... thread T0\n    #0 ... in totalWeight(std::__1::vector<float, std::__1::allocator<float>> const&)\n... is located 0 bytes after 12-byte region",
+              "lines": [
+                3
+              ],
+              "fixes": [
+                "Cambia la línea 3 por `for (int i = 0; i < (int)weights.size(); ++i) {`",
+                "Cambia la línea 3 por `for (std::size_t i = 0; i <= weights.size(); ++i) {`",
+                "Cambia la línea 3 por `for (int i = 1; i <= (int)weights.size(); ++i) {`",
+                "Cambia la línea 4 por `total += weights.at(i - 1);`"
+              ],
+              "answer": 0,
+              "hint": "Un vector de 3 floats tiene índices válidos 0, 1 y 2. ¿Cuál es la última `i` que usa este bucle?",
+              "explanation": "`i <= size()` avanza un paso de más y lee `weights[3]`, los 4 bytes justo después del bloque de 12 bytes. Sin ASan esa lectura devuelve en silencio lo que haya allí. Con `<` el bucle visita 0, 1 y 2 y devuelve 1.\n\nCambiar a `std::size_t` mantiene el mismo `<=`. Empezar en 1 se salta el primer peso y sigue leyendo el índice 3. `at(i - 1)` comprueba el índice, pero con `i = 0` pide el índice −1 (un número enorme al convertirlo), así que lanza `std::out_of_range`. Mejor aún: `for (float w : weights) total += w;` no puede equivocarse con los límites."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-signed-overflow",
+              "concepts": [
+                "undefined-behaviour",
+                "sanitizers"
+              ],
+              "prompt": "Una puntuación al final de la partida debería llegar a 2.500.000.000. Imprime un número negativo, y UBSan explica por qué. Haz clic en la línea con el error.",
+              "language": "cpp",
+              "code": "#include <cstdio>\n\nint main() {\n    int score = 2'000'000'000;\n    int bonus = 500'000'000;\n    score += bonus;\n    std::printf(\"%lld\\n\", (long long)score);\n}",
+              "error": "-1794967296\n... runtime error: signed integer overflow: 2000000000 + 500000000 cannot be represented in type 'int'",
+              "lines": [
+                4,
+                6
+              ],
+              "fixes": [
+                "Cambia la línea 4 por `long long score = 2'000'000'000;`",
+                "Cambia la línea 5 por `unsigned bonus = 500'000'000;`",
+                "Cambia la línea 5 por `long long bonus = 500'000'000;`",
+                "Cambia la línea 7 por `std::printf(\"%lld\\n\", (long long)score + 0LL);`"
+              ],
+              "answer": 0,
+              "hint": "¿Dónde se tiene que guardar el resultado? Un `int` de 32 bits admite como máximo 2.147.483.647.",
+              "explanation": "El total no cabe en un `int` de 32 bits, y el desbordamiento con signo es UB; UBSan lo informa en el `+=`. Hacer que `score` sea un `long long` de 64 bits le da espacio, y el programa imprime 2500000000.\n\nLas demás correcciones imprimen todas −1794967296. Con un bonus `unsigned` o `long long` la suma se calcula en un tipo más ancho, pero luego se **guarda de nuevo en** el `int` score, que le da la vuelta. Convertir `score` después del desbordamiento es demasiado tarde."
+            }
+          ]
+        },
+        {
+          "id": "dangling-and-invalidation",
+          "title": "Cuando el vector se mueve",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Un std::vector que crece mueve sus elementos a un bloque nuevo, así que todo puntero, referencia e iterador hacia él queda colgando: guarda índices o handles en su lugar.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Adónde fueron los enemigos",
+              "body": "Un `std::vector` guarda sus elementos en un bloque contiguo del heap. `size()` es cuántos elementos contiene; `capacity()` es cuántos caben en el bloque.\n\nCuando `push_back` encuentra el bloque lleno, el vector reserva uno más grande, mueve todos los elementos y **libera el bloque viejo**. Cualquier `Enemy&`, `Enemy*` o iterador que apuntara al bloque viejo ahora apunta a memoria liberada: **cuelga**. Usarlo es comportamiento indefinido.\n\nEn C#, una `List<Enemy>` de clases guarda referencias a objetos que nunca se mueven. Un `std::vector<Enemy>` guarda los propios enemigos, así que sí se mueven."
+            },
+            {
+              "type": "trace",
+              "id": "q-trace-capacity",
+              "concepts": [
+                "iterator-invalidation"
+              ],
+              "prompt": "Grabado con la biblioteca estándar de Apple clang (libc++). Recorre el código y predice cómo crece la capacidad y cuándo se mueve el bloque.",
+              "language": "cpp",
+              "code": "std::vector<int> ids;\nids.push_back(10);\nids.push_back(11);\nids.push_back(12);\nids.push_back(13);\nids.push_back(14);\nids.reserve(16);",
+              "frames": [
+                {
+                  "line": 1,
+                  "vars": {
+                    "ids": "[]",
+                    "size()": "0",
+                    "capacity()": "0",
+                    "buffer moved": "no"
+                  }
+                },
+                {
+                  "line": 2,
+                  "vars": {
+                    "ids": "[10]",
+                    "size()": "1",
+                    "capacity()": "1",
+                    "buffer moved": "no"
+                  }
+                },
+                {
+                  "line": 3,
+                  "vars": {
+                    "ids": "[10, 11]",
+                    "size()": "2",
+                    "capacity()": "2",
+                    "buffer moved": "yes"
+                  },
+                  "note": "Lleno: el segundo elemento necesitó un bloque nuevo y más grande."
+                },
+                {
+                  "line": 4,
+                  "vars": {
+                    "ids": "[10, 11, 12]",
+                    "size()": "3",
+                    "capacity()": "4",
+                    "buffer moved": "yes"
+                  },
+                  "ask": "capacity()"
+                },
+                {
+                  "line": 5,
+                  "vars": {
+                    "ids": "[10, 11, 12, 13]",
+                    "size()": "4",
+                    "capacity()": "4",
+                    "buffer moved": "no"
+                  },
+                  "ask": "buffer moved"
+                },
+                {
+                  "line": 6,
+                  "vars": {
+                    "ids": "[10, 11, 12, 13, 14]",
+                    "size()": "5",
+                    "capacity()": "8",
+                    "buffer moved": "yes"
+                  },
+                  "ask": "capacity()"
+                },
+                {
+                  "line": 7,
+                  "vars": {
+                    "ids": "[10, 11, 12, 13, 14]",
+                    "size()": "5",
+                    "capacity()": "16",
+                    "buffer moved": "yes"
+                  },
+                  "note": "`reserve` hace crecer el bloque por adelantado; este movimiento ocurre una sola vez, en un momento que tú elegiste."
+                }
+              ],
+              "hint": "Esta biblioteca duplica la capacidad cuando el bloque está lleno. El bloque solo se mueve cuando cambia la capacidad.",
+              "explanation": "Cada vez que `size()` superaría a `capacity()`, esta biblioteca reserva un bloque **del doble de tamaño** (1, 2, 4, 8) y mueve ahí los elementos. Meter el 13 en un bloque con espacio para 4 no mueve nada, pero meter el 14 sí. Otras bibliotecas estándar crecen con otros factores (1,5x es habitual), así que nunca cuentes con *cuándo* ocurre: asume que **cualquier** crecimiento lo mueve todo."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-dangling-boss",
+              "concepts": [
+                "dangling-reference",
+                "iterator-invalidation"
+              ],
+              "prompt": "Generar un minion y luego dañar al jefe debería dejar al jefe en `90`. Bajo ASan aborta. Haz clic en la línea con el error.",
+              "language": "cpp",
+              "code": "std::vector<Enemy> enemies(2);\nEnemy& boss = enemies[0];\nenemies.push_back(Enemy{});\nboss.hp -= 10;",
+              "error": "ERROR: AddressSanitizer: heap-use-after-free on address ...\nREAD of size 4 at ... thread T0\n...\nfreed by thread T0 here:\n...\n    #6 ... in Enemy* std::__1::vector<Enemy, std::__1::allocator<Enemy>>::__emplace_back_slow_path<Enemy>(Enemy&&)",
+              "lines": [
+                2,
+                3
+              ],
+              "fixes": [
+                "Cambia la línea 2 por `std::size_t boss = 0;` y la línea 4 por `enemies[boss].hp -= 10;`",
+                "Cambia la línea 2 por `Enemy* boss = &enemies[0];` y la línea 4 por `boss->hp -= 10;`",
+                "Cambia la línea 3 por `enemies.emplace_back();`",
+                "Cambia la línea 3 por `enemies.push_back(Enemy{}); enemies.shrink_to_fit();`"
+              ],
+              "answer": 0,
+              "hint": "El vector tiene 2 enemigos con capacidad 2. ¿Qué le obliga a hacer el tercero?",
+              "explanation": "`boss` se refiere al interior del bloque del vector. El `push_back` de la línea 3 necesita una tercera ranura, así que el vector mueve los dos enemigos a un bloque nuevo y libera el viejo; la línea 4 escribe entonces en memoria liberada. El informe de ASan incluso muestra la liberación ocurriendo dentro de `__emplace_back_slow_path`, el camino de crecimiento.\n\nUn **índice** sobrevive a la reasignación: `enemies[boss]` busca al jefe en el bloque que esté vigente. Un puntero cuelga exactamente igual que la referencia. `emplace_back` hace crecer el vector de la misma manera, y `shrink_to_fit` solo puede volver a moverlo."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-erase-loop",
+              "concepts": [
+                "iterator-invalidation"
+              ],
+              "prompt": "`removeDead` debería dejar solo las balas vivas: para las balas 1 a 4 con la 2 y la 3 muertas, debería conservar `1 4`. En cambio conserva `1 3 4`, y con una lista cuya última bala está muerta, ASan aborta. Haz clic en la línea con el error.",
+              "language": "cpp",
+              "code": "void removeDead(std::vector<Bullet>& bullets) {\n    for (auto it = bullets.begin(); it != bullets.end(); ++it) {\n        if (it->dead) bullets.erase(it);\n    }\n}",
+              "error": "1 3 4\nERROR: AddressSanitizer: heap-buffer-overflow on address ...\nREAD of size 1 at ... thread T0",
+              "lines": [
+                3
+              ],
+              "fixes": [
+                "Sustituye las líneas 2–4 por `std::erase_if(bullets, [](const Bullet& b) { return b.dead; });`",
+                "Cambia la línea 3 por `if (it->dead) it = bullets.erase(it);`",
+                "Recorre con un índice y llama a `bullets.erase(bullets.begin() + i)` en la línea 3",
+                "Añade `bullets.reserve(bullets.size() + 1);` antes del bucle, en la línea 2"
+              ],
+              "answer": 0,
+              "hint": "`erase` desplaza una ranura a la izquierda todas las balas posteriores. ¿Qué se salta entonces `++it`?",
+              "explanation": "`erase(it)` invalida `it` y desplaza las balas posteriores a la izquierda, así que la bala que sigue a una muerta pasa a ocupar donde apunta `it`, y `++it` la salta: la bala 3 sobrevive. Cuando la **última** bala está muerta, `++it` pasa de largo `end()` y el bucle lee más allá del vector, que es lo que informa ASan.\n\n`std::erase_if` (C++20) hace todo el trabajo en una pasada. Asignar `it = erase(it)` sigue ejecutando `++it` después y falla de las mismas dos formas. Un bucle con índice se salta la misma bala (imprimió `1 3 4`). `reserve` cambia la capacidad, no lo que `erase` hace con las posiciones. Los motores suelen evitar borrar en el medio: mira el swap-and-pop en la lección de ECS."
+            },
+            {
+              "type": "buckets",
+              "id": "q-does-it-invalidate",
+              "concepts": [
+                "iterator-invalidation",
+                "dangling-reference"
+              ],
+              "prompt": "Tienes `Enemy* p = &enemies[0];`. Tras cada operación, ¿sigue siendo seguro usar `p`?",
+              "buckets": [
+                "Sigue apuntando a un elemento vivo",
+                "Puede quedar colgando"
+              ],
+              "items": [
+                {
+                  "text": "Leer `enemies[5].hp`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`push_back` tras un `reserve(100)` anterior, con 10 elementos guardados",
+                  "bucket": 0
+                },
+                {
+                  "text": "`enemies.pop_back()` con 10 elementos guardados",
+                  "bucket": 0
+                },
+                {
+                  "text": "`push_back` cuando `size() == capacity()`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`enemies.insert(enemies.begin(), Enemy{})`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`enemies.clear()`",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Todo lo que reasigna, o que desplaza o destruye el elemento 0, rompe `p`.",
+              "explanation": "Las lecturas nunca mueven elementos. Con capacidad sobrante, `push_back` añade al final sin reasignar, y `pop_back` destruye solo el último elemento. Un `push_back` con el bloque lleno reasigna; insertar al principio desplaza el elemento 0 a una posición nueva (y también puede reasignar); `clear()` destruye todos los elementos. La regla fiable para el código de motor: no guardes punteros a un contenedor que cambia de tamaño. Guarda un índice o, mejor, un handle."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "memory-and-cache",
+      "title": "Memoria y caché",
+      "description": "Mide antes de optimizar y haz después que los datos sean amables con la caché: arrays contiguos, structs de arrays y disposiciones compactas.",
+      "lessons": [
+        {
+          "id": "measure-first",
+          "title": "Mide, no adivines",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "Un frame tiene un presupuesto de tiempo fijo, así que perfila una build optimizada para ver adónde se va, cambia una sola cosa y conserva el cambio solo si los números lo confirman.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "El presupuesto del frame",
+              "body": "Un juego a 60 frames por segundo tiene **1000 ms ÷ 60 ≈ 16,7 ms** por frame para todo: entrada, gameplay, física, animación, mezcla de audio, construcción de las draw calls. A 120 Hz son 8,3 ms. Si te pasas del presupuesto, el jugador ve un tirón.\n\nLa intuición de quienes programan motores sobre *dónde* se va ese tiempo falla sorprendentemente a menudo. Por eso la regla es: **perfila primero**. Un profiler (Instruments en macOS, Tracy, Superluminal, PIX, perf o los temporizadores del propio motor) muestra qué funciones son realmente calientes. Optimizar cualquier otra cosa, por ingeniosa que sea, no mueve el tiempo del frame."
+            },
+            {
+              "type": "numeric",
+              "id": "q-budget-144",
+              "concepts": [
+                "profiling"
+              ],
+              "prompt": "La build de PC de Ember apunta a un monitor de **144 Hz**. ¿Cuántos milisegundos recibe un frame?",
+              "answer": 6.94,
+              "tolerance": 0.01,
+              "unit": "ms",
+              "hint": "1000 ms dividido entre el número de frames por segundo.",
+              "explanation": "1000 ÷ 144 ≈ **6,94 ms**, menos de la mitad de los 16,7 ms de una build de consola a 60 Hz. El mismo código que cabe con holgura a 60 Hz puede pasarse del presupuesto a 144 Hz."
+            },
+            {
+              "type": "example",
+              "title": "Medir un scope con RAII",
+              "problem": "Ember necesita un temporizador barato dentro del motor antes de recurrir a un profiler completo. ¿Cómo construyes uno que no pueda olvidarse de parar?",
+              "steps": [
+                "Usa `std::chrono::steady_clock`: nunca retrocede, a diferencia del reloj de pared (`system_clock`), que el usuario o la sincronización horaria pueden cambiar.\n\n```cpp\nstruct ScopedTimer {\n    const char* label;\n    std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();\n    ~ScopedTimer() {\n        auto end = std::chrono::steady_clock::now();\n        double ms = std::chrono::duration<double, std::milli>(end - start).count();\n        std::printf(\"%s: %.2f ms\\n\", label, ms);\n    }\n};\n\nvoid updatePhysics() {\n    ScopedTimer t{\"physics\"};\n    // ... every return path is timed, because the destructor always runs\n}\n```",
+                "El constructor guarda la hora de inicio; el destructor vuelve a leer el reloj y lo informa. Gracias a RAII, todos los caminos de salida de `updatePhysics` quedan medidos.",
+                "Los motores reales envían estas muestras a un profiler en lugar de imprimirlas, y las envuelven en una macro para que desaparezcan al compilar las builds de distribución."
+              ],
+              "answer": "Un temporizador basado en scope: arranca en el constructor y para y registra en el destructor."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-benchmark-nothing",
+              "concepts": [
+                "profiling"
+              ],
+              "prompt": "Kai mide un bucle sobre 10 millones de floats, compilado con `-O2`. Informa `0.000 ms` en cada ejecución. Haz clic en la línea que hace que la medición no tenga sentido.",
+              "language": "cpp",
+              "code": "#include <chrono>\n#include <cstdio>\n#include <vector>\n\nint main() {\n    std::vector<float> xs(10'000'000, 1.5f);\n    auto t0 = std::chrono::steady_clock::now();\n    float sum = 0;\n    for (float x : xs) sum += x * x;\n    auto t1 = std::chrono::steady_clock::now();\n    double ms = std::chrono::duration<double, std::milli>(t1 - t0).count();\n    std::printf(\"%.3f ms\\n\", ms);\n}",
+              "error": "warning: variable 'sum' set but not used [-Wunused-but-set-variable]\n0.000 ms",
+              "lines": [
+                8,
+                12
+              ],
+              "fixes": [
+                "Cambia la línea 12 por `std::printf(\"%.3f ms (sum %g)\\n\", ms, sum);`",
+                "Usa `std::chrono::system_clock` en las líneas 7 y 10",
+                "Cambia la línea 6 por `std::vector<float> xs(100'000'000, 1.5f);`",
+                "Cambia la línea 11 por `volatile double ms = ...` para que el optimizador no pueda eliminar la medición"
+              ],
+              "answer": 0,
+              "hint": "Lee el aviso del compilador. Si nadie usa nunca `sum`, ¿tiene el optimizador que calcularla?",
+              "explanation": "Nadie lee nunca `sum`, así que con `-O2` el compilador borra el bucle entero: el programa mide un bloque vacío. Imprimir `sum` hace observable el resultado, así que el bucle debe ejecutarse de verdad (11,5 ms en la máquina donde se comprobó).\n\nOtro reloj, 10 veces más datos o una variable de tiempo `volatile` siguen sin medir nada e imprimen `0.000 ms`. Las bibliotecas de benchmarks ofrecen ayudas como `DoNotOptimize` precisamente para esto."
+            },
+            {
+              "type": "order",
+              "id": "q-profile-loop",
+              "concepts": [
+                "profiling"
+              ],
+              "prompt": "Un nivel baja a 40 fps. Pon en orden el flujo de trabajo de Rosa.",
+              "items": [
+                "Reproduce el frame lento en una build optimizada, en el hardware objetivo",
+                "Perfílalo para encontrar qué funciones tardan más",
+                "Formula una hipótesis sobre la más caliente (por ejemplo, fallos de caché)",
+                "Cambia esa única cosa",
+                "Vuelve a medir de la misma forma y compara las medianas",
+                "Conserva el cambio si ayudó; revierte si no"
+              ],
+              "hint": "No puedes saber qué cambiar antes de saber adónde se va el tiempo, y no puedes saber si funcionó sin volver a medir.",
+              "explanation": "Mide adónde se va el tiempo, cambia **una** cosa, vuelve a medir de la misma forma. Cambiar varias cosas a la vez oculta cuál ayudó, y comparar una sola ejecución con otra mide sobre todo ruido, así que compara medianas de varias ejecuciones."
+            },
+            {
+              "type": "buckets",
+              "id": "q-trust-measurement",
+              "concepts": [
+                "profiling"
+              ],
+              "prompt": "¿Cuáles de estas mediciones puede darlas por buenas Rosa?",
+              "buckets": [
+                "Fiable",
+                "Engañosa"
+              ],
+              "items": [
+                {
+                  "text": "Mediana de 30 frames en una build `-O2` en el PC de especificaciones mínimas",
+                  "bucket": 0
+                },
+                {
+                  "text": "Una captura del profiler del nivel lento en una build release",
+                  "bucket": 0
+                },
+                {
+                  "text": "Medir con `steady_clock` todo el paso de física",
+                  "bucket": 0
+                },
+                {
+                  "text": "Una ejecución de una build de depuración (`-O0`)",
+                  "bucket": 1
+                },
+                {
+                  "text": "Medir un bucle cuyo resultado nunca se usa, con `-O2`",
+                  "bucket": 1
+                },
+                {
+                  "text": "La más rápida de tres ejecuciones en la estación de trabajo de gama alta de un desarrollador",
+                  "bucket": 1
+                }
+              ],
+              "hint": "¿Es el código que se distribuye, en el hardware que importa, medido más de una vez?",
+              "explanation": "Las builds de depuración pueden ser muchas veces más lentas y lentas en *sitios distintos* que las optimizadas. Los resultados sin usar se eliminan al optimizar. Una sola ejecución, o la mejor de unas pocas, oculta el ruido y los valores atípicos, y una estación de trabajo rápida esconde problemas que sí tendrá la máquina de especificaciones mínimas. Mide la configuración que se distribuye, en el hardware objetivo, varias veces."
+            }
+          ]
+        },
+        {
+          "id": "cache-lines",
+          "title": "La caché decide",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "La CPU carga la memoria una línea de caché entera cada vez, así que los datos que recorres en orden son casi gratis y los que persigues a través de punteros son lentos.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "La memoria llega en líneas",
+              "body": "La memoria principal es mucho más lenta que la CPU: una carga que falla en todas las cachés espera del orden de 100 ns, cientos de ciclos, mientras que una carga que acierta en la caché **L1**, pequeña y rápida, tarda unos pocos ciclos.\n\nLa CPU nunca trae un único `float`. Trae la **línea de caché** entera que lo rodea: 64 bytes en la mayoría de los chips x86, 128 bytes en el Apple M5 donde se comprobó este curso (`sysctl hw.cachelinesize` informa 128). El **prefetcher** del hardware también detecta cuándo avanzas por la memoria y trae las líneas siguientes antes de que las pidas.\n\nAsí que leer datos **en orden y juntos** cuesta una fracción de leer la misma cantidad dispersa."
+            },
+            {
+              "type": "order",
+              "id": "q-memory-hierarchy",
+              "concepts": [
+                "cache-locality"
+              ],
+              "prompt": "Ordena de dónde puede venir un valor, de lo **más rápido** a lo más lento.",
+              "items": [
+                "Un registro de la CPU",
+                "Caché L1",
+                "Caché L2",
+                "Memoria principal (DRAM)",
+                "El SSD"
+              ],
+              "hint": "Cuanto más cerca del núcleo, más pequeño y más rápido.",
+              "explanation": "Los registros se leen en cada ciclo. L1 es diminuta (de 64 a 128 KB de caché de datos por núcleo en este M5) y está a pocos ciclos; L2 es más grande y más lenta; la DRAM está a unos cientos de ciclos; el SSD es miles de veces más lento aún, y por eso los motores cargan assets en segundo plano. Cada salto hacia fuera es aproximadamente un orden de magnitud más lento."
+            },
+            {
+              "type": "numeric",
+              "id": "q-floats-per-line",
+              "concepts": [
+                "cache-locality"
+              ],
+              "prompt": "En una CPU con líneas de caché de **64 bytes**, ¿cuántos `float` de 4 bytes llegan con cada línea que carga la CPU?",
+              "answer": 16,
+              "hint": "64 ÷ 4.",
+              "explanation": "64 ÷ 4 = **16**. Toca un float de un array compacto y sus 15 vecinos vienen gratis. Si los siguientes 15 floats son lo que necesitas después, pagas un fallo en lugar de dieciséis; si son datos sin relación, la línea se desperdició casi toda."
+            },
+            {
+              "type": "explain",
+              "title": "Por qué duelen las listas enlazadas",
+              "body": "Un `std::vector<int>` es un único bloque: recorrerlo lee línea tras línea en orden, y el prefetcher va por delante. Un `std::list<int>` reserva cada elemento como un nodo aparte con punteros a sus vecinos. Para encontrar el nodo 2 primero hay que cargar el nodo 1, así que la CPU no puede traer datos por adelantado, y los nodos pueden estar en cualquier parte de la memoria.\n\nMedido en el Apple M5 (`-O2`, mediana de 15 ejecuciones), sumar un millón de `int` tardó unos **0,03 ms** en un vector, unos **0,8 ms** en una lista cuyos nodos casualmente estaban en orden, y unos **55 ms** cuando los nodos de la misma lista estaban dispersos. El mismo bucle O(n); la disposición en memoria marcó la diferencia."
+            },
+            {
+              "type": "buckets",
+              "id": "q-contiguous-or-chasing",
+              "concepts": [
+                "cache-locality"
+              ],
+              "prompt": "Se recorre cada elemento en cada frame: clasifica cada contenedor según cómo se ubican sus elementos en memoria.",
+              "buckets": [
+                "Contiguo: recorre la memoria en orden",
+                "Persecución de punteros: un salto por elemento"
+              ],
+              "items": [
+                {
+                  "text": "`std::vector<Enemy>`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`std::array<Particle, 1024>`",
+                  "bucket": 0
+                },
+                {
+                  "text": "Un array de C simple `Vec3 positions[512]`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`std::list<Enemy>`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`std::vector<Enemy*>` donde cada enemigo se creó con `new`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`std::vector<std::unique_ptr<Enemy>>`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`std::map<int, Enemy>`",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Un vector de punteros es contiguo, pero los enemigos a los que apunta no.",
+              "explanation": "Los vectores, los arrays de tamaño fijo y los arrays simples guardan los propios objetos uno tras otro. Un vector de punteros o de `unique_ptr` es una lista contigua de **direcciones**; cada enemigo sigue siendo una reserva de heap aparte, así que cada elemento es un salto. `std::list` y `std::map` están hechos de nodos reservados por separado. Esta es una razón importante por la que los motores guardan los componentes por valor en arrays."
+            },
+            {
+              "type": "mcq",
+              "id": "q-list-or-vector",
+              "concepts": [
+                "cache-locality"
+              ],
+              "prompt": "Ember genera y elimina unos cientos de chispas en cada frame de unas 2.000 vivas. Kai sugiere `std::list` porque eliminar es O(1). ¿Qué debería probar primero Rosa?",
+              "choices": [
+                "Un `std::vector` que elimina una chispa moviendo la última chispa a su ranura (swap-and-pop), y luego medir",
+                "Mantener `std::list`: O(1) en la eliminación siempre gana a O(n)",
+                "Un `std::map` con el id de chispa como clave, para que eliminar sea O(log n)",
+                "Un `std::vector<Spark*>` para que las chispas nunca se muevan"
+              ],
+              "answer": 0,
+              "hint": "Cada frame *actualiza* las 2.000 chispas; solo se eliminan unos cientos. ¿Qué operación domina?",
+              "explanation": "La actualización de cada frame recorre **todas** las chispas, así que la velocidad de iteración domina, y el almacenamiento contiguo la gana con facilidad. Eliminar también puede ser O(1) en un vector: sobrescribe la chispa muerta con la última y haz `pop_back` (el orden no importa en las chispas). Un map o un vector de punteros devuelve la persecución de punteros. Big-O cuenta operaciones; no cuenta fallos de caché, así que mide."
+            }
+          ]
+        },
+        {
+          "id": "aos-vs-soa",
+          "title": "Arrays de structs, structs de arrays",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Organiza los datos según cómo se procesan: cuando un bucle caliente lee solo unos pocos campos de muchos objetos, guarda cada campo en su propio array para que cada línea de caché esté llena de datos útiles.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Dos disposiciones para las mismas partículas",
+              "body": "Un **array de structs** (AoS) mantiene juntos los campos de cada partícula:\n\n```cpp\nstruct Particle { float x, y, z, vx, vy, vz, r, g, b, a, life, size, rotation, spin, pad0, pad1; };\nstd::vector<Particle> particles;   // 64 bytes per particle\n```\n\nUn **struct de arrays** (SoA) guarda cada campo en su propio array:\n\n```cpp\nstruct Particles { std::vector<float> x, y, z, vx, vy, vz, life /* ... */; };\n```\n\nSi la pasada de envejecimiento solo hace `life -= dt`, AoS arrastra los 64 bytes de cada partícula por la caché para usar 4 de ellos. En SoA, cada línea que carga son solo valores de `life`."
+            },
+            {
+              "type": "numeric",
+              "id": "q-useful-bytes",
+              "concepts": [
+                "struct-of-arrays",
+                "cache-locality"
+              ],
+              "prompt": "En la disposición AoS, cada partícula ocupa exactamente una línea de caché de 64 bytes en una CPU con líneas de 64 bytes. La pasada de envejecimiento usa solo el campo `life` de 4 bytes. ¿Qué **porcentaje** de los bytes que carga usa realmente?",
+              "answer": 6.25,
+              "tolerance": 0.01,
+              "unit": "%",
+              "hint": "4 bytes útiles de cada 64 cargados.",
+              "explanation": "4 ÷ 64 = **6,25%**. El otro 93,75% del tráfico de memoria son campos que el bucle nunca toca. En SoA, una línea contiene 16 valores de `life` y la pasada los usa todos: 100%."
+            },
+            {
+              "type": "explain",
+              "title": "Qué midió",
+              "body": "En el Apple M5 (`-O2`, mediana de 15 ejecuciones, 1.000.000 de partículas), la pasada de envejecimiento tardó unos **1,2 ms** sobre los structs de 64 bytes y unos **0,05 ms** sobre un array `life` aparte: más de 20 veces más rápido.\n\nEl mismo benchmark también tuvo una sorpresa. Una pasada que actualizaba la posición a partir de la velocidad (seis de los dieciséis campos) *no* fue más rápida en SoA con exactamente un millón de partículas, pero sí unas 4 veces más rápida con cuatro millones. Los efectos de la disposición interactúan con los tamaños de caché y con cómo se alinean los arrays en memoria. SoA es una buena opción por defecto para los bucles calientes, no una ley: **mide tu propio caso**."
+            },
+            {
+              "type": "buckets",
+              "id": "q-pick-layout",
+              "concepts": [
+                "struct-of-arrays"
+              ],
+              "prompt": "¿Qué disposición encaja mejor con cada carga de trabajo?",
+              "buckets": [
+                "Struct de arrays",
+                "Array de structs"
+              ],
+              "items": [
+                {
+                  "text": "En cada frame, sumar la gravedad a la velocidad vertical de 200.000 partículas",
+                  "bucket": 0
+                },
+                {
+                  "text": "Hacer culling de 50.000 esferas envolventes contra la cámara, leyendo solo el centro y el radio",
+                  "bucket": 0
+                },
+                {
+                  "text": "Procesar posiciones con SIMD, 4 u 8 floats por instrucción",
+                  "bucket": 0
+                },
+                {
+                  "text": "Abrir la pantalla del inventario y mostrar todos los campos de un objeto",
+                  "bucket": 1
+                },
+                {
+                  "text": "Guardar en disco el perfil completo de un jugador",
+                  "bucket": 1
+                },
+                {
+                  "text": "Buscar un NPC aleatorio por id y leer todos sus campos una vez",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Muchos objetos pero pocos campos por pasada: sepáralos. Un objeto, todos sus campos: manténlos juntos.",
+              "explanation": "SoA gana cuando un bucle toca **pocos campos de muchos objetos**: cada byte cargado es útil, y los valores del mismo tipo están contiguos, listos para SIMD. AoS gana cuando el código usa **todos los campos de un objeto**, porque llegan en una o dos líneas de caché. Muchos motores mezclan ambos: campos calientes en arrays SoA y el resto en un struct frío."
+            },
+            {
+              "type": "example",
+              "title": "Separación caliente/fría",
+              "problem": "Un `Enemy` ocupa 120 bytes: posición, velocidad y salud se usan en cada frame; nombre, tabla de botín e información de aparición solo al morir o en los menús. Aun así, la mayor parte del código de enemigos tiene forma de objeto. ¿Cuál es un punto intermedio?",
+              "steps": [
+                "Separa por **frecuencia de acceso**, no por significado: `EnemyHot { Vec3 pos; Vec3 vel; float hp; }` (28 bytes) y `EnemyCold { std::string name; LootTable loot; SpawnInfo spawn; }`.",
+                "Guárdalos en dos arrays paralelos, `std::vector<EnemyHot> hot;` y `std::vector<EnemyCold> cold;`, donde el índice `i` es el mismo enemigo en ambos.",
+                "Los bucles de cada frame recorren solo `hot`: cada línea de 64 bytes contiene ahora más de dos enemigos en lugar de aproximadamente la mitad de uno."
+              ],
+              "answer": "Separación caliente/fría: guarda los campos de cada frame en un array compacto y mueve los campos poco usados a otro paralelo."
+            },
+            {
+              "type": "mcq",
+              "id": "q-soa-cost",
+              "concepts": [
+                "struct-of-arrays"
+              ],
+              "prompt": "Kai convierte todos los structs del motor a SoA, incluidos el perfil del jugador y el menú de ajustes. ¿A qué renunció?",
+              "choices": [
+                "El código que maneja un objeto entero (guardar, inspeccionar, copiar) ahora reúne campos de muchos arrays, lo que es más incómodo y toca más líneas de caché",
+                "A nada: SoA es más rápido para todos los patrones de acceso",
+                "SoA hace que el código use más memoria, porque cada array necesita su propio padding por elemento",
+                "SoA impide que el compilador use SIMD"
+              ],
+              "answer": 0,
+              "hint": "Piensa en la columna AoS de la pregunta anterior.",
+              "explanation": "SoA es un compromiso: excelente para bucles anchos sobre unos pocos campos, peor para el código que quiere **un objeto, todos sus campos**. Ese código ahora lee un valor de cada uno de muchos arrays, cada uno en una línea de caché distinta, y es más difícil de leer. Aplica SoA donde el profiler muestre bucles calientes; no añade padding por elemento, y normalmente *ayuda* a SIMD."
+            }
+          ]
+        },
+        {
+          "id": "struct-layout",
+          "title": "Padding y alineación",
+          "pareto": "extra",
+          "minutes": 7,
+          "takeaway": "Cada miembro se coloca en un múltiplo de su alineación y el compilador rellena los huecos, así que ordenar los miembros de mayor a menor alineación mantiene los structs pequeños; fija con static_assert los tamaños que importan.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Por qué sizeof te sorprende",
+              "body": "Todo tipo tiene una **alineación**: un `double` debe empezar en una dirección divisible por 8, un `float` por 4, un `short` por 2, un `char` o `bool` en cualquiera. (En este Mac arm64: `alignof(double)` es 8, `float` 4, `short` 2, `bool` 1, igual que en x86-64.)\n\nEl compilador coloca los miembros **en el orden de declaración** e inserta **padding** donde el siguiente miembro quedaría desalineado. También rellena el final para que el tamaño sea múltiplo de la mayor alineación, lo que mantiene alineado cada elemento de un array.\n\nEl padding es caché desperdiciada: en un array de un millón de partículas, 4 bytes de padding por partícula son 4 MB de nada viajando por la memoria."
+            },
+            {
+              "type": "output",
+              "id": "q-sizeof-order",
+              "concepts": [
+                "struct-padding"
+              ],
+              "prompt": "Los mismos tres miembros, dos órdenes. ¿Qué imprime esto?",
+              "language": "cpp",
+              "code": "#include <cstdio>\n\nstruct Loose {\n    char  tag;\n    int   id;\n    char  flags;\n};\n\nstruct Tight {\n    int   id;\n    char  tag;\n    char  flags;\n};\n\nint main() {\n    std::printf(\"%zu %zu\\n\", sizeof(Loose), sizeof(Tight));\n}",
+              "output": "12 8",
+              "hint": "En `Loose`, ¿dónde debe empezar `id` después de un `tag` de 1 byte? ¿Y qué tamaño es múltiplo de 4?",
+              "explanation": "`Loose`: `tag` en 0, luego 3 bytes de padding para que `id` empiece en 4, `id` en 4–7, `flags` en 8, y luego 3 bytes de padding final hasta llegar a un múltiplo de 4: **12**. `Tight`: `id` en 0–3, `tag` en 4, `flags` en 5, 2 bytes de padding final: **8**. Los mismos datos, un tercio más pequeños."
+            },
+            {
+              "type": "example",
+              "title": "Disponer un cuerpo rígido",
+              "problem": "`struct Body { bool sleeping; double mass; bool kinematic; double friction; };` ¿Cuánto vale `sizeof(Body)` y cuánto puede reducirse?",
+              "steps": [
+                "`sleeping` en el desplazamiento 0 (1 byte). `mass` necesita un múltiplo de 8: 7 bytes de padding, y `mass` en 8–15.",
+                "`kinematic` en 16. `friction` vuelve a necesitar un múltiplo de 8: otros 7 bytes de padding, y `friction` en 24–31. Tamaño **32**, de los cuales 14 bytes son padding.",
+                "Ordenado por alineación, `{ double mass; double friction; bool sleeping; bool kinematic; }` pone los bools en 16 y 17, y luego 6 bytes de padding final: tamaño **24**.",
+                "Una ejecución real imprimió los desplazamientos `0 8 16 24` y tamaño 32 para el primer orden, y `0 8 16 17` y tamaño 24 para el ordenado."
+              ],
+              "answer": "32 bytes tal como está escrito, 24 bytes ordenado de mayor a menor alineación."
+            },
+            {
+              "type": "order",
+              "id": "q-member-order",
+              "concepts": [
+                "struct-padding"
+              ],
+              "prompt": "La regla práctica para structs pequeños: declara los miembros de **mayor a menor alineación**. Ordena así estos miembros de `Projectile`.",
+              "items": [
+                "`double spawnTime;`",
+                "`float speed;`",
+                "`std::uint16_t ownerId;`",
+                "`std::uint8_t damageType;`"
+              ],
+              "hint": "Alineaciones: double 8, float 4, uint16_t 2, uint8_t 1.",
+              "explanation": "Con la mayor alineación primero, cada miembro ya empieza en un desplazamiento adecuado: `spawnTime` en 0, `speed` en 8, `ownerId` en 12, `damageType` en 14. Son 15 bytes de datos en un struct de 16 bytes, con solo 1 byte de padding final."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-static-assert-size",
+              "concepts": [
+                "struct-padding"
+              ],
+              "prompt": "El renderizador de partículas de Ember sube las `Particle` directamente a la GPU y espera exactamente 16 bytes cada una, así que Rosa protegió el tamaño con `static_assert`. Tras la edición de Kai ya no compila. Haz clic en una línea que haga `Particle` demasiado grande.",
+              "language": "cpp",
+              "code": "#include <cstdint>\n\nstruct Particle {\n    bool          alive;\n    float         x, y;\n    std::uint16_t frame;\n    float         life;\n};\n\nstatic_assert(sizeof(Particle) == 16, \"Particle must stay 16 bytes\");\n\nint main() {}",
+              "error": "error: static assertion failed due to requirement 'sizeof(Particle) == 16': Particle must stay 16 bytes\nnote: expression evaluates to '20 == 16'",
+              "lines": [
+                4,
+                6
+              ],
+              "fixes": [
+                "Reordena los miembros como `x, y`, `life`, `frame`, `alive` (primero la mayor alineación)",
+                "Cambia la línea 4 por `char alive;`",
+                "Intercambia las líneas 5 y 7, para que `life` vaya antes que `x, y`",
+                "Cambia la línea 6 por `std::uint8_t frame;`"
+              ],
+              "answer": 0,
+              "hint": "Calcula los desplazamientos: ¿dónde empieza `x` después de un `alive` de 1 byte? ¿Dónde empieza `life` después de un `frame` de 2 bytes?",
+              "explanation": "Los datos son 4 + 4 + 4 + 2 + 1 = 15 bytes, pero `alive` al principio fuerza 3 bytes de padding antes de `x`, y `frame` en el medio fuerza 2 antes de `life`: 20 bytes. Primero los floats, luego el `uint16_t` y después el `bool` caben en 16.\n\n`char` tiene el mismo tamaño y alineación que `bool`, así que nada cambia. Intercambiar `life` y `x, y` sigue dejando el miembro de 1 byte delante de floats. Un `frame` de 1 byte sigue dejando a `life` necesitando alineación. Las tres siguen evaluándose como `'20 == 16'`. El `static_assert` cumplió su función: el error se detectó en tiempo de compilación, no en la GPU."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "data-oriented-engine",
+      "title": "Un motor orientado a datos",
+      "description": "Ids de entidad y arrays de componentes empaquetados, handles generacionales en lugar de punteros, y allocators de arena y de pool.",
+      "lessons": [
+        {
+          "id": "entities-and-components",
+          "title": "Entidades, componentes, sistemas",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "En un ECS una entidad es solo un id, cada tipo de componente vive empaquetado en su propio array y los sistemas son bucles simples sobre esos arrays; el swap-and-pop mantiene los arrays compactos.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Primero los datos, después los objetos",
+              "body": "En C#, un objeto de juego suele ser una clase que contiene una lista de objetos componente, cada uno con su propio `Update()`. Cada componente es un objeto de heap independiente, así que actualizar 10.000 de ellos significa 10.000 saltos de puntero y llamadas virtuales.\n\nUn **entity component system** (ECS) le da la vuelta a esto:\n\n- Una **entidad** es solo un id, como un `std::uint32_t`. No es dueña de nada.\n- Un **componente** son datos simples (`Position`, `Velocity`, `Health`) guardados **empaquetados en un array por cada tipo de componente**.\n- Un **sistema** es una función que recorre los arrays que necesita: `for i: pos[i] += vel[i] * dt`.\n\nLos bucles calientes pasan a ser exactamente esos recorridos contiguos del mismo campo que le gustan a la caché."
+            },
+            {
+              "type": "buckets",
+              "id": "q-ecs-roles",
+              "concepts": [
+                "ecs"
+              ],
+              "prompt": "Clasifica cada pieza del nuevo ECS de Ember.",
+              "buckets": [
+                "Entidad",
+                "Componente",
+                "Sistema"
+              ],
+              "items": [
+                {
+                  "text": "El id `std::uint32_t` 4711",
+                  "bucket": 0
+                },
+                {
+                  "text": "`struct Position { float x, y, z; };`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`struct Health { float current, max; };`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`struct Velocity { float x, y, z; };`",
+                  "bucket": 1
+                },
+                {
+                  "text": "Una función que suma velocidad × dt a cada posición",
+                  "bucket": 2
+                },
+                {
+                  "text": "Una función que elimina todas las entidades cuya salud llegó a 0",
+                  "bucket": 2
+                }
+              ],
+              "hint": "Ids, datos y los bucles que procesan datos.",
+              "explanation": "La entidad es solo un id que une componentes. Los componentes son structs simples **sin comportamiento**. Los sistemas contienen el comportamiento y se ejecutan sobre muchos componentes a la vez. Esa separación es lo que permite que cada tipo de componente viva en su propio array compacto."
+            },
+            {
+              "type": "explain",
+              "title": "Arrays empaquetados y swap-and-pop",
+              "body": "Cada tipo de componente recibe un `ComponentArray<T>`: un `std::vector<T>` denso sin huecos, un array paralelo `owners` que dice a qué entidad pertenece cada ranura, y una búsqueda de entidad a ranura.\n\n```cpp\ntemplate <class T>\nstruct ComponentArray {\n    std::vector<T> dense;                         // components, packed\n    std::vector<Entity> owners;                   // owners[i] owns dense[i]\n    std::unordered_map<Entity, std::size_t> indexOf;\n\n    void add(Entity e, T value) {\n        indexOf[e] = dense.size();\n        dense.push_back(value);\n        owners.push_back(e);\n    }\n    void remove(Entity e) {                       // swap-and-pop\n        std::size_t i = indexOf[e];\n        Entity last = owners.back();\n        dense[i] = dense.back();\n        owners[i] = last;\n        dense.pop_back();\n        owners.pop_back();\n        indexOf[last] = i;\n        indexOf.erase(e);\n    }\n};\n```\n\nQuitar un elemento del medio con `erase` desplazaría todo lo que viene después. En su lugar, el **swap-and-pop** mueve el *último* componente al hueco y reduce el tamaño en uno: O(1), y el array sigue compacto. El precio es que no se conserva el orden y hay que actualizar la entrada de búsqueda de la entidad movida. (Muchas bibliotecas ECS de producción, EnTT por ejemplo, usan un array simple indexado por entidad en lugar de un hash map: un *sparse set*.)"
+            },
+            {
+              "type": "trace",
+              "id": "q-trace-swap-pop",
+              "concepts": [
+                "ecs"
+              ],
+              "prompt": "`indexOf` asigna a cada entidad su ranura en los arrays densos. Recorre la eliminación de la entidad 3 con swap-and-pop.",
+              "language": "cpp",
+              "code": "std::vector<Entity> owners = {7, 3, 9, 5};\nstd::vector<int> hp = {50, 80, 20, 60};\nstd::size_t i = indexOf[3];          // remove entity 3\nEntity last = owners.back();\nowners[i] = last;\nhp[i] = hp.back();\nowners.pop_back();\nhp.pop_back();\nindexOf[last] = i;\nindexOf.erase(3);",
+              "frames": [
+                {
+                  "line": 1,
+                  "vars": {
+                    "owners": "[7, 3, 9, 5]",
+                    "indexOf": "{3: 1, 5: 3, 7: 0, 9: 2}"
+                  }
+                },
+                {
+                  "line": 2,
+                  "vars": {
+                    "owners": "[7, 3, 9, 5]",
+                    "hp": "[50, 80, 20, 60]",
+                    "indexOf": "{3: 1, 5: 3, 7: 0, 9: 2}"
+                  }
+                },
+                {
+                  "line": 3,
+                  "vars": {
+                    "owners": "[7, 3, 9, 5]",
+                    "hp": "[50, 80, 20, 60]",
+                    "indexOf": "{3: 1, 5: 3, 7: 0, 9: 2}",
+                    "i": "1"
+                  },
+                  "note": "La entidad 3 está en la ranura 1."
+                },
+                {
+                  "line": 4,
+                  "vars": {
+                    "owners": "[7, 3, 9, 5]",
+                    "hp": "[50, 80, 20, 60]",
+                    "indexOf": "{3: 1, 5: 3, 7: 0, 9: 2}",
+                    "i": "1",
+                    "last": "5"
+                  },
+                  "ask": "last"
+                },
+                {
+                  "line": 5,
+                  "vars": {
+                    "owners": "[7, 5, 9, 5]",
+                    "hp": "[50, 80, 20, 60]",
+                    "indexOf": "{3: 1, 5: 3, 7: 0, 9: 2}",
+                    "i": "1",
+                    "last": "5"
+                  },
+                  "ask": "owners"
+                },
+                {
+                  "line": 6,
+                  "vars": {
+                    "owners": "[7, 5, 9, 5]",
+                    "hp": "[50, 60, 20, 60]",
+                    "indexOf": "{3: 1, 5: 3, 7: 0, 9: 2}",
+                    "i": "1",
+                    "last": "5"
+                  }
+                },
+                {
+                  "line": 7,
+                  "vars": {
+                    "owners": "[7, 5, 9]",
+                    "hp": "[50, 60, 20, 60]",
+                    "indexOf": "{3: 1, 5: 3, 7: 0, 9: 2}",
+                    "i": "1",
+                    "last": "5"
+                  }
+                },
+                {
+                  "line": 8,
+                  "vars": {
+                    "owners": "[7, 5, 9]",
+                    "hp": "[50, 60, 20]",
+                    "indexOf": "{3: 1, 5: 3, 7: 0, 9: 2}",
+                    "i": "1",
+                    "last": "5"
+                  },
+                  "ask": "hp"
+                },
+                {
+                  "line": 9,
+                  "vars": {
+                    "owners": "[7, 5, 9]",
+                    "hp": "[50, 60, 20]",
+                    "indexOf": "{3: 1, 5: 1, 7: 0, 9: 2}",
+                    "i": "1",
+                    "last": "5"
+                  },
+                  "note": "La entidad 5 se movió a la ranura 1, así que su entrada de búsqueda debe seguirla."
+                },
+                {
+                  "line": 10,
+                  "vars": {
+                    "owners": "[7, 5, 9]",
+                    "hp": "[50, 60, 20]",
+                    "indexOf": "{5: 1, 7: 0, 9: 2}",
+                    "i": "1",
+                    "last": "5"
+                  }
+                }
+              ],
+              "hint": "Los datos de la última entidad pasan al hueco, y luego ambos arrays pierden su última ranura.",
+              "explanation": "La última entidad, la **5**, se copia en la ranura 1 (donde estaba la 3), tanto en `owners` como en `hp`, y los arrays se reducen en uno. Después se corrige la búsqueda: la 5 ahora vive en la ranura 1, y la 3 ya no está. Olvidar esa línea `indexOf[last] = i` es el error clásico del swap-and-pop: la entidad 5 apuntaría a una ranura que ya no existe."
+            },
+            {
+              "type": "output",
+              "id": "q-ecs-order",
+              "concepts": [
+                "ecs"
+              ],
+              "prompt": "Con el `ComponentArray` de antes: las entidades 1 a 4 reciben salud de 10 a 40 y luego se elimina la entidad 2. ¿Qué imprime el bucle?",
+              "language": "cpp",
+              "code": "int main() {\n    ComponentArray<int> health;\n    health.add(1, 10);\n    health.add(2, 20);\n    health.add(3, 30);\n    health.add(4, 40);\n    health.remove(2);\n    for (std::size_t i = 0; i < health.dense.size(); ++i)\n        std::printf(\"%s%u:%d\", i ? \" \" : \"\", health.owners[i], health.dense[i]);\n    std::printf(\"\\n\");\n}",
+              "output": "1:10 4:40 3:30",
+              "hint": "¿Los datos de qué entidad rellenan el hueco que deja la entidad 2?",
+              "explanation": "Eliminar la entidad 2 (ranura 1) mueve el último componente, el 40 de la entidad 4, a la ranura 1. El array sigue compacto, con tres entradas, pero ahora en el orden **1, 4, 3**. Los sistemas no deben depender del orden de los componentes; si algo necesita de verdad un orden (por ejemplo, el orden de dibujo para la transparencia), ordena de forma explícita."
+            },
+            {
+              "type": "mcq",
+              "id": "q-why-ecs",
+              "concepts": [
+                "ecs",
+                "cache-locality"
+              ],
+              "prompt": "Ember mueve 50.000 balas por frame. Antes: `std::vector<std::unique_ptr<GameObject>>`, con cada bala llamando a un `update()` virtual. Después: un `MovementSystem` que recorre arrays empaquetados de `Position` y `Velocity`. ¿Por qué la segunda versión suele ser mucho más rápida?",
+              "choices": [
+                "Lee dos arrays empaquetados de principio a fin, en lugar de saltar a 50.000 objetos reservados por separado y hacer una llamada virtual para cada uno",
+                "Los sistemas se ejecutan en la GPU, mientras que las funciones virtuales se ejecutan en la CPU",
+                "Un ECS guarda menos bytes por bala porque las entidades no tienen ids",
+                "El compilador no puede optimizar `unique_ptr`, pero sí puede optimizar `std::vector`"
+              ],
+              "answer": 0,
+              "hint": "Piensa en lo que la CPU tiene que cargar por cada bala en cada versión.",
+              "explanation": "La versión con objetos salta a una reserva de heap distinta por cada bala, carga un puntero a la vtable y hace una llamada indirecta; la CPU no puede traer datos por adelantado. La versión ECS recorre dos arrays donde cada línea de caché está llena de posiciones o de velocidades, y el cuerpo del bucle es lo bastante simple para que el compilador lo vectorice. Los sistemas siguen ejecutándose en la CPU, y las entidades sí tienen ids."
+            }
+          ]
+        },
+        {
+          "id": "generational-handles",
+          "title": "Handles en lugar de punteros",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Refiérete a los objetos del motor con un handle formado por un índice más una generación: el índice encuentra la ranura, y una generación que ya no coincide te dice que el objeto que querías ya no existe.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "La ranura reutilizada",
+              "body": "Los punteros a arrays cuelgan cuando el array crece, así que los motores se refieren a los objetos por **índice**. Eso arregla la reasignación, pero crea un error nuevo: cuando muere un enemigo, su ranura se recicla para la siguiente aparición. Un misil que aún guarda el índice 0 ahora persigue a un enemigo **distinto**, y nada se cae para avisarte.\n\nUn **handle generacional** añade un contador:\n\n```cpp\nstruct Handle { std::uint32_t index, generation; };\n```\n\nCada ranura guarda una `generation` que sube cada vez que se libera la ranura. Un handle es válido solo mientras su generación coincida con la de la ranura. Los handles obsoletos se detectan en lugar de apuntar en silencio a la cosa equivocada."
+            },
+            {
+              "type": "example",
+              "title": "Un pool de enemigos con handles",
+              "problem": "¿Qué aspecto tiene un pool mínimo con spawn, destroy y get?",
+              "steps": [
+                "Las ranuras viven en un vector, con una lista libre de índices reciclados:\n\n```cpp\nstruct Handle { std::uint32_t index, generation; };\n\nstruct EnemyPool {\n    struct Slot { Enemy enemy; std::uint32_t generation = 0; bool used = false; };\n    std::vector<Slot> slots;\n    std::vector<std::uint32_t> freeList;\n\n    Handle spawn(Enemy e) {\n        std::uint32_t i;\n        if (!freeList.empty()) { i = freeList.back(); freeList.pop_back(); }\n        else { i = (std::uint32_t)slots.size(); slots.emplace_back(); }\n        slots[i].enemy = e;\n        slots[i].used = true;\n        return {i, slots[i].generation};\n    }\n    void destroy(Handle h) {\n        if (!get(h)) return;\n        slots[h.index].used = false;\n        slots[h.index].generation++;\n        freeList.push_back(h.index);\n    }\n    Enemy* get(Handle h) {\n        if (h.index >= slots.size()) return nullptr;\n        Slot& s = slots[h.index];\n        if (s.generation != h.generation || !s.used) return nullptr;\n        return &s.enemy;\n    }\n};\n```",
+                "`spawn` reutiliza una ranura libre cuando puede, y devuelve en el handle la generación **actual** de la ranura.",
+                "`destroy` incrementa la generación de la ranura, de modo que todos los handles del antiguo ocupante dejan de coincidir.",
+                "`get` comprueba tanto el índice como la generación, y devuelve `nullptr` para un handle obsoleto."
+              ],
+              "answer": "Un array de ranuras más una lista libre, donde cada búsqueda compara generaciones."
+            },
+            {
+              "type": "trace",
+              "id": "q-trace-handles",
+              "concepts": [
+                "generational-handles"
+              ],
+              "prompt": "Los handles se muestran como `{index, generation}`. Recorre el código y predice los valores.",
+              "language": "cpp",
+              "code": "EnemyPool pool;\nHandle a = pool.spawn({\"Ana\"});\npool.destroy(a);\nHandle b = pool.spawn({\"Bo\"});\nbool aAlive = pool.get(a) != nullptr;\nbool bAlive = pool.get(b) != nullptr;\nHandle c = pool.spawn({\"Cy\"});",
+              "frames": [
+                {
+                  "line": 1,
+                  "vars": {
+                    "slot generations": "[]"
+                  }
+                },
+                {
+                  "line": 2,
+                  "vars": {
+                    "slot generations": "[0]",
+                    "a": "{0, 0}"
+                  }
+                },
+                {
+                  "line": 3,
+                  "vars": {
+                    "slot generations": "[1]",
+                    "a": "{0, 0}"
+                  },
+                  "ask": "slot generations"
+                },
+                {
+                  "line": 4,
+                  "vars": {
+                    "slot generations": "[1]",
+                    "a": "{0, 0}",
+                    "b": "{0, 1}"
+                  },
+                  "note": "Bo reutiliza la ranura 0 y recibe la nueva generación de la ranura."
+                },
+                {
+                  "line": 5,
+                  "vars": {
+                    "slot generations": "[1]",
+                    "a": "{0, 0}",
+                    "b": "{0, 1}",
+                    "aAlive": "false"
+                  },
+                  "ask": "aAlive"
+                },
+                {
+                  "line": 6,
+                  "vars": {
+                    "slot generations": "[1]",
+                    "a": "{0, 0}",
+                    "b": "{0, 1}",
+                    "aAlive": "false",
+                    "bAlive": "true"
+                  }
+                },
+                {
+                  "line": 7,
+                  "vars": {
+                    "slot generations": "[1, 0]",
+                    "a": "{0, 0}",
+                    "b": "{0, 1}",
+                    "aAlive": "false",
+                    "bAlive": "true",
+                    "c": "{1, 0}"
+                  },
+                  "ask": "c"
+                }
+              ],
+              "hint": "Destruir incrementa la generación de la ranura. `get` solo acepta un handle cuya generación coincida.",
+              "explanation": "Destruir a Ana sube la generación de la ranura 0 a **1**. Bo reutiliza la ranura 0, así que su handle es `{0, 1}`. El antiguo handle de Ana, `{0, 0}`, tiene el mismo índice pero una generación vieja, por lo que `get(a)` falla: `aAlive` es **false**, mientras que el handle de Bo funciona. Con la lista libre vacía, Cy recibe una ranura nueva: `{1, 0}`."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-stale-handle",
+              "concepts": [
+                "generational-handles",
+                "dangling-reference"
+              ],
+              "prompt": "El `get` de Kai (el mismo pool de antes) se olvida de algo. Un misil fijado en Ana debería informar `target gone` cuando ella muera. En cambio, golpea a Bo. Haz clic en la línea con el error.",
+              "language": "cpp",
+              "code": "Enemy* EnemyPool::get(Handle h) {\n    if (h.index >= slots.size()) return nullptr;\n    Slot& s = slots[h.index];\n    if (!s.used) return nullptr;\n    return &s.enemy;\n}\n\nvoid fireMissile(EnemyPool& pool) {\n    Handle target = pool.spawn({\"Ana\"});   // the missile locks on to Ana\n    pool.destroy(target);                  // Ana dies before impact\n    pool.spawn({\"Bo\"});                    // Bo spawns into the free slot\n    if (Enemy* e = pool.get(target)) std::printf(\"hit %s\\n\", e->name);\n    else std::printf(\"target gone\\n\");\n}",
+              "error": "hit Bo",
+              "lines": [
+                4
+              ],
+              "fixes": [
+                "Cambia la línea 4 por `if (!s.used || s.generation != h.generation) return nullptr;`",
+                "Cambia la línea 4 por `if (!s.used || s.enemy.hp <= 0) return nullptr;`",
+                "Cambia la línea 10 por `pool.destroy(target); target = {};` para limpiar el handle",
+                "Cambia la línea 2 para que compruebe `h.index > slots.size()`"
+              ],
+              "answer": 0,
+              "hint": "Bo vive en la misma ranura que Ana. ¿Qué diferencia hay ahora entre el handle de Ana y la ranura?",
+              "explanation": "`get` solo comprueba que la ranura esté en uso, y lo está: por Bo. Comparar las generaciones rechaza el handle `{0, 0}` de Ana frente a la generación 1 de la ranura, y el programa imprime `target gone`.\n\nComprobar `hp` no ayuda: Bo está vivo y sano. Limpiar el handle a `{}` da `{0, 0}`, que sigue nombrando la ranura 0 y sigue golpeando a Bo. La comprobación de límites trata de índices más allá del final, no de la reutilización."
+            },
+            {
+              "type": "numeric",
+              "id": "q-handle-bits",
+              "concepts": [
+                "generational-handles"
+              ],
+              "prompt": "Para que un handle quepa en 32 bits, Ember usa **20 bits** para el índice y **12 bits** para la generación. ¿Cuántas generaciones puede atravesar una ranura antes de que el contador dé la vuelta a un valor que un handle antiguo aún podría guardar?",
+              "answer": 4096,
+              "hint": "12 bits pueden representar 2¹² valores distintos.",
+              "explanation": "2¹² = **4096** generaciones. Tras 4096 reutilizaciones de la misma ranura, un handle muy antiguo podría volver a coincidir. Eso suele ser aceptable, ya que un handle tendría que sobrevivir a 4096 muertes de esa ranura. El índice de 20 bits permite 2²⁰ = 1.048.576 objetos vivos. Los motores ajustan el reparto a su juego, o usan handles de 64 bits."
+            },
+            {
+              "type": "mcq",
+              "id": "q-handles-why",
+              "concepts": [
+                "generational-handles"
+              ],
+              "prompt": "Además de detectar referencias obsoletas, ¿qué más dan los handles a un motor que los punteros `Enemy*` simples no dan?",
+              "choices": [
+                "El pool puede crecer o compactar su almacenamiento sin romperlos, y pueden guardarse en disco o enviarse por la red como simples números",
+                "Hacen cada búsqueda más rápida que desreferenciar un puntero",
+                "Liberan al enemigo automáticamente cuando desaparece el último handle",
+                "Permiten que dos hilos escriban en el mismo enemigo de forma segura"
+              ],
+              "answer": 0,
+              "hint": "Un handle son solo dos enteros. ¿Qué puedes hacer con enteros que no puedas hacer con direcciones?",
+              "explanation": "Un handle dice *qué* objeto, no *dónde* está, así que el almacenamiento puede moverse con libertad, y significa lo mismo en un archivo de guardado, una repetición o un mensaje de red. La búsqueda cuesta un poco **más** que un puntero simple (un índice más una comparación). Los handles no son dueños de nada, y no hacen seguras las escrituras compartidas."
+            }
+          ]
+        },
+        {
+          "id": "arenas-and-pools",
+          "title": "Arenas y pools",
+          "pareto": "core",
+          "minutes": 9,
+          "takeaway": "Adapta el allocator al tiempo de vida: una arena reparte memoria avanzando un desplazamiento y la libera toda de golpe, un pool recicla ranuras de tamaño fijo mediante una lista libre.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "¿Por qué no usar simplemente new?",
+              "body": "`new` y `malloc` son de propósito general: cualquier tamaño, cualquier orden, cualquier hilo. Esa generalidad cuesta contabilidad y a veces bloqueos, y miles de reservas pequeñas por frame dispersan los datos por el heap.\n\nLas reservas de un juego siguen patrones, y cada patrón tiene un allocator más barato:\n\n- **Arena** (allocator lineal): muchas reservas que mueren todas juntas, como todo lo temporal de un frame o todo lo de un nivel. Reservar avanza un desplazamiento; liberar es `offset = 0`.\n- **Pool**: muchos objetos de un mismo tamaño, creados y destruidos en cualquier orden, como las balas. Reservar y liberar sacan y meten en una lista libre, ambos en O(1)."
+            },
+            {
+              "type": "example",
+              "title": "Redondear hacia arriba a una alineación",
+              "problem": "El siguiente byte libre de una arena está en el desplazamiento 13. ¿Dónde debe empezar un `double` alineado a 8 bytes y cómo se calcula sin división?",
+              "steps": [
+                "El inicio debe ser el primer múltiplo de 8 igual o posterior a 13: es **16**.",
+                "Para una alineación que sea potencia de dos, `(offset + align - 1) & ~(align - 1)` lo calcula: 13 + 7 = 20 = 10100 en binario; al enmascarar los tres bits bajos queda 10000 = 16.",
+                "Esa expresión es el corazón de la arena:\n\n```cpp\nstruct Arena {\n    std::byte* base;\n    std::size_t capacity;\n    std::size_t offset = 0;\n\n    void* alloc(std::size_t size, std::size_t align) {\n        std::size_t start = (offset + align - 1) & ~(align - 1);\n        if (start + size > capacity) return nullptr;\n        offset = start + size;\n        return base + start;\n    }\n    void reset() { offset = 0; }\n};\n```",
+                "Un desplazamiento que ya está alineado no se mueve: (16 + 7) enmascarado vuelve a dar 16."
+              ],
+              "answer": "Redondea hacia arriba con (offset + align − 1) & ~(align − 1): el desplazamiento 13 con alineación 8 da 16."
+            },
+            {
+              "type": "numeric",
+              "id": "q-align-up",
+              "concepts": [
+                "arena-allocator"
+              ],
+              "prompt": "El desplazamiento de la arena es **37**. Kai reserva un `Vec4` con alineación de 16 bytes. ¿En qué desplazamiento empieza?",
+              "answer": 48,
+              "hint": "El primer múltiplo de 16 igual o posterior a 37.",
+              "explanation": "(37 + 15) & ~15 = 52 & ~15 = **48**. 32 queda demasiado pronto, y 48 es el siguiente múltiplo de 16; los 11 bytes del 37 al 47 son padding."
+            },
+            {
+              "type": "trace",
+              "id": "q-trace-arena",
+              "concepts": [
+                "arena-allocator"
+              ],
+              "prompt": "Una arena de frame de 256 bytes, usando el `Arena` anterior. Los punteros se muestran como desplazamientos dentro de su buffer. Predice `frame.offset` a medida que llegan las reservas.",
+              "language": "cpp",
+              "code": "Arena frame{buffer, 256};\nvoid* name = frame.alloc(5, 1);     // 5 chars\nvoid* mass = frame.alloc(8, 8);     // a double\nvoid* pos  = frame.alloc(12, 4);    // a Vec3 of floats\nvoid* id   = frame.alloc(4, 4);     // an int\nframe.reset();                      // end of frame\nvoid* next = frame.alloc(8, 8);",
+              "frames": [
+                {
+                  "line": 1,
+                  "vars": {
+                    "frame.offset": "0"
+                  }
+                },
+                {
+                  "line": 2,
+                  "vars": {
+                    "frame.offset": "5",
+                    "name": "buffer + 0"
+                  }
+                },
+                {
+                  "line": 3,
+                  "vars": {
+                    "frame.offset": "16",
+                    "name": "buffer + 0",
+                    "mass": "buffer + 8"
+                  },
+                  "ask": "frame.offset"
+                },
+                {
+                  "line": 4,
+                  "vars": {
+                    "frame.offset": "28",
+                    "name": "buffer + 0",
+                    "mass": "buffer + 8",
+                    "pos": "buffer + 16"
+                  },
+                  "ask": "frame.offset"
+                },
+                {
+                  "line": 5,
+                  "vars": {
+                    "frame.offset": "32",
+                    "name": "buffer + 0",
+                    "mass": "buffer + 8",
+                    "pos": "buffer + 16",
+                    "id": "buffer + 28"
+                  },
+                  "ask": "frame.offset"
+                },
+                {
+                  "line": 6,
+                  "vars": {
+                    "frame.offset": "0",
+                    "name": "buffer + 0",
+                    "mass": "buffer + 8",
+                    "pos": "buffer + 16",
+                    "id": "buffer + 28"
+                  },
+                  "note": "Una sola asignación libera todas las reservas del frame."
+                },
+                {
+                  "line": 7,
+                  "vars": {
+                    "frame.offset": "8",
+                    "name": "buffer + 0",
+                    "mass": "buffer + 8",
+                    "pos": "buffer + 16",
+                    "id": "buffer + 28",
+                    "next": "buffer + 0"
+                  },
+                  "note": "`next` reutiliza bytes que antes pertenecían a `name` y `mass`."
+                }
+              ],
+              "hint": "Redondea cada inicio hacia arriba a la alineación y luego suma el tamaño.",
+              "explanation": "Tras el nombre de 5 bytes, el desplazamiento es 5. El `double` se redondea a 8 y termina en **16**. El `Vec3` de 12 bytes con alineación 4 empieza en 16 y termina en **28**; el `int` empieza en 28 y termina en **32**. `reset()` lo libera todo con una sola asignación, y la primera reserva del frame siguiente vuelve a empezar en 0. Los punteros antiguos conservan sus direcciones pero ahora apuntan a memoria que pertenece a datos nuevos."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-scratch-lifetime",
+              "concepts": [
+                "arena-allocator",
+                "dangling-reference"
+              ],
+              "prompt": "`scratch` es la arena por frame de antes, reiniciada al comienzo de cada frame. Kai conserva la etiqueta del frame 0 para mostrarla después, así que esto debería imprimir `frame 0`. Haz clic en la línea con el error.",
+              "language": "cpp",
+              "code": "const char* firstLabel = nullptr;\nfor (int frame = 0; frame < 2; ++frame) {\n    scratch.reset();\n    char* text = (char*)scratch.alloc(16, 1);\n    std::snprintf(text, 16, \"frame %d\", frame);\n    if (frame == 0) firstLabel = text;\n}\nstd::printf(\"%s\\n\", firstLabel);",
+              "error": "frame 1",
+              "lines": [
+                6
+              ],
+              "fixes": [
+                "Cambia la línea 1 por `std::string firstLabel;` (para que la línea 6 copie el texto) y la línea 8 para que imprima `firstLabel.c_str()`",
+                "Mueve `scratch.reset();` de la línea 3 al final del cuerpo del bucle",
+                "Cambia la línea 4 para reservar 64 bytes en lugar de 16",
+                "Cambia la línea 1 por `const char* volatile firstLabel = nullptr;`"
+              ],
+              "answer": 0,
+              "hint": "¿Qué pasa con los bytes a los que apuntaba `text` cuando el frame 1 reinicia la arena y vuelve a reservar?",
+              "explanation": "La línea 6 guarda un **puntero** dentro de la arena temporal. El frame 1 reinicia la arena y su primera reserva cae sobre exactamente los mismos bytes, sobrescribiéndolos con `frame 1`. Ningún sanitizer se queja: la memoria nunca se liberó, solo se reutilizó. Todo lo que deba sobrevivir al frame tiene que **copiarse** a memoria con un tiempo de vida más largo, aquí un `std::string`.\n\nReiniciar al final del cuerpo sigue reciclando los mismos bytes. Una reserva más grande empieza en el mismo desplazamiento. `volatile` no cambia nada sobre los tiempos de vida. La regla: la memoria de frame es solo para datos de frame."
+            },
+            {
+              "type": "explain",
+              "title": "Un pool con lista libre",
+              "body": "Un pool reserva de antemano `N` ranuras de un tipo. Las ranuras libres forman una lista enlazada que pasa **por las propias ranuras libres**, así que la lista no cuesta memoria extra:\n\n```cpp\ntemplate <class T, std::size_t N>\nclass Pool {\n    union Slot { T value; Slot* next; Slot() {} ~Slot() {} };\n    Slot slots[N];\n    Slot* freeHead = nullptr;\npublic:\n    Pool() {\n        for (std::size_t i = 0; i < N; ++i) { slots[i].next = freeHead; freeHead = &slots[i]; }\n    }\n    T* create() {\n        if (!freeHead) return nullptr;            // pool is full\n        Slot* s = freeHead;\n        freeHead = s->next;                       // pop the free list: O(1)\n        return new (&s->value) T{};               // build the object in place\n    }\n    void destroy(T* p) {\n        p->~T();\n        Slot* s = reinterpret_cast<Slot*>(p);\n        s->next = freeHead;                       // push onto the free list: O(1)\n        freeHead = s;\n    }\n};\n```\n\nEn una prueba con un pool de 3 ranuras, un cuarto `create()` devolvió `nullptr` (lleno), y tras destruir la segunda bala, el siguiente `create()` recuperó exactamente su ranura. Los pools se combinan de forma natural con los handles generacionales: el índice de la ranura es el índice del handle."
+            },
+            {
+              "type": "buckets",
+              "id": "q-which-allocator",
+              "concepts": [
+                "arena-allocator",
+                "pool-allocator"
+              ],
+              "prompt": "¿Qué allocator encaja con cada tipo de reserva?",
+              "buckets": [
+                "Arena (se libera toda de golpe)",
+                "Pool (tamaño fijo, cualquier orden)",
+                "Heap general"
+              ],
+              "items": [
+                {
+                  "text": "Cadenas de texto de depuración construidas durante este frame",
+                  "bucket": 0
+                },
+                {
+                  "text": "Listas temporales de abiertos/cerrados para el pathfinding de este frame",
+                  "bucket": 0
+                },
+                {
+                  "text": "Toda la geometría de un nivel, que se libera al descargar el nivel",
+                  "bucket": 0
+                },
+                {
+                  "text": "Balas de 48 bytes disparadas y destruidas en momentos aleatorios",
+                  "bucket": 1
+                },
+                {
+                  "text": "Partículas de un único tamaño fijo, con miles vivas a la vez",
+                  "bucket": 1
+                },
+                {
+                  "text": "Una lista de ranuras de guardado que cambia de tamaño rara vez y vive toda la sesión",
+                  "bucket": 2
+                }
+              ],
+              "hint": "Misma hora de muerte: arena. Mismo tamaño, horas de muerte distintas: pool. Ningún patrón, y poco frecuente: usa el heap.",
+              "explanation": "Las arenas encajan con todo lo que muere **junto**, por frame o por nivel. Los pools encajan con muchos objetos de **un solo tamaño** que mueren de forma independiente. Las reservas raras, de tamaño extraño y larga vida no ganan nada con un allocator propio, así que `std::vector` y el heap general van bien ahí."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "frames-time-threads",
+      "title": "Frames, tiempo e hilos",
+      "description": "El bucle principal de paso fijo con interpolación, la simulación determinista y cómo repartir el trabajo entre núcleos sin data races.",
+      "lessons": [
+        {
+          "id": "fixed-step-loop",
+          "title": "El bucle principal de paso fijo",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Mete el tiempo real del frame en un acumulador, acótalo, ejecuta tantos pasos fijos de simulación como contenga y renderiza entre los dos últimos estados usando la fracción sobrante.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Dentro del bucle del motor",
+              "body": "Ya sabes *por qué* los juegos simulan con un paso de tiempo fijo. Así lo implementa un motor:\n\n- Lee `std::chrono::steady_clock` una vez por frame y suma el tiempo transcurrido a un **acumulador**.\n- **Acota** primero ese tiempo de frame, para que una parada larga no encole cientos de pasos.\n- Mientras el acumulador contenga al menos un paso `dt`: copia el estado actual a `previous`, simula `current` durante `dt` y resta `dt`.\n- Lo que sobra es una fracción de paso: `alpha = accumulator / dt`. Renderiza `lerp(previous, current, alpha)`, para que el movimiento se vea fluido aunque la tasa de la pantalla y la de la simulación sean distintas."
+            },
+            {
+              "type": "trace",
+              "id": "q-trace-accumulator",
+              "concepts": [
+                "fixed-timestep-loop"
+              ],
+              "prompt": "Llegan cuatro frames que tardan 16, 16, 25 y 4 ms; la simulación avanza en pasos de 10 ms. Grabado tras la línea 4 y la línea 11 de cada frame. Predice los valores.",
+              "language": "cpp",
+              "code": "const double dt = 10;                     // simulate in fixed 10 ms steps\ndouble accumulator = 0;\nfor (double frameTime : {16.0, 16.0, 25.0, 4.0}) {\n    accumulator += std::min(frameTime, 250.0);\n    int steps = 0;\n    while (accumulator >= dt) {\n        // previous = current; simulate(current, dt);\n        accumulator -= dt;\n        ++steps;\n    }\n    double alpha = accumulator / dt;      // render lerp(previous, current, alpha)\n}",
+              "frames": [
+                {
+                  "line": 4,
+                  "vars": {
+                    "frameTime": "16",
+                    "accumulator": "16"
+                  }
+                },
+                {
+                  "line": 11,
+                  "vars": {
+                    "frameTime": "16",
+                    "accumulator": "6",
+                    "steps": "1",
+                    "alpha": "0.6"
+                  },
+                  "note": "Sobran 6 ms: el 60% del camino hasta el siguiente paso."
+                },
+                {
+                  "line": 4,
+                  "vars": {
+                    "frameTime": "16",
+                    "accumulator": "22"
+                  },
+                  "ask": "accumulator"
+                },
+                {
+                  "line": 11,
+                  "vars": {
+                    "frameTime": "16",
+                    "accumulator": "2",
+                    "steps": "2",
+                    "alpha": "0.2"
+                  },
+                  "ask": "steps"
+                },
+                {
+                  "line": 4,
+                  "vars": {
+                    "frameTime": "25",
+                    "accumulator": "27"
+                  }
+                },
+                {
+                  "line": 11,
+                  "vars": {
+                    "frameTime": "25",
+                    "accumulator": "7",
+                    "steps": "2",
+                    "alpha": "0.7"
+                  },
+                  "ask": "alpha"
+                },
+                {
+                  "line": 4,
+                  "vars": {
+                    "frameTime": "4",
+                    "accumulator": "11"
+                  }
+                },
+                {
+                  "line": 11,
+                  "vars": {
+                    "frameTime": "4",
+                    "accumulator": "1",
+                    "steps": "1",
+                    "alpha": "0.1"
+                  }
+                }
+              ],
+              "hint": "Suma el tiempo del frame a lo que sobró y resta 10 ms por cada paso.",
+              "explanation": "El tiempo sobrante se arrastra. El frame 2 empieza con 6 ms sobrantes, suma 16 y llega a **22**, ejecuta **2** pasos y conserva 2 ms (alpha 0,2). Frame 3: 2 + 25 = 27, dos pasos, sobran 7, alpha **0,7**. El frame 4 es corto: 7 + 4 = 11, un paso. En los cuatro frames, 61 ms de tiempo real produjeron 6 pasos (60 ms de simulación) con 1 ms arrastrado: la simulación nunca se desvía del tiempo real."
+            },
+            {
+              "type": "numeric",
+              "id": "q-interpolate",
+              "concepts": [
+                "fixed-timestep-loop"
+              ],
+              "prompt": "Tras el bucle de actualización, el `previous.x` de una caja es 100, su `current.x` es 110 y `alpha` es 0,7. ¿En qué x debe dibujarla el renderizador?",
+              "answer": 107,
+              "tolerance": 0.001,
+              "hint": "`previous + (current - previous) * alpha`",
+              "explanation": "100 + (110 − 100) × 0,7 = **107**. El renderizador siempre dibuja un poco en el pasado, entre los dos últimos estados simulados. Eso cuesta hasta un paso de latencia visual, pero nunca muestra una posición que la simulación no produjo, algo que sí puede pasar al extrapolar hacia el futuro (una caja dibujada dentro de una pared contra la que está a punto de chocar)."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-spiral",
+              "concepts": [
+                "fixed-timestep-loop"
+              ],
+              "prompt": "Después de que Kai reanuda desde un breakpoint que congeló el juego 3 segundos, `tick(3.0)` ejecuta **149** pasos de simulación en un solo frame. Si los pasos son lentos, ese frame tarda aún más, y el siguiente más todavía. Haz clic en la línea que hay que corregir.",
+              "language": "cpp",
+              "code": "const double dt = 1.0 / 50;          // 50 simulation steps per second\ndouble accumulator = 0;\n\nint tick(double frameTime) {\n    accumulator += frameTime;\n    int steps = 0;\n    while (accumulator >= dt) {\n        simulate(dt);\n        accumulator -= dt;\n        ++steps;\n    }\n    return steps;\n}",
+              "error": "1\n149",
+              "lines": [
+                5
+              ],
+              "fixes": [
+                "Cambia la línea 5 por `accumulator += std::min(frameTime, 0.25);`",
+                "Cambia la línea 1 por `const double dt = 1.0 / 25;`",
+                "Cambia la línea 5 por `accumulator = frameTime;`",
+                "Cambia la línea 2 por `float accumulator = 0;`"
+              ],
+              "answer": 0,
+              "hint": "¿Cuánto tiempo real debe poder entregar un solo frame a la simulación?",
+              "explanation": "Sin un tope, cualquier parada larga (un breakpoint, una carga de nivel, la paginación del sistema operativo) vuelca todo su tiempo en el acumulador, y el bucle intenta ponerse al día en un solo frame. Si calcular un paso lleva más tiempo que el que simula, cada frame se queda más atrás: la **espiral de la muerte**. Acotar a 0,25 s limita un frame a 12 pasos aquí; el juego va brevemente más lento que el tiempo real en lugar de congelarse.\n\nUn `dt` mayor reduce a la mitad los pasos pero cambia la tasa de simulación y aun así ejecuta 75 pasos. Sobrescribir el acumulador tira el tiempo sobrante y aun así ejecuta 149. Un acumulador `float` solo añade error de redondeo: ejecutó 151."
+            },
+            {
+              "type": "order",
+              "id": "q-frame-order",
+              "concepts": [
+                "fixed-timestep-loop"
+              ],
+              "prompt": "Pon en orden una iteración del bucle principal de Ember.",
+              "items": [
+                "Consulta la entrada y los eventos del sistema operativo",
+                "Lee el reloj y suma el tiempo de frame acotado al acumulador",
+                "Mientras el acumulador contenga un paso: guarda el estado anterior, simula un dt y resta dt",
+                "Calcula alpha = accumulator / dt",
+                "Renderiza el estado interpolado entre el anterior y el actual según alpha",
+                "Presenta la imagen terminada (intercambia los buffers)"
+              ],
+              "hint": "La simulación consume tiempo, el renderizado usa lo que sobra y presentar va al final.",
+              "explanation": "Primero la entrada, para que los pasos la vean. Luego el tiempo entra en el acumulador y se gasta en pasos fijos. Solo después de los pasos se conoce la fracción sobrante, así que alpha y el renderizado vienen a continuación, y la imagen se presenta al final del frame."
+            }
+          ]
+        },
+        {
+          "id": "determinism",
+          "title": "La misma entrada, el mismo juego",
+          "pareto": "extra",
+          "minutes": 8,
+          "takeaway": "El multijugador lockstep y las repeticiones necesitan simulaciones idénticas bit a bit, así que fija el orden de las operaciones en coma flotante y los flags del compilador, y da a la simulación su propio flujo aleatorio con semilla.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Por qué importan los bits",
+              "body": "El multijugador lockstep (habitual en los juegos de estrategia en tiempo real) envía solo las entradas de los jugadores; cada máquina ejecuta la simulación completa y debe llegar **exactamente** al mismo estado. Las repeticiones y muchos tests automáticos funcionan igual. Un solo bit distinto en un solo float puede convertirse en una batalla diferente un minuto después.\n\nLa trampa habitual es que la aritmética de coma flotante no es la aritmética de los números reales. Cada operación redondea al valor representable más cercano, así que **el orden de las operaciones cambia el resultado**: `(a + b) + c` y `a + (b + c)` pueden diferir."
+            },
+            {
+              "type": "output",
+              "id": "q-float-assoc",
+              "concepts": [
+                "determinism"
+              ],
+              "prompt": "Un `float` tiene unas 7 cifras decimales significativas. ¿Qué imprime esto?",
+              "language": "cpp",
+              "code": "#include <cstdio>\n\nint main() {\n    float big = 100000000.0f;\n    float small = 1.0f;\n    std::printf(\"%g\\n\", (small + big) - big);\n    std::printf(\"%g\\n\", small + (big - big));\n}",
+              "output": "0\n1",
+              "hint": "¿Se puede guardar 100.000.001 exactamente en un float? ¿Y el 0?",
+              "explanation": "`small + big` sería 100.000.001, que un float no puede representar: el float más cercano es 100.000.000, así que el 1 se pierde y la primera línea imprime **0**. En la segunda línea `big - big` es exactamente 0, y sumarle 1 da **1**. Los mismos tres números, las mismas operaciones, distinto orden, distinto resultado."
+            },
+            {
+              "type": "output",
+              "id": "q-double-order",
+              "concepts": [
+                "determinism"
+              ],
+              "prompt": "Los doubles también redondean. `%.17g` imprime las cifras suficientes para mostrar cada bit. ¿Qué imprime esto?",
+              "language": "cpp",
+              "code": "#include <cstdio>\n\nint main() {\n    double a = (0.1 + 0.2) + 0.3;\n    double b = 0.1 + (0.2 + 0.3);\n    std::printf(\"%s\\n\", a == b ? \"same\" : \"different\");\n    std::printf(\"%.17g\\n%.17g\\n\", a, b);\n}",
+              "output": "different\n0.60000000000000009\n0.59999999999999998",
+              "hint": "0.1, 0.2 y 0.3 no son exactos en binario, y cada suma redondea.",
+              "explanation": "`0.1 + 0.2` redondea a 0.30000000000000004; sumarle 0.3 redondea entonces a **0.60000000000000009**. `0.2 + 0.3` redondea exactamente a 0.5, y sumarle 0.1 da **0.59999999999999998**. Por eso `a == b` es falso. Una suma en paralelo que añade en un orden distinto en cada ejecución, o un compilador al que se permite reordenar sumas, rompe el determinismo de esta manera."
+            },
+            {
+              "type": "explain",
+              "title": "Flags, plataformas y números aleatorios",
+              "body": "El compilador puede cambiar por ti el orden o el redondeo:\n\n- `-ffast-math` permite explícitamente reordenar y otros atajos.\n- **Fused multiply-add**: Apple clang en arm64 compiló `a * b + c` como una única instrucción fusionada por defecto, que redondea una vez en lugar de dos. Con una entrada de prueba imprimió `-1.49011612e-08`; con `-ffp-contract=off` el mismo código fuente imprimió `0`. Compilado para x86-64, el mismo código fuente genera una multiplicación y una suma separadas (visible en el ensamblador), que redondea dos veces igual que la build que dio `0`.\n- Las funciones de la biblioteca matemática como `std::sin` pueden diferir entre plataformas.\n\nNúmeros aleatorios: la secuencia de salida de `std::mt19937` la fija el estándar de C++, así que una semilla significa los mismos números en todas partes. Las **distribuciones** estándar (`std::uniform_int_distribution`, ...) no están especificadas con exactitud, así que distintas bibliotecas estándar pueden convertir los mismos números en bruto en resultados distintos."
+            },
+            {
+              "type": "buckets",
+              "id": "q-deterministic-or-not",
+              "concepts": [
+                "determinism"
+              ],
+              "prompt": "Dos jugadores ejecutan la misma simulación en máquinas diferentes. ¿Cuáles de estos casos dan resultados idénticos en todas partes?",
+              "buckets": [
+                "Idéntico en todas partes",
+                "Puede diferir"
+              ],
+              "items": [
+                {
+                  "text": "La salida en bruto de `std::mt19937` con la misma semilla",
+                  "bucket": 0
+                },
+                {
+                  "text": "Aritmética de enteros y de coma fija",
+                  "bucket": 0
+                },
+                {
+                  "text": "Sumas de floats en el mismo orden, el mismo binario, con la contracción FMA desactivada",
+                  "bucket": 0
+                },
+                {
+                  "text": "`std::uniform_int_distribution` compilado con distintas bibliotecas estándar",
+                  "bucket": 1
+                },
+                {
+                  "text": "Código con floats compilado con `-ffast-math`",
+                  "bucket": 1
+                },
+                {
+                  "text": "Recorrer un `std::unordered_map` de unidades para aplicar daño",
+                  "bucket": 1
+                },
+                {
+                  "text": "Inicializar el RNG de la simulación con `std::random_device`",
+                  "bucket": 1
+                }
+              ],
+              "hint": "¿Está el resultado fijado por el estándar y por un orden fijo de operaciones?",
+              "explanation": "La secuencia del motor y la matemática de enteros están totalmente especificadas. Los floats son deterministas solo cuando las operaciones, su orden, los flags y el binario son todos iguales. Las distribuciones varían según la biblioteca, el orden de iteración de `unordered_map` depende de la implementación y del historial de inserciones, y `random_device` está pensado para ser impredecible. Los juegos lockstep suelen usar matemática de enteros o de coma fija precisamente por esta razón."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-shared-rng",
+              "concepts": [
+                "determinism"
+              ],
+              "prompt": "Dos jugadores de una partida lockstep tiran el mismo crítico con la misma semilla. El jugador con gráficos altos genera 3 chispas antes. La partida debería seguir `in sync`. Haz clic en la línea que lo rompe.",
+              "language": "cpp",
+              "code": "#include <cstdio>\n#include <random>\n\nstd::mt19937 rng(42);\n\nint critRoll(int sparks) {\n    for (int i = 0; i < sparks; ++i) rng();    // cosmetic: spark directions\n    return rng() % 100;                         // gameplay: crit chance\n}\n\nint main() {\n    int low = critRoll(0);     // player on low graphics: no sparks\n    rng.seed(42);\n    int high = critRoll(3);    // player on high graphics: 3 sparks\n    std::printf(\"%s\\n\", low == high ? \"in sync\" : \"desync\");\n}",
+              "error": "desync",
+              "lines": [
+                7
+              ],
+              "fixes": [
+                "Da a las chispas su propio generador: cambia la línea 4 por `std::mt19937 rng(42), fx(7);` y llama a `fx()` en la línea 7",
+                "Cambia la línea 4 por `std::mt19937_64 rng(42);`",
+                "Cambia la línea 8 por `return std::uniform_int_distribution<int>(0, 99)(rng);`"
+              ],
+              "answer": 0,
+              "hint": "¿Cuántos números ha producido `rng` cuando se tira el crítico, en cada máquina?",
+              "explanation": "Las chispas cosméticas sacan números del **mismo** generador que el gameplay, así que la tirada de crítico del jugador con gráficos altos usa el 4.º número de la secuencia mientras que la del jugador con gráficos bajos usa el 1.º. Separar los flujos mantiene idéntica la secuencia del gameplay sea cual sea la configuración gráfica, y el programa imprime `in sync`.\n\nUn motor de 64 bits o una distribución cambian cómo se producen los números, no cuántos consumen las chispas, así que ambos siguen imprimiendo `desync`. Regla: la simulación es dueña de su RNG, con una semilla fijada una vez y guardada con la repetición, y nada más puede sacar números de él."
+            }
+          ]
+        },
+        {
+          "id": "job-system",
+          "title": "Jobs y data races",
+          "pareto": "extra",
+          "minutes": 8,
+          "takeaway": "Divide el trabajo del frame en trozos independientes que escriban solo sus propios datos, combina los resultados tras un punto de sincronización y usa ThreadSanitizer para cazar las carreras que se te escaparon.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Usar todos los núcleos",
+              "body": "Una CPU moderna tiene muchos núcleos, pero un bucle de juego clásico se ejecuta en uno. Un **job system** mantiene vivos unos pocos hilos trabajadores (a menudo uno por núcleo) y les da pequeños **jobs**: *actualizar las entidades 0–255*, *actualizar las entidades 256–511*, y así sucesivamente.\n\nEl patrón que mantiene esto bajo control:\n\n- Divide el trabajo en **trozos independientes**, cada uno leyendo la entrada compartida y escribiendo **solo en su propio** rango de salida.\n- Espera en un **punto de sincronización** a que terminen todos los jobs de una fase antes de que la siguiente lea sus resultados.\n\nCuando dos hilos tocan la misma memoria, al menos uno escribe y nada los ordena, eso es un **data race**: comportamiento indefinido, no solo un número equivocado."
+            },
+            {
+              "type": "numeric",
+              "id": "q-job-count",
+              "concepts": [
+                "job-system"
+              ],
+              "prompt": "Ember actualiza **10.000** entidades en trozos de **256**. ¿Cuántos jobs salen?",
+              "answer": 40,
+              "hint": "El último trozo puede estar parcialmente vacío.",
+              "explanation": "10.000 ÷ 256 = 39,06, es decir, 39 trozos completos más un trozo parcial de 16: **40** jobs. Los trozos de unos pocos cientos de entidades son un compromiso habitual: lo bastante grandes para que el coste de planificación sea pequeño, lo bastante pequeños para repartirse bien entre núcleos."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-data-race",
+              "concepts": [
+                "data-race",
+                "sanitizers"
+              ],
+              "prompt": "Cuatro hilos trabajadores cuentan los enemigos vivos. Con 400.000 enemigos, todos vivos, debería devolver `400000`. Las ejecuciones normales imprimieron 231835, 139782, 103958 y 151070. Haz clic en la línea con el error.",
+              "language": "cpp",
+              "code": "int countAlive(const std::vector<Enemy>& enemies) {\n    int alive = 0;\n    std::vector<std::thread> workers;\n    const std::size_t chunk = enemies.size() / 4;\n    for (int w = 0; w < 4; ++w) {\n        workers.emplace_back([&, w] {\n            for (std::size_t i = w * chunk; i < (w + 1) * chunk; ++i)\n                if (enemies[i].hp > 0) ++alive;\n        });\n    }\n    for (auto& t : workers) t.join();\n    return alive;\n}",
+              "error": "WARNING: ThreadSanitizer: data race (pid=...)\n  Write of size 4 at ... by thread T...:\n  Previous write of size 4 at ... by thread T...:\n  Location is stack of main thread.",
+              "lines": [
+                8
+              ],
+              "fixes": [
+                "Da a cada trabajador su propio contador: `int counts[4] = {};` en la línea 2, `++counts[w]` en la línea 8, y devuelve su suma en la línea 12",
+                "Cambia la línea 2 por `volatile int alive = 0;`",
+                "Cambia la línea 2 por `static int alive = 0;`",
+                "Cambia la línea 6 para capturar por copia: `workers.emplace_back([=] {`"
+              ],
+              "answer": 0,
+              "hint": "`++alive` es una lectura, una suma y una escritura. ¿Qué pasa si dos hilos lo hacen en el mismo instante?",
+              "explanation": "Los cuatro hilos hacen `++alive` sobre el mismo `int`. Dos de ellos pueden leer el mismo valor antiguo y escribir ambos viejo + 1, perdiendo una cuenta, por lo que cada ejecución imprimió un número distinto y demasiado pequeño. Con un contador por trabajador, ningún par de hilos escribe en la misma memoria; el hilo principal los suma **después** de los join, el punto de sincronización.\n\n`volatile` no hace nada atómico, y un contador `static` sigue siendo compartido: TSan informa de un data race en ambos casos. Capturar por copia no compila (*cannot assign to a variable captured by copy in a non-mutable lambda*). `std::atomic<int>` también devolvería 400000, pero hace que cada incremento dispute la misma línea de caché."
+            },
+            {
+              "type": "buckets",
+              "id": "q-safe-in-parallel",
+              "concepts": [
+                "data-race",
+                "job-system"
+              ],
+              "prompt": "Varios jobs se ejecutan a la vez. ¿Cuáles de estos casos son seguros?",
+              "buckets": [
+                "Seguro",
+                "Data race"
+              ],
+              "items": [
+                {
+                  "text": "Cada job escribe `positions[i]` solo para las `i` de su propio trozo",
+                  "bucket": 0
+                },
+                {
+                  "text": "Todos los jobs leen la misma geometría `const` del nivel",
+                  "bucket": 0
+                },
+                {
+                  "text": "Cada job escribe su resultado en su propia ranura de un array `results`",
+                  "bucket": 0
+                },
+                {
+                  "text": "Los jobs incrementan un contador `std::atomic<int>` compartido",
+                  "bucket": 0
+                },
+                {
+                  "text": "Los jobs hacen `push_back` en un único `std::vector` compartido",
+                  "bucket": 1
+                },
+                {
+                  "text": "Los jobs incrementan un contador `int` simple compartido",
+                  "bucket": 1
+                },
+                {
+                  "text": "Un job escribe la salud de un enemigo mientras otro la lee",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Una carrera necesita memoria compartida, al menos un escritor y nada que ordene los accesos.",
+              "explanation": "Las escrituras disjuntas, las **lecturas** compartidas y los atómicos son seguros. Un `push_back` desde varios hilos compite por el tamaño y el buffer del vector, un contador `int` simple compite en cada incremento, y una escritura concurrente con una lectura compite aunque “parezca inofensiva”. Los motores suelen dar a cada job su propio buffer de salida y combinar tras el punto de sincronización."
+            },
+            {
+              "type": "example",
+              "title": "¿Cuánto más rápido puede ir?",
+              "problem": "La física tarda 8 ms en un núcleo: 2 ms de broadphase que deben ejecutarse en serie, y luego 6 ms de narrowphase que se divide limpiamente en jobs. Con 4 núcleos, ¿cuál es el mejor caso?",
+              "steps": [
+                "La parte serial no se reduce: 2 ms.",
+                "La parte paralela, en el mejor caso, se divide entre el número de núcleos: 6 ÷ 4 = 1,5 ms.",
+                "Total: 2 + 1,5 = **3,5 ms**, una aceleración de 2,3x con 4 núcleos, no de 4x. Esta es la **ley de Amdahl**: la parte serial limita la aceleración.",
+                "Los jobs reales también pagan por la planificación, por esperar en los puntos de sincronización y por los núcleos que se disputan líneas de caché compartidas, así que mide el resultado."
+              ],
+              "answer": "3,5 ms en el mejor caso: la parte serial de 2 ms más 6 ms repartidos entre 4 núcleos."
+            },
+            {
+              "type": "numeric",
+              "id": "q-amdahl",
+              "concepts": [
+                "job-system"
+              ],
+              "prompt": "La animación tarda 10 ms en un núcleo: 1 ms debe seguir siendo serial, y los otros 9 ms se dividen por igual en jobs. En el mejor caso, ¿cuántos ms tarda en **6** núcleos?",
+              "answer": 2.5,
+              "tolerance": 0.01,
+              "unit": "ms",
+              "hint": "El tiempo serial más el tiempo paralelo dividido entre el número de núcleos.",
+              "explanation": "1 + 9 ÷ 6 = 1 + 1,5 = **2,5 ms**, una aceleración de 4x con 6 núcleos. Con infinitos núcleos nunca podría bajar de la parte serial de 1 ms."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

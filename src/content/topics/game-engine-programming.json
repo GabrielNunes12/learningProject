@@ -1,0 +1,2735 @@
+{
+  "id": "game-engine-programming",
+  "title": "Game Engine Programming",
+  "icon": "C++",
+  "color": "#364fc7",
+  "order": 20,
+  "category": "Programming",
+  "level": "Advanced",
+  "description": "Write the C++ underneath a game engine: own memory without a garbage collector, avoid the undefined behaviour that crashes engines, lay data out for the cache, and build handles, allocators, a fixed-step loop and simple jobs.",
+  "keyIdeas": [
+    "C++ objects are **values**: assignment copies, and you choose references, pointers or moves to share or hand off.",
+    "Tie every resource to a scope with **RAII** and give each heap object **one owner** (`std::unique_ptr`); shared ownership is the exception.",
+    "**Undefined behaviour** is silent until it isn't: test under sanitizers, and never keep pointers into a container that can grow.",
+    "Memory access dominates: keep hot data **contiguous**, split it into **structs of arrays**, and measure before and after every change.",
+    "Engines refer to objects by **generational handles**, allocate from **arenas and pools**, and step the simulation on a **fixed timestep**.",
+    "Determinism and threads need discipline: fixed float order and flags, a dedicated seeded RNG, and jobs that never write the same data."
+  ],
+  "concepts": [
+    {
+      "id": "value-semantics",
+      "label": "Value semantics",
+      "lesson": "values-and-references",
+      "summary": "Every C++ type behaves like a value: assignment and by-value parameters copy the whole object.",
+      "aliases": [
+        "copy semantics",
+        "values",
+        "copies by default",
+        "value types"
+      ]
+    },
+    {
+      "id": "references-pointers",
+      "label": "References and pointers",
+      "lesson": "values-and-references",
+      "summary": "A reference is another name for an existing object; a pointer holds an address that can be null or re-pointed.",
+      "aliases": [
+        "reference",
+        "pointer",
+        "T&",
+        "T*",
+        "const reference",
+        "address"
+      ]
+    },
+    {
+      "id": "stack-vs-heap",
+      "label": "Stack vs heap",
+      "lesson": "scope-and-raii",
+      "summary": "Locals live on the stack and die at the end of their scope; heap objects live until their owner frees them, with no garbage collector.",
+      "aliases": [
+        "stack",
+        "heap",
+        "automatic storage",
+        "new and delete",
+        "free store"
+      ]
+    },
+    {
+      "id": "raii",
+      "label": "RAII",
+      "lesson": "scope-and-raii",
+      "summary": "Tie each resource to an object whose destructor releases it, so cleanup runs on every exit path.",
+      "aliases": [
+        "destructor",
+        "resource acquisition is initialization",
+        "scope guard",
+        "scoped timer",
+        "lock_guard"
+      ]
+    },
+    {
+      "id": "unique-ownership",
+      "label": "unique_ptr ownership",
+      "lesson": "owning-pointers",
+      "summary": "std::unique_ptr makes one object the single owner of a heap object; it can be moved but not copied.",
+      "aliases": [
+        "unique_ptr",
+        "make_unique",
+        "single owner",
+        "ownership",
+        "owning pointer"
+      ]
+    },
+    {
+      "id": "shared-ownership",
+      "label": "Shared ownership",
+      "lesson": "owning-pointers",
+      "summary": "std::shared_ptr shares an object through an atomic reference count, which costs memory and time and blurs who controls the lifetime.",
+      "aliases": [
+        "shared_ptr",
+        "reference counting",
+        "use_count",
+        "refcount",
+        "weak_ptr"
+      ]
+    },
+    {
+      "id": "move-semantics",
+      "label": "Move semantics",
+      "lesson": "moves-and-const",
+      "summary": "Moving transfers an object's resources instead of copying them; std::move only marks an object as safe to steal from.",
+      "aliases": [
+        "std::move",
+        "move constructor",
+        "rvalue reference",
+        "noexcept move",
+        "emplace_back"
+      ]
+    },
+    {
+      "id": "const-correctness",
+      "label": "Const correctness",
+      "lesson": "moves-and-const",
+      "summary": "Marking parameters and member functions const lets the compiler enforce which code may change an object.",
+      "aliases": [
+        "const",
+        "const member function",
+        "const reference",
+        "read-only"
+      ]
+    },
+    {
+      "id": "undefined-behaviour",
+      "label": "Undefined behaviour",
+      "lesson": "ub-and-sanitizers",
+      "summary": "Operations like out-of-bounds access, signed overflow or use-after-free have no defined result, and the optimiser assumes they never happen.",
+      "aliases": [
+        "UB",
+        "undefined behavior",
+        "out of bounds",
+        "signed overflow",
+        "uninitialised variable"
+      ]
+    },
+    {
+      "id": "sanitizers",
+      "label": "Sanitizers",
+      "lesson": "ub-and-sanitizers",
+      "summary": "Compiler-inserted run-time checks (AddressSanitizer, UndefinedBehaviorSanitizer, ThreadSanitizer) that report memory errors, UB and data races.",
+      "aliases": [
+        "ASan",
+        "UBSan",
+        "TSan",
+        "AddressSanitizer",
+        "-fsanitize"
+      ]
+    },
+    {
+      "id": "dangling-reference",
+      "label": "Dangling pointers",
+      "lesson": "dangling-and-invalidation",
+      "summary": "A pointer or reference to memory that has been freed or reused; using it is undefined behaviour.",
+      "aliases": [
+        "dangling pointer",
+        "use after free",
+        "dangling reference",
+        "stale pointer"
+      ]
+    },
+    {
+      "id": "iterator-invalidation",
+      "label": "Iterator invalidation",
+      "lesson": "dangling-and-invalidation",
+      "summary": "Operations that reallocate or shift a container's elements make existing pointers, references and iterators into it invalid.",
+      "aliases": [
+        "vector reallocation",
+        "capacity growth",
+        "erase while iterating",
+        "invalidated iterator"
+      ]
+    },
+    {
+      "id": "profiling",
+      "label": "Measure first",
+      "lesson": "measure-first",
+      "summary": "Profile an optimised build against the frame budget to find where time goes, then change one thing and measure again.",
+      "aliases": [
+        "profiler",
+        "frame budget",
+        "benchmark",
+        "profile before optimising",
+        "16.7 ms"
+      ]
+    },
+    {
+      "id": "cache-locality",
+      "label": "Cache locality",
+      "lesson": "cache-lines",
+      "summary": "The CPU loads whole cache lines and prefetches sequential memory, so contiguous data is fast and pointer chasing is slow.",
+      "aliases": [
+        "cache line",
+        "cache miss",
+        "contiguous memory",
+        "prefetching",
+        "locality",
+        "linked lists are slow"
+      ]
+    },
+    {
+      "id": "struct-of-arrays",
+      "label": "Struct of arrays",
+      "lesson": "aos-vs-soa",
+      "summary": "Storing each field in its own array so loops that touch a few fields of many objects load only useful bytes.",
+      "aliases": [
+        "SoA",
+        "AoS",
+        "array of structs",
+        "hot/cold splitting",
+        "data layout"
+      ]
+    },
+    {
+      "id": "struct-padding",
+      "label": "Padding and alignment",
+      "lesson": "struct-layout",
+      "summary": "Members sit at multiples of their alignment and the compiler pads the gaps, so member order changes sizeof.",
+      "aliases": [
+        "padding",
+        "alignment",
+        "alignof",
+        "sizeof",
+        "member order",
+        "static_assert"
+      ]
+    },
+    {
+      "id": "ecs",
+      "label": "Entity component system",
+      "lesson": "entities-and-components",
+      "summary": "Entities are ids, components are plain data packed in one array per type, and systems are loops over those arrays.",
+      "aliases": [
+        "ECS",
+        "components",
+        "systems",
+        "entity id",
+        "swap and pop",
+        "sparse set"
+      ]
+    },
+    {
+      "id": "generational-handles",
+      "label": "Generational handles",
+      "lesson": "generational-handles",
+      "summary": "An index plus a generation counter that lets the engine detect references to objects whose slot has been reused.",
+      "aliases": [
+        "handle",
+        "generation counter",
+        "stale handle",
+        "slot map",
+        "entity handle"
+      ]
+    },
+    {
+      "id": "arena-allocator",
+      "label": "Arena allocator",
+      "lesson": "arenas-and-pools",
+      "summary": "Allocates by bumping an aligned offset and frees everything at once by resetting it, ideal for per-frame scratch memory.",
+      "aliases": [
+        "linear allocator",
+        "bump allocator",
+        "frame allocator",
+        "scratch memory",
+        "stack allocator"
+      ]
+    },
+    {
+      "id": "pool-allocator",
+      "label": "Pool allocator",
+      "lesson": "arenas-and-pools",
+      "summary": "Preallocated fixed-size slots recycled through a free list, giving O(1) allocation and freeing in any order.",
+      "aliases": [
+        "object pool",
+        "free list",
+        "fixed-size allocator",
+        "slab"
+      ]
+    },
+    {
+      "id": "fixed-timestep-loop",
+      "label": "Fixed-step main loop",
+      "lesson": "fixed-step-loop",
+      "summary": "An accumulator turns clamped frame time into whole simulation steps, and rendering interpolates between the last two states.",
+      "aliases": [
+        "accumulator",
+        "fixed timestep",
+        "interpolation",
+        "alpha",
+        "spiral of death",
+        "game loop"
+      ]
+    },
+    {
+      "id": "determinism",
+      "label": "Determinism",
+      "lesson": "determinism",
+      "summary": "Identical inputs giving bit-identical simulation results, which needs a fixed order of float operations, fixed compiler flags and a dedicated seeded RNG.",
+      "aliases": [
+        "lockstep",
+        "replays",
+        "floating point",
+        "seeded RNG",
+        "mt19937",
+        "fast-math"
+      ]
+    },
+    {
+      "id": "data-race",
+      "label": "Data race",
+      "lesson": "job-system",
+      "summary": "Two threads accessing the same memory without ordering, at least one writing: undefined behaviour that loses updates.",
+      "aliases": [
+        "race",
+        "race condition",
+        "thread safety",
+        "atomic",
+        "ThreadSanitizer"
+      ]
+    },
+    {
+      "id": "job-system",
+      "label": "Job system",
+      "lesson": "job-system",
+      "summary": "Worker threads run small independent jobs over chunks of data, with sync points between phases; the serial part limits the speedup.",
+      "aliases": [
+        "jobs",
+        "worker threads",
+        "parallel for",
+        "task system",
+        "Amdahl's law"
+      ]
+    }
+  ],
+  "links": [
+    {
+      "from": "references-pointers",
+      "to": "value-semantics",
+      "label": "avoid the copies made by"
+    },
+    {
+      "from": "value-semantics",
+      "to": "java/primitives-vs-references",
+      "label": "applies to every type, unlike"
+    },
+    {
+      "from": "raii",
+      "to": "stack-vs-heap",
+      "label": "frees heap resources at the end of a stack scope, bridging"
+    },
+    {
+      "from": "raii",
+      "to": "java/try-with-resources",
+      "label": "is the C++ answer to"
+    },
+    {
+      "from": "unique-ownership",
+      "to": "raii",
+      "label": "applies"
+    },
+    {
+      "from": "shared-ownership",
+      "to": "unique-ownership",
+      "label": "costs more than"
+    },
+    {
+      "from": "move-semantics",
+      "to": "unique-ownership",
+      "label": "transfers"
+    },
+    {
+      "from": "move-semantics",
+      "to": "value-semantics",
+      "label": "avoids deep copies in"
+    },
+    {
+      "from": "const-correctness",
+      "to": "references-pointers",
+      "label": "makes read-only"
+    },
+    {
+      "from": "sanitizers",
+      "to": "undefined-behaviour",
+      "label": "detect"
+    },
+    {
+      "from": "dangling-reference",
+      "to": "undefined-behaviour",
+      "label": "is a kind of"
+    },
+    {
+      "from": "iterator-invalidation",
+      "to": "dangling-reference",
+      "label": "causes"
+    },
+    {
+      "from": "iterator-invalidation",
+      "to": "references-pointers",
+      "label": "breaks stored"
+    },
+    {
+      "from": "generational-handles",
+      "to": "dangling-reference",
+      "label": "detect what would be"
+    },
+    {
+      "from": "generational-handles",
+      "to": "ecs",
+      "label": "identify entities in"
+    },
+    {
+      "from": "ecs",
+      "to": "struct-of-arrays",
+      "label": "stores components as"
+    },
+    {
+      "from": "ecs",
+      "to": "java/inheritance-interfaces",
+      "label": "favours composition over"
+    },
+    {
+      "from": "struct-of-arrays",
+      "to": "cache-locality",
+      "label": "improves"
+    },
+    {
+      "from": "struct-padding",
+      "to": "cache-locality",
+      "label": "wastes"
+    },
+    {
+      "from": "cache-locality",
+      "to": "system-design/latency-numbers",
+      "label": "is the in-memory end of"
+    },
+    {
+      "from": "cache-locality",
+      "to": "big-o/big-o-notation",
+      "label": "is invisible to"
+    },
+    {
+      "from": "profiling",
+      "to": "cache-locality",
+      "label": "reveals problems with"
+    },
+    {
+      "from": "profiling",
+      "to": "system-design/latency-budget",
+      "label": "checks a frame against a"
+    },
+    {
+      "from": "profiling",
+      "to": "big-o/small-n-is-fine",
+      "label": "decides when it is true that"
+    },
+    {
+      "from": "arena-allocator",
+      "to": "stack-vs-heap",
+      "label": "replaces many heap allocations described in"
+    },
+    {
+      "from": "arena-allocator",
+      "to": "dangling-reference",
+      "label": "causes, if pointers outlive a reset,"
+    },
+    {
+      "from": "pool-allocator",
+      "to": "generational-handles",
+      "label": "pairs with"
+    },
+    {
+      "from": "pool-allocator",
+      "to": "arena-allocator",
+      "label": "complements"
+    },
+    {
+      "from": "fixed-timestep-loop",
+      "to": "determinism",
+      "label": "is a prerequisite for"
+    },
+    {
+      "from": "fixed-timestep-loop",
+      "to": "profiling",
+      "label": "must fit in the budget checked by"
+    },
+    {
+      "from": "determinism",
+      "to": "unit-testing/flaky-test",
+      "label": "prevents the replay version of a"
+    },
+    {
+      "from": "data-race",
+      "to": "determinism",
+      "label": "breaks"
+    },
+    {
+      "from": "data-race",
+      "to": "undefined-behaviour",
+      "label": "is"
+    },
+    {
+      "from": "data-race",
+      "to": "java/race-condition",
+      "label": "is the memory-level form of a"
+    },
+    {
+      "from": "sanitizers",
+      "to": "data-race",
+      "label": "catch (ThreadSanitizer)"
+    },
+    {
+      "from": "job-system",
+      "to": "data-race",
+      "label": "must avoid"
+    },
+    {
+      "from": "job-system",
+      "to": "java/executor-service",
+      "label": "is the engine version of"
+    },
+    {
+      "from": "fixed-timestep-loop",
+      "to": "game-development/fixed-timestep",
+      "label": "is how an engine implements"
+    },
+    {
+      "from": "ecs",
+      "to": "game-development/components",
+      "label": "stores in packed arrays what C# keeps in"
+    },
+    {
+      "from": "pool-allocator",
+      "to": "game-development/object-pool",
+      "label": "is the memory side of"
+    },
+    {
+      "from": "value-semantics",
+      "to": "game-development/value-semantics",
+      "label": "covers classes too, unlike"
+    },
+    {
+      "from": "determinism",
+      "to": "game-development/seeded-rng",
+      "label": "needs more than"
+    }
+  ],
+  "units": [
+    {
+      "id": "cpp-without-gc",
+      "title": "C++ without a garbage collector",
+      "description": "Values, references and pointers, destructors and RAII, and owning memory with unique_ptr instead of a GC.",
+      "lessons": [
+        {
+          "id": "values-and-references",
+          "title": "Everything is a value",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "In C++ every object is a value that assignment copies; a reference is another name for an object, a pointer holds an address you can change.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Meet Ember",
+              "body": "**Ember** is a small studio writing its own engine in C++. **Rosa** is the lead engine programmer. **Kai** writes gameplay code and has shipped games in C#.\n\nThe first surprise for Kai: in C#, a `class` variable holds a *reference* to an object on the garbage-collected heap. In C++ there is no such split. **Every type is a value type**, `struct` and `class` alike. Writing `Enemy b = a;` copies the whole object, member by member, and from then on `a` and `b` are two separate enemies.\n\nTo talk about the *same* object you have to ask for it explicitly, with a reference or a pointer."
+            },
+            {
+              "type": "output",
+              "id": "q-copy-or-alias",
+              "concepts": [
+                "value-semantics",
+                "references-pointers"
+              ],
+              "prompt": "`Enemy& r = a` makes `r` a **reference**: another name for `a`. What does this print?",
+              "language": "cpp",
+              "code": "#include <cstdio>\n\nstruct Enemy { int hp; };\n\nint main() {\n    Enemy a{100};\n    Enemy b = a;\n    Enemy& r = a;\n    b.hp -= 30;\n    r.hp -= 10;\n    std::printf(\"%d %d\\n\", a.hp, b.hp);\n}",
+              "output": "90 70",
+              "hint": "Which of `b` and `r` is a separate object, and which is just another name for `a`?",
+              "explanation": "`Enemy b = a;` copies `a`, so `b` is a second enemy with its own `hp`. Taking 30 from `b` leaves `a` alone: `b.hp` is 70. `r` is not an object at all, just another name for `a`, so `r.hp -= 10` takes 10 from `a`: 90.\n\nIn C# with `class Enemy`, both lines would have changed the same object."
+            },
+            {
+              "type": "explain",
+              "title": "References and pointers",
+              "body": "Both let you reach an object without copying it:\n\n- A **reference** `Enemy& r = a;` must be bound when it's created, can't be null, and can never be re-pointed. Every use of `r` *is* a use of `a`.\n- A **pointer** `Enemy* p = &a;` holds an address. It can be `nullptr`, and you can point it somewhere else later. Reach the object with `*p` or `p->hp`.\n\nFunction parameters follow the same rules. A plain `Enemy e` parameter is a **copy** made for the call; `Enemy& e` lets the function change the caller's object; `const Enemy& e` lets it read without copying."
+            },
+            {
+              "type": "trace",
+              "id": "q-trace-pointer-reference",
+              "concepts": [
+                "references-pointers"
+              ],
+              "prompt": "Step through and predict the values. Watch what assigning *to* a reference does.",
+              "language": "cpp",
+              "code": "int a = 1;\nint b = 2;\nint* p = &a;\n*p = 10;\np = &b;\n*p = 20;\nint& r = a;\nr = b;",
+              "frames": [
+                {
+                  "line": 1,
+                  "vars": {
+                    "a": "1"
+                  }
+                },
+                {
+                  "line": 2,
+                  "vars": {
+                    "a": "1",
+                    "b": "2"
+                  }
+                },
+                {
+                  "line": 3,
+                  "vars": {
+                    "a": "1",
+                    "b": "2",
+                    "p": "&a",
+                    "*p": "1"
+                  },
+                  "note": "`p` holds the address of `a`."
+                },
+                {
+                  "line": 4,
+                  "vars": {
+                    "a": "10",
+                    "b": "2",
+                    "p": "&a",
+                    "*p": "10"
+                  },
+                  "ask": "a"
+                },
+                {
+                  "line": 5,
+                  "vars": {
+                    "a": "10",
+                    "b": "2",
+                    "p": "&b",
+                    "*p": "2"
+                  },
+                  "note": "The pointer itself moved: now it points at `b`."
+                },
+                {
+                  "line": 6,
+                  "vars": {
+                    "a": "10",
+                    "b": "20",
+                    "p": "&b",
+                    "*p": "20"
+                  },
+                  "ask": "b"
+                },
+                {
+                  "line": 7,
+                  "vars": {
+                    "a": "10",
+                    "b": "20",
+                    "p": "&b",
+                    "*p": "20",
+                    "r": "10"
+                  },
+                  "note": "`r` is bound to `a` for good."
+                },
+                {
+                  "line": 8,
+                  "vars": {
+                    "a": "20",
+                    "b": "20",
+                    "p": "&b",
+                    "*p": "20",
+                    "r": "20"
+                  },
+                  "ask": "a"
+                }
+              ],
+              "hint": "A pointer can be re-pointed with `p = &b`. A reference cannot: `r = b` means \"assign b's value to the object r names\".",
+              "explanation": "`*p = 10` writes through the pointer into `a`. `p = &b` changes the **pointer**, so `*p = 20` writes into `b`. A reference can't be re-pointed: `r = b` doesn't make `r` refer to `b`, it **assigns** the value of `b` (20) to `a`. That's why references are used for \"this is the object\" and pointers for \"this may change, or be null\"."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-damage-copy",
+              "concepts": [
+                "value-semantics",
+                "references-pointers"
+              ],
+              "prompt": "`damage` should take 25 hp from the goblin, so this should print `75`. Click the line with the bug.",
+              "language": "cpp",
+              "code": "#include <cstdio>\n\nstruct Enemy { int hp; };\n\nvoid damage(Enemy e, int amount) {\n    e.hp -= amount;\n}\n\nint main() {\n    Enemy goblin{100};\n    damage(goblin, 25);\n    std::printf(\"%d\\n\", goblin.hp);\n}",
+              "error": "100",
+              "lines": [
+                5
+              ],
+              "fixes": [
+                "Change line 5 to `void damage(Enemy& e, int amount) {`",
+                "Change line 5 to `void damage(const Enemy& e, int amount) {`",
+                "Change line 5 to `void damage(Enemy* e, int amount) {`",
+                "Change line 11 to `damage(Enemy(goblin), 25);`"
+              ],
+              "answer": 0,
+              "hint": "Which object does `e.hp -= amount` change?",
+              "explanation": "`Enemy e` is a **copy** made for the call. The function damages the copy, which is thrown away when it returns, so the goblin keeps 100 hp. `Enemy& e` binds to the caller's goblin, and the program prints 75.\n\n`const Enemy&` avoids the copy but forbids the write: clang stops with *cannot assign to variable 'e' with const-qualified type 'const Enemy &'*. `Enemy*` would need `e->hp` and a call with `&goblin`, so it doesn't compile as written. `Enemy(goblin)` just makes the copy explicit and still prints 100."
+            },
+            {
+              "type": "buckets",
+              "id": "q-param-types",
+              "concepts": [
+                "references-pointers",
+                "value-semantics"
+              ],
+              "prompt": "Rosa's rule of thumb for parameters. Sort each case by the parameter type it should use.",
+              "buckets": [
+                "`T` (copy)",
+                "`const T&`",
+                "`T&`",
+                "`T*`"
+              ],
+              "items": [
+                {
+                  "text": "A 4-byte `int` level number the function only reads",
+                  "bucket": 0
+                },
+                {
+                  "text": "A 12-byte `Vec3` direction the function only reads",
+                  "bucket": 0
+                },
+                {
+                  "text": "A 3 MB `Mesh` the renderer only reads",
+                  "bucket": 1
+                },
+                {
+                  "text": "A `std::string` asset name to print in a log line",
+                  "bucket": 1
+                },
+                {
+                  "text": "The `Transform` the physics step must move",
+                  "bucket": 2
+                },
+                {
+                  "text": "A `std::vector<Enemy>` the spawner appends to",
+                  "bucket": 2
+                },
+                {
+                  "text": "A target that may not exist (the function checks for \"no target\")",
+                  "bucket": 3
+                }
+              ],
+              "hint": "Small and read-only: copy it. Big and read-only: `const&`. Must change: `&`. Might be missing: pointer.",
+              "explanation": "Copying a few bytes is as cheap as passing an address, so small read-only values go **by value**. Big read-only objects go by **`const T&`**: no copy, and the compiler stops accidental writes. Use **`T&`** when the function must change the caller's object. A **pointer** says \"this may be `nullptr`\"; a reference can't express that."
+            }
+          ]
+        },
+        {
+          "id": "scope-and-raii",
+          "title": "Scope, destructors and RAII",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "A destructor runs at a known moment, at the end of the owner's scope, so tie every resource to an object and cleanup can never be skipped.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Two places to live",
+              "body": "A local variable lives on the **stack**. It's created when its line runs and destroyed when its scope (the enclosing `{ }`) ends. Stack memory is very cheap: reserving it is a pointer bump that's already part of the function call.\n\nAnything created with `new` lives on the **heap** until someone calls `delete`. There's **no garbage collector**: if nobody deletes it, it leaks; if two places delete it, the program has undefined behaviour.\n\nWhen an object is destroyed, its **destructor** `~T()` runs. Locals are destroyed in **reverse order** of creation."
+            },
+            {
+              "type": "output",
+              "id": "q-dtor-order",
+              "concepts": [
+                "raii",
+                "stack-vs-heap"
+              ],
+              "prompt": "The destructor prints a line. What does this program print?",
+              "language": "cpp",
+              "code": "#include <cstdio>\n\nstruct Noisy {\n    const char* name;\n    ~Noisy() { std::printf(\"bye %s\\n\", name); }\n};\n\nint main() {\n    Noisy a{\"a\"};\n    {\n        Noisy b{\"b\"};\n        Noisy c{\"c\"};\n    }\n    Noisy d{\"d\"};\n}",
+              "output": "bye c\nbye b\nbye d\nbye a",
+              "hint": "The inner `{ }` ends before `d` is even created. Within a scope, the last one built is the first one destroyed.",
+              "explanation": "`b` and `c` live in the inner block, so they die when it closes, newest first: `c`, then `b`. Then `d` is created. At the end of `main`, the remaining locals die in reverse order: `d`, then `a`.\n\nThis timing is guaranteed. In C# a finalizer runs whenever the GC gets around to it; a C++ destructor runs exactly at the closing brace."
+            },
+            {
+              "type": "explain",
+              "title": "RAII: let the destructor clean up",
+              "body": "**RAII** (*Resource Acquisition Is Initialization*) turns that guarantee into a habit: wrap every resource in an object whose constructor acquires it and whose destructor releases it.\n\n- `std::vector`, `std::string` and `std::unique_ptr` own heap memory.\n- `std::lock_guard` locks a mutex and unlocks it.\n- An engine's `GpuBuffer` frees video memory; a `ScopedTimer` records how long a block took.\n\nThe destructor runs on every way out of the scope: falling off the end, an early `return`, or an exception. Engine code written this way rarely contains the word `delete`."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-leak",
+              "concepts": [
+                "raii",
+                "stack-vs-heap"
+              ],
+              "prompt": "Loading a missing level should clean up and return `false`. macOS's `leaks` tool reports a leak after one failed load. Click the line that causes it.",
+              "language": "cpp",
+              "code": "bool loadLevel(const char* path) {\n    char* buffer = new char[1 << 20];\n    if (!readFile(path, buffer)) return false;\n    parse(buffer);\n    delete[] buffer;\n    return true;\n}",
+              "error": "Process ...: 1 leak for 1064960 total leaked bytes.\nSTACK OF 1 INSTANCE OF 'ROOT LEAK: <malloc in loadLevel(char const*)>'",
+              "lines": [
+                2,
+                3
+              ],
+              "fixes": [
+                "Change line 2 to `auto buffer = std::make_unique<char[]>(1 << 20);`, pass `buffer.get()` on lines 3 and 4, and delete line 5",
+                "Change line 3 to `if (!readFile(path, buffer)) { delete buffer; return false; }`",
+                "Swap lines 4 and 5, so the buffer is freed before parsing",
+                "Change line 5 to `delete buffer;`"
+              ],
+              "answer": 0,
+              "hint": "Follow the path where `readFile` fails. Which line frees the buffer on that path?",
+              "explanation": "The early `return false` on line 3 skips the `delete[]` on line 5, so each failed load leaks a megabyte. With `std::make_unique<char[]>` the buffer belongs to an object whose destructor frees it on **every** path (`leaks` then reports 0 leaks). `std::vector<char> buffer(1 << 20)` would work too.\n\nThe other fixes are worse. Memory from `new[]` must be freed with `delete[]`: plain `delete` is undefined behaviour, and AddressSanitizer reports *alloc-dealloc-mismatch (operator new [] vs operator delete)*. Freeing before parsing makes `parse` read freed memory: *heap-use-after-free*."
+            },
+            {
+              "type": "buckets",
+              "id": "q-stack-or-heap",
+              "concepts": [
+                "stack-vs-heap"
+              ],
+              "prompt": "Inside a function, where do the **bytes** of each of these live?",
+              "buckets": [
+                "Stack (gone at the end of the scope)",
+                "Heap (lives until its owner frees it)"
+              ],
+              "items": [
+                {
+                  "text": "A local `Vec3 velocity{0, 0, 0};`",
+                  "bucket": 0
+                },
+                {
+                  "text": "A local `std::array<int, 16> slots;`",
+                  "bucket": 0
+                },
+                {
+                  "text": "A local `int count = 0;`",
+                  "bucket": 0
+                },
+                {
+                  "text": "The object made by `new Texture()`",
+                  "bucket": 1
+                },
+                {
+                  "text": "The elements of a local `std::vector<Enemy> enemies(100);`",
+                  "bucket": 1
+                },
+                {
+                  "text": "The object made by `std::make_unique<Level>()`",
+                  "bucket": 1
+                }
+              ],
+              "hint": "A `std::vector` object itself is small (three pointers on the stack); where do the elements it manages go?",
+              "explanation": "Plain locals, including fixed-size `std::array`s, sit in the function's stack frame. Anything made with `new` or `make_unique` is on the heap. A `std::vector` is the interesting one: the vector object (a few pointers) is on the stack, but its **elements** are in a heap block it allocates and frees, which is RAII doing its job."
+            },
+            {
+              "type": "mcq",
+              "id": "q-scoped-timer",
+              "concepts": [
+                "raii"
+              ],
+              "prompt": "Kai times `updatePhysics()`, which has four `return` statements. Rosa suggests `ScopedTimer t{\"physics\"};` on its first line instead of `start()` and `stop()` calls. Why is that better?",
+              "choices": [
+                "The timer's destructor records the time on every exit path, including early returns and exceptions",
+                "Objects on the stack are timed more precisely by the CPU",
+                "The compiler removes a `ScopedTimer` in release builds, so it costs nothing",
+                "A destructor runs on a background thread, so timing doesn't slow the frame"
+              ],
+              "answer": 0,
+              "hint": "What happens to `stop()` calls when a new early `return` is added later?",
+              "explanation": "With manual `stop()` calls, every exit path needs one, and the next early `return` someone adds will skip it. A scoped object's destructor runs on **every** path out of the scope. This is the same RAII idea as `std::lock_guard`. Destructors run on the same thread at the closing brace, and the compiler doesn't remove code that has visible effects."
+            }
+          ]
+        },
+        {
+          "id": "owning-pointers",
+          "title": "One owner: unique_ptr",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Give each heap object exactly one owner with std::unique_ptr, hand out plain pointers or references to observers, and keep shared_ptr for the rare case with no clear last user.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Who deletes it?",
+              "body": "Every heap object needs exactly one answer to *who frees this?* `std::unique_ptr<T>` writes that answer into the type: it **owns** the object and deletes it in its destructor.\n\n```cpp\nauto level = std::make_unique<Level>();  // level owns the Level\n```\n\nIt can't be copied (two owners would delete twice), only **moved**: `auto next = std::move(level);` transfers ownership and leaves `level` empty. On this machine `sizeof(std::unique_ptr<Mesh>)` is 8 bytes, the same as a raw `Mesh*`.\n\nCode that only *uses* the object takes a plain `Mesh&` or `Mesh*`. Those don't own anything; they just observe."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-unique-copy",
+              "concepts": [
+                "unique-ownership",
+                "move-semantics"
+              ],
+              "prompt": "Kai wants the texture cache to take ownership of a new texture. This doesn't compile. Click the line with the bug.",
+              "language": "cpp",
+              "code": "#include <memory>\n#include <vector>\n\nstruct Texture { int width = 0, height = 0; };\n\nint main() {\n    std::vector<std::unique_ptr<Texture>> cache;\n    auto tex = std::make_unique<Texture>();\n    cache.push_back(tex);\n}",
+              "error": "error: no matching function for call to '__construct_at'\n  ...\nnote: candidate template ignored: substitution failure [...]: call to implicitly-deleted copy constructor of 'std::unique_ptr<Texture>'",
+              "lines": [
+                9
+              ],
+              "fixes": [
+                "Change line 9 to `cache.push_back(std::move(tex));`",
+                "Change line 9 to `cache.push_back(&tex);`",
+                "Change line 9 to `cache.push_back(tex.get());`",
+                "Change line 9 to `cache.push_back(std::ref(tex));`"
+              ],
+              "answer": 0,
+              "hint": "A `unique_ptr` has no copy constructor. How do you hand ownership over instead?",
+              "explanation": "`push_back(tex)` asks the vector to **copy** the `unique_ptr`, and its copy constructor is deleted: two owners would delete the texture twice. `std::move(tex)` lets the vector **take over** ownership; `tex` is left empty.\n\n`&tex` is a pointer *to the unique_ptr* and `tex.get()` is a raw `Texture*`; neither converts to a `unique_ptr`, so both fail with *no matching member function for call to 'push_back'*. `std::ref(tex)` still ends up asking for a copy."
+            },
+            {
+              "type": "explain",
+              "title": "shared_ptr and its costs",
+              "body": "`std::shared_ptr<T>` lets several owners share one object through a **reference count**: each copy adds one, each destroyed copy subtracts one, and the last one deletes the object.\n\nEngines use it sparingly:\n\n- It's 16 bytes here (object pointer plus a pointer to the count), and the count lives in a heap-allocated **control block** (right next to the object when you use `std::make_shared`).\n- The count is updated with **atomic** instructions so it's thread-safe, and every copy pays for that.\n- Ownership blurs: when *everyone* owns the level, nobody can say when it dies. Two objects holding `shared_ptr`s to each other never die at all."
+            },
+            {
+              "type": "output",
+              "id": "q-use-count",
+              "concepts": [
+                "shared-ownership"
+              ],
+              "prompt": "`use_count()` returns how many `shared_ptr`s currently share the object. What does this print?",
+              "language": "cpp",
+              "code": "#include <cstdio>\n#include <memory>\n\nstruct Mesh { int vertices = 0; };\n\nint main() {\n    auto a = std::make_shared<Mesh>();\n    auto b = a;\n    {\n        auto c = a;\n        std::printf(\"%ld\\n\", a.use_count());\n    }\n    std::printf(\"%ld\\n\", a.use_count());\n    b.reset();\n    std::printf(\"%ld\\n\", a.use_count());\n}",
+              "output": "3\n2\n1",
+              "hint": "`c` only exists inside the inner braces. `b.reset()` makes `b` let go.",
+              "explanation": "`a`, `b` and `c` all share the mesh: **3**. When the inner block closes, `c` is destroyed and the count drops to **2**. `b.reset()` releases `b`'s share: **1**. The mesh is deleted only when `a` goes away too.\n\nEach of those copies and releases was an atomic increment or decrement."
+            },
+            {
+              "type": "buckets",
+              "id": "q-who-owns",
+              "concepts": [
+                "unique-ownership",
+                "shared-ownership"
+              ],
+              "prompt": "Pick the right tool for each relationship in Ember.",
+              "buckets": [
+                "`std::unique_ptr` (the one owner)",
+                "Plain `T*` or `T&` (observes, never frees)",
+                "`std::shared_ptr` (no clear last user)"
+              ],
+              "items": [
+                {
+                  "text": "The `World` owns each `Level` it loads",
+                  "bucket": 0
+                },
+                {
+                  "text": "The physics system owns its private broadphase tree",
+                  "bucket": 0
+                },
+                {
+                  "text": "`drawMesh` receives the mesh it should draw this frame",
+                  "bucket": 1
+                },
+                {
+                  "text": "A camera follows the player, who is owned by the world",
+                  "bucket": 1
+                },
+                {
+                  "text": "A decoded music track used by the audio thread and a streaming thread, freed when whichever finishes last lets go",
+                  "bucket": 2
+                }
+              ],
+              "hint": "Ask: is there one obvious place that decides when this object dies?",
+              "explanation": "When one place decides the lifetime, that place holds a **`unique_ptr`** and everyone else gets a plain pointer or reference that **never frees**. `shared_ptr` is for the genuinely unclear case, such as two threads where either may finish last. Cameras and callers are classic observers: they mustn't keep the player alive."
+            },
+            {
+              "type": "mcq",
+              "id": "q-shared-hot-loop",
+              "concepts": [
+                "shared-ownership"
+              ],
+              "prompt": "On the Apple M5 this course was checked on, 50 million calls to a function taking `std::shared_ptr<Mesh>` **by value** took about 164 ms; the same calls taking `const std::shared_ptr<Mesh>&` took about 23 ms (one thread, `-O2`). What explains the gap?",
+              "choices": [
+                "Each by-value call copies the shared_ptr, doing an atomic increment and later an atomic decrement of the count",
+                "Passing by value copies the whole Mesh object into every call",
+                "A `const&` parameter lets the compiler skip calling the function",
+                "shared_ptr is slow because it runs a garbage collector in the background"
+              ],
+              "answer": 0,
+              "hint": "What has to happen to the reference count when a `shared_ptr` is copied into a parameter and destroyed at the end of the call?",
+              "explanation": "Copying a `shared_ptr` copies the **pointer**, not the mesh, but it must atomically bump the shared count, and destroying the parameter atomically lowers it again. Pass a `shared_ptr` by `const&` (or pass the `Mesh&` itself) when you only need to use the object. There is no garbage collector; the count *is* the whole mechanism."
+            }
+          ]
+        },
+        {
+          "id": "moves-and-const",
+          "title": "Moves and const",
+          "pareto": "extra",
+          "minutes": 8,
+          "takeaway": "A move steals an object's insides instead of copying them (mark move constructors noexcept so containers use them), and const turns \"I won't change this\" into something the compiler checks.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Stealing instead of copying",
+              "body": "Copying a `std::vector` of a million vertices allocates a new block and copies every element. Often the source is about to be thrown away anyway, so C++ lets you **move** it: the new vector takes over the old one's heap block (three pointers change hands) and the old one is left empty.\n\n`std::move(x)` doesn't move anything by itself. It's a cast that says *I'm done with `x`, you may steal from it*. The moved-from object is still valid but its contents are unspecified, so only assign to it or destroy it. (`std::vector` guarantees that a vector you've *move-constructed from* is empty.)"
+            },
+            {
+              "type": "output",
+              "id": "q-moved-from",
+              "concepts": [
+                "move-semantics"
+              ],
+              "prompt": "What does this print?",
+              "language": "cpp",
+              "code": "#include <cstdio>\n#include <utility>\n#include <vector>\n\nint main() {\n    std::vector<int> a(1000, 7);\n    std::vector<int> b = a;\n    std::vector<int> c = std::move(a);\n    std::printf(\"%zu %zu %zu\\n\", a.size(), b.size(), c.size());\n}",
+              "output": "0 1000 1000",
+              "hint": "`b` is a copy. `c` took over `a`'s elements.",
+              "explanation": "`b = a` copies all 1000 elements, so both have size 1000. `c = std::move(a)` takes over `a`'s heap block: `c` has the 1000 elements and `a` is left empty, size **0**. No element was copied for `c`."
+            },
+            {
+              "type": "output",
+              "id": "q-copy-move-count",
+              "concepts": [
+                "move-semantics"
+              ],
+              "prompt": "The copy and move constructors print what they do. With room reserved up front, what does this print?",
+              "language": "cpp",
+              "code": "#include <cstdio>\n#include <utility>\n#include <vector>\n\nstruct Tracked {\n    Tracked() {}\n    Tracked(const Tracked&) { std::puts(\"copy\"); }\n    Tracked(Tracked&&) noexcept { std::puts(\"move\"); }\n};\n\nint main() {\n    std::vector<Tracked> v;\n    v.reserve(4);\n    Tracked t;\n    v.push_back(t);\n    v.push_back(std::move(t));\n    v.push_back(Tracked{});\n    v.emplace_back();\n}",
+              "output": "copy\nmove\nmove",
+              "hint": "A named variable is copied unless you `std::move` it; a temporary is moved; `emplace_back` builds the element in place.",
+              "explanation": "`push_back(t)` copies the named variable `t`. `push_back(std::move(t))` moves it. `Tracked{}` is a temporary, so it's moved automatically. `emplace_back()` constructs the new element **directly inside the vector**, with no copy or move at all, which is why engine code prefers it for big objects."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-noexcept",
+              "concepts": [
+                "move-semantics"
+              ],
+              "prompt": "When `meshes` grows from 1 to 2 elements it must relocate `rock`. Rosa expects it to **move** `rock`, but the program prints `copy`. Click the line with the bug.",
+              "language": "cpp",
+              "code": "#include <cstdio>\n#include <string>\n#include <vector>\n\nstruct Mesh {\n    std::string name;\n    Mesh(std::string n) : name(std::move(n)) {}\n    Mesh(const Mesh& o) : name(o.name) { std::puts(\"copy\"); }\n    Mesh(Mesh&& o) : name(std::move(o.name)) { std::puts(\"move\"); }\n};\n\nint main() {\n    std::vector<Mesh> meshes;\n    meshes.emplace_back(\"rock\");\n    meshes.emplace_back(\"tree\");\n}",
+              "error": "copy",
+              "lines": [
+                9
+              ],
+              "fixes": [
+                "Change line 9 to `Mesh(Mesh&& o) noexcept : name(std::move(o.name)) { std::puts(\"move\"); }`",
+                "Change line 15 to `meshes.reserve(2); meshes.emplace_back(\"tree\");`",
+                "Change line 15 to `meshes.push_back(Mesh(\"tree\"));`",
+                "Change line 9 to `Mesh(const Mesh&& o) : name(std::move(o.name)) { std::puts(\"move\"); }`"
+              ],
+              "answer": 0,
+              "hint": "When a vector relocates its elements it must not be left half-done if one of them throws. Which kind of move constructor can it trust?",
+              "explanation": "When `std::vector` grows, it moves the old elements only if the move constructor is **`noexcept`**. If a move could throw halfway, the old elements would already be gutted, so without `noexcept` the vector plays safe and **copies**. Adding `noexcept` makes it print `move`.\n\n`reserve(2)` on line 15 runs after `rock` is already in, so reserving itself relocates `rock` and still copies. `push_back(Mesh(\"tree\"))` moves the new temporary but still copies `rock` (it prints `move` then `copy`). A `const Mesh&&` can't be stolen from, and isn't `noexcept` either. If you write no copy or move constructors at all, the compiler generates the move for you, and it's `noexcept` whenever the members' moves are (as `std::string`'s is)."
+            },
+            {
+              "type": "explain",
+              "title": "const is a promise the compiler checks",
+              "body": "`const` marks things that won't change:\n\n- `const Mesh& m` in a parameter: the function can read `m` but not modify it.\n- `float length() const` on a member function: calling it doesn't modify the object, so it may be called on a `const` object.\n\nIn an engine this documents intent at scale. A render pass that takes `const World&` can't move anything by accident, and that's checked at compile time, not in code review."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-const-member",
+              "concepts": [
+                "const-correctness"
+              ],
+              "prompt": "This should print `5`, the length of (3, 4, 0). It doesn't compile. Click the line with the bug.",
+              "language": "cpp",
+              "code": "#include <cmath>\n#include <cstdio>\n\nstruct Vec3 {\n    float x, y, z;\n    float length() { return std::sqrt(x * x + y * y + z * z); }\n};\n\nfloat distanceFromOrigin(const Vec3& p) {\n    return p.length();\n}\n\nint main() {\n    std::printf(\"%g\\n\", distanceFromOrigin(Vec3{3, 4, 0}));\n}",
+              "error": "error: 'this' argument to member function 'length' has type 'const Vec3', but function is not marked const",
+              "lines": [
+                6
+              ],
+              "fixes": [
+                "Change line 6 to `float length() const { return std::sqrt(x * x + y * y + z * z); }`",
+                "Change line 6 to `const float length() { return std::sqrt(x * x + y * y + z * z); }`",
+                "Change line 5 to `mutable float x, y, z;`",
+                "Change line 9 to `float distanceFromOrigin(const Vec3 p) {`"
+              ],
+              "answer": 0,
+              "hint": "The error mentions the type of `this` inside the call. What has to be marked `const`?",
+              "explanation": "`p` is a `const Vec3&`, so only member functions **marked `const`** may be called on it. `length` only reads `x`, `y` and `z`, so declaring it `float length() const` is the honest fix and prints 5.\n\n`const float` makes the *return value* const (clang warns it has no effect) and changes nothing. `mutable` lets `const` functions change those fields but doesn't make `length` a `const` function. Taking `const Vec3` by value is still `const`, so all three still fail with the same error."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "undefined-behaviour",
+      "title": "Undefined behaviour",
+      "description": "The silent bugs that crash engines: out-of-bounds, overflow, dangling pointers and invalidated iterators, and the sanitizers that catch them.",
+      "lessons": [
+        {
+          "id": "ub-and-sanitizers",
+          "title": "Undefined behaviour and sanitizers",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Undefined behaviour gives no error and no guarantees, so build with warnings and run tests under AddressSanitizer and UndefinedBehaviorSanitizer to turn silent corruption into a clear report.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "No exception, no guarantee",
+              "body": "C# checks every array index and throws `IndexOutOfRangeException`. C++'s `v[i]` doesn't check: reading past the end is **undefined behaviour** (UB). The language standard places *no requirement at all* on what happens next. The program may print garbage, crash, or work perfectly until the release build.\n\nThat last part is the trap. The optimiser is allowed to assume UB never happens and rearrange code on that basis, so a bug can hide at `-O0` and appear at `-O2`, or show up only on one console.\n\nThe UB that engine programmers actually hit: out-of-bounds access, using freed memory, reading uninitialised variables, signed integer overflow and data races."
+            },
+            {
+              "type": "buckets",
+              "id": "q-ub-or-defined",
+              "concepts": [
+                "undefined-behaviour"
+              ],
+              "prompt": "Sort each line by what C++ promises.",
+              "buckets": [
+                "Defined (a result you can predict)",
+                "Undefined behaviour"
+              ],
+              "items": [
+                {
+                  "text": "An `unsigned int` at 0 minus 1",
+                  "bucket": 0
+                },
+                {
+                  "text": "`v.at(10)` on a vector of 3 elements",
+                  "bucket": 0
+                },
+                {
+                  "text": "`delete` on a null pointer",
+                  "bucket": 0
+                },
+                {
+                  "text": "An `int` at 2,147,483,647 plus 1",
+                  "bucket": 1
+                },
+                {
+                  "text": "`v[10]` on a vector of 3 elements",
+                  "bucket": 1
+                },
+                {
+                  "text": "Reading a local `int` that was never given a value",
+                  "bucket": 1
+                },
+                {
+                  "text": "Reading through a pointer after `delete` on it",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Unsigned arithmetic wraps around by definition. `at()` checks the index; `[]` doesn't.",
+              "explanation": "**Unsigned** arithmetic is defined to wrap around (0 − 1 becomes the largest value). `at()` checks the index and throws `std::out_of_range`. Deleting `nullptr` does nothing. **Signed** overflow, unchecked out-of-bounds access, uninitialised reads and use-after-free are all undefined: no error is promised, so none may come."
+            },
+            {
+              "type": "output",
+              "id": "q-unsigned-wrap",
+              "concepts": [
+                "undefined-behaviour"
+              ],
+              "prompt": "Unsigned wraparound is defined, which doesn't make it what you meant. What does this print?",
+              "language": "cpp",
+              "code": "#include <cstdint>\n#include <cstdio>\n\nint main() {\n    std::uint32_t ammo = 5;\n    ammo -= 10;\n    std::printf(\"%u\\n\", ammo);\n    std::uint8_t lives = 0;\n    lives -= 1;\n    std::printf(\"%d\\n\", lives);\n}",
+              "output": "4294967291\n255",
+              "hint": "A 32-bit unsigned value wraps modulo 2³², an 8-bit one modulo 2⁸ = 256.",
+              "explanation": "5 − 10 wraps to 2³² − 5 = **4294967291**: the player now has four billion bullets. An 8-bit counter at 0 minus 1 wraps to **255**. No sanitizer complains because nothing undefined happened. Check before subtracting (`if (ammo >= cost)`), or use a signed type for values that can go negative."
+            },
+            {
+              "type": "explain",
+              "title": "Sanitizers find it for you",
+              "body": "Clang can add checks to your program at compile time:\n\n```bash\nclang++ -std=c++20 -g -fsanitize=address,undefined game.cpp\n```\n\n- **AddressSanitizer** (ASan) catches out-of-bounds access, use-after-free and double frees, and prints where the memory was allocated and freed.\n- **UndefinedBehaviorSanitizer** (UBSan) catches signed overflow, bad shifts, misaligned pointers and more.\n\nThe program runs slower (clang's documentation puts ASan's typical slowdown at about 2x), so use them in debug builds, tests and nightly runs, not in shipped builds. Also compile with `-Wall -Wextra`: clang warned *variable 'spawned' is uninitialized when used here* for an `int` that was never set."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-off-by-one",
+              "concepts": [
+                "undefined-behaviour",
+                "sanitizers"
+              ],
+              "prompt": "`totalWeight` should add up three weights and return `1`. Under AddressSanitizer it aborts instead. Click the line with the bug.",
+              "language": "cpp",
+              "code": "float totalWeight(const std::vector<float>& weights) {\n    float total = 0;\n    for (int i = 0; i <= (int)weights.size(); ++i) {\n        total += weights[i];\n    }\n    return total;\n}",
+              "error": "ERROR: AddressSanitizer: heap-buffer-overflow on address ...\nREAD of size 4 at ... thread T0\n    #0 ... in totalWeight(std::__1::vector<float, std::__1::allocator<float>> const&)\n... is located 0 bytes after 12-byte region",
+              "lines": [
+                3
+              ],
+              "fixes": [
+                "Change line 3 to `for (int i = 0; i < (int)weights.size(); ++i) {`",
+                "Change line 3 to `for (std::size_t i = 0; i <= weights.size(); ++i) {`",
+                "Change line 3 to `for (int i = 1; i <= (int)weights.size(); ++i) {`",
+                "Change line 4 to `total += weights.at(i - 1);`"
+              ],
+              "answer": 0,
+              "hint": "A vector of 3 floats has valid indices 0, 1 and 2. What is the last `i` this loop uses?",
+              "explanation": "`i <= size()` runs one step too far and reads `weights[3]`, the 4 bytes right after the 12-byte block. Without ASan that read silently returns whatever is there. With `<` the loop visits 0, 1 and 2 and returns 1.\n\nSwitching to `std::size_t` keeps the same `<=`. Starting at 1 skips the first weight and still reads index 3. `at(i - 1)` checks the index, but at `i = 0` it asks for index −1 (a huge number once converted), so it throws `std::out_of_range`. Better still: `for (float w : weights) total += w;` can't get the bounds wrong."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-signed-overflow",
+              "concepts": [
+                "undefined-behaviour",
+                "sanitizers"
+              ],
+              "prompt": "A late-game score should reach 2,500,000,000. It prints a negative number, and UBSan explains why. Click the line with the bug.",
+              "language": "cpp",
+              "code": "#include <cstdio>\n\nint main() {\n    int score = 2'000'000'000;\n    int bonus = 500'000'000;\n    score += bonus;\n    std::printf(\"%lld\\n\", (long long)score);\n}",
+              "error": "-1794967296\n... runtime error: signed integer overflow: 2000000000 + 500000000 cannot be represented in type 'int'",
+              "lines": [
+                4,
+                6
+              ],
+              "fixes": [
+                "Change line 4 to `long long score = 2'000'000'000;`",
+                "Change line 5 to `unsigned bonus = 500'000'000;`",
+                "Change line 5 to `long long bonus = 500'000'000;`",
+                "Change line 7 to `std::printf(\"%lld\\n\", (long long)score + 0LL);`"
+              ],
+              "answer": 0,
+              "hint": "Where does the result have to be stored? A 32-bit `int` holds at most 2,147,483,647.",
+              "explanation": "The total doesn't fit in a 32-bit `int`, and signed overflow is UB; UBSan reports it at the `+=`. Making `score` a 64-bit `long long` gives it room, and the program prints 2500000000.\n\nThe other fixes all print −1794967296. With an `unsigned` or `long long` bonus the sum is computed in a wider type, but it's then **stored back into** the `int` score, which wraps it. Converting `score` after the overflow is too late."
+            }
+          ]
+        },
+        {
+          "id": "dangling-and-invalidation",
+          "title": "When the vector moves",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "A std::vector that grows moves its elements to a new block, so every pointer, reference and iterator into it dangles: store indices or handles instead.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Where the enemies went",
+              "body": "A `std::vector` keeps its elements in one contiguous heap block. `size()` is how many elements it holds; `capacity()` is how many fit in the block.\n\nWhen `push_back` finds the block full, the vector allocates a bigger one, moves every element across, and **frees the old block**. Any `Enemy&`, `Enemy*` or iterator that pointed into the old block now points at freed memory: it **dangles**. Using it is undefined behaviour.\n\nIn C#, a `List<Enemy>` of classes holds references to objects that never move. A `std::vector<Enemy>` holds the enemies themselves, so they do move."
+            },
+            {
+              "type": "trace",
+              "id": "q-trace-capacity",
+              "concepts": [
+                "iterator-invalidation"
+              ],
+              "prompt": "Recorded with Apple clang's standard library (libc++). Step through and predict how the capacity grows and when the block moves.",
+              "language": "cpp",
+              "code": "std::vector<int> ids;\nids.push_back(10);\nids.push_back(11);\nids.push_back(12);\nids.push_back(13);\nids.push_back(14);\nids.reserve(16);",
+              "frames": [
+                {
+                  "line": 1,
+                  "vars": {
+                    "ids": "[]",
+                    "size()": "0",
+                    "capacity()": "0",
+                    "buffer moved": "no"
+                  }
+                },
+                {
+                  "line": 2,
+                  "vars": {
+                    "ids": "[10]",
+                    "size()": "1",
+                    "capacity()": "1",
+                    "buffer moved": "no"
+                  }
+                },
+                {
+                  "line": 3,
+                  "vars": {
+                    "ids": "[10, 11]",
+                    "size()": "2",
+                    "capacity()": "2",
+                    "buffer moved": "yes"
+                  },
+                  "note": "Full: the second element needed a new, bigger block."
+                },
+                {
+                  "line": 4,
+                  "vars": {
+                    "ids": "[10, 11, 12]",
+                    "size()": "3",
+                    "capacity()": "4",
+                    "buffer moved": "yes"
+                  },
+                  "ask": "capacity()"
+                },
+                {
+                  "line": 5,
+                  "vars": {
+                    "ids": "[10, 11, 12, 13]",
+                    "size()": "4",
+                    "capacity()": "4",
+                    "buffer moved": "no"
+                  },
+                  "ask": "buffer moved"
+                },
+                {
+                  "line": 6,
+                  "vars": {
+                    "ids": "[10, 11, 12, 13, 14]",
+                    "size()": "5",
+                    "capacity()": "8",
+                    "buffer moved": "yes"
+                  },
+                  "ask": "capacity()"
+                },
+                {
+                  "line": 7,
+                  "vars": {
+                    "ids": "[10, 11, 12, 13, 14]",
+                    "size()": "5",
+                    "capacity()": "16",
+                    "buffer moved": "yes"
+                  },
+                  "note": "`reserve` grows the block ahead of time; this move happens once, at a moment you chose."
+                }
+              ],
+              "hint": "This library doubles the capacity when the block is full. The block only moves when the capacity changes.",
+              "explanation": "Each time `size()` would pass `capacity()`, this library allocates a block **twice as big** (1, 2, 4, 8) and moves the elements there. Pushing 13 into a block with room for 4 doesn't move anything, but pushing 14 does. Other standard libraries grow by other factors (1.5x is common), so never count on *when* it happens: assume **any** growth moves everything."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-dangling-boss",
+              "concepts": [
+                "dangling-reference",
+                "iterator-invalidation"
+              ],
+              "prompt": "Spawning a minion and then damaging the boss should leave the boss at `90`. Under ASan it aborts. Click the line with the bug.",
+              "language": "cpp",
+              "code": "std::vector<Enemy> enemies(2);\nEnemy& boss = enemies[0];\nenemies.push_back(Enemy{});\nboss.hp -= 10;",
+              "error": "ERROR: AddressSanitizer: heap-use-after-free on address ...\nREAD of size 4 at ... thread T0\n...\nfreed by thread T0 here:\n...\n    #6 ... in Enemy* std::__1::vector<Enemy, std::__1::allocator<Enemy>>::__emplace_back_slow_path<Enemy>(Enemy&&)",
+              "lines": [
+                2,
+                3
+              ],
+              "fixes": [
+                "Change line 2 to `std::size_t boss = 0;` and line 4 to `enemies[boss].hp -= 10;`",
+                "Change line 2 to `Enemy* boss = &enemies[0];` and line 4 to `boss->hp -= 10;`",
+                "Change line 3 to `enemies.emplace_back();`",
+                "Change line 3 to `enemies.push_back(Enemy{}); enemies.shrink_to_fit();`"
+              ],
+              "answer": 0,
+              "hint": "The vector holds 2 enemies with capacity 2. What does the third one force it to do?",
+              "explanation": "`boss` refers into the vector's block. The `push_back` on line 3 needs a third slot, so the vector moves both enemies to a new block and frees the old one; line 4 then writes into freed memory. ASan's report even shows the free happening inside `__emplace_back_slow_path`, the growing path.\n\nAn **index** survives reallocation: `enemies[boss]` looks the boss up in whatever block is current. A pointer dangles exactly like the reference. `emplace_back` grows the vector the same way, and `shrink_to_fit` can only move it again."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-erase-loop",
+              "concepts": [
+                "iterator-invalidation"
+              ],
+              "prompt": "`removeDead` should leave only the live bullets: for bullets 1 to 4 with 2 and 3 dead, it should keep `1 4`. Instead it keeps `1 3 4`, and on a list whose last bullet is dead, ASan aborts. Click the line with the bug.",
+              "language": "cpp",
+              "code": "void removeDead(std::vector<Bullet>& bullets) {\n    for (auto it = bullets.begin(); it != bullets.end(); ++it) {\n        if (it->dead) bullets.erase(it);\n    }\n}",
+              "error": "1 3 4\nERROR: AddressSanitizer: heap-buffer-overflow on address ...\nREAD of size 1 at ... thread T0",
+              "lines": [
+                3
+              ],
+              "fixes": [
+                "Replace lines 2–4 with `std::erase_if(bullets, [](const Bullet& b) { return b.dead; });`",
+                "Change line 3 to `if (it->dead) it = bullets.erase(it);`",
+                "Loop with an index and call `bullets.erase(bullets.begin() + i)` on line 3",
+                "Add `bullets.reserve(bullets.size() + 1);` before the loop on line 2"
+              ],
+              "answer": 0,
+              "hint": "`erase` shifts every later bullet one slot to the left. What does `++it` then skip?",
+              "explanation": "`erase(it)` invalidates `it` and shifts the later bullets left, so the bullet after a dead one lands where `it` points, and `++it` skips it: bullet 3 survives. When the **last** bullet is dead, `++it` steps past `end()` and the loop reads beyond the vector, which ASan reports.\n\n`std::erase_if` (C++20) does the whole job in one pass. Assigning `it = erase(it)` still runs `++it` afterwards and fails the same two ways. An index loop skips the same bullet (it printed `1 3 4`). `reserve` changes the capacity, not what `erase` does to positions. Engines often avoid erasing in the middle at all: see swap-and-pop in the ECS lesson."
+            },
+            {
+              "type": "buckets",
+              "id": "q-does-it-invalidate",
+              "concepts": [
+                "iterator-invalidation",
+                "dangling-reference"
+              ],
+              "prompt": "You hold `Enemy* p = &enemies[0];`. After each operation, is `p` still safe to use?",
+              "buckets": [
+                "Still points at a live element",
+                "May dangle"
+              ],
+              "items": [
+                {
+                  "text": "Reading `enemies[5].hp`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`push_back` after an earlier `reserve(100)`, with 10 elements stored",
+                  "bucket": 0
+                },
+                {
+                  "text": "`enemies.pop_back()` with 10 elements stored",
+                  "bucket": 0
+                },
+                {
+                  "text": "`push_back` when `size() == capacity()`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`enemies.insert(enemies.begin(), Enemy{})`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`enemies.clear()`",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Anything that reallocates, or that shifts or destroys element 0, breaks `p`.",
+              "explanation": "Reads never move elements. With spare capacity, `push_back` adds at the end without reallocating, and `pop_back` destroys only the last element. A full `push_back` reallocates; inserting at the front shifts element 0 to a new position (and may reallocate too); `clear()` destroys every element. The reliable rule for engine code: don't keep pointers into a container that changes size. Keep an index, or better, a handle."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "memory-and-cache",
+      "title": "Memory and the cache",
+      "description": "Measure before optimising, then make data cache-friendly: contiguous arrays, structs of arrays and tight layouts.",
+      "lessons": [
+        {
+          "id": "measure-first",
+          "title": "Measure, don't guess",
+          "pareto": "core",
+          "minutes": 7,
+          "takeaway": "A frame has a fixed time budget, so profile an optimised build to find where it goes, change one thing, and keep the change only if the numbers say so.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "The frame budget",
+              "body": "A game at 60 frames per second has **1000 ms ÷ 60 ≈ 16.7 ms** per frame for everything: input, gameplay, physics, animation, audio mixing, building the draw calls. At 120 Hz it's 8.3 ms. Miss the budget and the player sees a stutter.\n\nEngine programmers' intuition about *where* that time goes is wrong surprisingly often. So the rule is: **profile first**. A profiler (Instruments on macOS, Tracy, Superluminal, PIX, perf, or the engine's own timers) shows which functions are actually hot. Optimising anything else, however clever, doesn't move the frame time."
+            },
+            {
+              "type": "numeric",
+              "id": "q-budget-144",
+              "concepts": [
+                "profiling"
+              ],
+              "prompt": "Ember's PC build targets a **144 Hz** monitor. How many milliseconds does one frame get?",
+              "answer": 6.94,
+              "tolerance": 0.01,
+              "unit": "ms",
+              "hint": "1000 ms divided by the number of frames per second.",
+              "explanation": "1000 ÷ 144 ≈ **6.94 ms**, less than half of the 16.7 ms a 60 Hz console build gets. The same code that fits comfortably at 60 Hz can blow the budget at 144 Hz."
+            },
+            {
+              "type": "example",
+              "title": "Timing a scope with RAII",
+              "problem": "Ember needs a cheap in-engine timer before reaching for a full profiler. How do you build one that can't forget to stop?",
+              "steps": [
+                "Use `std::chrono::steady_clock`: it never jumps backwards, unlike the wall clock (`system_clock`), which can be changed by the user or by time synchronisation.\n\n```cpp\nstruct ScopedTimer {\n    const char* label;\n    std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();\n    ~ScopedTimer() {\n        auto end = std::chrono::steady_clock::now();\n        double ms = std::chrono::duration<double, std::milli>(end - start).count();\n        std::printf(\"%s: %.2f ms\\n\", label, ms);\n    }\n};\n\nvoid updatePhysics() {\n    ScopedTimer t{\"physics\"};\n    // ... every return path is timed, because the destructor always runs\n}\n```",
+                "The constructor records the start time; the destructor reads the clock again and reports. Thanks to RAII, every exit path of `updatePhysics` is timed.",
+                "Real engines send these samples to a profiler instead of printing them, and wrap them in a macro so they compile away in shipping builds."
+              ],
+              "answer": "A scope-based timer: start in the constructor, stop and record in the destructor."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-benchmark-nothing",
+              "concepts": [
+                "profiling"
+              ],
+              "prompt": "Kai benchmarks a loop over 10 million floats, built with `-O2`. It reports `0.000 ms` on every run. Click the line that makes the measurement meaningless.",
+              "language": "cpp",
+              "code": "#include <chrono>\n#include <cstdio>\n#include <vector>\n\nint main() {\n    std::vector<float> xs(10'000'000, 1.5f);\n    auto t0 = std::chrono::steady_clock::now();\n    float sum = 0;\n    for (float x : xs) sum += x * x;\n    auto t1 = std::chrono::steady_clock::now();\n    double ms = std::chrono::duration<double, std::milli>(t1 - t0).count();\n    std::printf(\"%.3f ms\\n\", ms);\n}",
+              "error": "warning: variable 'sum' set but not used [-Wunused-but-set-variable]\n0.000 ms",
+              "lines": [
+                8,
+                12
+              ],
+              "fixes": [
+                "Change line 12 to `std::printf(\"%.3f ms (sum %g)\\n\", ms, sum);`",
+                "Use `std::chrono::system_clock` on lines 7 and 10",
+                "Change line 6 to `std::vector<float> xs(100'000'000, 1.5f);`",
+                "Change line 11 to `volatile double ms = ...` so the timing can't be optimised away"
+              ],
+              "answer": 0,
+              "hint": "Read the compiler warning. If nobody ever uses `sum`, does the optimiser have to compute it?",
+              "explanation": "Nothing ever reads `sum`, so at `-O2` the compiler deletes the whole loop: the program times an empty block. Printing `sum` makes the result observable, so the loop must really run (11.5 ms on the machine this was checked on).\n\nA different clock, 10 times more data, or a `volatile` timing variable all still time nothing and print `0.000 ms`. Benchmark libraries provide helpers such as `DoNotOptimize` for exactly this."
+            },
+            {
+              "type": "order",
+              "id": "q-profile-loop",
+              "concepts": [
+                "profiling"
+              ],
+              "prompt": "A level drops to 40 fps. Put Rosa's workflow in order.",
+              "items": [
+                "Reproduce the slow frame in an optimised build, on the target hardware",
+                "Profile it to find which functions take the most time",
+                "Form one hypothesis about the hottest one (say, cache misses)",
+                "Change that one thing",
+                "Measure again the same way and compare the medians",
+                "Keep the change if it helped; revert it if it didn't"
+              ],
+              "hint": "You can't know what to change before you know where the time goes, and you can't know if it worked without measuring again.",
+              "explanation": "Measure where the time goes, change **one** thing, measure again the same way. Changing several things at once hides which one helped, and comparing a single run against a single run mostly measures noise, so compare medians of several runs."
+            },
+            {
+              "type": "buckets",
+              "id": "q-trust-measurement",
+              "concepts": [
+                "profiling"
+              ],
+              "prompt": "Which of these measurements can Rosa trust?",
+              "buckets": [
+                "Trustworthy",
+                "Misleading"
+              ],
+              "items": [
+                {
+                  "text": "Median of 30 frames in an `-O2` build on the min-spec PC",
+                  "bucket": 0
+                },
+                {
+                  "text": "A profiler capture of the slow level in a release build",
+                  "bucket": 0
+                },
+                {
+                  "text": "Timing with `steady_clock` around the whole physics step",
+                  "bucket": 0
+                },
+                {
+                  "text": "One run of a debug (`-O0`) build",
+                  "bucket": 1
+                },
+                {
+                  "text": "Timing a loop whose result is never used, at `-O2`",
+                  "bucket": 1
+                },
+                {
+                  "text": "The fastest of three runs on a developer's top-end workstation",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Is it the code that ships, on the hardware that matters, measured more than once?",
+              "explanation": "Debug builds can be many times slower and slow in *different places* than optimised ones. Unused results get optimised away. One run, or the best of a few, hides noise and outliers, and a fast workstation hides problems the min-spec machine will have. Measure the shipping configuration, on target hardware, several times."
+            }
+          ]
+        },
+        {
+          "id": "cache-lines",
+          "title": "The cache decides",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "The CPU loads memory a whole cache line at a time, so data you walk through in order is nearly free and data you chase through pointers is slow.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Memory comes in lines",
+              "body": "Main memory is far slower than the CPU: a load that misses every cache waits on the order of 100 ns, hundreds of cycles, while a load that hits the small, fast **L1** cache takes a few cycles.\n\nThe CPU never fetches a single `float`. It fetches the whole **cache line** around it: 64 bytes on most x86 chips, 128 bytes on the Apple M5 this course was checked on (`sysctl hw.cachelinesize` reports 128). The hardware **prefetcher** also spots when you walk forward through memory and fetches the next lines before you ask.\n\nSo reading data **in order, packed together** costs a fraction of reading the same amount scattered around."
+            },
+            {
+              "type": "order",
+              "id": "q-memory-hierarchy",
+              "concepts": [
+                "cache-locality"
+              ],
+              "prompt": "Order where a value can come from, **fastest** first.",
+              "items": [
+                "A CPU register",
+                "L1 cache",
+                "L2 cache",
+                "Main memory (DRAM)",
+                "The SSD"
+              ],
+              "hint": "The closer to the core, the smaller and faster.",
+              "explanation": "Registers are read every cycle. L1 is tiny (64 to 128 KB of data cache per core on this M5) and a few cycles away; L2 is bigger and slower; DRAM is a few hundred cycles away; the SSD is thousands of times slower still, which is why engines stream assets in the background. Each step out is roughly an order of magnitude slower."
+            },
+            {
+              "type": "numeric",
+              "id": "q-floats-per-line",
+              "concepts": [
+                "cache-locality"
+              ],
+              "prompt": "On a CPU with **64-byte** cache lines, how many 4-byte `float`s arrive with every line the CPU loads?",
+              "answer": 16,
+              "hint": "64 ÷ 4.",
+              "explanation": "64 ÷ 4 = **16**. Touch one float of a packed array and its 15 neighbours come along for free. If the next 15 floats are what you need next, you pay for one miss instead of sixteen; if they are unrelated data, the line was mostly wasted."
+            },
+            {
+              "type": "explain",
+              "title": "Why linked lists hurt",
+              "body": "A `std::vector<int>` is one block: walking it reads line after line in order, and the prefetcher keeps ahead. A `std::list<int>` allocates every element as a separate node with pointers to its neighbours. To find node 2 you must first load node 1, so the CPU can't fetch ahead, and the nodes can be anywhere in memory.\n\nMeasured on the Apple M5 (`-O2`, median of 15 runs), summing a million `int`s took about **0.03 ms** in a vector, about **0.8 ms** in a list whose nodes happened to sit in order, and about **55 ms** once the same list's nodes were scattered. Same O(n) loop; the memory layout made the difference."
+            },
+            {
+              "type": "buckets",
+              "id": "q-contiguous-or-chasing",
+              "concepts": [
+                "cache-locality"
+              ],
+              "prompt": "Iterating over every element each frame: sort each container by how its elements sit in memory.",
+              "buckets": [
+                "Contiguous: walks memory in order",
+                "Pointer chasing: one hop per element"
+              ],
+              "items": [
+                {
+                  "text": "`std::vector<Enemy>`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`std::array<Particle, 1024>`",
+                  "bucket": 0
+                },
+                {
+                  "text": "A plain C array `Vec3 positions[512]`",
+                  "bucket": 0
+                },
+                {
+                  "text": "`std::list<Enemy>`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`std::vector<Enemy*>` where each enemy was made with `new`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`std::vector<std::unique_ptr<Enemy>>`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`std::map<int, Enemy>`",
+                  "bucket": 1
+                }
+              ],
+              "hint": "A vector of pointers is contiguous, but the enemies it points to aren't.",
+              "explanation": "Vectors, arrays and plain arrays store the objects themselves back to back. A vector of pointers or `unique_ptr`s is a contiguous list of **addresses**; each enemy is still a separate heap allocation, so every element is a jump. `std::list` and `std::map` are made of separately allocated nodes. This is a big reason engines store components by value in arrays."
+            },
+            {
+              "type": "mcq",
+              "id": "q-list-or-vector",
+              "concepts": [
+                "cache-locality"
+              ],
+              "prompt": "Ember spawns and removes a few hundred sparks every frame out of about 2,000 alive. Kai suggests `std::list` because removal is O(1). What should Rosa try first?",
+              "choices": [
+                "A `std::vector` that removes a spark by moving the last spark into its slot (swap-and-pop), then measure",
+                "Keep `std::list`: O(1) removal always beats O(n)",
+                "A `std::map` keyed by spark id, so removal is O(log n)",
+                "A `std::vector<Spark*>` so the sparks never move"
+              ],
+              "answer": 0,
+              "hint": "Every frame *updates* all 2,000 sparks; only a few hundred are removed. Which operation dominates?",
+              "explanation": "The per-frame update walks **every** spark, so iteration speed dominates, and contiguous storage wins it easily. Removal can be O(1) in a vector too: overwrite the dead spark with the last one and `pop_back` (order doesn't matter for sparks). A map or a vector of pointers brings back the pointer chasing. Big-O counts operations; it doesn't count cache misses, so measure."
+            }
+          ]
+        },
+        {
+          "id": "aos-vs-soa",
+          "title": "Arrays of structs, structs of arrays",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Lay data out by how it is processed: when a hot loop reads only a few fields of many objects, store each field in its own array so every cache line is full of useful data.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Two layouts for the same particles",
+              "body": "An **array of structs** (AoS) keeps each particle's fields together:\n\n```cpp\nstruct Particle { float x, y, z, vx, vy, vz, r, g, b, a, life, size, rotation, spin, pad0, pad1; };\nstd::vector<Particle> particles;   // 64 bytes per particle\n```\n\nA **struct of arrays** (SoA) keeps each field in its own array:\n\n```cpp\nstruct Particles { std::vector<float> x, y, z, vx, vy, vz, life /* ... */; };\n```\n\nIf the aging pass only does `life -= dt`, AoS drags all 64 bytes of every particle through the cache to use 4 of them. In SoA, every line it loads is nothing but `life` values."
+            },
+            {
+              "type": "numeric",
+              "id": "q-useful-bytes",
+              "concepts": [
+                "struct-of-arrays",
+                "cache-locality"
+              ],
+              "prompt": "In the AoS layout, each particle is exactly one 64-byte cache line on a 64-byte-line CPU. The aging pass uses only the 4-byte `life`. What **percentage** of the bytes it loads does it actually use?",
+              "answer": 6.25,
+              "tolerance": 0.01,
+              "unit": "%",
+              "hint": "4 useful bytes out of every 64 loaded.",
+              "explanation": "4 ÷ 64 = **6.25%**. The other 93.75% of the memory traffic is fields the loop never touches. In SoA, a line holds 16 `life` values and the pass uses all of them: 100%."
+            },
+            {
+              "type": "explain",
+              "title": "What it measured",
+              "body": "On the Apple M5 (`-O2`, median of 15 runs, 1,000,000 particles), the aging pass took about **1.2 ms** over the 64-byte structs and about **0.05 ms** over a separate `life` array: more than 20 times faster.\n\nThe same benchmark also had a surprise. A pass updating position from velocity (six of the sixteen fields) was *not* faster in SoA at exactly one million particles, yet about 4 times faster at four million. Layout effects interact with cache sizes and with how arrays line up in memory. SoA is a strong default for hot loops, not a law: **measure your own case**."
+            },
+            {
+              "type": "buckets",
+              "id": "q-pick-layout",
+              "concepts": [
+                "struct-of-arrays"
+              ],
+              "prompt": "Which layout fits each workload better?",
+              "buckets": [
+                "Struct of arrays",
+                "Array of structs"
+              ],
+              "items": [
+                {
+                  "text": "Every frame, add gravity to the vertical velocity of 200,000 particles",
+                  "bucket": 0
+                },
+                {
+                  "text": "Cull 50,000 bounding spheres against the camera, reading only centre and radius",
+                  "bucket": 0
+                },
+                {
+                  "text": "Process positions with SIMD, 4 or 8 floats per instruction",
+                  "bucket": 0
+                },
+                {
+                  "text": "Open the inventory screen and show every field of one item",
+                  "bucket": 1
+                },
+                {
+                  "text": "Save one player's whole profile to disk",
+                  "bucket": 1
+                },
+                {
+                  "text": "Look up a random NPC by id and read all its fields once",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Many objects but few fields per pass: split them up. One object, all its fields: keep it together.",
+              "explanation": "SoA wins when a loop touches **few fields of many objects**: every loaded byte is useful, and same-typed values sit next to each other, ready for SIMD. AoS wins when code uses **all fields of one object**, because they arrive in one or two cache lines. Many engines mix the two: hot fields in SoA arrays, the rest in a cold struct."
+            },
+            {
+              "type": "example",
+              "title": "Hot/cold splitting",
+              "problem": "An `Enemy` has 120 bytes: position, velocity and health are used every frame; name, loot table and spawn info only on death or in menus. Most enemy code is still object-shaped. What's a middle ground?",
+              "steps": [
+                "Split by **access frequency**, not by meaning: `EnemyHot { Vec3 pos; Vec3 vel; float hp; }` (28 bytes) and `EnemyCold { std::string name; LootTable loot; SpawnInfo spawn; }`.",
+                "Keep them in two parallel arrays, `std::vector<EnemyHot> hot;` and `std::vector<EnemyCold> cold;`, where index `i` is the same enemy in both.",
+                "The per-frame loops walk only `hot`: each 64-byte line now holds more than two enemies instead of about half of one."
+              ],
+              "answer": "Hot/cold splitting: keep the per-frame fields in a compact array and move rarely used fields to a parallel one."
+            },
+            {
+              "type": "mcq",
+              "id": "q-soa-cost",
+              "concepts": [
+                "struct-of-arrays"
+              ],
+              "prompt": "Kai converts every struct in the engine to SoA, including the player profile and the settings menu. What did he give up?",
+              "choices": [
+                "Code that handles one whole object (save, inspect, copy) now gathers fields from many arrays, which is clumsier and touches more cache lines",
+                "Nothing: SoA is faster for every access pattern",
+                "SoA makes code use more memory, because each array needs its own padding per element",
+                "SoA prevents the compiler from using SIMD"
+              ],
+              "answer": 0,
+              "hint": "Think about the AoS column in the previous question.",
+              "explanation": "SoA is a trade: excellent for wide loops over a few fields, worse for code that wants **one object, all fields**. That code now reads one value from each of many arrays, each in a different cache line, and it's harder to read. Apply SoA where profiling shows hot loops; it doesn't add per-element padding, and it usually *helps* SIMD."
+            }
+          ]
+        },
+        {
+          "id": "struct-layout",
+          "title": "Padding and alignment",
+          "pareto": "extra",
+          "minutes": 7,
+          "takeaway": "Each member sits at a multiple of its alignment and the compiler pads the gaps, so ordering members from largest to smallest alignment keeps structs small; pin sizes that matter with static_assert.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Why sizeof surprises you",
+              "body": "Every type has an **alignment**: a `double` must start at an address divisible by 8, a `float` by 4, a `short` by 2, a `char` or `bool` anywhere. (On this arm64 Mac: `alignof(double)` is 8, `float` 4, `short` 2, `bool` 1, the same as on x86-64.)\n\nThe compiler lays members out **in declaration order** and inserts **padding** wherever the next member would be misaligned. It also pads the end so the size is a multiple of the largest alignment, which keeps every element of an array aligned.\n\nPadding is wasted cache: in an array of a million particles, 4 padding bytes per particle is 4 MB of nothing travelling through memory."
+            },
+            {
+              "type": "output",
+              "id": "q-sizeof-order",
+              "concepts": [
+                "struct-padding"
+              ],
+              "prompt": "Same three members, two orders. What does this print?",
+              "language": "cpp",
+              "code": "#include <cstdio>\n\nstruct Loose {\n    char  tag;\n    int   id;\n    char  flags;\n};\n\nstruct Tight {\n    int   id;\n    char  tag;\n    char  flags;\n};\n\nint main() {\n    std::printf(\"%zu %zu\\n\", sizeof(Loose), sizeof(Tight));\n}",
+              "output": "12 8",
+              "hint": "In `Loose`, where must `id` start after a 1-byte `tag`? And what size is a multiple of 4?",
+              "explanation": "`Loose`: `tag` at 0, then 3 bytes of padding so `id` starts at 4, `id` at 4–7, `flags` at 8, then 3 bytes of tail padding to reach a multiple of 4: **12**. `Tight`: `id` at 0–3, `tag` at 4, `flags` at 5, 2 bytes of tail padding: **8**. Same data, a third smaller."
+            },
+            {
+              "type": "example",
+              "title": "Laying out a rigid body",
+              "problem": "`struct Body { bool sleeping; double mass; bool kinematic; double friction; };` What is `sizeof(Body)`, and how small can it get?",
+              "steps": [
+                "`sleeping` at offset 0 (1 byte). `mass` needs a multiple of 8: 7 bytes of padding, then `mass` at 8–15.",
+                "`kinematic` at 16. `friction` needs a multiple of 8 again: 7 more padding bytes, `friction` at 24–31. Size **32**, of which 14 bytes are padding.",
+                "Sorted by alignment, `{ double mass; double friction; bool sleeping; bool kinematic; }` puts the bools at 16 and 17, then 6 bytes of tail padding: size **24**.",
+                "A real run printed offsets `0 8 16 24` and size 32 for the first order, and `0 8 16 17` and size 24 for the sorted one."
+              ],
+              "answer": "32 bytes as written, 24 bytes sorted from largest to smallest alignment."
+            },
+            {
+              "type": "order",
+              "id": "q-member-order",
+              "concepts": [
+                "struct-padding"
+              ],
+              "prompt": "The rule of thumb for small structs: declare members from **largest alignment to smallest**. Order these members of `Projectile` that way.",
+              "items": [
+                "`double spawnTime;`",
+                "`float speed;`",
+                "`std::uint16_t ownerId;`",
+                "`std::uint8_t damageType;`"
+              ],
+              "hint": "Alignments: double 8, float 4, uint16_t 2, uint8_t 1.",
+              "explanation": "Largest alignment first means each member already starts at a suitable offset: `spawnTime` at 0, `speed` at 8, `ownerId` at 12, `damageType` at 14. That's 15 bytes of data in a 16-byte struct, with only 1 byte of tail padding."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-static-assert-size",
+              "concepts": [
+                "struct-padding"
+              ],
+              "prompt": "Ember's particle renderer uploads `Particle`s straight to the GPU and expects exactly 16 bytes each, so Rosa guarded the size with `static_assert`. After Kai's edit it no longer compiles. Click a line that makes `Particle` too big.",
+              "language": "cpp",
+              "code": "#include <cstdint>\n\nstruct Particle {\n    bool          alive;\n    float         x, y;\n    std::uint16_t frame;\n    float         life;\n};\n\nstatic_assert(sizeof(Particle) == 16, \"Particle must stay 16 bytes\");\n\nint main() {}",
+              "error": "error: static assertion failed due to requirement 'sizeof(Particle) == 16': Particle must stay 16 bytes\nnote: expression evaluates to '20 == 16'",
+              "lines": [
+                4,
+                6
+              ],
+              "fixes": [
+                "Reorder the members as `x, y`, `life`, `frame`, `alive` (largest alignment first)",
+                "Change line 4 to `char alive;`",
+                "Swap lines 5 and 7, so `life` comes before `x, y`",
+                "Change line 6 to `std::uint8_t frame;`"
+              ],
+              "answer": 0,
+              "hint": "Work out the offsets: where does `x` start after a 1-byte `alive`? Where does `life` start after a 2-byte `frame`?",
+              "explanation": "The data is 4 + 4 + 4 + 2 + 1 = 15 bytes, but `alive` at the front forces 3 padding bytes before `x`, and `frame` in the middle forces 2 before `life`: 20 bytes. Floats first, then the `uint16_t`, then the `bool` fits in 16.\n\n`char` has the same size and alignment as `bool`, so nothing changes. Swapping `life` and `x, y` still leaves the 1-byte member in front of floats. A 1-byte `frame` still leaves `life` needing alignment. All three still evaluate to `'20 == 16'`. The `static_assert` did its job: the mistake was caught at compile time, not on the GPU."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "data-oriented-engine",
+      "title": "A data-oriented engine",
+      "description": "Entity ids and packed component arrays, generational handles instead of pointers, and arena and pool allocators.",
+      "lessons": [
+        {
+          "id": "entities-and-components",
+          "title": "Entities, components, systems",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "In an ECS an entity is just an id, each component type lives packed in its own array, and systems are plain loops over those arrays; swap-and-pop keeps the arrays packed.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Data first, objects second",
+              "body": "In C#, a game object is usually a class holding a list of component objects, each with its own `Update()`. Every component is a separate heap object, so updating 10,000 of them means 10,000 pointer hops and virtual calls.\n\nAn **entity component system** (ECS) turns this inside out:\n\n- An **entity** is just an id, such as `std::uint32_t`. It owns nothing.\n- A **component** is plain data (`Position`, `Velocity`, `Health`) stored **packed in one array per component type**.\n- A **system** is a function that loops over the arrays it needs: `for i: pos[i] += vel[i] * dt`.\n\nThe hot loops become exactly the contiguous, same-field walks the cache likes."
+            },
+            {
+              "type": "buckets",
+              "id": "q-ecs-roles",
+              "concepts": [
+                "ecs"
+              ],
+              "prompt": "Sort each piece of Ember's new ECS.",
+              "buckets": [
+                "Entity",
+                "Component",
+                "System"
+              ],
+              "items": [
+                {
+                  "text": "`std::uint32_t` id 4711",
+                  "bucket": 0
+                },
+                {
+                  "text": "`struct Position { float x, y, z; };`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`struct Health { float current, max; };`",
+                  "bucket": 1
+                },
+                {
+                  "text": "`struct Velocity { float x, y, z; };`",
+                  "bucket": 1
+                },
+                {
+                  "text": "A function that adds velocity × dt to every position",
+                  "bucket": 2
+                },
+                {
+                  "text": "A function that removes every entity whose health reached 0",
+                  "bucket": 2
+                }
+              ],
+              "hint": "Ids, data, and the loops that process data.",
+              "explanation": "The entity is only an id that ties components together. Components are plain structs with **no behaviour**. Systems hold the behaviour and run over many components at once. That split is what lets each component type live in its own tight array."
+            },
+            {
+              "type": "explain",
+              "title": "Packed arrays and swap-and-pop",
+              "body": "Each component type gets a `ComponentArray<T>`: a dense `std::vector<T>` with no gaps, a parallel `owners` array saying which entity each slot belongs to, and a lookup from entity to slot.\n\n```cpp\ntemplate <class T>\nstruct ComponentArray {\n    std::vector<T> dense;                         // components, packed\n    std::vector<Entity> owners;                   // owners[i] owns dense[i]\n    std::unordered_map<Entity, std::size_t> indexOf;\n\n    void add(Entity e, T value) {\n        indexOf[e] = dense.size();\n        dense.push_back(value);\n        owners.push_back(e);\n    }\n    void remove(Entity e) {                       // swap-and-pop\n        std::size_t i = indexOf[e];\n        Entity last = owners.back();\n        dense[i] = dense.back();\n        owners[i] = last;\n        dense.pop_back();\n        owners.pop_back();\n        indexOf[last] = i;\n        indexOf.erase(e);\n    }\n};\n```\n\nRemoving from the middle with `erase` would shift everything after it. Instead, **swap-and-pop** moves the *last* component into the hole and shrinks by one: O(1), and the array stays packed. The price is that order isn't preserved, and the lookup entry of the moved entity must be updated. (Many production ECS libraries, EnTT for one, use a plain array indexed by entity instead of a hash map: a *sparse set*.)"
+            },
+            {
+              "type": "trace",
+              "id": "q-trace-swap-pop",
+              "concepts": [
+                "ecs"
+              ],
+              "prompt": "`indexOf` maps each entity to its slot in the dense arrays. Step through removing entity 3 with swap-and-pop.",
+              "language": "cpp",
+              "code": "std::vector<Entity> owners = {7, 3, 9, 5};\nstd::vector<int> hp = {50, 80, 20, 60};\nstd::size_t i = indexOf[3];          // remove entity 3\nEntity last = owners.back();\nowners[i] = last;\nhp[i] = hp.back();\nowners.pop_back();\nhp.pop_back();\nindexOf[last] = i;\nindexOf.erase(3);",
+              "frames": [
+                {
+                  "line": 1,
+                  "vars": {
+                    "owners": "[7, 3, 9, 5]",
+                    "indexOf": "{3: 1, 5: 3, 7: 0, 9: 2}"
+                  }
+                },
+                {
+                  "line": 2,
+                  "vars": {
+                    "owners": "[7, 3, 9, 5]",
+                    "hp": "[50, 80, 20, 60]",
+                    "indexOf": "{3: 1, 5: 3, 7: 0, 9: 2}"
+                  }
+                },
+                {
+                  "line": 3,
+                  "vars": {
+                    "owners": "[7, 3, 9, 5]",
+                    "hp": "[50, 80, 20, 60]",
+                    "indexOf": "{3: 1, 5: 3, 7: 0, 9: 2}",
+                    "i": "1"
+                  },
+                  "note": "Entity 3 sits in slot 1."
+                },
+                {
+                  "line": 4,
+                  "vars": {
+                    "owners": "[7, 3, 9, 5]",
+                    "hp": "[50, 80, 20, 60]",
+                    "indexOf": "{3: 1, 5: 3, 7: 0, 9: 2}",
+                    "i": "1",
+                    "last": "5"
+                  },
+                  "ask": "last"
+                },
+                {
+                  "line": 5,
+                  "vars": {
+                    "owners": "[7, 5, 9, 5]",
+                    "hp": "[50, 80, 20, 60]",
+                    "indexOf": "{3: 1, 5: 3, 7: 0, 9: 2}",
+                    "i": "1",
+                    "last": "5"
+                  },
+                  "ask": "owners"
+                },
+                {
+                  "line": 6,
+                  "vars": {
+                    "owners": "[7, 5, 9, 5]",
+                    "hp": "[50, 60, 20, 60]",
+                    "indexOf": "{3: 1, 5: 3, 7: 0, 9: 2}",
+                    "i": "1",
+                    "last": "5"
+                  }
+                },
+                {
+                  "line": 7,
+                  "vars": {
+                    "owners": "[7, 5, 9]",
+                    "hp": "[50, 60, 20, 60]",
+                    "indexOf": "{3: 1, 5: 3, 7: 0, 9: 2}",
+                    "i": "1",
+                    "last": "5"
+                  }
+                },
+                {
+                  "line": 8,
+                  "vars": {
+                    "owners": "[7, 5, 9]",
+                    "hp": "[50, 60, 20]",
+                    "indexOf": "{3: 1, 5: 3, 7: 0, 9: 2}",
+                    "i": "1",
+                    "last": "5"
+                  },
+                  "ask": "hp"
+                },
+                {
+                  "line": 9,
+                  "vars": {
+                    "owners": "[7, 5, 9]",
+                    "hp": "[50, 60, 20]",
+                    "indexOf": "{3: 1, 5: 1, 7: 0, 9: 2}",
+                    "i": "1",
+                    "last": "5"
+                  },
+                  "note": "Entity 5 moved to slot 1, so its lookup entry must follow it."
+                },
+                {
+                  "line": 10,
+                  "vars": {
+                    "owners": "[7, 5, 9]",
+                    "hp": "[50, 60, 20]",
+                    "indexOf": "{5: 1, 7: 0, 9: 2}",
+                    "i": "1",
+                    "last": "5"
+                  }
+                }
+              ],
+              "hint": "The last entity's data moves into the hole, then both arrays drop their last slot.",
+              "explanation": "The last entity, **5**, is copied into slot 1 (where 3 was), in both `owners` and `hp`, and the arrays shrink by one. Then the lookup is fixed: 5 now lives at slot 1, and 3 is gone. Forgetting that `indexOf[last] = i` line is the classic swap-and-pop bug: entity 5 would point at a slot that no longer exists."
+            },
+            {
+              "type": "output",
+              "id": "q-ecs-order",
+              "concepts": [
+                "ecs"
+              ],
+              "prompt": "Using the `ComponentArray` from before: entities 1 to 4 get health 10 to 40, then entity 2 is removed. What does the loop print?",
+              "language": "cpp",
+              "code": "int main() {\n    ComponentArray<int> health;\n    health.add(1, 10);\n    health.add(2, 20);\n    health.add(3, 30);\n    health.add(4, 40);\n    health.remove(2);\n    for (std::size_t i = 0; i < health.dense.size(); ++i)\n        std::printf(\"%s%u:%d\", i ? \" \" : \"\", health.owners[i], health.dense[i]);\n    std::printf(\"\\n\");\n}",
+              "output": "1:10 4:40 3:30",
+              "hint": "Which entity's data fills the hole left by entity 2?",
+              "explanation": "Removing entity 2 (slot 1) moves the last component, entity 4's 40, into slot 1. The array is still packed, three entries, but now in the order **1, 4, 3**. Systems must not depend on component order; if something truly needs an order (say, draw order for transparency), it sorts explicitly."
+            },
+            {
+              "type": "mcq",
+              "id": "q-why-ecs",
+              "concepts": [
+                "ecs",
+                "cache-locality"
+              ],
+              "prompt": "Ember moves 50,000 bullets per frame. Before: `std::vector<std::unique_ptr<GameObject>>`, each bullet calling a virtual `update()`. After: a `MovementSystem` looping over packed `Position` and `Velocity` arrays. Why is the second version typically much faster?",
+              "choices": [
+                "It reads two packed arrays front to back, instead of hopping to 50,000 separately allocated objects and making a virtual call for each",
+                "Systems run on the GPU, while virtual functions run on the CPU",
+                "An ECS stores fewer bytes per bullet because entities have no ids",
+                "The compiler can't optimise `unique_ptr`, but it can optimise `std::vector`"
+              ],
+              "answer": 0,
+              "hint": "Think about what the CPU has to load for each bullet in each version.",
+              "explanation": "The object version jumps to a different heap allocation per bullet, loads a vtable pointer, and makes an indirect call; the CPU can't fetch ahead. The ECS version streams through two arrays where every cache line is full of positions or velocities, and the loop body is simple enough for the compiler to vectorise. Systems still run on the CPU, and entities do have ids."
+            }
+          ]
+        },
+        {
+          "id": "generational-handles",
+          "title": "Handles instead of pointers",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Refer to engine objects with a handle of index plus generation: the index finds the slot, and a generation that no longer matches tells you the object you meant is gone.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "The reused slot",
+              "body": "Pointers into arrays dangle when the array grows, so engines refer to objects by **index** instead. That fixes reallocation, but creates a new bug: when an enemy dies, its slot is recycled for the next spawn. A missile still holding index 0 now homes in on a **different** enemy, and nothing crashes to warn you.\n\nA **generational handle** adds a counter:\n\n```cpp\nstruct Handle { std::uint32_t index, generation; };\n```\n\nEach slot stores a `generation` that goes up every time the slot is freed. A handle is valid only while its generation matches the slot's. Stale handles are detected instead of silently pointing at the wrong thing."
+            },
+            {
+              "type": "example",
+              "title": "An enemy pool with handles",
+              "problem": "What does a minimal pool with spawn, destroy and get look like?",
+              "steps": [
+                "Slots live in a vector, with a free list of recycled indices:\n\n```cpp\nstruct Handle { std::uint32_t index, generation; };\n\nstruct EnemyPool {\n    struct Slot { Enemy enemy; std::uint32_t generation = 0; bool used = false; };\n    std::vector<Slot> slots;\n    std::vector<std::uint32_t> freeList;\n\n    Handle spawn(Enemy e) {\n        std::uint32_t i;\n        if (!freeList.empty()) { i = freeList.back(); freeList.pop_back(); }\n        else { i = (std::uint32_t)slots.size(); slots.emplace_back(); }\n        slots[i].enemy = e;\n        slots[i].used = true;\n        return {i, slots[i].generation};\n    }\n    void destroy(Handle h) {\n        if (!get(h)) return;\n        slots[h.index].used = false;\n        slots[h.index].generation++;\n        freeList.push_back(h.index);\n    }\n    Enemy* get(Handle h) {\n        if (h.index >= slots.size()) return nullptr;\n        Slot& s = slots[h.index];\n        if (s.generation != h.generation || !s.used) return nullptr;\n        return &s.enemy;\n    }\n};\n```",
+                "`spawn` reuses a free slot when it can, and returns the slot's **current** generation in the handle.",
+                "`destroy` bumps the slot's generation, so every handle to the old occupant stops matching.",
+                "`get` checks both the index and the generation, and returns `nullptr` for a stale handle."
+              ],
+              "answer": "A slot array plus a free list, where every lookup compares generations."
+            },
+            {
+              "type": "trace",
+              "id": "q-trace-handles",
+              "concepts": [
+                "generational-handles"
+              ],
+              "prompt": "Handles are shown as `{index, generation}`. Step through and predict the values.",
+              "language": "cpp",
+              "code": "EnemyPool pool;\nHandle a = pool.spawn({\"Ana\"});\npool.destroy(a);\nHandle b = pool.spawn({\"Bo\"});\nbool aAlive = pool.get(a) != nullptr;\nbool bAlive = pool.get(b) != nullptr;\nHandle c = pool.spawn({\"Cy\"});",
+              "frames": [
+                {
+                  "line": 1,
+                  "vars": {
+                    "slot generations": "[]"
+                  }
+                },
+                {
+                  "line": 2,
+                  "vars": {
+                    "slot generations": "[0]",
+                    "a": "{0, 0}"
+                  }
+                },
+                {
+                  "line": 3,
+                  "vars": {
+                    "slot generations": "[1]",
+                    "a": "{0, 0}"
+                  },
+                  "ask": "slot generations"
+                },
+                {
+                  "line": 4,
+                  "vars": {
+                    "slot generations": "[1]",
+                    "a": "{0, 0}",
+                    "b": "{0, 1}"
+                  },
+                  "note": "Bo reuses slot 0, and gets the slot's new generation."
+                },
+                {
+                  "line": 5,
+                  "vars": {
+                    "slot generations": "[1]",
+                    "a": "{0, 0}",
+                    "b": "{0, 1}",
+                    "aAlive": "false"
+                  },
+                  "ask": "aAlive"
+                },
+                {
+                  "line": 6,
+                  "vars": {
+                    "slot generations": "[1]",
+                    "a": "{0, 0}",
+                    "b": "{0, 1}",
+                    "aAlive": "false",
+                    "bAlive": "true"
+                  }
+                },
+                {
+                  "line": 7,
+                  "vars": {
+                    "slot generations": "[1, 0]",
+                    "a": "{0, 0}",
+                    "b": "{0, 1}",
+                    "aAlive": "false",
+                    "bAlive": "true",
+                    "c": "{1, 0}"
+                  },
+                  "ask": "c"
+                }
+              ],
+              "hint": "Destroying bumps the slot's generation. `get` only accepts a handle whose generation matches.",
+              "explanation": "Destroying Ana bumps slot 0's generation to **1**. Bo reuses slot 0, so his handle is `{0, 1}`. Ana's old handle `{0, 0}` has the same index but an old generation, so `get(a)` fails: `aAlive` is **false**, while Bo's handle works. With the free list empty, Cy gets a brand-new slot: `{1, 0}`."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-stale-handle",
+              "concepts": [
+                "generational-handles",
+                "dangling-reference"
+              ],
+              "prompt": "Kai's `get` (same pool as before) forgets something. A missile locked on to Ana should report `target gone` after she dies. Instead it hits Bo. Click the line with the bug.",
+              "language": "cpp",
+              "code": "Enemy* EnemyPool::get(Handle h) {\n    if (h.index >= slots.size()) return nullptr;\n    Slot& s = slots[h.index];\n    if (!s.used) return nullptr;\n    return &s.enemy;\n}\n\nvoid fireMissile(EnemyPool& pool) {\n    Handle target = pool.spawn({\"Ana\"});   // the missile locks on to Ana\n    pool.destroy(target);                  // Ana dies before impact\n    pool.spawn({\"Bo\"});                    // Bo spawns into the free slot\n    if (Enemy* e = pool.get(target)) std::printf(\"hit %s\\n\", e->name);\n    else std::printf(\"target gone\\n\");\n}",
+              "error": "hit Bo",
+              "lines": [
+                4
+              ],
+              "fixes": [
+                "Change line 4 to `if (!s.used || s.generation != h.generation) return nullptr;`",
+                "Change line 4 to `if (!s.used || s.enemy.hp <= 0) return nullptr;`",
+                "Change line 10 to `pool.destroy(target); target = {};` to clear the handle",
+                "Change line 2 to check `h.index > slots.size()` instead"
+              ],
+              "answer": 0,
+              "hint": "Bo lives in the same slot Ana did. What differs between Ana's handle and the slot now?",
+              "explanation": "`get` only checks that the slot is in use, and it is: by Bo. Comparing generations rejects Ana's handle `{0, 0}` against the slot's generation 1, and the program prints `target gone`.\n\nChecking `hp` doesn't help: Bo is alive and healthy. Clearing the handle to `{}` gives `{0, 0}`, which still names slot 0 and still hits Bo. The bounds check is about indices past the end, not reuse."
+            },
+            {
+              "type": "numeric",
+              "id": "q-handle-bits",
+              "concepts": [
+                "generational-handles"
+              ],
+              "prompt": "To fit a handle in 32 bits, Ember uses **20 bits** for the index and **12 bits** for the generation. How many generations can a slot go through before the counter wraps around to a value an old handle might still hold?",
+              "answer": 4096,
+              "hint": "12 bits can represent 2¹² different values.",
+              "explanation": "2¹² = **4096** generations. After 4096 reuses of the same slot, a very old handle could match again. That's usually acceptable, since a handle would have to survive 4096 deaths of that slot. The 20-bit index allows 2²⁰ = 1,048,576 live objects. Engines tune the split to their game, or use 64-bit handles."
+            },
+            {
+              "type": "mcq",
+              "id": "q-handles-why",
+              "concepts": [
+                "generational-handles"
+              ],
+              "prompt": "Besides catching stale references, what else do handles give an engine that raw `Enemy*` pointers don't?",
+              "choices": [
+                "The pool can grow or compact its storage without breaking them, and they can be saved to disk or sent over the network as plain numbers",
+                "They make each lookup faster than dereferencing a pointer",
+                "They free the enemy automatically when the last handle goes away",
+                "They let two threads write the same enemy safely"
+              ],
+              "answer": 0,
+              "hint": "A handle is just two integers. What can you do with integers that you can't do with addresses?",
+              "explanation": "A handle says *which* object, not *where* it is, so storage can move freely, and it means the same thing in a save file, a replay or a network message. Lookup costs a little **more** than a raw pointer (an index plus a compare). Handles don't own anything, and they don't make shared writes safe."
+            }
+          ]
+        },
+        {
+          "id": "arenas-and-pools",
+          "title": "Arenas and pools",
+          "pareto": "core",
+          "minutes": 9,
+          "takeaway": "Match the allocator to the lifetime: an arena hands out memory by bumping an offset and frees it all at once, a pool recycles fixed-size slots through a free list.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Why not just new?",
+              "body": "`new` and `malloc` are general-purpose: any size, any order, any thread. That generality costs bookkeeping and sometimes locks, and thousands of small allocations per frame scatter data across the heap.\n\nGame allocations follow patterns, and each pattern has a cheaper allocator:\n\n- **Arena** (linear allocator): many allocations that all die together, such as everything temporary in one frame or everything in one level. Allocating bumps an offset; freeing is `offset = 0`.\n- **Pool**: many objects of one size, created and destroyed in any order, such as bullets. Allocating and freeing pop and push a free list, both O(1)."
+            },
+            {
+              "type": "example",
+              "title": "Rounding up to an alignment",
+              "problem": "An arena's next free byte is at offset 13. Where must an 8-byte-aligned `double` start, and how is that computed without division?",
+              "steps": [
+                "The start must be the first multiple of 8 at or after 13: that's **16**.",
+                "For a power-of-two alignment, `(offset + align - 1) & ~(align - 1)` does it: 13 + 7 = 20 = binary 10100; masking off the low three bits gives 10000 = 16.",
+                "That expression is the heart of the arena:\n\n```cpp\nstruct Arena {\n    std::byte* base;\n    std::size_t capacity;\n    std::size_t offset = 0;\n\n    void* alloc(std::size_t size, std::size_t align) {\n        std::size_t start = (offset + align - 1) & ~(align - 1);\n        if (start + size > capacity) return nullptr;\n        offset = start + size;\n        return base + start;\n    }\n    void reset() { offset = 0; }\n};\n```",
+                "An already-aligned offset stays put: (16 + 7) masked gives 16 again."
+              ],
+              "answer": "Round up with (offset + align − 1) & ~(align − 1): offset 13 with alignment 8 gives 16."
+            },
+            {
+              "type": "numeric",
+              "id": "q-align-up",
+              "concepts": [
+                "arena-allocator"
+              ],
+              "prompt": "The arena's offset is **37**. Kai allocates a `Vec4` with 16-byte alignment. At what offset does it start?",
+              "answer": 48,
+              "hint": "The first multiple of 16 at or after 37.",
+              "explanation": "(37 + 15) & ~15 = 52 & ~15 = **48**. 32 is too early, and 48 is the next multiple of 16; the 11 bytes from 37 to 47 are padding."
+            },
+            {
+              "type": "trace",
+              "id": "q-trace-arena",
+              "concepts": [
+                "arena-allocator"
+              ],
+              "prompt": "A 256-byte frame arena, using the `Arena` above. Pointers are shown as offsets into its buffer. Predict `frame.offset` as the allocations come in.",
+              "language": "cpp",
+              "code": "Arena frame{buffer, 256};\nvoid* name = frame.alloc(5, 1);     // 5 chars\nvoid* mass = frame.alloc(8, 8);     // a double\nvoid* pos  = frame.alloc(12, 4);    // a Vec3 of floats\nvoid* id   = frame.alloc(4, 4);     // an int\nframe.reset();                      // end of frame\nvoid* next = frame.alloc(8, 8);",
+              "frames": [
+                {
+                  "line": 1,
+                  "vars": {
+                    "frame.offset": "0"
+                  }
+                },
+                {
+                  "line": 2,
+                  "vars": {
+                    "frame.offset": "5",
+                    "name": "buffer + 0"
+                  }
+                },
+                {
+                  "line": 3,
+                  "vars": {
+                    "frame.offset": "16",
+                    "name": "buffer + 0",
+                    "mass": "buffer + 8"
+                  },
+                  "ask": "frame.offset"
+                },
+                {
+                  "line": 4,
+                  "vars": {
+                    "frame.offset": "28",
+                    "name": "buffer + 0",
+                    "mass": "buffer + 8",
+                    "pos": "buffer + 16"
+                  },
+                  "ask": "frame.offset"
+                },
+                {
+                  "line": 5,
+                  "vars": {
+                    "frame.offset": "32",
+                    "name": "buffer + 0",
+                    "mass": "buffer + 8",
+                    "pos": "buffer + 16",
+                    "id": "buffer + 28"
+                  },
+                  "ask": "frame.offset"
+                },
+                {
+                  "line": 6,
+                  "vars": {
+                    "frame.offset": "0",
+                    "name": "buffer + 0",
+                    "mass": "buffer + 8",
+                    "pos": "buffer + 16",
+                    "id": "buffer + 28"
+                  },
+                  "note": "One assignment frees every allocation of the frame."
+                },
+                {
+                  "line": 7,
+                  "vars": {
+                    "frame.offset": "8",
+                    "name": "buffer + 0",
+                    "mass": "buffer + 8",
+                    "pos": "buffer + 16",
+                    "id": "buffer + 28",
+                    "next": "buffer + 0"
+                  },
+                  "note": "`next` reuses bytes that `name` and `mass` used to own."
+                }
+              ],
+              "hint": "Round each start up to the alignment, then add the size.",
+              "explanation": "After the 5-byte name, the offset is 5. The `double` rounds up to 8 and ends at **16**. The 12-byte `Vec3` with alignment 4 starts at 16 and ends at **28**; the `int` starts at 28 and ends at **32**. `reset()` frees all of it in one assignment, and the next frame's first allocation starts at 0 again. The old pointers still hold their addresses but now point at memory that belongs to new data."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-scratch-lifetime",
+              "concepts": [
+                "arena-allocator",
+                "dangling-reference"
+              ],
+              "prompt": "`scratch` is the per-frame arena from before, reset at the start of every frame. Kai keeps frame 0's label to show later, so this should print `frame 0`. Click the line with the bug.",
+              "language": "cpp",
+              "code": "const char* firstLabel = nullptr;\nfor (int frame = 0; frame < 2; ++frame) {\n    scratch.reset();\n    char* text = (char*)scratch.alloc(16, 1);\n    std::snprintf(text, 16, \"frame %d\", frame);\n    if (frame == 0) firstLabel = text;\n}\nstd::printf(\"%s\\n\", firstLabel);",
+              "error": "frame 1",
+              "lines": [
+                6
+              ],
+              "fixes": [
+                "Change line 1 to `std::string firstLabel;` (so line 6 copies the text) and line 8 to print `firstLabel.c_str()`",
+                "Move `scratch.reset();` from line 3 to the end of the loop body",
+                "Change line 4 to allocate 64 bytes instead of 16",
+                "Change line 1 to `const char* volatile firstLabel = nullptr;`"
+              ],
+              "answer": 0,
+              "hint": "What happens to the bytes `text` pointed at once frame 1 resets the arena and allocates again?",
+              "explanation": "Line 6 keeps a **pointer** into the scratch arena. Frame 1 resets the arena and its first allocation lands on the very same bytes, overwriting them with `frame 1`. No sanitizer complains: the memory was never freed, just reused. Anything that must outlive the frame has to be **copied** to memory with a longer lifetime, here a `std::string`.\n\nResetting at the end of the body still recycles the same bytes. A bigger allocation starts at the same offset. `volatile` changes nothing about lifetimes. The rule: frame memory is for frame data only."
+            },
+            {
+              "type": "explain",
+              "title": "A pool with a free list",
+              "body": "A pool preallocates `N` slots of one type. Free slots form a linked list threaded **through the free slots themselves**, so the list costs no extra memory:\n\n```cpp\ntemplate <class T, std::size_t N>\nclass Pool {\n    union Slot { T value; Slot* next; Slot() {} ~Slot() {} };\n    Slot slots[N];\n    Slot* freeHead = nullptr;\npublic:\n    Pool() {\n        for (std::size_t i = 0; i < N; ++i) { slots[i].next = freeHead; freeHead = &slots[i]; }\n    }\n    T* create() {\n        if (!freeHead) return nullptr;            // pool is full\n        Slot* s = freeHead;\n        freeHead = s->next;                       // pop the free list: O(1)\n        return new (&s->value) T{};               // build the object in place\n    }\n    void destroy(T* p) {\n        p->~T();\n        Slot* s = reinterpret_cast<Slot*>(p);\n        s->next = freeHead;                       // push onto the free list: O(1)\n        freeHead = s;\n    }\n};\n```\n\nIn a test with a 3-slot pool, a fourth `create()` returned `nullptr` (full), and after destroying the second bullet, the next `create()` got exactly its slot back. Pools pair naturally with generational handles: the slot index is the handle's index."
+            },
+            {
+              "type": "buckets",
+              "id": "q-which-allocator",
+              "concepts": [
+                "arena-allocator",
+                "pool-allocator"
+              ],
+              "prompt": "Which allocator fits each kind of allocation?",
+              "buckets": [
+                "Arena (freed all at once)",
+                "Pool (fixed size, any order)",
+                "General heap"
+              ],
+              "items": [
+                {
+                  "text": "Debug text strings built during this frame",
+                  "bucket": 0
+                },
+                {
+                  "text": "Temporary open/closed lists for this frame's pathfinding",
+                  "bucket": 0
+                },
+                {
+                  "text": "All of a level's geometry, freed when the level unloads",
+                  "bucket": 0
+                },
+                {
+                  "text": "48-byte bullets fired and destroyed at random times",
+                  "bucket": 1
+                },
+                {
+                  "text": "Particles of one fixed size, thousands alive at once",
+                  "bucket": 1
+                },
+                {
+                  "text": "A save-slot list that changes size rarely and lives all session",
+                  "bucket": 2
+                }
+              ],
+              "hint": "Same death time: arena. Same size, different death times: pool. Neither pattern, and rare: just use the heap.",
+              "explanation": "Arenas fit anything that dies **together**, per frame or per level. Pools fit many objects of **one size** that die independently. Rare, oddly sized, long-lived allocations gain nothing from a custom allocator, so `std::vector` and the general heap are fine there."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "frames-time-threads",
+      "title": "Frames, time and threads",
+      "description": "The fixed-step main loop with interpolation, deterministic simulation, and splitting work across cores without data races.",
+      "lessons": [
+        {
+          "id": "fixed-step-loop",
+          "title": "The fixed-step main loop",
+          "pareto": "core",
+          "minutes": 8,
+          "takeaway": "Feed real frame time into an accumulator, clamp it, run as many fixed simulation steps as it holds, and render between the last two states using the leftover fraction.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Inside the engine loop",
+              "body": "You already know *why* games simulate with a fixed timestep. Here is how an engine implements it:\n\n- Read `std::chrono::steady_clock` once per frame and add the elapsed time to an **accumulator**.\n- **Clamp** that frame time first, so a long stall can't queue up hundreds of steps.\n- While the accumulator holds at least one step `dt`: copy the current state to `previous`, simulate `current` by `dt`, subtract `dt`.\n- The leftover is a fraction of a step: `alpha = accumulator / dt`. Render `lerp(previous, current, alpha)`, so motion looks smooth even when the display rate and the simulation rate differ."
+            },
+            {
+              "type": "trace",
+              "id": "q-trace-accumulator",
+              "concepts": [
+                "fixed-timestep-loop"
+              ],
+              "prompt": "Four frames arrive taking 16, 16, 25 and 4 ms; the simulation steps by 10 ms. Recorded after line 4 and line 11 of each frame. Predict the values.",
+              "language": "cpp",
+              "code": "const double dt = 10;                     // simulate in fixed 10 ms steps\ndouble accumulator = 0;\nfor (double frameTime : {16.0, 16.0, 25.0, 4.0}) {\n    accumulator += std::min(frameTime, 250.0);\n    int steps = 0;\n    while (accumulator >= dt) {\n        // previous = current; simulate(current, dt);\n        accumulator -= dt;\n        ++steps;\n    }\n    double alpha = accumulator / dt;      // render lerp(previous, current, alpha)\n}",
+              "frames": [
+                {
+                  "line": 4,
+                  "vars": {
+                    "frameTime": "16",
+                    "accumulator": "16"
+                  }
+                },
+                {
+                  "line": 11,
+                  "vars": {
+                    "frameTime": "16",
+                    "accumulator": "6",
+                    "steps": "1",
+                    "alpha": "0.6"
+                  },
+                  "note": "6 ms are left over: 60% of the way to the next step."
+                },
+                {
+                  "line": 4,
+                  "vars": {
+                    "frameTime": "16",
+                    "accumulator": "22"
+                  },
+                  "ask": "accumulator"
+                },
+                {
+                  "line": 11,
+                  "vars": {
+                    "frameTime": "16",
+                    "accumulator": "2",
+                    "steps": "2",
+                    "alpha": "0.2"
+                  },
+                  "ask": "steps"
+                },
+                {
+                  "line": 4,
+                  "vars": {
+                    "frameTime": "25",
+                    "accumulator": "27"
+                  }
+                },
+                {
+                  "line": 11,
+                  "vars": {
+                    "frameTime": "25",
+                    "accumulator": "7",
+                    "steps": "2",
+                    "alpha": "0.7"
+                  },
+                  "ask": "alpha"
+                },
+                {
+                  "line": 4,
+                  "vars": {
+                    "frameTime": "4",
+                    "accumulator": "11"
+                  }
+                },
+                {
+                  "line": 11,
+                  "vars": {
+                    "frameTime": "4",
+                    "accumulator": "1",
+                    "steps": "1",
+                    "alpha": "0.1"
+                  }
+                }
+              ],
+              "hint": "Add the frame time to what was left over, then take out 10 ms per step.",
+              "explanation": "Leftover time carries over. Frame 2 starts with 6 ms left, adds 16 to get **22**, runs **2** steps and keeps 2 ms (alpha 0.2). Frame 3: 2 + 25 = 27, two steps, 7 left, alpha **0.7**. Frame 4 is short: 7 + 4 = 11, one step. Over the four frames, 61 ms of real time produced 6 steps (60 ms of simulation) with 1 ms carried forward: the simulation never drifts from real time."
+            },
+            {
+              "type": "numeric",
+              "id": "q-interpolate",
+              "concepts": [
+                "fixed-timestep-loop"
+              ],
+              "prompt": "After the update loop, a crate's `previous.x` is 100 and `current.x` is 110, and `alpha` is 0.7. At what x should the renderer draw it?",
+              "answer": 107,
+              "tolerance": 0.001,
+              "hint": "`previous + (current - previous) * alpha`",
+              "explanation": "100 + (110 − 100) × 0.7 = **107**. The renderer always draws slightly in the past, between the last two simulated states. That costs up to one step of visual latency, but never shows a position the simulation didn't produce, which extrapolating into the future can (a crate drawn inside a wall it's about to hit)."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-spiral",
+              "concepts": [
+                "fixed-timestep-loop"
+              ],
+              "prompt": "After Kai resumes from a breakpoint that froze the game for 3 seconds, `tick(3.0)` runs **149** simulation steps in one frame. If steps are slow, that frame takes even longer, and the next one longer still. Click the line to fix.",
+              "language": "cpp",
+              "code": "const double dt = 1.0 / 50;          // 50 simulation steps per second\ndouble accumulator = 0;\n\nint tick(double frameTime) {\n    accumulator += frameTime;\n    int steps = 0;\n    while (accumulator >= dt) {\n        simulate(dt);\n        accumulator -= dt;\n        ++steps;\n    }\n    return steps;\n}",
+              "error": "1\n149",
+              "lines": [
+                5
+              ],
+              "fixes": [
+                "Change line 5 to `accumulator += std::min(frameTime, 0.25);`",
+                "Change line 1 to `const double dt = 1.0 / 25;`",
+                "Change line 5 to `accumulator = frameTime;`",
+                "Change line 2 to `float accumulator = 0;`"
+              ],
+              "answer": 0,
+              "hint": "How much real time should a single frame be allowed to hand the simulation?",
+              "explanation": "Without a cap, any long stall (a breakpoint, a level load, the OS paging) dumps all of it into the accumulator, and the loop tries to catch up in one frame. If a step takes longer to compute than the time it simulates, each frame falls further behind: the **spiral of death**. Clamping to 0.25 s caps one frame at 12 steps here; the game briefly runs slower than real time instead of freezing.\n\nA bigger `dt` halves the steps but changes the simulation rate and still runs 75 steps. Overwriting the accumulator throws away leftover time and still runs 149. A `float` accumulator only adds rounding error: it ran 151."
+            },
+            {
+              "type": "order",
+              "id": "q-frame-order",
+              "concepts": [
+                "fixed-timestep-loop"
+              ],
+              "prompt": "Put one iteration of Ember's main loop in order.",
+              "items": [
+                "Poll input and OS events",
+                "Read the clock and add the clamped frame time to the accumulator",
+                "While the accumulator holds a step: save previous state, simulate one dt, subtract dt",
+                "Compute alpha = accumulator / dt",
+                "Render the state interpolated between previous and current by alpha",
+                "Present the finished image (swap buffers)"
+              ],
+              "hint": "Simulation consumes time, rendering uses what's left over, presenting comes last.",
+              "explanation": "Input first, so the steps see it. Then time goes into the accumulator and gets spent in fixed steps. Only after the steps is the leftover fraction known, so alpha and rendering come next, and the image is presented at the end of the frame."
+            }
+          ]
+        },
+        {
+          "id": "determinism",
+          "title": "Same input, same game",
+          "pareto": "extra",
+          "minutes": 8,
+          "takeaway": "Lockstep multiplayer and replays need bit-identical simulations, so fix the order of floating-point operations and the compiler flags, and give the simulation its own seeded random stream.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Why bits matter",
+              "body": "Lockstep multiplayer (common in RTS games) sends only the players' inputs; every machine runs the full simulation and must arrive at **exactly** the same state. Replays and many automated tests work the same way. One differing bit in one float can grow into a different battle a minute later.\n\nThe usual trap is that floating-point arithmetic isn't real-number arithmetic. Every operation rounds to the nearest representable value, so **the order of operations changes the result**: `(a + b) + c` and `a + (b + c)` can differ."
+            },
+            {
+              "type": "output",
+              "id": "q-float-assoc",
+              "concepts": [
+                "determinism"
+              ],
+              "prompt": "A `float` has about 7 significant decimal digits. What does this print?",
+              "language": "cpp",
+              "code": "#include <cstdio>\n\nint main() {\n    float big = 100000000.0f;\n    float small = 1.0f;\n    std::printf(\"%g\\n\", (small + big) - big);\n    std::printf(\"%g\\n\", small + (big - big));\n}",
+              "output": "0\n1",
+              "hint": "Can 100,000,001 be stored exactly in a float? What about 0?",
+              "explanation": "`small + big` would be 100,000,001, which a float can't hold: the nearest float is 100,000,000, so the 1 is lost and the first line prints **0**. In the second line `big - big` is exactly 0, and adding 1 gives **1**. Same three numbers, same operations, different order, different answer."
+            },
+            {
+              "type": "output",
+              "id": "q-double-order",
+              "concepts": [
+                "determinism"
+              ],
+              "prompt": "Doubles round too. `%.17g` prints enough digits to show every bit. What does this print?",
+              "language": "cpp",
+              "code": "#include <cstdio>\n\nint main() {\n    double a = (0.1 + 0.2) + 0.3;\n    double b = 0.1 + (0.2 + 0.3);\n    std::printf(\"%s\\n\", a == b ? \"same\" : \"different\");\n    std::printf(\"%.17g\\n%.17g\\n\", a, b);\n}",
+              "output": "different\n0.60000000000000009\n0.59999999999999998",
+              "hint": "0.1, 0.2 and 0.3 aren't exact in binary, and each addition rounds.",
+              "explanation": "`0.1 + 0.2` rounds to 0.30000000000000004; adding 0.3 then rounds to **0.60000000000000009**. `0.2 + 0.3` rounds to exactly 0.5, and adding 0.1 gives **0.59999999999999998**. So `a == b` is false. A parallel sum that adds in a different order each run, or a compiler allowed to reorder additions, breaks determinism this way."
+            },
+            {
+              "type": "explain",
+              "title": "Flags, platforms and random numbers",
+              "body": "The compiler can change the order or rounding for you:\n\n- `-ffast-math` explicitly allows reordering and other shortcuts.\n- **Fused multiply-add**: Apple clang on arm64 compiled `a * b + c` as one fused instruction by default, which rounds once instead of twice. For one test input that printed `-1.49011612e-08`; with `-ffp-contract=off` the same source printed `0`. Built for x86-64, the same source compiles to a separate multiply and add (visible in the assembly), which rounds twice like the `0` build.\n- Math library functions like `std::sin` may differ between platforms.\n\nRandom numbers: `std::mt19937`'s output sequence is fixed by the C++ standard, so a seed means the same numbers everywhere. The standard **distributions** (`std::uniform_int_distribution`, ...) are not specified exactly, so different standard libraries may turn the same raw numbers into different results."
+            },
+            {
+              "type": "buckets",
+              "id": "q-deterministic-or-not",
+              "concepts": [
+                "determinism"
+              ],
+              "prompt": "Two players run the same simulation on different machines. Which of these give identical results everywhere?",
+              "buckets": [
+                "Identical everywhere",
+                "Can differ"
+              ],
+              "items": [
+                {
+                  "text": "Raw `std::mt19937` output from the same seed",
+                  "bucket": 0
+                },
+                {
+                  "text": "Integer and fixed-point arithmetic",
+                  "bucket": 0
+                },
+                {
+                  "text": "Float additions in the same order, same binary, FMA contraction off",
+                  "bucket": 0
+                },
+                {
+                  "text": "`std::uniform_int_distribution` built with different standard libraries",
+                  "bucket": 1
+                },
+                {
+                  "text": "Float code built with `-ffast-math`",
+                  "bucket": 1
+                },
+                {
+                  "text": "Iterating a `std::unordered_map` of units to apply damage",
+                  "bucket": 1
+                },
+                {
+                  "text": "Seeding the simulation RNG from `std::random_device`",
+                  "bucket": 1
+                }
+              ],
+              "hint": "Is the result pinned down by the standard and by a fixed order of operations?",
+              "explanation": "The engine's sequence and integer math are fully specified. Floats are deterministic only when the operations, their order, the flags and the binary are all the same. Distributions vary by library, `unordered_map` iteration order depends on the implementation and on insertion history, and `random_device` is meant to be unpredictable. Lockstep games often use integer or fixed-point math for exactly this reason."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-shared-rng",
+              "concepts": [
+                "determinism"
+              ],
+              "prompt": "Two players in a lockstep match roll the same crit with the same seed. The player on high graphics draws 3 sparks first. The match should stay `in sync`. Click the line that breaks it.",
+              "language": "cpp",
+              "code": "#include <cstdio>\n#include <random>\n\nstd::mt19937 rng(42);\n\nint critRoll(int sparks) {\n    for (int i = 0; i < sparks; ++i) rng();    // cosmetic: spark directions\n    return rng() % 100;                         // gameplay: crit chance\n}\n\nint main() {\n    int low = critRoll(0);     // player on low graphics: no sparks\n    rng.seed(42);\n    int high = critRoll(3);    // player on high graphics: 3 sparks\n    std::printf(\"%s\\n\", low == high ? \"in sync\" : \"desync\");\n}",
+              "error": "desync",
+              "lines": [
+                7
+              ],
+              "fixes": [
+                "Give sparks their own generator: change line 4 to `std::mt19937 rng(42), fx(7);` and call `fx()` on line 7",
+                "Change line 4 to `std::mt19937_64 rng(42);`",
+                "Change line 8 to `return std::uniform_int_distribution<int>(0, 99)(rng);`"
+              ],
+              "answer": 0,
+              "hint": "How many numbers has `rng` produced when the crit is rolled, on each machine?",
+              "explanation": "Cosmetic sparks draw from the **same** generator as gameplay, so the high-graphics player's crit roll uses the 4th number of the sequence while the low-graphics player's uses the 1st. Splitting the streams keeps the gameplay sequence identical whatever the graphics settings, and the program prints `in sync`.\n\nA 64-bit engine or a distribution changes how numbers are produced, not how many the sparks consume, so both still print `desync`. Rule: the simulation owns its RNG, seeded once and recorded with the replay, and nothing else may draw from it."
+            }
+          ]
+        },
+        {
+          "id": "job-system",
+          "title": "Jobs and data races",
+          "pareto": "extra",
+          "minutes": 8,
+          "takeaway": "Split frame work into independent chunks that write only their own data, combine results after a sync point, and use ThreadSanitizer to catch the races you missed.",
+          "steps": [
+            {
+              "type": "explain",
+              "title": "Using every core",
+              "body": "A modern CPU has many cores, but a classic game loop runs on one. A **job system** keeps a few worker threads alive (often one per core) and feeds them small **jobs**: *update entities 0–255*, *update entities 256–511*, and so on.\n\nThe pattern that keeps this sane:\n\n- Split work into **independent chunks**, each reading shared input and writing **only its own** output range.\n- Wait at a **sync point** until all jobs of a phase finish before the next phase reads their results.\n\nWhen two threads touch the same memory, at least one writes, and nothing orders them, that's a **data race**: undefined behaviour, not just a wrong number."
+            },
+            {
+              "type": "numeric",
+              "id": "q-job-count",
+              "concepts": [
+                "job-system"
+              ],
+              "prompt": "Ember updates **10,000** entities in chunks of **256**. How many jobs does that make?",
+              "answer": 40,
+              "hint": "The last chunk can be partly empty.",
+              "explanation": "10,000 ÷ 256 = 39.06, so 39 full chunks plus one partial chunk of 16: **40** jobs. Chunks of a few hundred entities are a common compromise: big enough that scheduling overhead is small, small enough to balance across cores."
+            },
+            {
+              "type": "bug",
+              "id": "q-bug-data-race",
+              "concepts": [
+                "data-race",
+                "sanitizers"
+              ],
+              "prompt": "Four workers count the living enemies. With 400,000 enemies, all alive, it should return `400000`. Plain runs printed 231835, 139782, 103958 and 151070. Click the line with the bug.",
+              "language": "cpp",
+              "code": "int countAlive(const std::vector<Enemy>& enemies) {\n    int alive = 0;\n    std::vector<std::thread> workers;\n    const std::size_t chunk = enemies.size() / 4;\n    for (int w = 0; w < 4; ++w) {\n        workers.emplace_back([&, w] {\n            for (std::size_t i = w * chunk; i < (w + 1) * chunk; ++i)\n                if (enemies[i].hp > 0) ++alive;\n        });\n    }\n    for (auto& t : workers) t.join();\n    return alive;\n}",
+              "error": "WARNING: ThreadSanitizer: data race (pid=...)\n  Write of size 4 at ... by thread T...:\n  Previous write of size 4 at ... by thread T...:\n  Location is stack of main thread.",
+              "lines": [
+                8
+              ],
+              "fixes": [
+                "Give each worker its own counter: `int counts[4] = {};` on line 2, `++counts[w]` on line 8, and return their sum on line 12",
+                "Change line 2 to `volatile int alive = 0;`",
+                "Change line 2 to `static int alive = 0;`",
+                "Change line 6 to capture by copy: `workers.emplace_back([=] {`"
+              ],
+              "answer": 0,
+              "hint": "`++alive` is a read, an add and a write. What if two threads do it at the same moment?",
+              "explanation": "All four threads do `++alive` on the same `int`. Two of them can read the same old value and both write back old + 1, losing a count, which is why every run printed a different, too-small number. Per-worker counters mean no two threads write the same memory; the main thread adds them up **after** the joins, the sync point.\n\n`volatile` doesn't make anything atomic, and a `static` counter is still shared: TSan reports a data race for both. Capturing by copy doesn't compile (*cannot assign to a variable captured by copy in a non-mutable lambda*). `std::atomic<int>` would also return 400000, but makes every increment contend for the same cache line."
+            },
+            {
+              "type": "buckets",
+              "id": "q-safe-in-parallel",
+              "concepts": [
+                "data-race",
+                "job-system"
+              ],
+              "prompt": "Several jobs run at the same time. Which of these are safe?",
+              "buckets": [
+                "Safe",
+                "Data race"
+              ],
+              "items": [
+                {
+                  "text": "Each job writes `positions[i]` only for the `i` in its own chunk",
+                  "bucket": 0
+                },
+                {
+                  "text": "All jobs read the same `const` level geometry",
+                  "bucket": 0
+                },
+                {
+                  "text": "Each job writes its result into its own slot of a `results` array",
+                  "bucket": 0
+                },
+                {
+                  "text": "Jobs increment a shared `std::atomic<int>` counter",
+                  "bucket": 0
+                },
+                {
+                  "text": "Jobs `push_back` into one shared `std::vector`",
+                  "bucket": 1
+                },
+                {
+                  "text": "Jobs increment a shared plain `int` counter",
+                  "bucket": 1
+                },
+                {
+                  "text": "One job writes an enemy's health while another reads it",
+                  "bucket": 1
+                }
+              ],
+              "hint": "A race needs shared memory, at least one writer, and nothing that orders the accesses.",
+              "explanation": "Disjoint writes, shared **reads**, and atomics are all safe. `push_back` from several threads races on the vector's size and buffer, a plain `int` counter races on every increment, and a write concurrent with a read races even if it \"looks harmless\". Engines usually give each job its own output buffer and merge after the sync point."
+            },
+            {
+              "type": "example",
+              "title": "How much faster can it get?",
+              "problem": "Physics takes 8 ms on one core: 2 ms of broadphase that must run serially, then 6 ms of narrowphase that splits cleanly into jobs. With 4 cores, what's the best case?",
+              "steps": [
+                "The serial part doesn't shrink: 2 ms.",
+                "The parallel part, at best, divides by the core count: 6 ÷ 4 = 1.5 ms.",
+                "Total: 2 + 1.5 = **3.5 ms**, a 2.3x speedup from 4 cores, not 4x. This is **Amdahl's law**: the serial part limits the speedup.",
+                "Real jobs also pay for scheduling, waiting at sync points, and cores fighting over shared cache lines, so measure the result."
+              ],
+              "answer": "3.5 ms in the best case: the 2 ms serial part plus 6 ms spread over 4 cores."
+            },
+            {
+              "type": "numeric",
+              "id": "q-amdahl",
+              "concepts": [
+                "job-system"
+              ],
+              "prompt": "Animation takes 10 ms on one core: 1 ms must stay serial, the other 9 ms splits evenly into jobs. In the best case, how many ms does it take on **6** cores?",
+              "answer": 2.5,
+              "tolerance": 0.01,
+              "unit": "ms",
+              "hint": "Serial time plus parallel time divided by the core count.",
+              "explanation": "1 + 9 ÷ 6 = 1 + 1.5 = **2.5 ms**, a 4x speedup from 6 cores. With infinitely many cores it could never drop below the 1 ms serial part."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

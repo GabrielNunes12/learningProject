@@ -58,6 +58,20 @@ const LANGS: Record<string, LangSpec> = {
     types: true,
     annotations: true,
   },
+  csharp: {
+    keywords: words(
+      'abstract as base bool break byte case catch char checked class const continue decimal default delegate do double else enum event explicit extern false finally fixed float for foreach goto if implicit in init int interface internal is lock long namespace new null object operator out override params private protected public readonly record ref return sbyte sealed short sizeof stackalloc static string struct switch this throw true try typeof uint ulong unchecked unsafe ushort using var virtual void volatile when where while with yield get set value nameof async await',
+    ),
+    comment: C_COMMENT,
+    types: true,
+  },
+  cpp: {
+    keywords: words(
+      'alignas alignof auto bool break case catch char class const constexpr consteval const_cast continue decltype default delete do double dynamic_cast else enum explicit extern false float for friend if inline int long mutable namespace new noexcept nullptr operator private protected public reinterpret_cast return short signed sizeof static static_assert static_cast struct switch template this thread_local throw true try typedef typename union unsigned using virtual void volatile while override final size_t std include define pragma',
+    ),
+    comment: C_COMMENT,
+    types: true,
+  },
   sql: {
     keywords: words(
       'select from where and or not in is null like ilike between as distinct order by group having limit offset fetch first rows only join inner left right full outer cross on using union all except intersect insert into values update set delete create table view index unique primary key foreign references default check constraint alter add drop column cascade if exists begin commit rollback transaction savepoint with recursive case when then else end over partition window asc desc nulls last true false count sum avg min max coalesce nullif cast extract exists any returning serial integer int bigint smallint text varchar char numeric decimal boolean date timestamp timestamptz real double precision row_number rank dense_rank lag lead explain analyze',
@@ -82,6 +96,12 @@ const ALIASES: Record<string, string> = {
   python3: 'python',
   kt: 'kotlin',
   kts: 'kotlin',
+  cs: 'csharp',
+  'c#': 'csharp',
+  'c++': 'cpp',
+  cc: 'cpp',
+  cxx: 'cpp',
+  hpp: 'cpp',
   jshell: 'java',
   postgresql: 'sql',
   postgres: 'sql',
