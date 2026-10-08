@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { lessonKey, lessonSteps, questionKey, unitOf, useCourseContent } from '../content';
+import { useEffect, useMemo, useState } from 'react';
+import { lessonKey, lessonSteps, prerequisiteGraph, questionKey, unitOf, useCourseContent } from '../content';
 import { useAuth } from '../lib/auth';
 import { href } from '../lib/router';
 import { completeLesson, getProgress, openLesson, recordAnswer, saveSheet, streak, useProgress, xpToday, XP, type SheetDraft } from '../lib/storage';
@@ -9,10 +9,12 @@ import { isQuestion, type Course, type ExampleStep, type LessonInfo, type Step }
 import { PlayerHeader, PlayerLoading } from './Layout';
 import { Markdown } from './Markdown';
 import { BottomBar, QuestionView } from './QuestionView';
+import { ConceptGraphContext } from './QuestionFrame';
 import { SimStepView } from './sims/SimStepView';
 import { accentStyle, Ring, useBodyAccent } from './ui';
 import { CourseIcon } from './CourseIcon';
 import { ExplainBack } from './ExplainBack';
+import { CheckYourself } from './CheckYourself';
 import { Icon } from './icons';
 import { useStudyTimer } from './useStudyTimer';
 import { hasEarned } from '../lib/certificate';
@@ -39,6 +41,11 @@ function LessonRun({ course, lesson, steps }: { course: Course; lesson: LessonIn
   const [score, setScore] = useState({ right: 0, total: 0 });
   const [xp, setXp] = useState(0);
   const [keywordSheet, setKeywordSheet] = useState<SheetDraft | undefined>();
+  // The concept graph for the step-back after a wrong answer (QuestionFrame). Memoised before the early return below.
+  const graph = useMemo(
+    () => ({ concepts: course.concepts ?? [], prereqs: prerequisiteGraph(course.id), seed: course.id }),
+    [course],
+  );
   const courseHref = href('course', course.id);
   useBodyAccent(course.color);
   useStudyTimer(course.id);
@@ -144,16 +151,18 @@ function LessonRun({ course, lesson, steps }: { course: Course; lesson: LessonIn
 
         {phase === 'steps' && isQuestion(step) && (
           <article className="step-card" key={stepKey}>
-            <QuestionView
-              step={step}
-              mode="learn"
-              onDone={(ok, confidence) => {
-                recordAnswer(questionKey(course.id, lesson.id, step.id), ok, confidence);
-                setScore((s) => ({ right: s.right + (ok ? 1 : 0), total: s.total + 1 }));
-                setXp((x) => x + (ok ? XP.correct : XP.attempt));
-                next();
-              }}
-            />
+            <ConceptGraphContext.Provider value={graph}>
+              <QuestionView
+                step={step}
+                mode="learn"
+                onDone={(ok, confidence) => {
+                  recordAnswer(questionKey(course.id, lesson.id, step.id), ok, confidence);
+                  setScore((s) => ({ right: s.right + (ok ? 1 : 0), total: s.total + 1 }));
+                  setXp((x) => x + (ok ? XP.correct : XP.attempt));
+                  next();
+                }}
+              />
+            </ConceptGraphContext.Provider>
           </article>
         )}
       </main>
@@ -319,6 +328,7 @@ function LessonComplete({ course, lesson, score, xp }: { course: Course; lesson:
 
         {/* Explain it back before the takeaway, so the summary doesn't do the recalling for you. */}
         {ideas.length > 0 && <ExplainBack ideas={ideas} />}
+        <CheckYourself course={course} lessonId={lesson.id} />
 
         <div className="takeaway">
           <span className="eyebrow">{t('lesson.complete.takeaway')}</span>

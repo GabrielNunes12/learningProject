@@ -72,6 +72,23 @@ export function ExplainBack({ ideas }: { ideas: Concept[] }) {
           ) : (
             <p className="small">{t('lesson.explain.all')}</p>
           )}
+          <details className="explain-model">
+            <summary>{t('lesson.explain.model')}</summary>
+            <ul>
+              {ideas.map((c) => (
+                <li key={c.id}>
+                  <strong>{c.label}</strong>
+                  {c.summary && (
+                    <>
+                      {' · '}
+                      <InlineMarkdown text={c.summary} />
+                    </>
+                  )}
+                </li>
+              ))}
+            </ul>
+            <p className="small muted">{t('lesson.explain.modelNote')}</p>
+          </details>
           <p className="small muted">{t('lesson.explain.note')}</p>
         </div>
       )}

@@ -1,15 +1,20 @@
 // The shared shell of every graded step: prompt, hint, "Why" feedback and the bottom check bar.
 // Classic questions and the mini-games all use it, so they look and behave the same and all feed spaced review.
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import type { Confidence } from '../lib/mastery';
+import { probeFor } from '../lib/socratic';
 import { XP } from '../lib/storage';
-import type { QuestionStep } from '../types';
+import type { Concept, QuestionStep } from '../types';
 import { InlineMarkdown, Markdown } from './Markdown';
 import { Icon } from './icons';
+import { SocraticProbe } from './SocraticProbe';
 import { useT } from '../i18n/react';
 
 export type Status = 'answering' | 'wrong' | 'correct' | 'revealed';
+
+/** The course's concept graph, for the Socratic step-back (lib/socratic.ts). `seed` makes each question's probe stable. */
+export const ConceptGraphContext = createContext<{ concepts: Concept[]; prereqs: Map<string, string[]>; seed: string } | null>(null);
 
 /** What QuestionView passes to every graded step component. */
 export interface QuestionProps<S extends QuestionStep = QuestionStep> {
@@ -123,6 +128,13 @@ export function QuestionFrame({
   const [showHint, setShowHint] = useState(false);
   const feedbackRef = useRef<HTMLDivElement>(null);
   const { status, first, finished, tone } = flow;
+  // The step-back is for learning only: it appears after the first miss and stays until the question is finished.
+  const graph = useContext(ConceptGraphContext);
+  const probe = useMemo(
+    () => (graph && mode === 'learn' ? probeFor(step.concepts, graph.concepts, graph.prereqs, `${graph.seed}/${step.id}`) : null),
+    [graph, mode, step],
+  );
+  const [probePick, setProbePick] = useState<number | null>(null);
 
   useEffect(() => {
     if (status !== 'answering') feedbackRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -165,6 +177,8 @@ export function QuestionFrame({
         </div>
 
         {children}
+
+        {probe && flow.misses > 0 && !finished && <SocraticProbe probe={probe} pick={probePick} onPick={setProbePick} />}
 
         {mode === 'learn' && step.hint && status === 'answering' && first !== null && !showHint && (
           <button className="link hint-link" onClick={() => setShowHint(true)}>

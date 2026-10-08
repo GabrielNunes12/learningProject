@@ -58,6 +58,10 @@ const prereqGraphs = new Map(
 /** A course's prerequisite graph: each concept's direct prerequisites (lib/diagnose.ts). */
 export const prerequisiteGraph = (courseId: string) => prereqGraphs.get(courseId) ?? new Map<string, string[]>();
 
+const englishLinkLabels = new Map(courses.map((c) => [c.id, (c.links ?? []).map((l) => l.label.trim().toLowerCase())]));
+/** A course's link labels in English, by link index (translations keep the order), for lib/checker.ts. */
+export const linkLabels = (courseId: string) => englishLinkLabels.get(courseId) ?? [];
+
 export const getCourse = (id: string) => courses.find((c) => c.id === id);
 
 export const lessonKey = (courseId: string, lessonId: string) => `${courseId}/${lessonId}`;

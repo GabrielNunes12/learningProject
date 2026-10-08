@@ -57,6 +57,24 @@ export default {
   'lesson.explain.fix': 'It points, you fix: add what’s missing in your own words and compare again.',
   'lesson.explain.all': 'Every idea is in there. Nice work.',
   'lesson.explain.note': 'It checks which ideas you name, not whether every sentence is right.',
+  // The lesson's own summary of each idea, after a comparison, to read next to your explanation.
+  'lesson.explain.model': "See the lesson's own summary",
+  'lesson.explain.modelNote': 'Read it next to yours: did you get each one right, not just mention it?',
+
+  // Check yourself (the checker), at the end of a lesson: true or false claims about how the lesson's ideas connect.
+  // {right} of {count} claims right. "Actually:" introduces the real link after a wrong false claim; "It’s true." after a missed true one.
+  'lesson.check.eyebrow': 'Check yourself',
+  'lesson.check.intro': 'True or false? These come from how the lesson’s ideas connect.',
+  'lesson.check.true': 'True',
+  'lesson.check.false': 'False',
+  'lesson.check.check': 'Check',
+  'lesson.check.score': { one: '{right} of {count} claim right', other: '{right} of {count} claims right' },
+  // Screen-reader labels of the ✓ and ✗ marks.
+  'lesson.check.markRight': 'Right',
+  'lesson.check.markWrong': 'Wrong',
+  'lesson.check.actually': 'Actually:',
+  'lesson.check.isTrue': 'It’s true.',
+  'lesson.check.retry': 'Try again',
 
   'lesson.complete.checkpoint': 'Unit checkpoint: map what you know',
   // <link>…</link> becomes a link to the sign-up page.
@@ -95,6 +113,15 @@ export default {
   'lesson.frame.needHint': 'Need a hint?',
   // {hint} is the hint text; <b>…</b> is bold.
   'lesson.frame.hintLine': '<b>Hint:</b> {hint}',
+  // The step-back after a wrong attempt (SocraticProbe). {concept} is a concept name, {summary} its one-sentence summary; <b>…</b> is bold.
+  'lesson.socratic.eyebrow': 'Step back',
+  'lesson.socratic.foundation': 'This question builds on <b>{concept}</b>. Which sentence describes it?',
+  'lesson.socratic.self': 'This question is about <b>{concept}</b>. Which sentence describes it?',
+  'lesson.socratic.right': 'Right, you know the foundation. Now look at the question again with it in mind.',
+  'lesson.socratic.rightSelf': 'Right. Now look at the question again with it in mind.',
+  'lesson.socratic.gap': 'That’s the gap. <b>{concept}</b>: {summary}',
+  'lesson.socratic.gapSelf': 'Not quite. <b>{concept}</b>: {summary}',
+  'lesson.socratic.tryAgain': 'Try the question again with this in mind.',
   // Heading of the explanation shown after answering.
   'lesson.frame.why': 'Why',
   // Right on the second try or later.
