@@ -8,6 +8,7 @@
 
 import type { Course, LessonInfo, QuestionStep, UnitInfo } from '../types';
 import { formatPercent, t, type MessageKey } from '../i18n/core.ts';
+import { rootCauses } from './diagnose.ts';
 
 // ---------- inputs ----------
 
@@ -353,7 +354,11 @@ export function isStarted(course: Course, p: ProgressLike) {
 }
 
 /** Builds the full report for the given courses (usually the started ones, or one course). */
-export function buildReport(courses: Course[], p: ProgressLike, now = Date.now()): Report {
+/**
+ * `prereqOf` gives a course's prerequisite graph (content/index.ts prerequisiteGraph); with it, the report looks for
+ * the shaky foundation behind repeated mistakes (lib/diagnose.ts).
+ */
+export function buildReport(courses: Course[], p: ProgressLike, now = Date.now(), prereqOf?: (courseId: string) => Map<string, string[]>): Report {
   const reports = courses.map((c) => analyzeCourse(c, p, now));
   const items = reports.flatMap((r) => r.items);
   const graphs = reports.filter((r) => r.hasGraph).length;
@@ -433,8 +438,38 @@ export function buildReport(courses: Course[], p: ProgressLike, now = Date.now()
       }),
     });
 
+  // The diagnostician: weak concepts that build on the same shaky foundation share one cause. Fix it first.
+  const roots: { course: Course; root: ItemStats; explains: ItemStats[] }[] = [];
+  if (prereqOf)
+    for (const r of reports) {
+      if (!r.hasGraph) continue;
+      const byId = new Map(r.items.filter((i) => i.kind === 'concept').map((i) => [i.id, i]));
+      const shaky = (id: string) => {
+        const i = byId.get(id);
+        return Boolean(i && (i.weakness > 0 || i.mastery === 'struggling' || i.mastery === 'untested' || (i.mastery === 'learning' && i.recentMisses > 0)));
+      };
+      const weakIds = [...byId.values()].filter((i) => i.weakness > 0).map((i) => i.id);
+      for (const rc of rootCauses(weakIds, shaky, prereqOf(r.course.id)))
+        roots.push({ course: r.course, root: byId.get(rc.root)!, explains: rc.explains.map((id) => byId.get(id)!) });
+    }
+  roots.sort((a, b) => b.explains.length - a.explains.length || b.root.weakness - a.root.weakness);
+  const topRoot = roots[0];
+
   // ---------- tips: rule-based, each tied to evidence and an action ----------
   const tips: Tip[] = [];
+  if (topRoot) {
+    const { root, explains } = topRoot;
+    tips.push({
+      id: `root-${root.key}`,
+      title: t('insights.tip.root.title', { name: name(root) }),
+      evidence: t('insights.tip.root.evidence', { items: list(explains.map(name)), count: explains.length }),
+      advice: root.mastery === 'untested' ? t('insights.tip.root.adviceUntested') : t('insights.tip.root.advice'),
+      actions: [
+        { label: t('insights.action.openLesson', { lesson: root.lessonTitle }), route: ['course', root.courseId, 'lesson', root.lessonId] },
+        ...(root.mastery === 'untested' ? [] : [{ label: t('insights.action.practiseConcept', { concept: root.label }), route: ['practice', root.courseId, root.id] }]),
+      ],
+    });
+  }
   const oneCourse = courses.length === 1 ? courses[0].id : undefined;
   const reviewRoute = oneCourse ? ['review', 'start', oneCourse] : ['review', 'start'];
   if (due >= PILE_UP || (due >= 5 && oldestDueDays >= 3))
@@ -448,7 +483,8 @@ export function buildReport(courses: Course[], p: ProgressLike, now = Date.now()
       advice: t('insights.tip.clearReviews.advice'),
       actions: [{ label: t('insights.action.startReviews'), route: reviewRoute }],
     });
-  for (const w of weak.slice(0, 2)) {
+  // Weak concepts the root cause explains are covered by its tip.
+  for (const w of weak.filter((i) => !topRoot?.explains.includes(i) && i !== topRoot?.root).slice(0, 2)) {
     tips.push({
       id: `weak-${w.key}`,
       title: t('insights.tip.weak.title', { name: name(w) }),
@@ -468,7 +504,7 @@ export function buildReport(courses: Course[], p: ProgressLike, now = Date.now()
       ],
     });
   }
-  const forgotNotWeak = forgotten.filter((f) => !weak.slice(0, 2).includes(f));
+  const forgotNotWeak = forgotten.filter((f) => !weak.slice(0, 2).includes(f) && !topRoot?.explains.includes(f) && f !== topRoot?.root);
   if (forgotNotWeak.length) {
     const f = forgotNotWeak[0];
     tips.push({

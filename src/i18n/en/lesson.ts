@@ -44,6 +44,20 @@ export default {
   'lesson.complete.certTitle': 'You finished {course}!',
   'lesson.complete.certText': 'Get your certificate: download it as a PDF and share it on LinkedIn, X or Facebook.',
   'lesson.complete.takeaway': 'Key takeaway',
+
+  // Explain it back (the listener), on the lesson-complete screen: the learner explains the lesson in their own words and sees which of its ideas (concepts) they named. {covered} of {count} ideas; {min} is the minimum number of words.
+  'lesson.explain.eyebrow': 'Explain it back',
+  'lesson.explain.intro': 'In your own words, as if to a friend who missed this lesson. Then see which of its ideas you covered.',
+  'lesson.explain.placeholder': 'This lesson was about…',
+  'lesson.explain.words': '{count}/{min} words',
+  'lesson.explain.compare': 'Compare with the lesson',
+  'lesson.explain.compareAgain': 'Compare again',
+  'lesson.explain.score': { one: '{covered} of {count} idea', other: '{covered} of {count} ideas' },
+  'lesson.explain.missed': { one: 'You missed this one', other: 'You missed these' },
+  'lesson.explain.fix': 'It points, you fix: add what’s missing in your own words and compare again.',
+  'lesson.explain.all': 'Every idea is in there. Nice work.',
+  'lesson.explain.note': 'It checks which ideas you name, not whether every sentence is right.',
+
   'lesson.complete.checkpoint': 'Unit checkpoint: map what you know',
   // <link>…</link> becomes a link to the sign-up page.
   'lesson.complete.signupNudge': '<link>Create a free profile</link> to keep your progress on every device.',

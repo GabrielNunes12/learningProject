@@ -94,6 +94,10 @@ export default {
   'insights.tip.clearReviews.advice':
     'Hazlos antes de empezar lecciones nuevas. El repaso espaciado suele funcionar mejor cuando se hace cerca de la fecha prevista.',
   'insights.tip.weak.title': 'Vuelve a {name}',
+  'insights.tip.root.title': 'Arregla primero {name}',
+  'insights.tip.root.evidence': { one: 'Sigues fallando {items}, que se apoya en esto.', other: 'Sigues fallando {items}: todos se apoyan en esto.' },
+  'insights.tip.root.advice': 'El mismo hueco aparece como error en cada uno. Arregla la causa y desaparecen: repite su lección y luego practícalo.',
+  'insights.tip.root.adviceUntested': 'Aún no lo has practicado, así que el hueco está en la base. Haz primero su lección.',
   'insights.tip.weak.adviceConcept':
     'Relee la lección “{lesson}” y luego haz una práctica mixta corta: mezclarlo con otras ideas te ayuda a elegir el enfoque correcto, no solo a repetirlo.',
   'insights.tip.weak.adviceLesson': 'Repite la lección y luego haz una práctica mixta corta de {course}.',

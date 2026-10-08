@@ -1,5 +1,5 @@
 import { useMemo, type ReactNode } from 'react';
-import { courses, getCourse } from '../content';
+import { courses, getCourse, prerequisiteGraph } from '../content';
 import {
   buildReport,
   hasEnoughForReport,
@@ -64,7 +64,7 @@ export function Insights({ courseId }: { courseId?: string }) {
   const focus = courseId ? getCourse(courseId) : undefined;
   const started = useMemo(() => courses.filter((c) => isStarted(c, p)), [p]);
   // The report holds sentences written in the active language, so it's rebuilt on a language switch.
-  const report = useMemo(() => buildReport(focus ? [focus] : started, p), [focus, started, p, locale]);
+  const report = useMemo(() => buildReport(focus ? [focus] : started, p, Date.now(), prerequisiteGraph), [focus, started, p, locale]);
   const filterCourses = focus && !started.includes(focus) ? [...started, focus] : started;
 
   return (
@@ -538,7 +538,7 @@ export function InsightsTeaser() {
   const p = useProgress();
   const started = useMemo(() => courses.filter((c) => isStarted(c, p)), [p]);
   // The report holds sentences in the active language: rebuild it on a language switch.
-  const report = useMemo(() => (hasEnoughForReport(started, p) ? buildReport(started, p) : null), [started, p, locale]);
+  const report = useMemo(() => (hasEnoughForReport(started, p) ? buildReport(started, p, Date.now(), prerequisiteGraph) : null), [started, p, locale]);
   if (!report) return null;
   const top = report.weak[0];
   const line = top

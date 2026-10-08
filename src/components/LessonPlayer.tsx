@@ -12,6 +12,7 @@ import { BottomBar, QuestionView } from './QuestionView';
 import { SimStepView } from './sims/SimStepView';
 import { accentStyle, Ring, useBodyAccent } from './ui';
 import { CourseIcon } from './CourseIcon';
+import { ExplainBack } from './ExplainBack';
 import { Icon } from './icons';
 import { useStudyTimer } from './useStudyTimer';
 import { hasEarned } from '../lib/certificate';
@@ -264,6 +265,7 @@ function LessonComplete({ course, lesson, score, xp }: { course: Course; lesson:
   const nextLesson =
     course.lessons.slice(pos + 1).find((l) => l.pareto === 'core' && !p.completed[lessonKey(course.id, l.id)]) ?? course.lessons[pos + 1];
   const today = xpToday(p);
+  const ideas = (course.concepts ?? []).filter((c) => c.lesson === lesson.id);
   // Finishing a unit's last lesson invites a unit checkpoint on the knowledge map.
   const unit = unitOf(course, lesson);
   const checkpoint =
@@ -314,6 +316,9 @@ function LessonComplete({ course, lesson, score, xp }: { course: Course; lesson:
             <span aria-hidden>→</span>
           </a>
         )}
+
+        {/* Explain it back before the takeaway, so the summary doesn't do the recalling for you. */}
+        {ideas.length > 0 && <ExplainBack ideas={ideas} />}
 
         <div className="takeaway">
           <span className="eyebrow">{t('lesson.complete.takeaway')}</span>

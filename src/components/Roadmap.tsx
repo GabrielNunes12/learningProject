@@ -120,7 +120,15 @@ export function Roadmap({ trackId }: { trackId?: string }) {
 
   return (
     <Page wide>
-      <PageHeader title={t('roadmap.title')} subtitle={t('roadmap.subtitle')} />
+      <PageHeader
+        title={t('roadmap.title')}
+        subtitle={t('roadmap.subtitle')}
+        actions={
+          <a className="btn" href={href('start')}>
+            {t('roadmap.start.helpChoose')}
+          </a>
+        }
+      />
 
       <nav className="rm-tracks" aria-label={t('roadmap.tracks')}>
         {infos.map((info) => {

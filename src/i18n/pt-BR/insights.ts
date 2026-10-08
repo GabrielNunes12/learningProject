@@ -99,6 +99,10 @@ export default {
   'insights.tip.clearReviews.advice':
     'Faça as revisões antes das lições novas. A revisão espaçada costuma funcionar melhor quando acontece perto da data marcada.',
   'insights.tip.weak.title': 'Retome {name}',
+  'insights.tip.root.title': 'Corrija {name} primeiro',
+  'insights.tip.root.evidence': { one: 'Você continua errando {items}, que se apoia nele.', other: 'Você continua errando {items}: todos se apoiam nele.' },
+  'insights.tip.root.advice': 'A mesma lacuna aparece como erro em cada um deles. Corrija a causa e eles somem: refaça a lição dele e depois pratique.',
+  'insights.tip.root.adviceUntested': 'Você ainda não praticou isso, então a lacuna está na base. Faça a lição dele primeiro.',
   'insights.tip.weak.adviceConcept':
     'Releia a lição “{lesson}” e depois faça uma prática mista curta: misturar com outras ideias ajuda a escolher a abordagem certa, não só a repeti-la.',
   'insights.tip.weak.adviceLesson': 'Refaça a lição e depois uma prática mista curta de {course}.',

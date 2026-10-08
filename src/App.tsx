@@ -7,6 +7,7 @@ import { DevGames } from './components/DevGames';
 import { Courses } from './components/Courses';
 import { Home } from './components/Home';
 import { Insights } from './components/Insights';
+import { Interview } from './components/Interview';
 import { KnowledgeMap } from './components/KnowledgeMap';
 import { Page } from './components/Layout';
 import { LessonPlayer } from './components/LessonPlayer';
@@ -54,6 +55,8 @@ function Route({ route }: { route: string[] }) {
       return <Courses />;
     case 'roadmap':
       return <Roadmap trackId={a} />;
+    case 'start':
+      return <Interview />;
     case 'review':
       if (a === 'start' || a === 'weak') return <ReviewSession key={route.join('/')} mode={a} courseId={b} />;
       return <Review />;

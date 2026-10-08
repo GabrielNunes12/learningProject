@@ -115,6 +115,9 @@ export function Home() {
               {t('common.createProfile')}
             </a>
           </div>
+          <a className="hero-start" href={href('start')}>
+            {t('roadmap.start.cta')}
+          </a>
         </section>
       ) : (
         <div className="greeting">
@@ -122,6 +125,11 @@ export function Home() {
           <p className="lead">
             {today >= p.dailyGoal ? t('home.goalReached') : due > 0 ? t('home.startWithReviews', { count: due }) : t('home.pickUp')}
           </p>
+          {fresh && (
+            <a className="hero-start" href={href('start')}>
+              {t('roadmap.start.cta')}
+            </a>
+          )}
         </div>
       )}
 

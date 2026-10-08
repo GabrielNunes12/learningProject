@@ -98,6 +98,13 @@ export default {
   'insights.tip.clearReviews.advice': 'Do them before new lessons. Spaced review tends to work best when it happens close to the due date.',
   // {name} is a concept name or a quoted lesson title.
   'insights.tip.weak.title': 'Revisit {name}',
+
+  // Root cause (the diagnostician): several weak concepts build on one shaky concept. {name} is that concept; {items} lists the weak ones that build on it.
+  'insights.tip.root.title': 'Fix {name} first',
+  'insights.tip.root.evidence': { one: 'You keep missing {items}, which builds on it.', other: 'You keep missing {items}: they all build on it.' },
+  'insights.tip.root.advice': 'The same gap shows up as mistakes in each of them. Fix the cause and they go away: redo its lesson, then practise it.',
+  'insights.tip.root.adviceUntested': 'You haven’t practised it yet, so the gap is in the foundation. Do its lesson first.',
+
   'insights.tip.weak.adviceConcept':
     'Reread the lesson "{lesson}", then do a short mixed practice: mixing it with other ideas tends to help you pick the right approach, not just repeat it.',
   'insights.tip.weak.adviceLesson': 'Redo the lesson, then a short mixed practice on {course}.',

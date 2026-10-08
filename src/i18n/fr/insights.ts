@@ -95,6 +95,10 @@ export default {
   },
   'insights.tip.clearReviews.advice': "Fais-les avant les nouvelles leçons. La révision espacée marche souvent mieux quand elle a lieu près de la date prévue.",
   'insights.tip.weak.title': "Reviens sur {name}",
+  'insights.tip.root.title': "Corrige d'abord {name}",
+  'insights.tip.root.evidence': { one: "Tu rates encore {items}, qui s'appuie dessus.", other: "Tu rates encore {items} : tous s'appuient dessus." },
+  'insights.tip.root.advice': 'Le même trou se traduit par des erreurs dans chacun. Corrige la cause et elles disparaissent : refais sa leçon, puis entraîne-toi.',
+  'insights.tip.root.adviceUntested': "Tu ne l'as pas encore pratiqué, donc le trou est dans les fondations. Fais d'abord sa leçon.",
   'insights.tip.weak.adviceConcept':
     "Relis la leçon « {lesson} », puis fais une courte pratique mixte : mélanger avec d'autres idées aide souvent à choisir la bonne approche, pas seulement à la répéter.",
   'insights.tip.weak.adviceLesson': "Refais la leçon, puis une courte pratique mixte sur {course}.",

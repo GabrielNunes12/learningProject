@@ -1,5 +1,6 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import { isQuestion, type Course, type CourseFile, type LessonInfo, type QuestionInfo, type QuestionStep, type Step } from '../types';
+import { prerequisites } from '../lib/diagnose';
 import { withLessons, type CatalogEntry } from './catalog';
 import roadmapData from './roadmap.json';
 import { overlay, ROADMAP_FIELDS, validateCourseTranslation, validateTranslation } from './translation';
@@ -46,6 +47,16 @@ export const courses: Course[] = loaded.sort(
 if (import.meta.env.DEV) contentErrors.push(...validateConceptRefs(loaded));
 
 export const categories = [...new Set(courses.map((c) => c.category))];
+
+// Built now, while link labels are still English: a language switch rewrites them in place (see `overlay` below).
+const prereqGraphs = new Map(
+  courses.map((c) => {
+    const lessonOf = new Map((c.concepts ?? []).map((k) => [k.id, c.lessons.findIndex((l) => l.id === k.lesson)]));
+    return [c.id, prerequisites(c.links ?? [], (id) => (lessonOf.get(id) ?? -1) >= 0 ? lessonOf.get(id) : undefined)];
+  }),
+);
+/** A course's prerequisite graph: each concept's direct prerequisites (lib/diagnose.ts). */
+export const prerequisiteGraph = (courseId: string) => prereqGraphs.get(courseId) ?? new Map<string, string[]>();
 
 export const getCourse = (id: string) => courses.find((c) => c.id === id);
 
