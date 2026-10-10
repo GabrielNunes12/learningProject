@@ -1,7 +1,7 @@
 // Tests for the mini-game answer checks and the new validation rules. Run with: npm test
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
-import { checkTraceValue, gameAnswerLabel, isOrderCorrect, isRightBucket, orderMarks } from '../src/lib/answers.ts';
+import { checkTraceValue, gameAnswerLabel, isOrderCorrect, isRightBucket, orderMarks, otherChangedVar } from '../src/lib/answers.ts';
 import { validateCourse, validateRoadmap } from '../src/content/validate.ts';
 import type { BucketsStep, OrderStep, TraceStep } from '../src/types.ts';
 
@@ -51,6 +51,28 @@ describe('buckets game', () => {
 });
 
 describe('trace game', () => {
+  test('accepts the whole assignment, any spacing and either quote style', () => {
+    const items = { line: 7, vars: { items: '[1, 2, 3]' }, ask: 'items' };
+    for (const typed of ['[1, 2, 3]', 'items = [1, 2, 3]', 'items=[1,2,3]', 'val items = [1, 2, 3]', '[ 1,2 , 3 ]', 'items: [1, 2, 3]'])
+      assert.equal(checkTraceValue(items, typed), true, typed);
+    for (const typed of ['[1, 2]', 'items = [1, 2]', 'count = [1, 2, 3]', 'items =', '[1, 2, 3, 4]']) assert.equal(checkTraceValue(items, typed), false, typed);
+    const msg = { line: 4, vars: { msg: '"Ann has 1"' }, ask: 'msg' };
+    for (const typed of ['"Ann has 1"', "'Ann has 1'", 'Ann has 1', 'msg = "Ann has 1"', 'msg = Ann has 1']) assert.equal(checkTraceValue(msg, typed), true, typed);
+    assert.equal(checkTraceValue(msg, '"Annhas1"'), false, 'spaces inside a string still count');
+    const words = { line: 1, vars: { xs: "['a', 'b']" }, ask: 'xs' };
+    assert.equal(checkTraceValue(words, '["a","b"]'), true);
+  });
+
+  test('a value that belongs to another variable the line just changed is a misread question, not a wrong answer', () => {
+    // Line 4 of the Kotlin template trace: `count = count + 2` runs, but the question asks about `msg`.
+    const prev = { count: '1', name: '"Ann"', msg: '"Ann has 1"' };
+    const frame = { line: 4, vars: { count: '3', name: '"Ann"', msg: '"Ann has 1"' }, ask: 'msg' };
+    assert.equal(otherChangedVar(frame, prev, '3'), 'count');
+    assert.equal(otherChangedVar(frame, prev, 'Ann has 1'), undefined, 'the right answer');
+    assert.equal(otherChangedVar(frame, prev, 'Ann'), undefined, 'name did not change on this line');
+    assert.equal(otherChangedVar(frame, prev, '4'), undefined, 'just wrong');
+  });
+
   test('accepts the value with or without string quotes, ignoring spaces', () => {
     assert.equal(checkTraceValue(trace.frames[1], "'aa'"), true);
     assert.equal(checkTraceValue(trace.frames[1], 'aa'), true);

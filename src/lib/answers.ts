@@ -113,16 +113,46 @@ export const expectedValue = (frame: TraceFrame) => (frame.ask ? frame.vars[fram
 
 const QUOTED = /^(['"])(.*)\1$/s;
 
-/** Compares a prediction with the frame's value. Spacing is ignored, and a string may be typed with or without its quotes. */
+/** Drops whitespace outside string literals and treats ' and " alike, so `[1,2, 3]` matches `[1, 2, 3]`. */
+function compact(s: string): string {
+  let out = '';
+  let quote: string | null = null;
+  for (const ch of s) {
+    if (quote) {
+      if (ch === quote) quote = null;
+      out += ch === "'" || ch === '"' ? '"' : ch;
+    } else if (ch === "'" || ch === '"') {
+      quote = ch;
+      out += '"';
+    } else if (!/\s/.test(ch)) out += ch;
+  }
+  return out;
+}
+
+/**
+ * Compares a prediction with the frame's value. Spacing is ignored, a string may be typed with or without its quotes
+ * (single or double), and the learner may write the whole assignment (`items = [1, 2, 3]`, even `val items = …`)
+ * instead of just the value.
+ */
 export function checkTraceValue(frame: TraceFrame, input: string): boolean {
   const expected = expectedValue(frame);
-  if (expected === undefined) return false;
-  const got = normalizeOutput(input);
-  if (got === '') return false;
+  if (expected === undefined || !frame.ask) return false;
+  const name = frame.ask.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const value = normalizeOutput(input).replace(new RegExp(`^(?:(?:val|var|let|const|auto|final)\\s+)?${name}\\s*[=:]\\s*`), '');
+  if (value === '') return false;
   const want = normalizeOutput(expected);
-  if (got === want) return true;
+  if (value === want || compact(value) === compact(want)) return true;
   const unquoted = want.match(QUOTED);
-  return unquoted !== null && got === unquoted[2];
+  return unquoted !== null && value === unquoted[2];
+}
+
+/**
+ * When a wrong prediction is the new value of another variable the line just changed (the learner answered for
+ * `count` while the question asks about `msg`), that variable's name. It's a misread question, not a wrong idea.
+ */
+export function otherChangedVar(frame: TraceFrame, prevVars: Record<string, string> | undefined, input: string): string | undefined {
+  if (!frame.ask || checkTraceValue(frame, input)) return undefined;
+  return Object.keys(frame.vars).find((name) => name !== frame.ask && prevVars?.[name] !== frame.vars[name] && checkTraceValue({ ...frame, ask: name }, input));
 }
 
 /** Short text for "Correct answer:" lines. */

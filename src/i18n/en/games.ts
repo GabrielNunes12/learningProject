@@ -224,6 +224,8 @@ export default {
   'games.trace.question': 'Line {line} just ran. What is {name} now?',
   'games.trace.placeholder': 'Type the value',
   'games.trace.notQuite': '✗ Not quite. Look at line {line} again and retry.',
+  // {value} is what the learner typed, {other} the variable that holds it, {name} the variable the question asks about.
+  'games.trace.otherVar': '{value} is the new value of {other}. The question asks about {name}: what is it now?',
   'games.trace.showMe': 'Show me',
   // After a prediction. {value} is "name = value" shown as code.
   'games.trace.right': '✓ Right: {value}',

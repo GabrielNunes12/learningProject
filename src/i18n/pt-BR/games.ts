@@ -183,6 +183,7 @@ export default {
   'games.trace.question': 'A linha {line} acabou de ser executada. Quanto vale {name} agora?',
   'games.trace.placeholder': 'Digite o valor',
   'games.trace.notQuite': '✗ Quase. Olhe a linha {line} de novo e tente outra vez.',
+  'games.trace.otherVar': '{value} é o novo valor de {other}. A pergunta é sobre {name}: quanto vale agora?',
   'games.trace.showMe': 'Mostrar',
   'games.trace.right': '✓ Certo: {value}',
   'games.trace.gotIt': '✓ Acertou: {value}',

@@ -2,7 +2,7 @@
 // At some frames the new value is hidden and the learner predicts it. Graded once, when the last frame is reached:
 // right only if every prediction was right on the first try.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { checkTraceValue, gameAnswerLabel } from '../../lib/answers';
+import { checkTraceValue, gameAnswerLabel, otherChangedVar } from '../../lib/answers';
 import {
   allFirstTriesRight,
   changedItems,
@@ -36,6 +36,8 @@ export function TraceGame({ step, mode, context, onDone }: QuestionProps<TraceSt
   const [state, setState] = useState<TraceState>(initialTrace);
   const stateRef = useRef(state);
   const [input, setInput] = useState('');
+  // The variable whose value the learner typed instead of the asked one (a misread question: not counted as a try).
+  const [otherVar, setOtherVar] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
   const stepRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -49,6 +51,7 @@ export function TraceGame({ step, mode, context, onDone }: QuestionProps<TraceSt
     setState(next);
     if (next.asking !== null && prev.asking === null) {
       setInput('');
+      setOtherVar(null);
       setPlaying(false);
     }
     if (prev.asking !== null && next.asking === null) requestAnimationFrame(() => stepRef.current?.focus());
@@ -68,6 +71,9 @@ export function TraceGame({ step, mode, context, onDone }: QuestionProps<TraceSt
   function submit() {
     const s = stateRef.current;
     if (s.asking === null || input.trim() === '') return;
+    const other = otherChangedVar(frames[s.asking], frames[s.asking - 1]?.vars, input);
+    setOtherVar(other ?? null);
+    if (other) return inputRef.current?.select();
     const ok = checkTraceValue(frames[s.asking], input);
     dispatch({ type: 'answer', ok, test });
     if (!ok && !test) {
@@ -258,7 +264,10 @@ export function TraceGame({ step, mode, context, onDone }: QuestionProps<TraceSt
                 id={`trace-in-${step.id}`}
                 ref={inputRef}
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                  setOtherVar(null);
+                }}
                 placeholder={t('games.trace.placeholder')}
                 autoComplete="off"
                 autoCapitalize="off"
@@ -269,7 +278,12 @@ export function TraceGame({ step, mode, context, onDone }: QuestionProps<TraceSt
                 {t('common.check')}
               </button>
             </div>
-            {tries > 0 && (
+            {otherVar && (
+              <p className="trace-ask-msg" role="alert">
+                <span>{tx('games.trace.otherVar', { value: <code>{input.trim()}</code>, other: <code>{otherVar}</code>, name: <code>{frame.ask}</code> })}</span>
+              </p>
+            )}
+            {tries > 0 && !otherVar && (
               <p className="trace-ask-msg" role="alert">
                 <span>{t('games.trace.notQuite', { line: frame.line })}</span>
                 <button type="button" className="link" onClick={() => dispatch({ type: 'reveal' })}>
