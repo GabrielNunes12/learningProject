@@ -21,7 +21,7 @@ export interface SessionResult {
   confidence: Confidence;
 }
 
-/** Every session is a thinking session: it opens with "make it again" (when a sheet is due) and closes with "make it shorter". */
+/** Every session is a thinking session: it closes with "make it shorter" and then "make it again" (when a sheet is due). */
 export interface SessionRitual {
   kind: 'review' | 'practice' | 'quiz';
   /** Shown in the notebook, e.g. "Review" or "Mixed practice: Python". */
@@ -53,7 +53,7 @@ export function Session(props: Props) {
 function SessionRun({ ritual, questions, exitHref, onFinish, renderEnd, stopWhen, standIn }: Props) {
   const { t, locale } = useT();
   const [againSheet] = useState(() => dueSheet(getProgress().sheets ?? {}));
-  const [phase, setPhase] = useState<'again' | 'questions' | 'shorter' | 'end'>(againSheet ? 'again' : 'questions');
+  const [phase, setPhase] = useState<'questions' | 'shorter' | 'again' | 'end'>('questions');
   const [idx, setIdx] = useState(0);
   const [results, setResults] = useState<SessionResult[]>([]);
   const [thinkXp, setThinkXp] = useState(0);
@@ -61,8 +61,8 @@ function SessionRun({ ritual, questions, exitHref, onFinish, renderEnd, stopWhen
   // Study time goes to the course of the question on screen (a mixed session moves between courses).
   useStudyTimer((phase === 'again' && againSheet?.course) || questions[Math.min(idx, questions.length - 1)]?.course.id);
   const xp = results.reduce((s, r) => s + (r.ok ? XP.correct : XP.attempt), 0) + thinkXp;
-  const lead = againSheet ? 1 : 0;
-  const total = questions.length + lead + 1;
+  // Progress bar: questions + shorter + [again].
+  const total = questions.length + 1 + (againSheet ? 1 : 0);
 
   if (phase === 'end') {
     const items: ClerkItem[] = results.map((r) => ({
@@ -86,14 +86,14 @@ function SessionRun({ ritual, questions, exitHref, onFinish, renderEnd, stopWhen
     const color = questions[0]?.course.color;
     return (
       <div className="player" style={accentStyle(color)}>
-        <PlayerHeader exitHref={exitHref} done={phase === 'again' ? 0 : total - 1} total={total} />
+        <PlayerHeader exitHref={exitHref} done={phase === 'shorter' ? questions.length : total - 1} total={total} />
         <main className="player-body">
           {phase === 'again' && againSheet && (
             <AgainPhase
               sheet={againSheet}
               onDone={(gained) => {
                 setThinkXp((x) => x + gained);
-                setPhase('questions');
+                setPhase('end');
               }}
             />
           )}
@@ -108,7 +108,7 @@ function SessionRun({ ritual, questions, exitHref, onFinish, renderEnd, stopWhen
                 const now = Date.now();
                 const sheet = finishShorter({ key: sessionSheetKey(ritual.kind, now), course: ritual.course, title: ritual.title, again: [], createdAt: now, updatedAt: now }, anchors, now);
                 setThinkXp((x) => x + saveSheet(sheet));
-                setPhase('end');
+                setPhase(againSheet ? 'again' : 'end');
               }}
             />
           )}
@@ -123,7 +123,7 @@ function SessionRun({ ritual, questions, exitHref, onFinish, renderEnd, stopWhen
     <div className="player" style={accentStyle(q.course.color)}>
       <PlayerHeader
         exitHref={exitHref}
-        done={lead + idx}
+        done={idx}
         total={total}
         right={
           <span className="xp-pill" aria-label={t('lesson.session.correctSoFar', { count: right })}>

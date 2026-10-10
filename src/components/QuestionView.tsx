@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { answerLabel, checkAnswer, isBugLine, shuffled } from '../lib/answers';
+import { sparChoice } from '../lib/sparring';
 import type { ClassicQuestionStep } from '../types';
 import { BalanceGame } from './games/BalanceGame';
 import { BucketsGame } from './games/BucketsGame';
@@ -59,6 +60,8 @@ function ClassicQuestion({ step, mode, shuffle = false, context, onDone }: Quest
   const { status, finished, tone } = flow;
   const [selected, setSelected] = useState<number | null>(null);
   const [input, setInput] = useState('');
+  // The learner's first wrong pick on a multiple-choice question: the sparring partner argues against it (lib/sparring.ts).
+  const [firstWrong, setFirstWrong] = useState<number | null>(null);
   // Bug hunts have two parts: find the line, then pick the fix.
   const [line, setLine] = useState<number | null>(null);
   const [lineFound, setLineFound] = useState(false);
@@ -79,8 +82,13 @@ function ClassicQuestion({ step, mode, shuffle = false, context, onDone }: Quest
       else flow.grade(false);
       return;
     }
-    flow.grade(checkAnswer(step, choices ? selected : input));
+    const ok = checkAnswer(step, choices ? selected : input);
+    if (!ok && step.type === 'mcq' && firstWrong === null) setFirstWrong(selected);
+    flow.grade(ok);
   }
+
+  // Learning only: after a right multiple-choice answer, argue against a wrong choice before the "Why" (Sparring.tsx).
+  const sparIndex = step.type === 'mcq' && mode === 'learn' ? sparChoice(step.answer, step.choices.length, step.id, firstWrong) : -1;
 
   function retry() {
     if (pickingLine) setLine(null);
@@ -114,6 +122,11 @@ function ClassicQuestion({ step, mode, shuffle = false, context, onDone }: Quest
       canCheck={canCheck}
       onCheck={check}
       onRetry={retry}
+      spar={
+        step.type === 'mcq' && mode === 'learn' && sparIndex >= 0
+          ? { choice: step.choices[sparIndex], yours: firstWrong !== null }
+          : undefined
+      }
       answer={
         step.type === 'output' ? (
           <div className="answer-line">

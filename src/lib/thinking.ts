@@ -1,7 +1,7 @@
-// Thinking on paper: the three-phase ritual that opens and closes every study session.
+// Thinking on paper: the three-phase ritual that closes every study session.
 //   Make it wrong   (end of a lesson)    dump keywords from memory after the steps, sort them into piles, sketch. Nothing is graded.
 //   Make it shorter (end of any session) squeeze it into 2–3 anchors of at most 4 words.
-//   Make it again   (start of a session) rebuild an earlier sheet from a blank page, then compare and fix it.
+//   Make it again   (end of a session)   rebuild an earlier sheet from a blank page, then compare and fix it.
 // Pure: no DOM, only type imports plus the matching helpers from knowledgeMap.ts and t() from the i18n core.
 import { t } from '../i18n/core.ts';
 import type { Concept } from '../types.ts';
@@ -37,7 +37,7 @@ export const ANCHORS_MAX = 3;
 export const AGAIN_MIN_RECALL = 2;
 /**
  * Days until the next "make it again", by how many redos a sheet already has. The first one is due
- * straight away (the start of the next session); later ones spread out like spaced review.
+ * straight away (the end of the next session); later ones spread out like spaced review.
  */
 export const AGAIN_DAYS = [0, 1, 3, 7, 16, 35];
 
@@ -298,7 +298,7 @@ export function anchorFeedback(anchors: string[], concepts: Concept[], lessonId?
 export const nextDue = (redos: number, now = Date.now()) => now + AGAIN_DAYS[Math.min(redos, AGAIN_DAYS.length - 1)] * DAY;
 
 /**
- * The sheet to rebuild at the start of a session: a lesson sheet that is due, never the one being
+ * The sheet to rebuild at the end of a session (picked when it starts): a lesson sheet that is due, never the one being
  * studied right now. The freshest never-redone sheet comes first (it is "the previous session"),
  * then the most overdue.
  */

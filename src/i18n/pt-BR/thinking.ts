@@ -59,11 +59,11 @@ export default {
   'thinking.shorter.notMistake': 'Não é um erro: vale mais uma olhada antes de seguir em frente.',
   'thinking.shorter.beforeHeading': 'Logo antes, você escreveu',
   'thinking.shorter.firstGuesses': 'Suas palavras-chave',
-  'thinking.shorter.rebuildNext': 'Você vai refazer esta folha de memória no início da próxima sessão e corrigir o que estiver errado.',
+  'thinking.shorter.rebuildNext': 'Você vai refazer esta folha de memória no fim da próxima sessão e corrigir o que estiver errado.',
   'thinking.shorter.ready': 'Curto o bastante. Bagunçado não tem problema.',
   'thinking.shorter.squeeze': 'Condensar',
 
-  // ---------- make it again (start of a later session) ----------
+  // ---------- make it again (end of a later session) ----------
   'thinking.again.heading': 'Refaça “{title}” de memória',
   'thinking.again.lead':
     'Papel em branco, sem espiar. Escreva as palavras-chave e âncoras de que você lembra daquela folha e organize-as do jeito que elas se ligam agora. Puxar tudo de volta da memória é o que faz fixar.',
@@ -136,8 +136,8 @@ export default {
   'thinking.notebook.methodWrong': '<b>{phase}.</b> Depois dos passos, coloque no papel as palavras-chave de que você se lembra e organize-as em pilhas, mesmo que algumas estejam erradas.',
   'thinking.notebook.methodShorter': '<b>{phase}.</b> Depois de cada sessão, condense tudo em 2–3 âncoras de no máximo quatro palavras.',
   'thinking.notebook.methodAgain':
-    '<b>{phase}.</b> Na sessão seguinte, refaça uma folha antiga a partir de uma página em branco, depois corrija e reorganize. O intervalo aumenta a cada vez.',
-  'thinking.notebook.empty': 'Nenhuma folha ainda. Sua primeira lição começa com uma.',
+    '<b>{phase}.</b> No fim da sessão seguinte, refaça uma folha antiga a partir de uma página em branco, depois corrija e reorganize. O intervalo aumenta a cada vez.',
+  'thinking.notebook.empty': 'Nenhuma folha ainda. Sua primeira lição termina com uma.',
   'thinking.notebook.pickLesson': 'Escolher uma lição',
   'thinking.notebook.sessionAnchors': 'Âncoras da sessão',
   'thinking.notebook.rebuilt': 'refeita {count}×, da última vez {remembered}/{total} de memória',
@@ -157,8 +157,8 @@ export default {
   // ---------- Home teaser card ----------
   'thinking.teaser.eyebrow': 'Pensar no papel',
   'thinking.teaser.due': {
-    one: '{count} folha pronta para refazer de memória. Sua próxima sessão começa com ela.',
-    other: '{count} folhas prontas para refazer de memória. Sua próxima sessão começa com uma delas.',
+    one: '{count} folha pronta para refazer de memória. Sua próxima sessão termina com ela.',
+    other: '{count} folhas prontas para refazer de memória. Sua próxima sessão termina com uma delas.',
   },
   'thinking.teaser.streak': { one: 'Sequência de reflexão: {count} dia.', other: 'Sequência de reflexão: {count} dias.' },
   'thinking.teaser.sheets': { one: '{count} folha no seu caderno.', other: '{count} folhas no seu caderno.' },

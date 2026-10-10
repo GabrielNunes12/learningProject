@@ -9,6 +9,7 @@ import type { Concept, QuestionStep } from '../types';
 import { InlineMarkdown, Markdown } from './Markdown';
 import { Icon } from './icons';
 import { SocraticProbe } from './SocraticProbe';
+import { SparCompare, Sparring } from './Sparring';
 import { useT } from '../i18n/react';
 
 export type Status = 'answering' | 'wrong' | 'correct' | 'revealed';
@@ -107,6 +108,8 @@ interface FrameProps {
   enterKey?: boolean;
   /** Label for the check button (default: common.check). */
   checkLabel?: string;
+  /** learn only, after a right answer: the wrong choice to argue against, before the "Why" (Sparring.tsx). */
+  spar?: { choice: string; yours: boolean };
   children: ReactNode;
 }
 
@@ -122,6 +125,7 @@ export function QuestionFrame({
   answer,
   enterKey = true,
   checkLabel,
+  spar,
   children,
 }: FrameProps) {
   const { t, tx } = useT();
@@ -135,6 +139,10 @@ export function QuestionFrame({
     [graph, mode, step],
   );
   const [probePick, setProbePick] = useState<number | null>(null);
+  // The sparring round comes before the "Why" and is never a gate: argue, skip, or Continue.
+  const [sparState, setSparState] = useState<'arguing' | 'done'>('arguing');
+  const [sparArgument, setSparArgument] = useState<string | null>(null);
+  const sparring = spar !== undefined && mode === 'learn' && status === 'correct' && sparState === 'arguing';
 
   useEffect(() => {
     if (status !== 'answering') feedbackRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -192,12 +200,25 @@ export function QuestionFrame({
         )}
 
         <div ref={feedbackRef}>
-          {finished && (
-            <div className={`explanation ${tone}`}>
-              {status === 'revealed' && answer}
-              <span className="eyebrow">{t('lesson.frame.why')}</span>
-              <Markdown text={step.explanation} />
-            </div>
+          {spar && sparring && (
+            <Sparring
+              choice={spar.choice}
+              yours={spar.yours}
+              onDone={(argued) => {
+                setSparArgument(argued);
+                setSparState('done');
+              }}
+            />
+          )}
+          {finished && !sparring && (
+            <>
+              {sparArgument && <SparCompare argument={sparArgument} />}
+              <div className={`explanation ${tone}`}>
+                {status === 'revealed' && answer}
+                <span className="eyebrow">{t('lesson.frame.why')}</span>
+                <Markdown text={step.explanation} />
+              </div>
+            </>
           )}
         </div>
       </div>

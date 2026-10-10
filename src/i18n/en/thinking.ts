@@ -11,7 +11,7 @@ export default {
   'thinking.phase.wrong': 'Make it wrong',
   // Phase 2, at the end of a session: squeeze what was learned into 2–3 tiny "anchors" (4 words at most each).
   'thinking.phase.shorter': 'Make it shorter',
-  // Phase 3, at the start of a later session: rebuild an old sheet from memory on blank paper, then fix it.
+  // Phase 3, at the end of a later session: rebuild an old sheet from memory on blank paper, then fix it.
   'thinking.phase.again': 'Make it again',
 
   // ---------- missing-step messages (src/lib/thinking.ts), shown in the bottom bar while a phase is not done ----------
@@ -66,12 +66,12 @@ export default {
   'thinking.shorter.notMistake': 'Not a mistake: worth one more look before you move on.',
   'thinking.shorter.beforeHeading': 'Just before, you wrote',
   'thinking.shorter.firstGuesses': 'Your keywords',
-  'thinking.shorter.rebuildNext': "You'll rebuild this sheet from memory at the start of your next session, and fix what's wrong.",
+  'thinking.shorter.rebuildNext': "You'll rebuild this sheet from memory at the end of your next session, and fix what's wrong.",
   'thinking.shorter.ready': 'Short enough. Messy is fine.',
   // Button: shows what the anchors cover.
   'thinking.shorter.squeeze': 'Squeeze it',
 
-  // ---------- make it again (start of a later session) ----------
+  // ---------- make it again (end of a later session) ----------
   // {title} is the sheet's title (a lesson title or a session name).
   'thinking.again.heading': 'Rebuild “{title}” from memory',
   'thinking.again.lead':
@@ -166,8 +166,8 @@ export default {
   'thinking.notebook.methodWrong': '<b>{phase}.</b> After the steps, put the keywords you remember on paper and sort them, even if some are wrong.',
   'thinking.notebook.methodShorter': '<b>{phase}.</b> After every session, squeeze it into 2–3 anchors of four words or fewer.',
   'thinking.notebook.methodAgain':
-    '<b>{phase}.</b> Next session, rebuild an old sheet from a blank page, then fix and reorganise it. The gap grows each time.',
-  'thinking.notebook.empty': 'No sheets yet. Your first lesson starts with one.',
+    '<b>{phase}.</b> At the end of your next session, rebuild an old sheet from a blank page, then fix and reorganise it. The gap grows each time.',
+  'thinking.notebook.empty': 'No sheets yet. Your first lesson ends with one.',
   'thinking.notebook.pickLesson': 'Pick a lesson',
   'thinking.notebook.sessionAnchors': 'Session anchors',
   // Under a sheet title. "×" means "times".
@@ -186,8 +186,8 @@ export default {
   // ---------- Home teaser card ----------
   'thinking.teaser.eyebrow': 'Thinking on paper',
   'thinking.teaser.due': {
-    one: '{count} sheet ready to rebuild from memory. Your next session opens with one.',
-    other: '{count} sheets ready to rebuild from memory. Your next session opens with one.',
+    one: '{count} sheet ready to rebuild from memory. Your next session ends with it.',
+    other: '{count} sheets ready to rebuild from memory. Your next session ends with one.',
   },
   // Two sentences shown together: "Thinking streak: 3 days. 5 sheets in your notebook."
   'thinking.teaser.streak': { one: 'Thinking streak: {count} day.', other: 'Thinking streak: {count} days.' },

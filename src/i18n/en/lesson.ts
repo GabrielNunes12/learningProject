@@ -141,6 +141,19 @@ export default {
   'lesson.socratic.gap': 'That’s the gap. <b>{concept}</b>: {summary}',
   'lesson.socratic.gapSelf': 'Not quite. <b>{concept}</b>: {summary}',
   'lesson.socratic.tryAgain': 'Try the question again with this in mind.',
+  // The sparring partner (Sparring.tsx): argue against a wrong choice before the "Why". {choice} is the choice text.
+  'lesson.spar.eyebrow': 'Sparring',
+  'lesson.spar.friend': 'A friend picks “{choice}”. Convince them they’re wrong.',
+  'lesson.spar.yours': 'Earlier you picked “{choice}”. Now argue against it.',
+  'lesson.spar.placeholder': 'It’s not that, because…',
+  'lesson.spar.words': '{count}/{min} words',
+  'lesson.spar.argue': 'Argue',
+  'lesson.spar.skip': 'Skip',
+  'lesson.spar.compare': 'Compare your argument with the lesson’s reasoning:',
+  'lesson.spar.holds': 'My argument holds',
+  'lesson.spar.missed': 'I missed something',
+  'lesson.spar.holdsNote': 'Good: you can defend it.',
+  'lesson.spar.missedNote': 'Read the reasoning again: that’s the part to remember.',
   // Heading of the explanation shown after answering.
   'lesson.frame.why': 'Why',
   // Right on the second try or later.

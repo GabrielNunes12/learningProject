@@ -52,11 +52,11 @@ export default {
   'thinking.shorter.notMistake': "Ce n'est pas une erreur : ça vaut un dernier coup d'œil avant de continuer.",
   'thinking.shorter.beforeHeading': "Juste avant, tu as écrit",
   'thinking.shorter.firstGuesses': "Tes mots-clés",
-  'thinking.shorter.rebuildNext': "Tu reconstruiras cette feuille de mémoire au début de ta prochaine séance, et tu corrigeras ce qui est faux.",
+  'thinking.shorter.rebuildNext': "Tu reconstruiras cette feuille de mémoire à la fin de ta prochaine séance, et tu corrigeras ce qui est faux.",
   'thinking.shorter.ready': "Assez court. Pas besoin que ce soit propre.",
   'thinking.shorter.squeeze': "Condenser",
 
-  // ---------- make it again (start of a later session) ----------
+  // ---------- make it again (end of a later session) ----------
   'thinking.again.heading': "Reconstruis « {title} » de mémoire",
   'thinking.again.lead':
     "Feuille blanche, sans regarder. Écris les mots-clés et les ancres de cette feuille dont tu te souviens, et organise-les selon les liens que tu vois maintenant. C'est l'effort d'aller les rechercher qui les fait tenir.",
@@ -129,8 +129,8 @@ export default {
   'thinking.notebook.methodWrong': "<b>{phase}.</b> Après les étapes, mets sur papier les mots-clés dont tu te souviens et classe-les, même si certains sont faux.",
   'thinking.notebook.methodShorter': "<b>{phase}.</b> Après chaque séance, condense-la en 2 ou 3 ancres de quatre mots maximum.",
   'thinking.notebook.methodAgain':
-    "<b>{phase}.</b> À la séance suivante, reconstruis une ancienne feuille sur une page blanche, puis corrige-la et réorganise-la. L'intervalle s'allonge à chaque fois.",
-  'thinking.notebook.empty': "Pas encore de feuilles. Ta première leçon commence par une feuille.",
+    "<b>{phase}.</b> À la fin de la séance suivante, reconstruis une ancienne feuille sur une page blanche, puis corrige-la et réorganise-la. L'intervalle s'allonge à chaque fois.",
+  'thinking.notebook.empty': "Pas encore de feuilles. Ta première leçon se termine par une feuille.",
   'thinking.notebook.pickLesson': "Choisis une leçon",
   'thinking.notebook.sessionAnchors': "Ancres de séance",
   'thinking.notebook.rebuilt': "reconstruite {count} fois, la dernière avec {remembered}/{total} de mémoire",
@@ -147,8 +147,8 @@ export default {
   // ---------- Home teaser card ----------
   'thinking.teaser.eyebrow': "Penser sur papier",
   'thinking.teaser.due': {
-    one: "{count} feuille prête à être reconstruite de mémoire. Ta prochaine séance commence par là.",
-    other: "{count} feuilles prêtes à être reconstruites de mémoire. Ta prochaine séance commence par l'une d'elles.",
+    one: "{count} feuille prête à être reconstruite de mémoire. Ta prochaine séance se termine par là.",
+    other: "{count} feuilles prêtes à être reconstruites de mémoire. Ta prochaine séance se termine par l'une d'elles.",
   },
   'thinking.teaser.streak': { one: "Série de réflexion : {count} jour.", other: "Série de réflexion : {count} jours." },
   'thinking.teaser.sheets': { one: "{count} feuille dans ton carnet.", other: "{count} feuilles dans ton carnet." },

@@ -56,7 +56,7 @@ export default {
   'thinking.shorter.notMistake': 'No es un error: vale la pena echarle otro vistazo antes de seguir.',
   'thinking.shorter.beforeHeading': 'Justo antes escribiste',
   'thinking.shorter.firstGuesses': 'Tus palabras clave',
-  'thinking.shorter.rebuildNext': 'Reharás esta hoja de memoria al empezar tu próxima sesión y corregirás lo que esté mal.',
+  'thinking.shorter.rebuildNext': 'Reharás esta hoja de memoria al final de tu próxima sesión y corregirás lo que esté mal.',
   'thinking.shorter.ready': 'Ya es bastante corto. El desorden no importa.',
   'thinking.shorter.squeeze': 'Condénsalo',
 
@@ -133,8 +133,8 @@ export default {
   'thinking.notebook.methodWrong': '<b>{phase}.</b> Después de los pasos, pon en papel las palabras clave que recuerdes y ordénalas, aunque algunas estén mal.',
   'thinking.notebook.methodShorter': '<b>{phase}.</b> Después de cada sesión, condénsala en 2–3 anclas de cuatro palabras o menos.',
   'thinking.notebook.methodAgain':
-    '<b>{phase}.</b> En la siguiente sesión, rehaz una hoja antigua partiendo de una página en blanco, y luego corrígela y reorganízala. El intervalo crece cada vez.',
-  'thinking.notebook.empty': 'Aún no hay hojas. Tu primera lección empieza con una.',
+    '<b>{phase}.</b> Al final de la siguiente sesión, rehaz una hoja antigua partiendo de una página en blanco, y luego corrígela y reorganízala. El intervalo crece cada vez.',
+  'thinking.notebook.empty': 'Aún no hay hojas. Tu primera lección termina con una.',
   'thinking.notebook.pickLesson': 'Elige una lección',
   'thinking.notebook.sessionAnchors': 'Anclas de la sesión',
   'thinking.notebook.rebuilt': 'rehecha {count}×, la última vez {remembered}/{total} de memoria',
@@ -151,8 +151,8 @@ export default {
   // ---------- Home teaser card ----------
   'thinking.teaser.eyebrow': 'Pensar en papel',
   'thinking.teaser.due': {
-    one: '{count} hoja lista para rehacer de memoria. Tu próxima sesión empieza con una.',
-    other: '{count} hojas listas para rehacer de memoria. Tu próxima sesión empieza con una.',
+    one: '{count} hoja lista para rehacer de memoria. Tu próxima sesión termina con ella.',
+    other: '{count} hojas listas para rehacer de memoria. Tu próxima sesión termina con una.',
   },
   'thinking.teaser.streak': { one: 'Racha de reflexión: {count} día.', other: 'Racha de reflexión: {count} días.' },
   'thinking.teaser.sheets': { one: '{count} hoja en tu cuaderno.', other: '{count} hojas en tu cuaderno.' },

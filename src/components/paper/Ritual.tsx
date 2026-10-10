@@ -1,4 +1,4 @@
-// The thinking-on-paper phases that open and close every study session (see lib/thinking.ts).
+// The thinking-on-paper phases that close every study session (see lib/thinking.ts).
 import { useEffect, useMemo, useState } from 'react';
 import type { Sheet, SheetDraft } from '../../lib/storage';
 import { saveSheet } from '../../lib/storage';
@@ -204,7 +204,7 @@ export function ShorterPhase({ heading, intro, concepts, lessonId, focus, keywor
 
 const VERDICT_LABEL: Record<Verdict, MessageKey> = { keep: 'thinking.again.keep', fix: 'thinking.again.fix', drop: 'thinking.again.drop' };
 
-/** Start of a session: rebuild an earlier sheet from a blank page, then compare, fix and keep a clean version. */
+/** End of a session, after make it shorter: rebuild an earlier sheet from a blank page, then compare, fix and keep a clean version. */
 export function AgainPhase({ sheet, onDone }: { sheet: Sheet; onDone: (xp: number) => void }) {
   const { t } = useT();
   const old = sheet.clean ?? sheet.wrong;

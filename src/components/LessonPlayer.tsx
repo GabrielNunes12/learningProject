@@ -36,9 +36,10 @@ export function LessonPlayer({ course, lesson }: { course: Course; lesson: Lesso
 function LessonRun({ course, lesson, steps }: { course: Course; lesson: LessonInfo; steps: Step[] }) {
   const { t, locale } = useT();
   const sheetKey = lessonSheetKey(course.id, lesson.id);
-  // Every lesson is a thinking session: redo an earlier sheet if one is due, learn the steps, sort keywords, squeeze at the end.
+  // Every lesson is a thinking session: learn the steps, sort keywords, squeeze, then redo an earlier sheet if one is due.
+  // The due sheet is picked now, so the sheet this lesson writes is never the one rebuilt at its end.
   const [againSheet] = useState(() => dueSheet(getProgress().sheets ?? {}, Date.now(), sheetKey));
-  const [phase, setPhase] = useState<Phase>(againSheet ? 'again' : 'steps');
+  const [phase, setPhase] = useState<Phase>('steps');
   const [index, setIndex] = useState(0);
   const [score, setScore] = useState({ right: 0, total: 0 });
   const [xp, setXp] = useState(0);
@@ -66,10 +67,9 @@ function LessonRun({ course, lesson, steps }: { course: Course; lesson: LessonIn
 
   if (phase === 'done') return <LessonComplete course={course} lesson={lesson} score={score} xp={xp} results={results} />;
 
-  // Progress bar: [again] + steps + wrong + shorter.
-  const before = againSheet ? 1 : 0;
-  const total = before + steps.length + 2;
-  const done = phase === 'again' ? 0 : phase === 'steps' ? before + index : phase === 'wrong' ? before + steps.length : total - 1;
+  // Progress bar: steps + wrong + shorter + [again].
+  const total = steps.length + 2 + (againSheet ? 1 : 0);
+  const done = phase === 'steps' ? index : phase === 'wrong' ? steps.length : phase === 'shorter' ? steps.length + 1 : total - 1;
   const step = steps[index];
   // The current step remounts in the new language on a switch; index, phase, score and XP are kept.
   const stepKey = `${index}-${locale}`;
@@ -96,7 +96,7 @@ function LessonRun({ course, lesson, steps }: { course: Course; lesson: LessonIn
             sheet={againSheet}
             onDone={(gained) => {
               setXp((x) => x + gained);
-              setPhase('steps');
+              setPhase('done');
             }}
           />
         )}
@@ -126,7 +126,7 @@ function LessonRun({ course, lesson, steps }: { course: Course; lesson: LessonIn
               const base = sheet ?? startLessonSheet(undefined, course.id, lesson.id, lesson.title, keywordSheet ?? emptyDraft());
               const gained = saveSheet(finishShorter(base, anchors));
               setXp((x) => x + gained + completeLesson(lessonKey(course.id, lesson.id)));
-              setPhase('done');
+              setPhase(againSheet ? 'again' : 'done');
             }}
           />
         )}
