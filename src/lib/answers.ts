@@ -146,6 +146,66 @@ export function checkTraceValue(frame: TraceFrame, input: string): boolean {
   return unquoted !== null && value === unquoted[2];
 }
 
+/** True when two printed values read the same (spacing outside strings and quote style ignored). */
+export const sameTraceValue = (a: string, b: string) => compact(normalizeOutput(a)) === compact(normalizeOutput(b));
+
+/** FNV-1a: a string to a 32-bit seed, so the same question always shows its options in the same order. */
+function seedOf(s: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+  return h >>> 0;
+}
+
+/**
+ * Up to `max` values to choose from when predicting `frames[at]` (lessons; reviews and quizzes keep typing).
+ * The right value plus believable wrong ones, nearest mistakes first: the value the variable had or will have on other
+ * lines (a string template that "updates itself", a list before the append), then other variables' values on this line
+ * (answering for `count` when asked about `msg`), then a list's last item alone or without it, then a number one off. Order is shuffled by `seed`. Fewer than two
+ * means there is nothing believable to offer, and the learner types instead.
+ */
+export function traceChoices(frames: readonly TraceFrame[], at: number, seed: string, max = 4): string[] {
+  const frame = frames[at];
+  const right = frame?.ask ? frame.vars[frame.ask] : undefined;
+  if (right === undefined || !frame.ask) return [];
+  const ask = frame.ask;
+  const picked = [right];
+  const add = (v: string | undefined) => {
+    if (v !== undefined && v.trim() !== '' && picked.length < max && !picked.some((p) => sameTraceValue(p, v))) picked.push(v);
+  };
+  // The asked variable on other lines, nearest first.
+  for (let d = 1; d < frames.length; d++) {
+    add(frames[at - d]?.vars[ask]);
+    add(frames[at + d]?.vars[ask]);
+  }
+  // Other variables on this line: the ones the line changed first.
+  const prev = frames[at - 1]?.vars;
+  const others = Object.keys(frame.vars).filter((k) => k !== ask);
+  for (const k of [...others.filter((k) => prev?.[k] !== frame.vars[k]), ...others.filter((k) => prev?.[k] === frame.vars[k])]) add(frame.vars[k]);
+  // A list with only its last item (a "fresh" list each time) or without it (the append that "didn't happen").
+  const list = right.trim().match(/^\[(.*)\]$/s);
+  // Flat lists only: splitting nested ones on commas would make broken options.
+  if (list && list[1].trim() && !/[[{(]/.test(list[1])) {
+    const items = list[1].split(',').map((x) => x.trim());
+    if (items.length > 1) {
+      add(`[${items.at(-1)}]`);
+      add(`[${items.slice(0, -1).join(', ')}]`);
+    }
+  }
+  // A number one off.
+  if (/^-?\d+$/.test(right.trim())) {
+    add(String(Number(right) + 1));
+    add(String(Number(right) - 1));
+  }
+  // Seeded Fisher–Yates.
+  let state = seedOf(seed);
+  const rnd = () => (state = (Math.imul(state, 1664525) + 1013904223) >>> 0) / 2 ** 32;
+  for (let i = picked.length - 1; i > 0; i--) {
+    const j = Math.floor(rnd() * (i + 1));
+    [picked[i], picked[j]] = [picked[j], picked[i]];
+  }
+  return picked;
+}
+
 /**
  * When a wrong prediction is the new value of another variable the line just changed (the learner answered for
  * `count` while the question asks about `msg`), that variable's name. It's a misread question, not a wrong idea.

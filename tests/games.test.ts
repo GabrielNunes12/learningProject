@@ -1,7 +1,7 @@
 // Tests for the mini-game answer checks and the new validation rules. Run with: npm test
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
-import { checkTraceValue, gameAnswerLabel, isOrderCorrect, isRightBucket, orderMarks, otherChangedVar } from '../src/lib/answers.ts';
+import { checkTraceValue, gameAnswerLabel, isOrderCorrect, isRightBucket, orderMarks, otherChangedVar, sameTraceValue, traceChoices } from '../src/lib/answers.ts';
 import { validateCourse, validateRoadmap } from '../src/content/validate.ts';
 import type { BucketsStep, OrderStep, TraceStep } from '../src/types.ts';
 
@@ -61,6 +61,53 @@ describe('trace game', () => {
     assert.equal(checkTraceValue(msg, '"Annhas1"'), false, 'spaces inside a string still count');
     const words = { line: 1, vars: { xs: "['a', 'b']" }, ask: 'xs' };
     assert.equal(checkTraceValue(words, '["a","b"]'), true);
+  });
+
+  test('lesson options: the right value plus the nearest believable mistakes', () => {
+    const frames = [
+      { line: 1, vars: { count: '1' } },
+      { line: 3, vars: { count: '1', msg: '"Ann has 1"' } },
+      { line: 4, vars: { count: '3', msg: '"Ann has 1"' }, ask: 'msg' },
+      { line: 5, vars: { count: '3', msg: '"Ann has 3"' }, ask: 'msg' },
+    ];
+    const at4 = traceChoices(frames, 2, 'seed');
+    assert.ok(at4.includes('"Ann has 1"'), 'the right value');
+    assert.ok(at4.includes('"Ann has 3"'), 'the "template updates itself" mistake');
+    assert.ok(at4.includes('3'), "count's value: answering for the wrong variable");
+    assert.ok(at4.length >= 2 && at4.length <= 4);
+    assert.deepEqual(traceChoices(frames, 2, 'seed'), at4, 'same seed, same order');
+    assert.deepEqual(traceChoices(frames, 0, 'seed'), [], 'no prediction on this frame');
+    const lists = traceChoices([{ line: 1, vars: { xs: '[1, 2]' } }, { line: 2, vars: { xs: '[1,2, 3]' }, ask: 'xs' }], 1, 's');
+    assert.ok(lists.some((v) => sameTraceValue(v, '[1, 2]')), 'the list before the append');
+    assert.equal(new Set(lists.map((v) => v.replace(/\s/g, ''))).size, lists.length, 'no option twice, even spaced differently');
+  });
+
+  test('every shipped trace prediction offers its right value among 2–4 distinct options', async () => {
+    const { readdirSync, readFileSync } = await import('node:fs');
+    const dir = new URL('../src/content/topics/', import.meta.url);
+    let asks = 0;
+    let typed = 0;
+    const walk = (o: unknown, visit: (step: { type: string; frames: { ask?: string; vars: Record<string, string>; line: number }[] }) => void): void => {
+      if (Array.isArray(o)) o.forEach((x) => walk(x, visit));
+      else if (o && typeof o === 'object') {
+        if ((o as { type?: string }).type === 'trace') visit(o as never);
+        Object.values(o).forEach((x) => walk(x, visit));
+      }
+    };
+    for (const f of readdirSync(dir).filter((n) => n.endsWith('.json'))) {
+      walk(JSON.parse(readFileSync(new URL(f, dir), 'utf8')), (step) =>
+        step.frames.forEach((fr, i) => {
+          if (!fr.ask) return;
+          asks++;
+          const c = traceChoices(step.frames, i, `${f}/${i}`);
+          if (c.length < 2) return void typed++;
+          assert.ok(c.length <= 4, `${f} frame ${i}`);
+          assert.equal(c.filter((v) => checkTraceValue(fr, v)).length, 1, `${f} frame ${i}: exactly one right option`);
+        }),
+      );
+    }
+    assert.ok(asks > 0);
+    assert.ok(typed / asks < 0.1, `${typed} of ${asks} predictions fall back to typing`);
   });
 
   test('a value that belongs to another variable the line just changed is a misread question, not a wrong answer', () => {

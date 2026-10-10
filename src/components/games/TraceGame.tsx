@@ -2,7 +2,7 @@
 // At some frames the new value is hidden and the learner predicts it. Graded once, when the last frame is reached:
 // right only if every prediction was right on the first try.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { checkTraceValue, gameAnswerLabel, otherChangedVar } from '../../lib/answers';
+import { checkTraceValue, gameAnswerLabel, otherChangedVar, traceChoices } from '../../lib/answers';
 import {
   allFirstTriesRight,
   changedItems,
@@ -38,6 +38,15 @@ export function TraceGame({ step, mode, context, onDone }: QuestionProps<TraceSt
   const [input, setInput] = useState('');
   // The variable whose value the learner typed instead of the asked one (a misread question: not counted as a try).
   const [otherVar, setOtherVar] = useState<string | null>(null);
+  // Options already tried and wrong for the current prediction.
+  const [wrongPicks, setWrongPicks] = useState<string[]>([]);
+  const choicesRef = useRef<HTMLDivElement>(null);
+  // Lessons pick from options (typing exact syntax isn't the skill being learned); quizzes and reviews keep recall typed.
+  const choices = useMemo(
+    () => (test || state.asking === null ? [] : traceChoices(frames, state.asking, `${step.id}/${state.asking}`)),
+    [test, state.asking, frames, step.id],
+  );
+  const picking = choices.length >= 2;
   const [playing, setPlaying] = useState(false);
   const stepRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -52,6 +61,7 @@ export function TraceGame({ step, mode, context, onDone }: QuestionProps<TraceSt
     if (next.asking !== null && prev.asking === null) {
       setInput('');
       setOtherVar(null);
+      setWrongPicks([]);
       setPlaying(false);
     }
     if (prev.asking !== null && next.asking === null) requestAnimationFrame(() => stepRef.current?.focus());
@@ -87,6 +97,14 @@ export function TraceGame({ step, mode, context, onDone }: QuestionProps<TraceSt
     }
   }
 
+  function pick(value: string) {
+    const s = stateRef.current;
+    if (s.asking === null || wrongPicks.includes(value)) return;
+    const ok = checkTraceValue(frames[s.asking], value);
+    if (!ok) setWrongPicks((w) => [...w, value]);
+    dispatch({ type: 'answer', ok, test });
+  }
+
   function togglePlay() {
     if (playing) return setPlaying(false);
     if (stateRef.current.pos >= last) dispatch({ type: 'seek', to: -1 });
@@ -119,7 +137,13 @@ export function TraceGame({ step, mode, context, onDone }: QuestionProps<TraceSt
       const t = e.target;
       const typing = (t instanceof HTMLInputElement && t.type !== 'range') || t instanceof HTMLTextAreaElement || t instanceof HTMLSelectElement;
       if (typing) return;
-      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      if (picking && stateRef.current.asking !== null && /^[1-9]$/.test(e.key)) {
+        const value = choices[Number(e.key) - 1];
+        if (value !== undefined) {
+          e.preventDefault();
+          pick(value);
+        }
+      } else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
         e.preventDefault();
         setPlaying(false);
         dispatch({ type: e.key === 'ArrowRight' ? 'forward' : 'back' });
@@ -130,7 +154,7 @@ export function TraceGame({ step, mode, context, onDone }: QuestionProps<TraceSt
         else if (flow.status === 'wrong') {
           flow.retry();
           reset();
-        } else if (stateRef.current.asking !== null) inputRef.current?.focus();
+        } else if (stateRef.current.asking !== null) (picking ? choicesRef.current?.querySelector<HTMLButtonElement>('button:not(:disabled)') : inputRef.current)?.focus();
         else dispatch({ type: 'forward' });
       }
     };
@@ -248,7 +272,36 @@ export function TraceGame({ step, mode, context, onDone }: QuestionProps<TraceSt
           </div>
         </div>
 
-        {asking && frame?.ask && (
+        {asking && frame?.ask && picking && (
+          <div className={`trace-ask${tries > 0 ? ' wrong' : ''}`}>
+            <p className="trace-ask-label" id={`trace-q-${step.id}`}>
+              {tx('games.trace.question', { line: frame.line, name: <code>{frame.ask}</code> })}
+            </p>
+            <div className="trace-choices" role="group" aria-labelledby={`trace-q-${step.id}`} ref={choicesRef}>
+              {choices.map((value, i) => {
+                const wrong = wrongPicks.includes(value);
+                return (
+                  <button key={value} type="button" className={`trace-choice${wrong ? ' wrong' : ''}`} disabled={wrong} onClick={() => pick(value)} autoFocus={i === 0}>
+                    <span className="trace-choice-key" aria-hidden>
+                      {i + 1}
+                    </span>
+                    <code>{value}</code>
+                  </button>
+                );
+              })}
+            </div>
+            {tries > 0 && (
+              <p className="trace-ask-msg" role="alert">
+                <span>{t('games.trace.notQuite', { line: frame.line })}</span>
+                <button type="button" className="link" onClick={() => dispatch({ type: 'reveal' })}>
+                  {t('games.trace.showMe')}
+                </button>
+              </p>
+            )}
+          </div>
+        )}
+
+        {asking && frame?.ask && !picking && (
           <form
             className={`trace-ask${tries > 0 ? ' wrong' : ''}`}
             onSubmit={(e) => {
